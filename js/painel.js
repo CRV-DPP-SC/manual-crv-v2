@@ -522,6 +522,10 @@ window.carregarAba = async function (aba) {
   document.querySelectorAll('.p-aba-btn')
     .forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
 
+  /* Limpa seleções ao trocar de aba */
+  _selSols.clear(); _selAcess.clear();
+  _atualizarBarra();
+
   const corpo = document.getElementById('p-corpo');
   corpo.innerHTML = '<div class="p-loading">Carregando…</div>';
 
@@ -600,8 +604,249 @@ window.carregarAba = async function (aba) {
   }
 };
 
+// ══════════════════════════════════════════════
+// SELEÇÃO EM MASSA
+// ══════════════════════════════════════════════
+let _selCtx  = null;   // 'sols' | 'acess'
+let _selSols  = new Set();
+let _selAcess = new Set();
+
+function selLimpar() {
+  _selSols.clear(); _selAcess.clear();
+  document.querySelectorAll('.p-card-check, .p-sel-all-check').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.p-card.selecionado').forEach(c => c.classList.remove('selecionado'));
+  _atualizarBarra();
+}
+window.selLimpar = selLimpar;
+
+function _atualizarBarra() {
+  const barra  = document.getElementById('p-barra-sel');
+  const info   = document.getElementById('p-barra-sel-info');
+  const acoes  = document.getElementById('p-barra-sel-acoes');
+  if (!barra) return;
+
+  const n = _selCtx === 'acess' ? _selAcess.size : _selSols.size;
+  barra.classList.toggle('visivel', n > 0);
+  if (!info || !acoes) return;
+  info.textContent = n + ' selecionado' + (n !== 1 ? 's' : '');
+  acoes.innerHTML = '';
+
+  if (_selCtx === 'sols') {
+    const ids = [..._selSols];
+    /* Assinar em massa: só nas pendentes onde o usuário pode assinar */
+    const podeFirmarAlgum = ids.some(id => {
+      const s = _selSolsData.find(x => x.id === id);
+      return s && podeAssinar() && (s.assinantes || []).find(a => a.email === usuarioAtual.email && a.status === 'pendente');
+    });
+    if (podeFirmarAlgum) acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-ass" onclick="bulkAssinar()">✅ Assinar selecionados</button>`);
+    /* Cancelar em massa */
+    const podeCancelarAlgum = ids.some(id => {
+      const s = _selSolsData.find(x => x.id === id); return s && podeCancelar(s);
+    });
+    if (podeCancelarAlgum) acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-canc" onclick="bulkCancelar()">Cancelar selecionados</button>`);
+    /* Excluir em massa: só CRV */
+    if (perfilAtual === 'crv') acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-exc" onclick="bulkExcluirSols()">Excluir selecionados</button>`);
+
+  } else if (_selCtx === 'acess') {
+    const ids = [..._selAcess];
+    const temPend = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return r?.status === 'pendente'; });
+    const temAprov = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return r?.status === 'aprovado'; });
+    const temExcl  = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return ['pendente','recusado'].includes(r?.status); });
+    if (temPend)  acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-apr" onclick="bulkAprovar()">✅ Aprovar selecionados</button>`);
+    if (temPend)  acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRecusar()">Recusar selecionados</button>`);
+    if (temAprov) acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRevogar()">Revogar selecionados</button>`);
+    if (temExcl)  acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-exc" onclick="bulkExcluirAcess()">Excluir selecionados</button>`);
+  }
+}
+
+/* Referências aos dados ativos para checagem inline */
+let _selSolsData  = [];
+let _selAcessData = [];
+
+window.selSolToggle = function(id) {
+  _selCtx = 'sols';
+  _selSols.has(id) ? _selSols.delete(id) : _selSols.add(id);
+  const card = document.getElementById('pcard-' + id);
+  if (card) card.classList.toggle('selecionado', _selSols.has(id));
+  _atualizarSelAll('sol');
+  _atualizarBarra();
+};
+window.selSolAll = function(cb) {
+  _selCtx = 'sols';
+  if (cb.checked) _selSolsData.forEach(s => _selSols.add(s.id));
+  else _selSols.clear();
+  document.querySelectorAll('.p-card-check[data-ctx=sol]').forEach(c => { c.checked = cb.checked; });
+  document.querySelectorAll('.p-card[id^=pcard-]').forEach(c => c.classList.toggle('selecionado', cb.checked));
+  _atualizarBarra();
+};
+window.selAccToggle = function(id) {
+  _selCtx = 'acess';
+  _selAcess.has(id) ? _selAcess.delete(id) : _selAcess.add(id);
+  const card = document.getElementById('acard-' + id);
+  if (card) card.classList.toggle('selecionado', _selAcess.has(id));
+  _atualizarSelAll('acc');
+  _atualizarBarra();
+};
+window.selAccAll = function(cb) {
+  _selCtx = 'acess';
+  if (cb.checked) _selAcessData.forEach(r => _selAcess.add(r.id));
+  else _selAcess.clear();
+  document.querySelectorAll('.p-card-check[data-ctx=acc]').forEach(c => { c.checked = cb.checked; });
+  document.querySelectorAll('.p-card[id^=acard-]').forEach(c => c.classList.toggle('selecionado', cb.checked));
+  _atualizarBarra();
+};
+
+function _atualizarSelAll(ctx) {
+  const allCb = document.querySelector('.p-sel-all-check[data-ctx=' + ctx + ']');
+  if (!allCb) return;
+  const total = ctx === 'sol' ? _selSolsData.length : _selAcessData.length;
+  const sel   = ctx === 'sol' ? _selSols.size : _selAcess.size;
+  allCb.checked       = sel > 0 && sel === total;
+  allCb.indeterminate = sel > 0 && sel < total;
+}
+
+// ── Ações em massa — Solicitações ──
+window.bulkAssinar = async function() {
+  const ids = [..._selSols].filter(id => {
+    const s = _selSolsData.find(x => x.id === id);
+    return s && podeAssinar() && (s.assinantes || []).find(a => a.email === usuarioAtual.email && a.status === 'pendente');
+  });
+  if (!ids.length) return;
+  if (!confirm(`Assinar ${ids.length} documento(s) selecionado(s)?`)) return;
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try {
+      const ref  = doc(db, 'solicitacoes', id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) { err++; continue; }
+      const assinantes = (snap.data().assinantes || []).map(a =>
+        a.email === usuarioAtual.email ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() } : a
+      );
+      await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+      ok++;
+    } catch { err++; }
+  }
+  selLimpar();
+  showToastPainel(`${ok} documento(s) assinado(s)${err ? ` · ${err} erro(s)` : ''}.`);
+  const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+  if (abaAtiva) carregarAba(abaAtiva);
+};
+
+window.bulkCancelar = function() {
+  const ids = [..._selSols].filter(id => { const s = _selSolsData.find(x => x.id === id); return s && podeCancelar(s); });
+  if (!ids.length) return;
+  if (!confirm(`Cancelar ${ids.length} solicitação(ões)? Esta ação é definitiva.`)) return;
+  const motivo = prompt('Justificativa do cancelamento (obrigatório):');
+  if (!motivo?.trim()) { showToastPainel('Justificativa obrigatória.'); return; }
+  _bulkCancelarExec(ids, motivo.trim());
+};
+async function _bulkCancelarExec(ids, motivo) {
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try {
+      const ref  = doc(db, 'solicitacoes', id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) { err++; continue; }
+      const assinantes = (snap.data().assinantes || []).map(a =>
+        a.status === 'pendente' ? { ...a, status: 'cancelado', dataAcao: new Date().toISOString() } : a
+      );
+      await updateDoc(ref, {
+        assinantes, statusGeral: 'cancelado',
+        cancelamento: { por: usuarioAtual.email, nome: nomeExibidoAtual(), perfil: _labelPerfil[perfilAtual] || perfilAtual, motivo, em: new Date().toISOString() },
+        atualizadoEm: serverTimestamp(),
+      });
+      ok++;
+    } catch { err++; }
+  }
+  selLimpar();
+  showToastPainel(`${ok} solicitação(ões) cancelada(s)${err ? ` · ${err} erro(s)` : ''}.`);
+  carregarAba('cancelados');
+}
+
+window.bulkExcluirSols = async function() {
+  if (!confirm(`Excluir permanentemente ${_selSols.size} documento(s)? Ação irreversível.`)) return;
+  const ids = [..._selSols];
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try { await deleteDoc(doc(db, 'solicitacoes', id)); ok++; } catch { err++; }
+  }
+  selLimpar();
+  showToastPainel(`${ok} documento(s) excluído(s)${err ? ` · ${err} erro(s)` : ''}.`);
+  const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+  if (abaAtiva) carregarAba(abaAtiva); else mostrarDashboard();
+};
+
+// ── Ações em massa — Acessos ──
+window.bulkAprovar = async function() {
+  const ids = [..._selAcess].filter(id => _selAcessData.find(x => x.id === id)?.status === 'pendente');
+  if (!ids.length) return;
+  if (!confirm(`Aprovar ${ids.length} cadastro(s)?`)) return;
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try {
+      await updateDoc(doc(db, 'usuarios_cadastrados', id), { status: 'aprovado', aprovadoPor: usuarioAtual.email, aprovadoEm: serverTimestamp(), motivoRecusa: null });
+      ok++;
+    } catch { err++; }
+  }
+  selLimpar(); showToastPainel(`${ok} acesso(s) aprovado(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
+};
+
+window.bulkRecusar = function() {
+  const ids = [..._selAcess].filter(id => _selAcessData.find(x => x.id === id)?.status === 'pendente');
+  if (!ids.length) return;
+  const motivo = prompt(`Recusar ${ids.length} cadastro(s). Motivo (opcional):`);
+  if (motivo === null) return;
+  _bulkRecusarExec(ids, motivo.trim() || 'Não especificado');
+};
+async function _bulkRecusarExec(ids, motivo) {
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try {
+      await updateDoc(doc(db, 'usuarios_cadastrados', id), { status: 'recusado', aprovadoPor: usuarioAtual.email, aprovadoEm: serverTimestamp(), motivoRecusa: motivo });
+      ok++;
+    } catch { err++; }
+  }
+  selLimpar(); showToastPainel(`${ok} cadastro(s) recusado(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
+}
+
+window.bulkRevogar = async function() {
+  const ids = [..._selAcess].filter(id => _selAcessData.find(x => x.id === id)?.status === 'aprovado');
+  if (!ids.length) return;
+  if (!confirm(`Revogar ${ids.length} acesso(s)?`)) return;
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try {
+      await updateDoc(doc(db, 'usuarios_cadastrados', id), { status: 'revogado', aprovadoPor: usuarioAtual.email, aprovadoEm: serverTimestamp() });
+      ok++;
+    } catch { err++; }
+  }
+  selLimpar(); showToastPainel(`${ok} acesso(s) revogado(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
+};
+
+window.bulkExcluirAcess = async function() {
+  const ids = [..._selAcess].filter(id => ['pendente','recusado'].includes(_selAcessData.find(x => x.id === id)?.status));
+  if (!ids.length) return;
+  if (!confirm(`Excluir permanentemente ${ids.length} cadastro(s)?`)) return;
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try { await deleteDoc(doc(db, 'usuarios_cadastrados', id)); ok++; } catch { err++; }
+  }
+  selLimpar(); showToastPainel(`${ok} cadastro(s) excluído(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
+};
+
 // ── RENDERIZA LISTA ──
 function renderizarLista(el, lista, tipo) {
+  _selSols.clear();
+  _selSolsData = lista;
+  _selCtx = 'sols';
+
   const msgs = {
     pendentes:  'Nenhuma assinatura pendente.',
     minhas:     'Nenhuma solicitação encontrada.',
@@ -610,10 +855,15 @@ function renderizarLista(el, lista, tipo) {
   };
   if (!lista.length) {
     el.innerHTML = `<div class="p-vazio">${msgs[tipo] || 'Nenhum registro.'}</div>`;
+    _atualizarBarra();
     return;
   }
 
-  el.innerHTML = lista.map(s => {
+  const cabSel = `<div class="p-sel-header">
+    <label><input type="checkbox" class="p-sel-all-check" data-ctx="sol" onchange="selSolAll(this)"> Selecionar todos (${lista.length})</label>
+  </div>`;
+
+  el.innerHTML = cabSel + lista.map(s => {
     const data        = s.criadoEm?.toDate ? s.criadoEm.toDate().toLocaleDateString('pt-BR') : '—';
     const statusGeral = calcularStatusGeral(s.assinantes || [], s.statusGeral);
     const minhaAssin  = (s.assinantes || []).find(a => a.email === usuarioAtual.email);
@@ -625,13 +875,16 @@ function renderizarLista(el, lista, tipo) {
       : '';
 
     return `
-    <div class="p-card">
+    <div class="p-card" id="pcard-${s.id}">
       <div class="p-card-header">
-        <div>
-          <div class="p-card-titulo">${escHtml(s.titulo || 'Ofício s/ título')}</div>
-          <div class="p-card-meta">${escHtml(s.emailUnidadeOrigem || '—')} · ${data}</div>
+        <input type="checkbox" class="p-card-check" data-ctx="sol" onchange="selSolToggle('${s.id}')" onclick="event.stopPropagation()" title="Selecionar">
+        <div class="p-card-header-inner">
+          <div>
+            <div class="p-card-titulo">${escHtml(s.titulo || 'Ofício s/ título')}</div>
+            <div class="p-card-meta">${escHtml(s.emailUnidadeOrigem || '—')} · ${data}</div>
+          </div>
+          <span class="p-status p-status-${statusGeral.classe}">${statusGeral.label}</span>
         </div>
-        <span class="p-status p-status-${statusGeral.classe}">${statusGeral.label}</span>
       </div>
       ${s.presos && s.presos.length ? `
       <div class="p-card-presos">
@@ -682,6 +935,7 @@ function renderizarLista(el, lista, tipo) {
       </div>
     </div>`;
   }).join('');
+  _atualizarBarra();
 }
 
 function calcularStatusGeral(assinantes, statusDoc) {
@@ -1409,7 +1663,15 @@ async function carregarAbaAcessos(el) {
     const ordem = { pendente: 0, aprovado: 1, recusado: 2, revogado: 3 };
     registros.sort((a, b) => (ordem[a.status] ?? 9) - (ordem[b.status] ?? 9));
 
-    el.innerHTML = registros.map(r => {
+    _selAcess.clear();
+    _selAcessData = registros;
+    _selCtx = 'acess';
+
+    const cabSel = `<div class="p-sel-header">
+      <label><input type="checkbox" class="p-sel-all-check" data-ctx="acc" onchange="selAccAll(this)"> Selecionar todos (${registros.length})</label>
+    </div>`;
+
+    el.innerHTML = cabSel + registros.map(r => {
       const info = {
         pendente: { label: 'Pendente', classe: 'p-status-pendente' },
         aprovado:  { label: 'Aprovado', classe: 'p-status-concluido' },
@@ -1435,19 +1697,23 @@ async function carregarAbaAcessos(el) {
       }
 
       return `
-      <div class="p-card">
+      <div class="p-card" id="acard-${r.id}">
         <div class="p-card-header">
-          <div>
-            <div class="p-card-titulo">${r.nome || '—'}</div>
-            <div class="p-card-meta">${r.email} · ${r.nomeUnidade || '—'} · Cadastro: ${dataCad}</div>
-            ${dataApr ? `<div class="p-card-meta">Ação por: ${r.aprovadoPor || '—'} em ${dataApr}</div>` : ''}
-            ${r.motivoRecusa ? `<div class="p-card-meta" style="color:var(--vermelho);">Motivo: ${r.motivoRecusa}</div>` : ''}
+          <input type="checkbox" class="p-card-check" data-ctx="acc" onchange="selAccToggle('${r.id}')" onclick="event.stopPropagation()" title="Selecionar">
+          <div class="p-card-header-inner">
+            <div>
+              <div class="p-card-titulo">${escHtml(r.nome || '—')}</div>
+              <div class="p-card-meta">${escHtml(r.email)} · ${escHtml(r.nomeUnidade || '—')} · Cadastro: ${dataCad}</div>
+              ${dataApr ? `<div class="p-card-meta">Ação por: ${escHtml(r.aprovadoPor || '—')} em ${dataApr}</div>` : ''}
+              ${r.motivoRecusa ? `<div class="p-card-meta" style="color:var(--vermelho);">Motivo: ${escHtml(r.motivoRecusa)}</div>` : ''}
+            </div>
+            <span class="p-status ${info.classe}">${info.label}</span>
           </div>
-          <span class="p-status ${info.classe}">${info.label}</span>
         </div>
         ${acoes.length ? `<div class="p-card-acoes">${acoes.join('')}</div>` : ''}
       </div>`;
     }).join('');
+    _atualizarBarra();
 
   } catch (e) {
     el.innerHTML = `<div class="p-erro-msg">Erro ao carregar acessos: ${e.message}</div>`;

@@ -257,6 +257,41 @@
       font-size: .84rem; color: #b91c1c;
     }
 
+    /* ── SELEÇÃO EM MASSA ── */
+    .p-sel-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 4px 10px; border-bottom: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .p-sel-header label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: .82rem; color: var(--txt-2); font-weight: 500; }
+    .p-sel-header input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--azul-500); cursor: pointer; flex-shrink: 0; }
+    .p-card-check { width: 16px; height: 16px; accent-color: var(--azul-500); cursor: pointer; flex-shrink: 0; margin-right: 4px; }
+    .p-card.selecionado { border-color: var(--azul-400); background: var(--azul-50); }
+    .p-card-header-inner { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+    .p-barra-sel {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
+      background: var(--azul-900); color: #fff;
+      padding: 12px 24px; display: none;
+      align-items: center; gap: 10px; flex-wrap: wrap;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.25);
+      border-top: 2px solid var(--azul-600);
+    }
+    .p-barra-sel.visivel { display: flex; }
+    .p-barra-sel-info { font-size: .88rem; font-weight: 700; flex: 1; }
+    .p-barra-btn { padding: 7px 16px; border-radius: var(--radius-sm); font-size: .8rem; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: background .15s; }
+    .p-barra-btn-ass    { background: #15803d; color: #fff; }
+    .p-barra-btn-ass:hover    { background: #166534; }
+    .p-barra-btn-apr    { background: #15803d; color: #fff; }
+    .p-barra-btn-apr:hover    { background: #166534; }
+    .p-barra-btn-neg    { background: #fef2f2; color: #dc2626; }
+    .p-barra-btn-neg:hover    { background: #fee2e2; }
+    .p-barra-btn-exc    { background: #7f1d1d; color: #fff; }
+    .p-barra-btn-exc:hover    { background: #991b1b; }
+    .p-barra-btn-canc   { background: rgba(255,255,255,.12); color: #fff; }
+    .p-barra-btn-canc:hover   { background: rgba(255,255,255,.22); }
+    .p-barra-btn-limpar { background: none; border: 1px solid rgba(255,255,255,.3); color: rgba(255,255,255,.7); font-size: .75rem; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; }
+    .p-barra-btn-limpar:hover { background: rgba(255,255,255,.1); color: #fff; }
+
     /* ── DASHBOARD / NAVEGAÇÃO CRV / SR ── */
     #p-corpo.dashboard-mode { padding: 0; max-width: none; }
 
@@ -567,6 +602,13 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ══ BARRA DE SELEÇÃO EM MASSA ══ -->
+<div id="p-barra-sel" class="p-barra-sel">
+  <span class="p-barra-sel-info" id="p-barra-sel-info">0 selecionados</span>
+  <div id="p-barra-sel-acoes" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+  <button class="p-barra-btn-limpar" onclick="selLimpar()">✕ Desmarcar todos</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
