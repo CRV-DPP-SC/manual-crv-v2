@@ -704,3 +704,16 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
   .preview-acoes { gap: 6px; }
   .btn-acao { padding: 7px 10px; font-size: .74rem; }
 }
+
+/* ── Botão WhatsApp flutuante ── */
+.btn-wpp {
+  position: fixed; bottom: 140px; right: 22px; z-index: 8998;
+  background: #25d366; color: #fff; border: none; border-radius: 50%;
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.28);
+  transition: transform .2s, box-shadow .2s;
+  text-decoration: none;
+}
+.btn-wpp:hover { transform: scale(1.1); box-shadow: 0 6px 22px rgba(0,0,0,.35); }
+.btn-wpp svg  { width: 26px; height: 26px; fill: #fff; }
