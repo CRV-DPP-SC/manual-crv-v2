@@ -150,6 +150,8 @@ const CSS = `
   }
   .ntf-btn-ass  { background: #15803d; color: #fff; }
   .ntf-btn-ass:hover  { background: #166534; }
+  .ntf-btn-neg  { background: #dc2626; color: #fff; }
+  .ntf-btn-neg:hover  { background: #b91c1c; }
   .ntf-btn-ver  { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
   .ntf-btn-ver:hover  { background: #e2e8f0; }
   .ntf-rodape {
@@ -162,6 +164,50 @@ const CSS = `
     text-decoration: none;
   }
   .ntf-link-painel:hover { text-decoration: underline; }
+
+  /* Modal de negação */
+  #ntf-modal-neg {
+    display: none; position: fixed; inset: 0; z-index: 9500;
+    background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #ntf-modal-neg.aberto { display: flex; }
+  .ntf-neg-box {
+    background: #fff; border-radius: 14px;
+    width: 100%; max-width: 440px;
+    box-shadow: 0 12px 48px rgba(0,0,0,.22);
+    overflow: hidden; animation: ntfSlide .18s ease;
+  }
+  .ntf-neg-head {
+    background: #dc2626; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ntf-neg-head h3 { font-size: .95rem; font-weight: 700; color: #fff; margin: 0; }
+  .ntf-neg-body { padding: 18px; }
+  .ntf-neg-label { font-size: .8rem; font-weight: 600; color: #374151; margin-bottom: 6px; display: block; }
+  .ntf-neg-motivo {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 8px 12px; font-size: .84rem; font-family: inherit;
+    resize: vertical; min-height: 80px; color: #0f172a;
+    box-sizing: border-box;
+  }
+  .ntf-neg-motivo:focus { outline: 2px solid #dc2626; border-color: transparent; }
+  .ntf-neg-acoes {
+    display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;
+  }
+  .ntf-neg-cancel {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0;
+    background: #f8fafc; color: #334155; font-size: .82rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .ntf-neg-cancel:hover { background: #e2e8f0; }
+  .ntf-neg-ok {
+    padding: 8px 18px; border-radius: 8px; border: none;
+    background: #dc2626; color: #fff; font-size: .82rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: background .15s;
+  }
+  .ntf-neg-ok:hover { background: #b91c1c; }
+  .ntf-neg-ok:disabled { background: #fca5a5; cursor: default; }
 
   /* Modal de confirmação de assinatura */
   #ntf-modal-conf {
@@ -237,6 +283,25 @@ function _injetarDOM() {
       <div class="ntf-lista" id="ntf-lista"></div>
       <div class="ntf-rodape">
         <a class="ntf-link-painel" href="/painel.html" id="ntf-link-painel">Abrir Painel da Unidade →</a>
+      </div>
+    </div>
+
+    <!-- Modal negação -->
+    <div id="ntf-modal-neg" onclick="if(event.target===this)_ntfFecharNeg()">
+      <div class="ntf-neg-box">
+        <div class="ntf-neg-head">
+          <h3>❌ Negar Assinatura</h3>
+          <button class="ntf-fechar" onclick="_ntfFecharNeg()">✕</button>
+        </div>
+        <div class="ntf-neg-body">
+          <div id="ntf-neg-titulo" style="font-size:.88rem;font-weight:600;color:#0f172a;margin-bottom:12px;"></div>
+          <label class="ntf-neg-label">Motivo da negação (opcional)</label>
+          <textarea class="ntf-neg-motivo" id="ntf-neg-motivo" placeholder="Descreva o motivo…"></textarea>
+          <div class="ntf-neg-acoes">
+            <button class="ntf-neg-cancel" onclick="_ntfFecharNeg()">Cancelar</button>
+            <button class="ntf-neg-ok" id="ntf-neg-ok" onclick="_ntfNegar()">❌ Confirmar negação</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -386,7 +451,7 @@ function _renderizarLista() {
         </div>
         <div class="ntf-acoes">
           <button class="ntf-btn ntf-btn-ass" onclick="_ntfAbrirConf('${_esc(s.id)}')">✅ Assinar</button>
-          <button class="ntf-btn ntf-btn-ver" onclick="_ntfVerNoPainel('${_esc(s.id)}')">Ver no Painel</button>
+          <button class="ntf-btn ntf-btn-neg" onclick="_ntfAbrirNeg('${_esc(s.id)}')">❌ Negar</button>
         </div>
       </div>`;
   }).join('');
@@ -466,6 +531,47 @@ window._ntfAssinar = async function() {
   } catch (e) {
     _ntfToast('Erro ao assinar: ' + e.message);
     if (btn) { btn.disabled = false; btn.textContent = '✅ Confirmar assinatura'; }
+  }
+};
+
+window._ntfAbrirNeg = function(id) {
+  const s = _pendentes.find(x => x.id === id);
+  if (!s) return;
+  _pendConf = s;
+  const titulo = document.getElementById('ntf-neg-titulo');
+  if (titulo) titulo.textContent = s.titulo || 'Ofício s/ título';
+  const motivo = document.getElementById('ntf-neg-motivo');
+  if (motivo) motivo.value = '';
+  document.getElementById('ntf-modal-neg').classList.add('aberto');
+  _ntfFechar();
+};
+
+window._ntfFecharNeg = function() {
+  document.getElementById('ntf-modal-neg').classList.remove('aberto');
+  _pendConf = null;
+};
+
+window._ntfNegar = async function() {
+  if (!_pendConf || !_emailUsuario) return;
+  const btn = document.getElementById('ntf-neg-ok');
+  const motivo = (document.getElementById('ntf-neg-motivo')?.value || '').trim();
+  if (btn) { btn.disabled = true; btn.textContent = 'Negando…'; }
+
+  try {
+    const ref  = doc(_db, 'solicitacoes', _pendConf.id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error('Documento não encontrado.');
+    const assinantes = (snap.data().assinantes || []).map(a =>
+      a.email === _emailUsuario
+        ? { ...a, status: 'negado', motivoNegacao: motivo, dataAcao: new Date().toISOString() }
+        : a
+    );
+    await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+    _ntfFecharNeg();
+    _ntfToast('❌ Assinatura negada.');
+  } catch (e) {
+    _ntfToast('Erro ao negar: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '❌ Confirmar negação'; }
   }
 };
 
