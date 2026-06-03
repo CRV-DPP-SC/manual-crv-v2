@@ -70,6 +70,7 @@ function dCRV() {
     + '<div class="dest-t">À</div>'
     + '<div class="dest-n">CENTRAL DE REGULAÇÃO DE VAGAS</div>'
     + '<div class="dest-l">Departamento de Polícia Penal</div>'
+    + '<div class="dest-l">Secretaria de Estado de Justiça e Reintegração Social</div>'
     + '<div class="dest-l">Florianópolis/SC</div>'
     + '</div></div>';
 }

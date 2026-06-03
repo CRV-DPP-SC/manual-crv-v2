@@ -20,7 +20,7 @@ function getCSS() {
       /* Corpo: padding para não sobrepor os elementos fixos */
       '.oficio-corpo{padding:0.9cm 0 0.7cm 0}',
       /* Espaços em branco em print */
-      '.lb{height:6pt!important;line-height:6pt!important}',
+      '.lb{height:11pt!important;line-height:11pt!important}',
       /* Assinaturas */
       '.ass-bloco{page-break-inside:avoid!important;break-inside:avoid!important;line-height:1.2!important;margin-left:8cm!important}',
       '.ass-dig{font-size:9pt!important}.ass-nome{font-size:10pt!important;white-space:nowrap}.ass-cargo{font-size:8.5pt!important;line-height:1.25!important}',

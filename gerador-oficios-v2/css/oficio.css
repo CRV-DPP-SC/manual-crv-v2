@@ -287,7 +287,7 @@
   }
 
   /* Espaços em branco na impressão */
-  .lb { height: 6pt !important; line-height: 6pt !important; }
+  .lb { height: 11pt !important; line-height: 11pt !important; }
 
   /* Assinaturas e destinatário: não cortar entre páginas */
   .ass-bloco {
