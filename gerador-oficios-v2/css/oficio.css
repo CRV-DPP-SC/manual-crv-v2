@@ -1,6 +1,6 @@
 /* ============================================================
    OFICIO.CSS — estilos do documento em papel
-   Usados tanto no preview em tela quanto na exportação.
+   Abordagem V1: div flexbox + position:fixed para cab/rod em print.
    ============================================================ */
 
 /* ── Placeholder para campos não preenchidos ── */
@@ -10,40 +10,26 @@
   font-weight: normal;
 }
 
-/* ── Estrutura do ofício ── */
+/* ── Estrutura principal do ofício (tela) ── */
 #oficio {
   background: #fff;
   font-family: Arial, sans-serif;
   font-size: 11pt;
   line-height: 1.0;
   color: #111;
-  width: 100%;
   max-width: 21cm;
   margin: 0 auto;
-  border-collapse: collapse;
+  padding: 1cm 1.5cm 0 1.5cm;
+  display: flex;
+  flex-direction: column;
+  min-height: 27cm;
 }
 
-.ofc-print-header {
-  padding: 1cm 1.5cm 0.3cm 1.5cm;
-  vertical-align: top;
-}
-
-.ofc-print-body {
-  padding: 0.3cm 1.5cm 0 1.5cm;
-  vertical-align: top;
-}
-
-.ofc-print-footer {
-  padding: 0.3cm 1.5cm 0.5cm 1.5cm;
-}
-
-.ofc-ass-page {
-  page-break-before: always;
-  break-before: page;
-  padding-top: 0.3cm;
-}
-
+/* ── Corpo do ofício — cresce para preencher o espaço ── */
 .oficio-corpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   padding-bottom: 0;
 }
 
@@ -52,13 +38,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: none;
   padding-bottom: 6px;
-  margin-bottom: 0;
 }
 
 .ofc-cab img {
-  height: 60px;
+  height: 46px;
   flex-shrink: 0;
 }
 
@@ -113,7 +97,7 @@
   font-family: Arial, sans-serif;
 }
 
-/* ── Corpo ── */
+/* ── Corpo do texto ── */
 .ofc-sau {
   font-size: 11pt;
   line-height: 1.0;
@@ -174,8 +158,9 @@
   display: block;
 }
 
-/* ── Destinatário ── */
+/* ── Destinatário — empurrado ao fundo pelo flexbox ── */
 .ofc-dest-wrap {
+  margin-top: auto;
   padding-top: 18pt;
 }
 
@@ -203,15 +188,11 @@
 .ofc-lista li { margin-bottom: 2pt; }
 .ofc-lista-wrap { margin: 0; padding: 0; }
 
-/* ── Rodapé ── */
+/* ── Rodapé (tela: abaixo do conteúdo; print: position:fixed) ── */
 .ofc-rodape {
-  padding: 0 0 10px;
+  margin-top: 0.5cm;
+  padding: 6px 0 10px;
   font-family: Arial, sans-serif;
-}
-
-.rod-linha {
-  border-top: 0.5pt solid #555;
-  margin-bottom: 5px;
 }
 
 .rod-info {
@@ -222,24 +203,25 @@
 }
 
 .rod-dpp  { font-weight: bold; font-size: 9pt; text-transform: uppercase; display: block; color: #111; letter-spacing: .03em; }
-.rod-end  { font-weight: normal; font-size: 8pt; display: block; color: #333; }
-.rod-cont { font-weight: normal; font-size: 8pt; display: block; color: #333; }
-
-/* Anexo sem page-break (o page-break é controlado pelo wrapper externo) */
-.anexo-inner { font-family: Arial, sans-serif; }
+.rod-un   { font-weight: bold; color: #174b8a; display: block; font-size: 8.5pt; }
+.rod-cont { font-size: 8pt; display: block; color: #333; }
 
 /* ── Anexo ── */
 .anexo-wrapper {
   font-family: Arial, sans-serif;
   page-break-before: always;
+  break-before: page;
+  padding-top: 0.5cm;
 }
+
+.anexo-inner { font-family: Arial, sans-serif; }
 
 .anexo-tabela {
   width: 100%;
   border-collapse: collapse;
 }
 
-/* ── Preview: separador de quebra de página ── */
+/* ── Separador visual de quebra de página (tela) ── */
 .page-break-preview {
   border-top: 2px dashed #bcd;
   margin: 24px 0;
@@ -248,20 +230,94 @@
   font-size: 0.75rem;
 }
 
-/* ── Impressão / PDF ── */
+/* ════════════════════════════════════════════
+   IMPRESSÃO / PDF
+   @page com margens que acomodam cab e rod fixos
+   ════════════════════════════════════════════ */
 @page {
   size: A4;
-  margin: 0.3cm 2cm 0.3cm 3cm;
+  margin: 2.8cm 2cm 2.5cm 3cm;
 }
 
 @media print {
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
-  header, footer, .ofc-no-print { display: none !important; }
-  .ofc-placeholder, .page-break-preview, .ofc-no-print { display: none !important; }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0; padding: 0;
+  }
 
-  #oficio { border: none !important; box-shadow: none !important; }
-  .ofc-cab img { height: 52pt !important; }
-  .ofc-print-header { padding: 0.4cm 0 0.3cm 0; }
-  .ofc-print-body   { padding: 0.2cm 0 0; }
-  .ofc-print-footer { padding: 0.3cm 0 0.4cm 0; }
+  /* Ocultar elementos de interface */
+  header, footer,
+  .ofc-no-print,
+  .page-break-preview { display: none !important; }
+
+  .ofc-placeholder { display: none; }
+
+  /* Ofício: sem padding (as margens @page cuidam disso) */
+  #oficio {
+    padding: 0;
+    min-height: 0;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Cabeçalho fixo no TOPO de cada página */
+  .ofc-cab {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 0.35cm 2cm 0.2cm 3cm;
+    background: #fff;
+    z-index: 100;
+  }
+  .ofc-cab img { height: 38pt !important; }
+
+  /* Rodapé fixo no FUNDO de cada página */
+  .ofc-rodape {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.15cm 2cm 0.35cm 3cm;
+    background: #fff;
+    z-index: 100;
+    margin-top: 0;
+  }
+
+  /* Corpo: padding para não sobrepor cab e rod fixos */
+  .oficio-corpo {
+    padding: 0.3cm 0 1.1cm 0;
+  }
+
+  /* Compactar espaços em branco na impressão */
+  .lb { height: 3pt !important; line-height: 3pt !important; }
+
+  /* Assinaturas e destinatário: não cortar entre páginas */
+  .ass-bloco {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    line-height: 1.2 !important;
+    margin-left: 5.5cm !important;
+  }
+  .ass-dig  { font-size: 9pt !important; }
+  .ass-nome { font-size: 10pt !important; white-space: nowrap; }
+  .ass-cargo { font-size: 8.5pt !important; line-height: 1.25 !important; }
+
+  .ofc-dest-wrap {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: 8pt;  /* em print não usa margin-top:auto */
+    padding-top: 14pt;
+    margin-bottom: 0.5cm;
+  }
+  .ofc-dest {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    font-size: 10pt !important;
+  }
+
+  /* Parágrafos: órfãos e viúvas */
+  .ofc-p { orphans: 3; widows: 3; margin-bottom: 5pt; }
+  .ofc-sau { margin-bottom: 5pt; }
+
+  /* Cabeçalho: fonte compacta */
+  .c1, .c2, .c3 { font-size: 9pt !important; }
+  .c4 { font-size: 9.5pt !important; white-space: nowrap; }
 }

@@ -1,5 +1,6 @@
 /* ============================================================
    DOCUMENTO — estrutura HTML do ofício em papel
+   Abordagem V1: div flexbox + position:fixed para cab/rod em print.
    Funções puras: recebem estado (s) e retornam HTML.
    ============================================================ */
 
@@ -91,23 +92,28 @@ function rod(s) {
   var em  = o ? o.em  : '';
   var end = o ? o.e   : '';
   var contato = [
-    tel ? 'Fone: ' + tel : '',
-    em  ? 'e-mail: ' + em : ''
-  ].filter(Boolean).join(' / ');
+    tel ? 'Tel.: ' + tel : '',
+    em  ? 'E-mail: ' + em : ''
+  ].filter(Boolean).join(' | ');
   return '<div class="ofc-rodape">'
-    + '<div class="rod-linha"></div>'
     + '<div class="rod-info">'
-    + '<span class="rod-dpp">Polícia Penal de Santa Catarina</span>'
-    + (end ? '<span class="rod-end">' + end + '</span>' : '')
-    + (contato ? '<span class="rod-cont">' + contato + '</span>' : '')
+    + '<div class="rod-dpp">POLÍCIA PENAL DE SANTA CATARINA</div>'
+    + (o ? '<div class="rod-un">' + o.n + '</div>' : '')
+    + (end ? '<div class="rod-cont">' + end + '</div>' : '')
+    + (contato ? '<div class="rod-cont">' + contato + '</div>' : '')
     + '</div></div>';
 }
 
-/* ── Monta o HTML completo do ofício ── */
+/* ── Monta o HTML completo do ofício ──
+   Abordagem V1: div flexbox simples.
+   Em @media print, .ofc-cab e .ofc-rodape são position:fixed
+   e aparecem automaticamente em TODAS as páginas impressas.
+   @page com margin:2.8cm top e 2.5cm bottom acomoda os elementos fixos.
+   ── */
 function montarOficio(s) {
   if (!s || !s.mod) return '';
 
-  /* resumo_ipen não gera ofício — exibe apenas instrução */
+  /* resumo_ipen não gera ofício */
   if (s.mod === 'resumo_ipen') {
     return '<div class="preview-placeholder" style="padding:2rem;">'
       + '<p>Este modo gera apenas o <strong>Resumo Sintético IPEN</strong>.<br>'
@@ -117,57 +123,46 @@ function montarOficio(s) {
 
   var corpo = gerarCorpo(s);
   var ec    = s.mod === 'comunicacao';
+  var anexos = _gerarAnexos(s);
 
-  /*
-   * Estrutura correta (baseada no modelo oficial PPSC):
-   * 1. Tabela principal: cabeçalho + corpo + fechamento + assinatura + destinatário + rodapé
-   * 2. Páginas de anexos (se houver): cada uma em tabela própria com cabeçalho e rodapé
-   */
-  var paginaPrincipal = '<table id="oficio" class="ofc-print-table">'
-    + '<thead><tr><td class="ofc-print-header">' + cab(s) + '</td></tr></thead>'
-    + '<tbody><tr><td class="ofc-print-body">'
+  return '<div id="oficio">'
+    + cab(s) + lb(1)
     + '<div class="oficio-corpo">'
     + numData(s) + lb(4)
     + '<div class="ofc-sau">' + (s.sau || ph('Saudação')) + '</div>' + lb(4)
     + corpo + lb(4)
     + '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>' + lb(5)
-    + blocoAss(s) + lb(2)
+    + blocoAss(s)
     + (ec ? dJuizo(s) : dCRV())
     + '</div>'
-    + '</td></tr></tbody>'
-    + '<tfoot><tr><td class="ofc-print-footer">' + rod(s) + '</td></tr></tfoot>'
-    + '</table>';
-
-  return paginaPrincipal + _gerarPaginasAnexos(s);
+    + rod(s)
+    + anexos
+    + '</div>';
 }
 
-/* ── Gera páginas de anexos (APÓS a assinatura), cada uma com cabeçalho e rodapé ── */
-function _gerarPaginasAnexos(s) {
+/* ── Gera anexos (APÓS rodapé, com page-break-before em cada um) ──
+   Com position:fixed no cab/rod em print, o cabeçalho e rodapé
+   aparecem automaticamente em todas as páginas incluindo as de anexo.
+   ── */
+function _gerarAnexos(s) {
   var isMulti = s.numero === 'P' && s.reed && s.reed.length > 0;
   if (!isMulti) return '';
-
-  function _paginaAnexo(conteudo) {
-    return '<div class="page-break-preview ofc-no-print">— Nova página: Anexo —</div>'
-      + '<div style="page-break-before:always;break-before:page;">'
-      + '<table class="ofc-print-table" style="width:100%;">'
-      + '<thead><tr><td class="ofc-print-header">' + cab(s) + '</td></tr></thead>'
-      + '<tbody><tr><td class="ofc-print-body" style="padding-top:0.4cm;">' + conteudo + '</td></tr></tbody>'
-      + '<tfoot><tr><td class="ofc-print-footer">' + rod(s) + '</td></tr></tfoot>'
-      + '</table></div>';
-  }
 
   var html = '';
   if (s.mod === 'permuta') {
     var tituloI = 'Relação de Reeducandos — ' + (s.ori ? s.ori.n : 'Unidade de Origem') + ' (Unidade de Origem)';
-    html += _paginaAnexo(gerarAnexoTabela(s.reed, 'I', tituloI, s.saudeOpcao, true, true));
+    html += '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
+          + gerarAnexoTabela(s.reed, 'I', tituloI, s.saudeOpcao, true);
     if (s.permutaDes && s.permutaDes.length > 1) {
       var tituloII = 'Relação de Reeducandos — ' + (s.des ? s.des.n : 'Unidade de Destino') + ' (Em Contrapartida)';
-      html += _paginaAnexo(gerarAnexoTabela(s.permutaDes, 'II', tituloII, null, true, true));
+      html += '<div class="page-break-preview ofc-no-print">— Nova página: Anexo II —</div>'
+            + gerarAnexoTabela(s.permutaDes, 'II', tituloII, null, true);
     }
   } else {
     var temRegime = s.reed.some(function(r) { return r.regime && r.regime.length > 0; });
     var titulo    = temRegime ? null : 'Relação de Custodiados';
-    html += _paginaAnexo(gerarAnexoTabela(s.reed, 'I', titulo, s.saudeOpcao, temRegime, true));
+    html += '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
+          + gerarAnexoTabela(s.reed, 'I', titulo, s.saudeOpcao, temRegime);
   }
   return html;
 }
