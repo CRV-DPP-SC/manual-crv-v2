@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora do Sistema Prisional — CRV/SC</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f4f6f9;color:#1a1a2e;min-height:100vh;padding:2rem 1rem}
+    .wrap{max-width:900px;margin:0 auto}
+    .site-header{background:#1a1a2e;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem}
+    .site-header img{height:70px;width:auto;flex-shrink:0}
+    .site-header-text p{font-size:.72rem;color:#cbd5e1;margin:1px 0;line-height:1.4}
+    .site-header-text p.bold{color:#fff;font-weight:700}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+    .card-title{font-size:.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid6{display:grid;grid-template-columns:repeat(5,1fr) 1.15fr 1.15fr;gap:9px}
+    @media(max-width:760px){.grid6{grid-template-columns:1fr 1fr 1fr}.grid2{grid-template-columns:1fr}}
+    @media(max-width:480px){.grid6{grid-template-columns:1fr 1fr}}
+    label{font-size:.75rem;color:#374151;display:block;margin-bottom:4px;font-weight:500}
+    input[type=number]{width:100%;height:40px;border:1px solid #d1d5db;border-radius:8px;padding:0 10px;font-family:'Courier New',monospace;font-size:.9rem;color:#1a1a2e;background:#fff;transition:border-color .2s,box-shadow .2s;-moz-appearance:textfield}
+    input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+    input[type=number]:focus{outline:none;border-color:#3b5bdb;box-shadow:0 0 0 3px rgba(59,91,219,.12)}
+    .total-box{height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#eef2ff;border:1px solid #c7d2fe;font-family:'Courier New',monospace;font-size:.88rem;font-weight:700;color:#3b5bdb}
+
+    /* Cards de resumo e déficit */
+    .resumo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:.75rem}
+    .resumo-bloco{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:1rem}
+    .resumo-bloco-title{font-size:.62rem;font-weight:700;color:#3b5bdb;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.65rem;border-left:3px solid #3b5bdb;padding-left:8px}
+    .resumo-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:3px 0;border-bottom:1px solid #f0f0f0}
+    .resumo-row:last-child{border-bottom:none;font-weight:700;margin-top:4px;padding-top:6px;font-size:.88rem}
+    .resumo-row span:last-child{font-family:'Courier New',monospace;font-weight:600}
+
+    .deficit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .deficit-bloco{border-radius:10px;padding:1rem;text-align:center;border:1.5px solid}
+    .deficit-bloco.deficit{background:#fef2f2;border-color:#fca5a5}
+    .deficit-bloco.surplus{background:#f0fdf4;border-color:#86efac}
+    .deficit-bloco.neutro{background:#f9fafb;border-color:#e5e7eb}
+    .deficit-bloco-title{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;color:#6b7280}
+    .deficit-val{font-size:1.5rem;font-weight:700;font-family:'Courier New',monospace}
+    .deficit-pct{font-size:.85rem;font-family:'Courier New',monospace;margin-top:2px}
+    .deficit-bloco.deficit .deficit-val,.deficit-bloco.deficit .deficit-pct{color:#b91c1c}
+    .deficit-bloco.surplus .deficit-val,.deficit-bloco.surplus .deficit-pct{color:#15803d}
+    .deficit-bloco.neutro .deficit-val{color:#1a1a2e}
+
+    /* Vagas existentes resumo */
+    .vagas-resumo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+    .vaga-stat{background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:.85rem 1rem;display:flex;justify-content:space-between;align-items:center}
+    .vaga-stat-label{font-size:.72rem;font-weight:600;color:#4338ca;text-transform:uppercase;letter-spacing:.05em}
+    .vaga-stat-val{font-family:'Courier New',monospace;font-size:1.1rem;font-weight:700;color:#3b5bdb}
+
+    .obs-box{background:#fffbeb;border:1px solid #fbbf24;border-radius:8px;padding:.75rem 1rem;font-size:.78rem;color:#92400e;margin-top:.75rem;line-height:1.5;display:none}
+    .obs-box.show{display:block}
+
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+    button{height:38px;padding:0 16px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:.8rem;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,border-color .15s}
+    button:hover{background:#f3f4f6;border-color:#9ca3af}
+    button:active{transform:scale(.98)}
+    .footer-note{text-align:center;font-size:.7rem;color:#9ca3af;margin-top:.5rem}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:#1a1a2e;color:#fff;border-radius:8px;padding:10px 20px;font-size:.8rem;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:9999}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;padding:1rem}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:14px;max-width:580px;width:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-shrink:0}
+    .modal-header h2{font-size:.82rem;font-weight:700;color:#1a1a2e;text-transform:uppercase;letter-spacing:.06em}
+    .modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#6b7280;padding:0 4px;height:auto;line-height:1}
+    .modal-close:hover{color:#1a1a2e;background:none}
+    .modal-body{padding:1.25rem;overflow-y:auto;flex:1}
+    .modal-footer{padding:.85rem 1.25rem;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+    .btn-primary{height:36px;padding:0 20px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer}
+    .btn-primary:hover{background:#2d3a5e}
+    .btn-secondary{height:36px;padding:0 16px;background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:.82rem;cursor:pointer}
+    .btn-secondary:hover{background:#f3f4f6}
+    .step-heading{font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.85rem}
+    .check-list{display:flex;flex-direction:column;gap:7px}
+    .check-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border:1px solid #e5e7eb;border-radius:9px;cursor:pointer;transition:background .15s,border-color .15s;user-select:none}
+    .check-item:hover{background:#f5f7ff;border-color:#c7d2fe}
+    .check-item input[type=radio]{width:16px;height:16px;accent-color:#3b5bdb;cursor:pointer;flex-shrink:0}
+    .check-item span{font-size:.85rem;color:#1a1a2e;font-weight:500}
+    .check-item.item-all{background:#eef2ff;border-color:#c7d2fe}
+    .check-item.item-all span{color:#3b5bdb;font-weight:700}
+    .modal-text{font-family:'Courier New',monospace;font-size:.8rem;line-height:1.8;color:#1a1a2e;white-space:pre-wrap;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:1rem;user-select:none;pointer-events:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="site-header">
+    <img src="data:image/png;base64,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" alt="Polícia Penal SC" />
+    <div class="site-header-text">
+      <p>ESTADO DE SANTA CATARINA</p>
+      <p>SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL</p>
+      <p>DEPARTAMENTO DE POLÍCIA PENAL</p>
+      <p class="bold">CENTRAL DE REGULAÇÃO DE VAGAS - CRV</p>
+    </div>
+  </div>
+
+  <!-- QUADRO 1: VAGAS EXISTENTES -->
+  <div class="card">
+    <div class="card-title">Vagas Existentes</div>
+    <div class="grid2">
+      <div><label>Total de Vagas Masculino</label><input type="number" id="tv_m_input" value="0" min="0" oninput="calc()"></div>
+      <div><label>Total de Vagas Feminino</label><input type="number" id="tv_f_input" value="0" min="0" oninput="calc()"></div>
+    </div>
+  </div>
+
+  <!-- QUADRO 2: RECOLHIDOS MASCULINO -->
+  <div class="card">
+    <div class="card-title">Pessoas Recolhidas — Masculino</div>
+    <div class="grid6">
+      <div><label>Provisório</label><input type="number" id="pm_pr" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Fechado</label><input type="number" id="pm_fe" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Semiaberto</label><input type="number" id="pm_se" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Aberto</label><input type="number" id="pm_ab" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Med. Segurança</label><input type="number" id="pm_ms" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Não Informado</label><input type="number" id="pm_ni" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Total</label><div class="total-box" id="tp_m">—</div></div>
+    </div>
+  </div>
+
+  <!-- QUADRO 3: RECOLHIDOS FEMININO -->
+  <div class="card">
+    <div class="card-title">Pessoas Recolhidas — Feminino</div>
+    <div class="grid6">
+      <div><label>Provisório</label><input type="number" id="pf_pr" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Fechado</label><input type="number" id="pf_fe" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Semiaberto</label><input type="number" id="pf_se" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Aberto</label><input type="number" id="pf_ab" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Med. Segurança</label><input type="number" id="pf_ms" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Não Informado</label><input type="number" id="pf_ni" placeholder="0" min="0" oninput="calc()"></div>
+      <div><label>Total</label><div class="total-box" id="tp_f">—</div></div>
+    </div>
+  </div>
+
+  <!-- QUADRO 4: RESUMO -->
+  <div class="card">
+    <div class="card-title">Resumo — Vagas e Recolhidos</div>
+    <div class="vagas-resumo">
+      <div class="vaga-stat"><span class="vaga-stat-label">Vagas Masculino</span><span class="vaga-stat-val" id="rs_tv_m">21.869</span></div>
+      <div class="vaga-stat"><span class="vaga-stat-label">Vagas Feminino</span><span class="vaga-stat-val" id="rs_tv_f">1.380</span></div>
+    </div>
+    <div class="resumo-grid">
+      <div class="resumo-bloco">
+        <div class="resumo-bloco-title">Masculino — Recolhidos</div>
+        <div class="resumo-row"><span>Provisório</span><span id="rs_pm_pr">—</span></div>
+        <div class="resumo-row"><span>Fechado</span><span id="rs_pm_fe">—</span></div>
+        <div class="resumo-row"><span>Semiaberto</span><span id="rs_pm_se">—</span></div>
+        <div class="resumo-row"><span>Aberto</span><span id="rs_pm_ab">—</span></div>
+        <div class="resumo-row"><span>Med. Segurança</span><span id="rs_pm_ms">—</span></div>
+        <div class="resumo-row"><span>Não Informado</span><span id="rs_pm_ni">—</span></div>
+        <div class="resumo-row"><span>TOTAL</span><span id="rs_tp_m">—</span></div>
+      </div>
+      <div class="resumo-bloco">
+        <div class="resumo-bloco-title">Feminino — Recolhidos</div>
+        <div class="resumo-row"><span>Provisório</span><span id="rs_pf_pr">—</span></div>
+        <div class="resumo-row"><span>Fechado</span><span id="rs_pf_fe">—</span></div>
+        <div class="resumo-row"><span>Semiaberto</span><span id="rs_pf_se">—</span></div>
+        <div class="resumo-row"><span>Aberto</span><span id="rs_pf_ab">—</span></div>
+        <div class="resumo-row"><span>Med. Segurança</span><span id="rs_pf_ms">—</span></div>
+        <div class="resumo-row"><span>Não Informado</span><span id="rs_pf_ni">—</span></div>
+        <div class="resumo-row"><span>TOTAL</span><span id="rs_tp_f">—</span></div>
+      </div>
+    </div>
+    <!-- DÉFICIT -->
+    <div class="deficit-grid">
+      <div class="deficit-bloco neutro" id="def_m">
+        <div class="deficit-bloco-title">Déficit — Masculino</div>
+        <div class="deficit-val" id="def_m_val">—</div>
+        <div class="deficit-pct" id="def_m_pct"></div>
+      </div>
+      <div class="deficit-bloco neutro" id="def_f">
+        <div class="deficit-bloco-title">Déficit — Feminino</div>
+        <div class="deficit-val" id="def_f_val">—</div>
+        <div class="deficit-pct" id="def_f_pct"></div>
+      </div>
+    </div>
+    <div class="deficit-bloco neutro" id="def_t" style="margin-top:12px">
+      <div class="deficit-bloco-title">Déficit Total de Vagas — Masculino + Feminino</div>
+      <div class="deficit-val" id="def_t_val">—</div>
+      <div class="deficit-pct" id="def_t_pct"></div>
+    </div>
+    <div class="obs-box" id="obs-box">
+      <strong>Obs.:</strong> As Pessoas Privadas de Liberdade que constam como "Não Informado" e/ou "Aberto" ingressaram recentemente e aguardam análise e atualização do BPI pelo setor penal.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Gerar Relatório</div>
+    <div class="btn-row">
+      <button onclick="abrirSeletor('texto')">📋 Copiar Texto</button>
+      <button onclick="abrirSeletor('pdf')">📄 Baixar PDF</button>
+      <button onclick="abrirSeletor('doc')">📝 Baixar DOC</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Para Uso do Plantão</div>
+    <div class="btn-row">
+      <button onclick="abrirSeletor('plantao_inicio')">📋 Gerar Texto de Início de Plantão</button>
+      <button onclick="abrirSeletor('plantao_termino')">📋 Gerar Texto de Término de Plantão</button>
+    </div>
+  </div>
+
+  <p class="footer-note">Os valores são calculados automaticamente em tempo real.</p>
+</div>
+
+<!-- MODAL SELETOR -->
+<div class="modal-overlay" id="modal-seletor">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="seletor-titulo">Selecionar Dados</h2>
+      <button class="modal-close" onclick="fecharSeletor()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="step-heading">Selecionar grupo</div>
+      <div class="check-list">
+        <label class="check-item"><input type="radio" name="sel_grupo" value="masc"><span>Masculino</span></label>
+        <label class="check-item"><input type="radio" name="sel_grupo" value="fem"><span>Feminino</span></label>
+        <label class="check-item item-all"><input type="radio" name="sel_grupo" value="ambos" checked><span>Ambos</span></label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharSeletor()">Cancelar</button>
+      <button class="btn-primary" onclick="confirmarSeletor()">Gerar ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESULTADO -->
+<div class="modal-overlay" id="modal-resultado">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="resultado-titulo">Relatório</h2>
+      <button class="modal-close" onclick="fecharResultado()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-text" id="resultado-texto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharResultado()">Fechar</button>
+      <button class="btn-primary" onclick="copiarResultado()">📋 Copiar Texto</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+var REG    = ['pr','fe','se','ab','ms','ni'];
+var REG_NOME = {pr:'Provisório',fe:'Fechado',se:'Semiaberto',ab:'Aberto',ms:'Medida de Segurança',ni:'Não Informado'};
+var TV = {m:0, f:0};
+var P  = {m:{pr:0,fe:0,se:0,ab:0,ms:0,ni:0,tt:0}, f:{pr:0,fe:0,se:0,ab:0,ms:0,ni:0,tt:0}};
+var D  = {m:0, f:0, t:0};
+var PCT= {m:0, f:0, t:0};
+var TV_T = 0;
+
+function fmt(n){return Math.round(n).toLocaleString('pt-BR')}
+function fmtp(n,neg){var s=Math.abs(n).toFixed(2).replace('.',',')+' %';return neg?'-'+s:s}
+function getDate(){var d=new Date();return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}
+
+function temObs(){
+  return (P.m.ni>0||P.m.ab>0||P.f.ni>0||P.f.ab>0);
+}
+var OBS_TEXTO='Obs.: As Pessoas Privadas de Liberdade que constam como "Não Informado" e/ou "Aberto" ingressaram recentemente e aguardam análise e atualização do BPI pelo setor penal.';
+
+function calc(){
+  TV.m = parseInt(document.getElementById('tv_m_input').value)||0;
+  TV.f = parseInt(document.getElementById('tv_f_input').value)||0;
+
+  ['m','f'].forEach(function(s){
+    var pt=0;
+    REG.forEach(function(r){
+      var pi=parseInt(document.getElementById('p'+s+'_'+r).value)||0;
+      P[s][r]=pi; pt+=pi;
+    });
+    P[s].tt=pt;
+    D[s]=TV[s]-pt;
+    PCT[s]=TV[s]>0?((TV[s]-pt)/TV[s])*100:0;
+
+    // Resumo recolhidos
+    document.getElementById('tp_'+s).textContent=fmt(pt);
+    REG.forEach(function(r){
+      document.getElementById('rs_p'+s+'_'+r).textContent=fmt(P[s][r]);
+    });
+    document.getElementById('rs_tp_'+s).textContent=fmt(pt);
+
+    // Vagas resumo
+    document.getElementById('rs_tv_'+s).textContent=fmt(TV[s]);
+
+    // Déficit bloco
+    var el=document.getElementById('def_'+s);
+    el.className='deficit-bloco '+(D[s]<0?'deficit':D[s]>0?'surplus':'neutro');
+    document.getElementById('def_'+s+'_val').textContent=fmt(D[s]);
+    document.getElementById('def_'+s+'_pct').textContent=D[s]!==0?fmtp(PCT[s],D[s]<0):'';
+  });
+
+  // Observação
+  document.getElementById('obs-box').className='obs-box'+(temObs()?' show':'');
+
+  // Déficit total
+  TV_T = TV.m + TV.f;
+  var PT_T = P.m.tt + P.f.tt;
+  D.t = TV_T - PT_T;
+  PCT.t = TV_T > 0 ? ((TV_T - PT_T) / TV_T) * 100 : 0;
+  var elT = document.getElementById('def_t');
+  elT.className = 'deficit-bloco ' + (D.t < 0 ? 'deficit' : D.t > 0 ? 'surplus' : 'neutro');
+  document.getElementById('def_t_val').textContent = fmt(D.t);
+  document.getElementById('def_t_pct').textContent = D.t !== 0 ? fmtp(PCT.t, D.t < 0) : '';
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show')},2500);
+}
+
+/* ── SELETOR ── */
+var _acao='';
+function abrirSeletor(acao){
+  _acao=acao;
+  document.querySelector('input[name="sel_grupo"][value="ambos"]').checked=true;
+  var t={texto:'Copiar Texto',pdf:'Baixar PDF',doc:'Baixar DOC',plantao_inicio:'Início de Plantão',plantao_termino:'Término de Plantão'};
+  document.getElementById('seletor-titulo').textContent=(t[acao]||'Relatório')+' — Selecionar Dados';
+  document.getElementById('modal-seletor').classList.add('open');
+}
+function fecharSeletor(){document.getElementById('modal-seletor').classList.remove('open')}
+function confirmarSeletor(){fecharSeletor();executarAcao();}
+function getSel(){
+  var val=document.querySelector('input[name="sel_grupo"]:checked').value;
+  return{masc:val==='masc'||val==='ambos', fem:val==='fem'||val==='ambos'};
+}
+
+/* ── BUILD TEXTO — Boletim CRV (Copiar Texto) ── */
+function buildTexto(sel,intro){
+  var L=[];
+  if(intro){L.push(intro,'');}
+
+  L.push('BOLETIM PLANTÃO CRV - '+getDate(),'');
+
+  // Vagas existentes
+  L.push('VAGAS EXISTENTES (Com base no Relatório 1.4 do iPEN)');
+  var tvM = sel.masc ? TV.m : 0;
+  var tvF = sel.fem  ? TV.f : 0;
+  var tvT = tvM + tvF;
+  if(sel.masc) L.push('  Masculino: '+fmt(tvM));
+  if(sel.fem)  L.push('  Feminino:  '+fmt(tvF));
+  if(sel.masc&&sel.fem) L.push('  TOTAL:     '+fmt(tvT));
+  L.push('');
+
+  // Pessoas recolhidas — masc+fem somados, pr agrega ab+ni
+  var recM_pr = sel.masc ? P.m.pr + P.m.ab + P.m.ni : 0;
+  var recM_fe = sel.masc ? P.m.fe : 0;
+  var recM_se = sel.masc ? P.m.se : 0;
+  var recM_ms = sel.masc ? P.m.ms : 0;
+  var recF_pr = sel.fem  ? P.f.pr + P.f.ab + P.f.ni : 0;
+  var recF_fe = sel.fem  ? P.f.fe : 0;
+  var recF_se = sel.fem  ? P.f.se : 0;
+  var recF_ms = sel.fem  ? P.f.ms : 0;
+  var pr_tot = recM_pr + recF_pr;
+  var fe_tot = recM_fe + recF_fe;
+  var se_tot = recM_se + recF_se;
+  var ms_tot = recM_ms + recF_ms;
+  var rec_tt  = (sel.masc?P.m.tt:0) + (sel.fem?P.f.tt:0);
+
+  L.push('PESSOAS RECOLHIDAS');
+  L.push('  Provisório:         '+fmt(pr_tot));
+  L.push('  Fechado:            '+fmt(fe_tot));
+  L.push('  Semiaberto:         '+fmt(se_tot));
+  L.push('  Medida de Segurança:'+fmt(ms_tot));
+  L.push('  TOTAL:              '+fmt(rec_tt));
+  L.push('');
+
+  // Déficit — Masculino, Feminino e Total
+  L.push('DÉFICIT DE VAGAS');
+  if(sel.masc){
+    var neg=D.m<0;
+    L.push('  Masculino: '+fmt(D.m)+(D.m!==0?' ('+fmtp(PCT.m,neg)+')':''));
+  }
+  if(sel.fem){
+    var neg=D.f<0;
+    L.push('  Feminino:  '+fmt(D.f)+(D.f!==0?' ('+fmtp(PCT.f,neg)+')':''));
+  }
+  if(sel.masc&&sel.fem){
+    var neg=D.t<0;
+    L.push('  TOTAL:     '+fmt(D.t)+(D.t!==0?' ('+fmtp(PCT.t,neg)+')':''));
+  }
+
+  return L.join('\n');
+}
+
+/* ── EXECUTAR ── */
+function executarAcao(){
+  calc();
+  var sel=getSel();
+  if(_acao==='texto'||_acao==='plantao_inicio'||_acao==='plantao_termino'){
+    var intro=null,titulo='Relatório do Sistema Prisional';
+    if(_acao==='plantao_inicio'){intro='Iniciamos o plantão com o seguinte quantitativo lotacional:';titulo='Texto de Início de Plantão';}
+    if(_acao==='plantao_termino'){intro='Finalizamos o plantão sem alterações e com o seguinte quantitativo lotacional:';titulo='Texto de Término de Plantão';}
+    var txt=buildTexto(sel,intro);
+    document.getElementById('resultado-titulo').textContent=titulo;
+    document.getElementById('resultado-texto').textContent=txt;
+    window._textoModal=txt;
+    document.getElementById('modal-resultado').classList.add('open');
+  } else if(_acao==='pdf'){
+    gerarPDF(sel);
+  } else if(_acao==='doc'){
+    gerarDOC(sel);
+  }
+}
+
+function fecharResultado(){document.getElementById('modal-resultado').classList.remove('open')}
+function copiarResultado(){
+  var text=window._textoModal||'';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(function(){showToast('✓ Texto copiado!');fecharResultado()}).catch(function(){fallbackCopy(text);fecharResultado()});
+  }else{fallbackCopy(text);fecharResultado()}
+}
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();
+  document.execCommand('copy');document.body.removeChild(ta);showToast('✓ Texto copiado!');
+}
+document.addEventListener('click',function(e){
+  if(e.target.id==='modal-seletor')fecharSeletor();
+  if(e.target.id==='modal-resultado')fecharResultado();
+});
+
+/* ── PDF ── */
+function pdfCor(val){return val<0?[185,28,28]:val>0?[21,128,61]:[0,0,0]}
+
+function gerarPDF(sel){
+  if(!window.jspdf){showToast('jsPDF não carregou.');return}
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({unit:'mm',format:'a4'});
+  var L=25,RE=185,lh=6,y=20;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(0,0,0);
+  doc.text('ESTADO DE SANTA CATARINA',L,y);
+  doc.text('SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL',L,y+5);
+  doc.text('DEPARTAMENTO DE POLÍCIA PENAL',L,y+10);
+  doc.setFont('helvetica','bold');
+  doc.text('CENTRAL DE REGULAÇÃO DE VAGAS - CRV',L,y+15);
+  y+=22;
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);doc.line(L,y,190,y);y+=7;
+
+  // Título
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(0,0,0);
+  doc.text('BOLETIM PLANTÃO CRV - '+getDate(),L,y);y+=lh+2;
+
+  // Vagas existentes
+  doc.setFont('helvetica','bold');doc.setFontSize(10);
+  doc.text('VAGAS EXISTENTES (Com base no Relatório 1.4 do iPEN)',L,y);y+=lh;
+  doc.setFont('helvetica','normal');
+  var tvM=sel.masc?TV.m:0, tvF=sel.fem?TV.f:0, tvT=tvM+tvF;
+  if(sel.masc){doc.text('Masculino:',L+5,y);doc.text(fmt(tvM),RE,y,{align:'right'});y+=lh;}
+  if(sel.fem) {doc.text('Feminino:',L+5,y); doc.text(fmt(tvF),RE,y,{align:'right'});y+=lh;}
+  if(sel.masc&&sel.fem){
+    doc.setFont('helvetica','bold');
+    doc.text('TOTAL:',L+5,y);doc.text(fmt(tvT),RE,y,{align:'right'});
+    doc.setFont('helvetica','normal');y+=lh;
+  }
+  y+=3;
+
+  // Pessoas recolhidas — masc+fem somados, pr agrega ab+ni
+  var pr_tot=(sel.masc?P.m.pr+P.m.ab+P.m.ni:0)+(sel.fem?P.f.pr+P.f.ab+P.f.ni:0);
+  var fe_tot=(sel.masc?P.m.fe:0)+(sel.fem?P.f.fe:0);
+  var se_tot=(sel.masc?P.m.se:0)+(sel.fem?P.f.se:0);
+  var ms_tot=(sel.masc?P.m.ms:0)+(sel.fem?P.f.ms:0);
+  var rec_tt=(sel.masc?P.m.tt:0)+(sel.fem?P.f.tt:0);
+  doc.setFont('helvetica','bold');doc.setTextColor(59,91,219);
+  doc.text('PESSOAS RECOLHIDAS',L,y);y+=lh;
+  doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
+  var linhasRec=[['Provisório',pr_tot],['Fechado',fe_tot],['Semiaberto',se_tot],['Medida de Segurança',ms_tot]];
+  linhasRec.forEach(function(row){doc.text(row[0]+':',L+5,y);doc.text(fmt(row[1]),RE,y,{align:'right'});y+=lh;});
+  doc.setFont('helvetica','bold');
+  doc.text('TOTAL:',L+5,y);doc.text(fmt(rec_tt),RE,y,{align:'right'});
+  doc.setFont('helvetica','normal');y+=lh;y+=3;
+
+  // Déficit — Masculino, Feminino, Total
+  doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
+  doc.text('DÉFICIT DE VAGAS',L,y);y+=lh;
+  doc.setFont('helvetica','normal');
+  function linhaDefPDF(val,pct,label){
+    doc.setTextColor(0,0,0);doc.text(label+':',L+5,y);
+    var c=pdfCor(val);doc.setTextColor(c[0],c[1],c[2]);
+    doc.text(fmt(val),RE-28,y,{align:'right'});
+    if(val!==0)doc.text('('+fmtp(pct,val<0)+')',RE,y,{align:'right'});
+    y+=lh;
+  }
+  if(sel.masc) linhaDefPDF(D.m,PCT.m,'Masculino');
+  if(sel.fem)  linhaDefPDF(D.f,PCT.f,'Feminino');
+  if(sel.masc&&sel.fem){
+    doc.setFont('helvetica','bold');
+    linhaDefPDF(D.t,PCT.t,'TOTAL');
+    doc.setFont('helvetica','normal');
+  }
+  doc.setTextColor(0,0,0);y+=3;
+
+  doc.setLineWidth(0.3);doc.setDrawColor(0,0,0);doc.line(L,265,190,265);
+  doc.setFontSize(8);doc.setTextColor(80,80,80);
+  doc.setFont('helvetica','bold');doc.text('POLÍCIA PENAL DE SANTA CATARINA',105,270,{align:'center'});
+  doc.setFont('helvetica','normal');
+  doc.text('Rua Fúlvio Aducci, nº 1214 – Bairro Estreito – CEP 88075-000 – Florianópolis/SC',105,275,{align:'center'});
+  doc.text('Fone: (48) 3665-7310 / e-mail: policiapenal@pp.sc.gov.br',105,280,{align:'center'});
+  doc.save('relatorio-prisional.pdf');
+  showToast('✓ PDF gerado!');
+}
+
+/* ── DOC ── */
+function corSpan(val,texto){
+  var cor=val<0?'#b91c1c':val>0?'#15803d':'#000';
+  return '<span style="color:'+cor+'">'+texto+'</span>';
+}
+
+function gerarDOC(sel){
+  var css='@page{margin:2cm 3cm 2.5cm 3cm;}body{font-family:Arial,sans-serif;font-size:11pt;line-height:1.15;color:#000;}.sep{border:none;border-top:1px solid #000;margin:6pt 0;}.date{text-align:right;margin-bottom:10pt;}h2{font-size:11pt;font-weight:bold;margin:10pt 0 2pt 0;}h3{font-size:10pt;font-weight:bold;margin:8pt 0 2pt 0;color:#3b5bdb;border-left:3px solid #3b5bdb;padding-left:6pt;}table.d{width:100%;border-collapse:collapse;margin-bottom:4pt;}table.d td{font-size:10pt;padding:2pt 4pt;}table.d td:last-child{text-align:right;}.tr td{font-weight:bold;}.obs{font-size:9pt;color:#92400e;background:#fffbeb;border:1pt solid #fbbf24;padding:6pt 8pt;margin-top:8pt;}.fs{border:none;border-top:1px solid #000;margin-top:140pt;margin-bottom:3pt;}.ft{text-align:center;font-size:8pt;color:#555;margin:1pt 0;}';
+
+  var body='<hr class="sep">';
+
+  // Título
+  body+='<h2>BOLETIM PLANTÃO CRV - '+getDate()+'</h2>';
+
+  // Vagas existentes
+  var tvM=sel.masc?TV.m:0, tvF=sel.fem?TV.f:0, tvT=tvM+tvF;
+  body+='<h2>VAGAS EXISTENTES <span style="font-weight:normal;font-size:9pt">(Com base no Relatório 1.4 do iPEN)</span></h2><table class="d">';
+  if(sel.masc) body+='<tr><td>Masculino</td><td>'+fmt(tvM)+'</td></tr>';
+  if(sel.fem)  body+='<tr><td>Feminino</td><td>'+fmt(tvF)+'</td></tr>';
+  if(sel.masc&&sel.fem) body+='<tr class="tr"><td>TOTAL</td><td>'+fmt(tvT)+'</td></tr>';
+  body+='</table>';
+
+  // Pessoas recolhidas — masc+fem somados, pr agrega ab+ni
+  var pr_tot=(sel.masc?P.m.pr+P.m.ab+P.m.ni:0)+(sel.fem?P.f.pr+P.f.ab+P.f.ni:0);
+  var fe_tot=(sel.masc?P.m.fe:0)+(sel.fem?P.f.fe:0);
+  var se_tot=(sel.masc?P.m.se:0)+(sel.fem?P.f.se:0);
+  var ms_tot=(sel.masc?P.m.ms:0)+(sel.fem?P.f.ms:0);
+  var rec_tt=(sel.masc?P.m.tt:0)+(sel.fem?P.f.tt:0);
+  body+='<h2>PESSOAS RECOLHIDAS</h2><table class="d">';
+  body+='<tr><td>Provisório</td><td>'+fmt(pr_tot)+'</td></tr>';
+  body+='<tr><td>Fechado</td><td>'+fmt(fe_tot)+'</td></tr>';
+  body+='<tr><td>Semiaberto</td><td>'+fmt(se_tot)+'</td></tr>';
+  body+='<tr><td>Medida de Segurança</td><td>'+fmt(ms_tot)+'</td></tr>';
+  body+='<tr class="tr"><td>TOTAL</td><td>'+fmt(rec_tt)+'</td></tr></table>';
+
+  // Déficit — Masculino, Feminino, Total
+  body+='<h2>DÉFICIT DE VAGAS</h2><table class="d">';
+  function linhaDefDoc(val,pct,label,bold){
+    var pctSpan=val!==0?' '+corSpan(val,'('+fmtp(pct,val<0)+')'):'';
+    var tr=bold?'class="tr"':'';
+    return'<tr '+tr+'><td>'+label+'</td><td>'+corSpan(val,fmt(val))+pctSpan+'</td></tr>';
+  }
+  if(sel.masc) body+=linhaDefDoc(D.m,PCT.m,'Masculino',false);
+  if(sel.fem)  body+=linhaDefDoc(D.f,PCT.f,'Feminino',false);
+  if(sel.masc&&sel.fem) body+=linhaDefDoc(D.t,PCT.t,'TOTAL',true);
+  body+='</table>';
+
+  body+='<hr class="fs"><p class="ft"><b>POLÍCIA PENAL DE SANTA CATARINA</b></p><p class="ft">Rua Fúlvio Aducci, nº 1214 – Bairro Estreito – CEP 88075-000 – Florianópolis/SC</p><p class="ft">Fone: (48) 3665-7310 / e-mail: policiapenal@pp.sc.gov.br</p>';
+
+  var html='<html><head><meta charset="UTF-8"><style>'+css+'</style></head><body>'+body+'</body></html>';
+  var blob=new Blob([html],{type:'application/msword'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='relatorio-prisional.doc';a.click();
+  showToast('✓ DOC gerado!');
+}
+
+// Inicializar
+calc();
+</script>
+</body>
+</html>

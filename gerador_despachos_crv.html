@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Despachos — CRV/DPP</title>
+<style>
+:root{
+  --azul:#0d2b55;--azul2:#174b8a;--azul3:#2563b0;
+  --ouro:#c8930a;--cinza:#eef2f8;--borda:#c8d6ec;
+  --verde:#1a7a40;--verde-bg:#f0fdf4;--verde-bd:#86efac;
+  --verm:#b91c1c;--verm-bg:#fef2f2;--verm-bd:#fca5a5;
+  --amar:#92400e;--amar-bg:#fffbeb;--amar-bd:#fcd34d;
+  --texto:#0f1e35;--bot:#1e3f72;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:"Segoe UI",Calibri,sans-serif;background:var(--cinza);color:var(--texto)}
+
+/* ── TOPO ── */
+.topo{background:linear-gradient(135deg,var(--azul),var(--azul2));color:#fff;padding:12px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 3px 14px rgba(0,0,0,.35);position:sticky;top:0;z-index:100}
+.topo-icon{font-size:1.6rem;flex-shrink:0}
+.topo h1{font-size:.95rem;font-weight:700}
+.topo p{font-size:.72rem;opacity:.72;margin-top:1px}
+.topo-badge{margin-left:auto;background:var(--ouro);color:#fff;font-size:.65rem;font-weight:800;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.topo-novo{margin-left:.75rem;background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.28);color:rgba(255,255,255,.85);font-family:inherit;font-size:.72rem;font-weight:700;padding:5px 13px;border-radius:8px;cursor:pointer;display:none;transition:all .15s}
+.topo-novo:hover{background:rgba(255,255,255,.22);color:#fff}
+.topo-novo.vis{display:block}
+
+/* ── LAYOUT ── */
+.layout{display:flex;flex-direction:column;height:calc(100vh - 68px)}
+.chat-area{flex:1;overflow-y:auto;padding:22px 0;scroll-behavior:smooth}
+.chat-inner{max-width:680px;margin:0 auto;padding:0 16px;display:flex;flex-direction:column;gap:14px}
+
+/* ── MENSAGENS ── */
+.msg{display:flex;gap:10px;align-items:flex-start;animation:popIn .25s ease}
+@keyframes popIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.bot{justify-content:flex-start}.msg.user{justify-content:flex-end}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0;margin-top:2px;letter-spacing:-.02em}
+.av.bot{background:var(--azul2);color:#fff}.av.user{background:#c8d6ec;color:var(--azul);font-size:.9rem}
+.balao{max-width:82%;padding:12px 16px;border-radius:16px;font-size:.9rem;line-height:1.6}
+.balao.bot{background:var(--bot);color:#fff;border-top-left-radius:4px}
+.balao.user{background:var(--azul3);color:#fff;border-top-right-radius:4px}
+.balao strong{color:#f0c040}
+.balao .sub{font-size:.74rem;opacity:.68;margin-top:4px;display:block}
+
+/* ── OPÇÕES (chips) ── */
+.ow{max-width:680px;margin:0 auto;padding:2px 16px 10px;display:none}
+.or{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.chip{padding:9px 18px;border:2px solid var(--azul3);border-radius:22px;background:#fff;color:var(--azul2);font-size:.84rem;font-weight:700;cursor:pointer;transition:all .18s;font-family:inherit;user-select:none;display:flex;align-items:center;gap:6px}
+.chip:hover{background:var(--azul3);color:#fff;transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,176,.2)}
+.chip.sel{background:var(--azul);color:#fff;border-color:var(--azul)}
+.chip.dis{opacity:.4;pointer-events:none}
+.chip.vd{border-color:var(--verde);color:var(--verde)}
+.chip.vd:hover,.chip.vd.sel{background:var(--verde);color:#fff;border-color:var(--verde)}
+.chip.vm{border-color:var(--verm);color:var(--verm)}
+.chip.vm:hover,.chip.vm.sel{background:var(--verm);color:#fff;border-color:var(--verm)}
+.chip.am{border-color:var(--amar);color:var(--amar)}
+.chip.am:hover,.chip.am.sel{background:var(--amar);color:#fff;border-color:var(--amar)}
+.chip.lg{width:100%;justify-content:flex-start;border-radius:10px;padding:11px 16px}
+
+/* ── INPUT LIVRE ── */
+.iw{max-width:680px;margin:0 auto;padding:0 16px 10px;display:none}
+.ir{display:flex;gap:8px}
+.ir input{flex:1;padding:11px 15px;border:2px solid var(--borda);border-radius:22px;font-size:.88rem;font-family:inherit;color:var(--texto);transition:border .2s}
+.ir input:focus{outline:none;border-color:var(--azul3)}
+.bsend{padding:11px 20px;background:var(--azul);color:#fff;border:none;border-radius:22px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s}
+.bsend:hover{background:var(--azul3)}
+
+/* ── PAINEL MOTIVOS ── */
+.motivos-wrap{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--borda);border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(13,43,85,.1)}
+.motivos-head{padding:10px 14px;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px}
+.motivos-head.vm{background:var(--verm-bg);color:var(--verm);border-bottom:1px solid var(--verm-bd)}
+.motivos-head.am{background:var(--amar-bg);color:var(--amar);border-bottom:1px solid var(--amar-bd)}
+.motivos-body{padding:8px}
+.motivo-item{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border:1.5px solid var(--borda);border-radius:8px;cursor:pointer;font-size:.85rem;color:#334155;background:#f8fafc;margin-bottom:5px;transition:all .13s;user-select:none;line-height:1.45}
+.motivo-item:last-child{margin-bottom:0}
+.motivo-item:hover{border-color:#94a3b8;background:#fff}
+.motivo-item.sel.vm{border-color:var(--verm-bd);background:var(--verm-bg);color:var(--verm)}
+.motivo-item.sel.am{border-color:var(--amar-bd);background:var(--amar-bg);color:var(--amar)}
+.mi-check{width:18px;height:18px;border:2px solid #cbd5e1;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;margin-top:1px;transition:all .13s}
+.motivo-item.sel.vm .mi-check{background:var(--verm);border-color:var(--verm);color:#fff}
+.motivo-item.sel.am .mi-check{background:var(--amar);border-color:var(--amar);color:#fff}
+.mi-texto{flex:1}
+.mi-sub{display:none;margin-top:8px;padding:8px;background:#f1f5f9;border-radius:6px;gap:5px;flex-direction:column}
+.mi-sub.vis{display:flex}
+.sub-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;font-size:.8rem;color:#475569;background:#fff;transition:all .12s;user-select:none}
+.sub-item:hover{border-color:#94a3b8}
+.sub-item.sel.vm{border-color:var(--verm-bd);background:var(--verm-bg);color:var(--verm)}
+.sub-item.sel.am{border-color:var(--amar-bd);background:var(--amar-bg);color:var(--amar)}
+.sub-check{width:15px;height:15px;border:2px solid #cbd5e1;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;transition:all .12s}
+.sub-item.sel.vm .sub-check{background:var(--verm);border-color:var(--verm);color:#fff}
+.sub-item.sel.am .sub-check{background:var(--amar);border-color:var(--amar);color:#fff}
+.sub-outros-input{width:100%;padding:7px 10px;border:1.5px solid var(--borda);border-radius:6px;font-size:.8rem;font-family:inherit;color:var(--texto);margin-top:4px;display:none}
+.sub-outros-input.vis{display:block}
+.sub-outros-input:focus{outline:none;border-color:var(--azul3)}
+.motivos-conf{margin:8px 8px 8px;padding:10px 16px;background:var(--azul);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;width:calc(100% - 16px);transition:background .15s}
+.motivos-conf:hover{background:var(--azul3)}
+
+/* ── DESPACHO FINAL ── */
+.desp-wrap{max-width:680px;margin:0 auto;padding:0 16px 40px;display:none;animation:popIn .3s ease}
+.desp-wrap.vis{display:block}
+.desp-acoes{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.ba{padding:9px 20px;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer;border:none;display:flex;align-items:center;gap:6px;transition:all .2s;font-family:inherit}
+.bc{background:var(--azul);color:#fff}.bc:hover{background:var(--azul3)}
+.bd{background:#1a5e99;color:#fff}.bd:hover{background:#154a78}
+.bn{background:#fff;border:2px solid var(--borda);color:var(--azul)}.bn:hover{background:#f0f0f0}
+.desp-card{background:#fff;border:1px solid var(--borda);border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(13,43,85,.08)}
+.desp-header{padding:14px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:10px}
+.desp-badge{font-size:.8rem;font-weight:800;padding:5px 14px;border-radius:20px;white-space:nowrap}
+.badge-def{background:var(--verde-bg);color:var(--verde);border:1.5px solid var(--verde-bd)}
+.badge-ind{background:var(--verm-bg);color:var(--verm);border:1.5px solid var(--verm-bd)}
+.badge-dev{background:var(--amar-bg);color:var(--amar);border:1.5px solid var(--amar-bd)}
+.desp-subtit{font-size:.8rem;color:#64748b;font-weight:600}
+.desp-body{padding:20px}
+.desp-nota{font-size:.75rem;color:#94a3b8;padding:0 20px 14px;font-style:italic}
+.desp-texto{font-size:.9rem;line-height:1.75;color:#1e293b;white-space:pre-wrap;outline:none;cursor:text;min-height:80px;border:1.5px dashed transparent;border-radius:6px;padding:6px;transition:border .2s}
+.desp-texto:focus{border-color:var(--borda)}
+
+/* ── TYPING ── */
+.typing{display:flex;gap:5px;align-items:center;padding:4px 0}
+.typing span{width:7px;height:7px;background:rgba(255,255,255,.5);border-radius:50%;animation:bounce .9s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:22px;right:22px;background:#111;color:#fff;padding:11px 20px;border-radius:8px;font-size:.82rem;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9999}
+.toast.show{opacity:1}
+
+@media(max-width:600px){.balao{max-width:92%}.chip{font-size:.8rem;padding:8px 14px}}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div class="topo-icon">⚖️</div>
+  <div>
+    <h1>Gerador de Despachos — CRV/DPP</h1>
+    <p>Central de Regulação de Vagas · Polícia Penal de Santa Catarina</p>
+  </div>
+  <div class="topo-badge">SC · 2026</div>
+  <button class="topo-novo" id="btnNovo" onclick="reiniciar()">↩ Novo despacho</button>
+</div>
+
+<div class="layout">
+  <div class="chat-area" id="chatArea">
+    <div class="chat-inner" id="ci"></div>
+  </div>
+  <div class="ow" id="ow"><div class="or" id="or"></div></div>
+  <div class="iw" id="iw"></div>
+</div>
+
+<div class="desp-wrap" id="despWrap">
+  <div class="desp-acoes">
+    <button class="ba bc" onclick="copiarDespacho()">📋 Copiar texto</button>
+    <button class="ba bd" onclick="baixarDoc()">📄 Baixar .doc</button>
+    <button class="ba bn" onclick="reiniciar()">↩ Novo despacho</button>
+  </div>
+  <div class="desp-card">
+    <div class="desp-header">
+      <div class="desp-badge" id="despBadge"></div>
+      <div class="desp-subtit" id="despSubtit"></div>
+    </div>
+    <div class="desp-body">
+      <div class="desp-texto" id="despTexto" contenteditable="true" spellcheck="false"></div>
+    </div>
+    <div class="desp-nota">✏️ Clique no texto para editar antes de copiar.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ESTADO
+// ════════════════════════════════════════════════════════════
+var S = {
+  inciso: null,           // 'I' | 'II' | 'III' | 'PERNOITE' | 'PERMUTA'
+  permulaInciso: null,    // 'II' | 'III' — subinciso da permuta
+  resultado: null,        // 'def' | 'ind' | 'dev'
+  prazo: null,
+  pernoiteMotivo: '',
+  pernoiteSGPe: '',
+  motivos: [],
+  assFlts: [],
+  docFlts: [],
+  docOutros: '',
+};
+
+function rS(){ S={inciso:null,permulaInciso:null,resultado:null,prazo:null,pernoiteMotivo:'',pernoiteSGPe:'',motivos:[],assFlts:[],docFlts:[],docOutros:''}; }
+
+// ════════════════════════════════════════════════════════════
+// HELPERS DOM
+// ════════════════════════════════════════════════════════════
+var ci=document.getElementById('ci');
+var ow=document.getElementById('ow');
+var or_=document.getElementById('or');
+var iw=document.getElementById('iw');
+
+function sb(){ setTimeout(function(){ document.getElementById('chatArea').scrollTo({top:9e6,behavior:'smooth'}); },80); }
+
+function lp(){
+  or_.innerHTML='';
+  ow.style.display='none';
+  iw.style.display='none';
+  iw.innerHTML='';
+}
+
+function mBot(html, delay){
+  delay = delay || 0;
+  return new Promise(function(resolve){
+    setTimeout(function(){
+      var t=document.createElement('div');
+      t.className='msg bot';
+      t.innerHTML='<div class="av bot">CRV</div><div class="balao bot"><div class="typing"><span></span><span></span><span></span></div></div>';
+      ci.appendChild(t); sb();
+      setTimeout(function(){ t.querySelector('.balao').innerHTML=html; resolve(); sb(); }, 480);
+    }, delay);
+  });
+}
+
+function mUser(txt){
+  var d=document.createElement('div');
+  d.className='msg user';
+  d.innerHTML='<div class="balao user">'+esc(txt)+'</div><div class="av user">👤</div>';
+  ci.appendChild(d); sb();
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function chips(ops, cb){
+  lp(); ow.style.display='block';
+  ops.forEach(function(o){
+    var b=document.createElement('button');
+    b.className='chip'+(o.cl?' '+o.cl:'')+(o.lg?' lg':'');
+    b.innerHTML=o.l;
+    b.onclick=function(){
+      document.querySelectorAll('.chip').forEach(function(c){ c.classList.add('dis'); });
+      b.classList.add('sel');
+      mUser(o.l.replace(/<[^>]+>/g,'').trim());
+      lp();
+      setTimeout(function(){ cb(o.v); },300);
+    };
+    or_.appendChild(b);
+  });
+}
+
+function inp(ph, cb){
+  lp(); iw.style.display='block';
+  var row=document.createElement('div'); row.className='ir';
+  var el=document.createElement('input'); el.type='text'; el.placeholder=ph; el.autocomplete='off';
+  var btn=document.createElement('button'); btn.className='bsend'; btn.textContent='Enviar →';
+  var go=function(){
+    var v=el.value.trim();
+    if(!v){ el.focus(); return; }
+    mUser(v); lp(); setTimeout(function(){ cb(v); },300);
+  };
+  btn.onclick=go;
+  el.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); go(); } };
+  row.appendChild(el); row.appendChild(btn); iw.appendChild(row);
+  setTimeout(function(){ el.focus(); },180);
+}
+
+function toast(m){
+  var t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); },2600);
+}
+
+// ════════════════════════════════════════════════════════════
+// PAINEL DE MOTIVOS (checkboxes multi)
+// ════════════════════════════════════════════════════════════
+function buildPainelMotivos(tipo){
+  lp();
+  var cls = tipo==='ind' ? 'vm' : 'am';
+  var label = tipo==='ind' ? '❌ Motivos do Indeferimento' : '🔄 Motivos da Devolução';
+
+  var wrap=document.createElement('div');
+  wrap.style.cssText='max-width:680px;margin:0 auto;padding:0 16px 10px';
+
+  var painel=document.createElement('div');
+  painel.className='motivos-wrap';
+
+  var head=document.createElement('div');
+  head.className='motivos-head '+cls;
+  head.innerHTML='<span>📋</span> '+label+'<span class="sub" style="font-size:.7rem;opacity:.7;font-weight:400;text-transform:none;margin-left:4px">— selecione um ou mais</span>';
+  painel.appendChild(head);
+
+  var body=document.createElement('div');
+  body.className='motivos-body';
+
+  var sel = { fluxo:false, ass:false, doc:false };
+  var assFlts = {};
+  var docFlts = {};
+  var docOutrosVal = '';
+
+  var ASS_OPTS = [
+    {v:'ori_dir',  l:'Diretor(a) da Unidade Prisional de Origem'},
+    {v:'des_dir',  l:'Diretor(a) da Unidade Prisional de Destino'},
+    {v:'ori_sr',   l:'Superintendente da Regional de Origem'},
+    {v:'des_sr',   l:'Superintendente da Regional de Destino'},
+  ];
+
+  var DOC_OPTS = [
+    {v:'bpi',       l:'BPI — Boletim Penal Informativo'},
+    {v:'saude',     l:'Formulário de Saúde'},
+    {v:'mandado',   l:'Mandado de Prisão'},
+    {v:'despacho',  l:'Despacho / Decisão Judicial'},
+    {v:'outros',    l:'Outros'},
+  ];
+
+  ASS_OPTS.forEach(function(o){ assFlts[o.v]=false; });
+  DOC_OPTS.forEach(function(o){ docFlts[o.v]=false; });
+
+  var iFluxo = criarItem(cls,'O fluxo não foi observado na integralidade');
+  iFluxo.onclick = function(){ sel.fluxo=!sel.fluxo; toggleItem(iFluxo,cls,sel.fluxo); };
+  body.appendChild(iFluxo);
+
+  var iAss = criarItem(cls,'Falta de Assinaturas');
+  var subAss = document.createElement('div');
+  subAss.className='mi-sub';
+  ASS_OPTS.forEach(function(o){
+    var si = criarSubItem(cls,o.l);
+    si.onclick=function(e){
+      e.stopPropagation();
+      assFlts[o.v]=!assFlts[o.v];
+      toggleSubItem(si,cls,assFlts[o.v]);
+      var algum=Object.values(assFlts).some(Boolean);
+      sel.ass=algum;
+      toggleItem(iAss,cls,algum);
+    };
+    subAss.appendChild(si);
+  });
+  iAss.querySelector('.mi-texto').appendChild(subAss);
+  iAss.addEventListener('click',function(e){
+    if(e.target.closest('.mi-sub')) return;
+    subAss.classList.toggle('vis');
+  });
+  body.appendChild(iAss);
+
+  var iDoc = criarItem(cls,'Falta de Documento');
+  var subDoc = document.createElement('div');
+  subDoc.className='mi-sub';
+  var outrosInput = document.createElement('input');
+  outrosInput.className='sub-outros-input';
+  outrosInput.placeholder='Especifique o documento...';
+  outrosInput.onclick=function(e){ e.stopPropagation(); };
+  outrosInput.oninput=function(){ docOutrosVal=outrosInput.value.trim(); };
+
+  DOC_OPTS.forEach(function(o){
+    var si = criarSubItem(cls,o.l);
+    si.onclick=function(e){
+      e.stopPropagation();
+      docFlts[o.v]=!docFlts[o.v];
+      toggleSubItem(si,cls,docFlts[o.v]);
+      if(o.v==='outros'){
+        outrosInput.classList.toggle('vis',docFlts.outros);
+        if(docFlts.outros) setTimeout(function(){ outrosInput.focus(); },100);
+      }
+      var algum=Object.values(docFlts).some(Boolean);
+      sel.doc=algum;
+      toggleItem(iDoc,cls,algum);
+    };
+    subDoc.appendChild(si);
+  });
+  subDoc.appendChild(outrosInput);
+  iDoc.querySelector('.mi-texto').appendChild(subDoc);
+  iDoc.addEventListener('click',function(e){
+    if(e.target.closest('.mi-sub')) return;
+    subDoc.classList.toggle('vis');
+  });
+  body.appendChild(iDoc);
+
+  painel.appendChild(body);
+
+  var btnConf = document.createElement('button');
+  btnConf.className='motivos-conf';
+  btnConf.textContent='✓ Confirmar seleção e gerar despacho';
+  btnConf.onclick=function(){
+    var assArr = ASS_OPTS.filter(function(o){ return assFlts[o.v]; }).map(function(o){ return o.l; });
+    var docArr = DOC_OPTS.filter(function(o){ return o.v!=='outros' && docFlts[o.v]; }).map(function(o){ return o.l; });
+    if(docFlts.outros && docOutrosVal) docArr.push(docOutrosVal);
+
+    S.assFlts = assArr;
+    S.docFlts = docArr;
+
+    var partes=[];
+    if(sel.fluxo) partes.push('Fluxo incompleto');
+    if(assArr.length) partes.push('Falta assinatura: '+assArr.map(function(a){ return a.split(' ')[0]+' '+a.split(' ')[1]; }).join(', '));
+    if(docArr.length) partes.push('Falta documento: '+docArr.join(', '));
+    mUser(partes.length ? partes.join(' · ') : '(sem motivo específico)');
+    S.motivos = { fluxo: sel.fluxo, ass: assArr, doc: docArr };
+    lp();
+    wrap.remove();
+    setTimeout(function(){ gerarDespacho(); },400);
+  };
+  painel.appendChild(btnConf);
+  wrap.appendChild(painel);
+
+  ow.style.display='block';
+  or_.appendChild(wrap);
+  sb();
+}
+
+function criarItem(cls, texto){
+  var d=document.createElement('div');
+  d.className='motivo-item';
+  d.innerHTML='<div class="mi-check"></div><div class="mi-texto">'+esc(texto)+'</div>';
+  return d;
+}
+
+function criarSubItem(cls, texto){
+  var d=document.createElement('div');
+  d.className='sub-item';
+  d.innerHTML='<div class="sub-check"></div><span>'+esc(texto)+'</span>';
+  return d;
+}
+
+function toggleItem(el, cls, ativo){
+  el.classList.toggle('sel',ativo);
+  el.classList.toggle(cls,ativo);
+  el.querySelector('.mi-check').textContent = ativo ? '✓' : '';
+}
+
+function toggleSubItem(el, cls, ativo){
+  el.classList.toggle('sel',ativo);
+  el.classList.toggle(cls,ativo);
+  el.querySelector('.sub-check').textContent = ativo ? '✓' : '';
+}
+
+// ════════════════════════════════════════════════════════════
+// FLUXO PRINCIPAL
+// ════════════════════════════════════════════════════════════
+async function iniciar(){
+  rS();
+  await mBot('Olá! Sou o assistente de despachos da <strong>CRV/DPP</strong>.<br><span class="sub">Vamos gerar o despacho em poucos passos.</span>');
+  await passo1();
+}
+
+async function passo1(){
+  await mBot('Qual é a <strong>modalidade</strong> do pedido a ser analisado?');
+  chips([
+    {l:'<strong>Art. 21, I</strong><br><small style="font-weight:400;font-size:.75rem">Emergencial — gerenciamento de crises</small>', v:'I', lg:true},
+    {l:'<strong>Art. 21, II</strong><br><small style="font-weight:400;font-size:.75rem">Pedido da pessoa privada de liberdade ou familiar</small>', v:'II', lg:true},
+    {l:'<strong>Art. 21, III</strong><br><small style="font-weight:400;font-size:.75rem">Adequação da capacidade de ocupação</small>', v:'III', lg:true},
+    {l:'<strong>🔄 Permuta</strong><br><small style="font-weight:400;font-size:.75rem">Transferência em permuta entre unidades</small>', v:'PERMUTA', lg:true},
+    {l:'<strong>🌙 Pernoite</strong><br><small style="font-weight:400;font-size:.75rem">Medida excepcional administrativa</small>', v:'PERNOITE', lg:true},
+    {l:'<strong>⚠️ Indeferimento — Procedimentos</strong><br><small style="font-weight:400;font-size:.75rem">Inobservância das regras convencionadas em reunião</small>', v:'PROC', lg:true, cl:'vm'},
+  ], function(v){
+    S.inciso = v;
+    if(v === 'PERMUTA'){
+      setTimeout(passoPermutaInciso, 200);
+    } else if(v === 'PROC'){
+      setTimeout(gerarDespachoProc, 200);
+    } else {
+      setTimeout(passo2, 200);
+    }
+  });
+}
+
+// ── PERMUTA: escolha do subinciso ──
+async function passoPermutaInciso(){
+  await mBot('A permuta está enquadrada em qual <strong>inciso</strong>?');
+  chips([
+    {l:'<strong>Art. 21, II</strong><br><small style="font-weight:400;font-size:.75rem">Pedido voluntário — iniciativa da pessoa privada de liberdade ou familiar</small>', v:'II', lg:true},
+    {l:'<strong>Art. 21, III</strong><br><small style="font-weight:400;font-size:.75rem">Pedido da unidade prisional — ajuste/equalização de vagas</small>', v:'III', lg:true},
+  ], function(v){
+    S.permulaInciso = v;
+    setTimeout(passo2, 200);
+  });
+}
+
+async function passo2(){
+  await mBot('Qual é o <strong>resultado da análise</strong> para este pedido?');
+
+  if(S.inciso === 'PERMUTA'){
+    chips([
+      {l:'✅ Deferir', v:'def', cl:'vd'},
+      {l:'❌ Indeferir', v:'ind', cl:'vm'},
+    ], function(v){
+      S.resultado = v;
+      setTimeout(v === 'def' ? passo3Deferir : gerarDespacho, 200);
+    });
+  } else {
+    chips([
+      {l:'✅ Deferir', v:'def', cl:'vd'},
+      {l:'❌ Indeferir', v:'ind', cl:'vm'},
+      {l:'🔄 Devolver para Retificação', v:'dev', cl:'am'},
+    ], function(v){
+      S.resultado = v;
+      if(v==='def'){
+        setTimeout(passo3Deferir, 200);
+      } else {
+        setTimeout(passo3IndDev, 200);
+      }
+    });
+  }
+}
+
+async function passo3Deferir(){
+  if(S.inciso === 'I'){
+    await mBot('Por se tratar de situação emergencial, qual é o <strong>prazo máximo</strong> para realização da transferência?');
+    chips([
+      {l:'⏱ 24 horas', v:'24'},
+      {l:'⏱ 48 horas', v:'48'},
+      {l:'⏱ 72 horas', v:'72'},
+      {l:'✏️ Outro prazo', v:'outro'},
+    ], function(v){
+      if(v==='outro'){
+        mBot('Digite o prazo:').then(function(){
+          inp('Ex.: 6 horas, 12 horas...', function(val){
+            S.prazo = val;
+            setTimeout(gerarDespacho, 300);
+          });
+        });
+      } else {
+        S.prazo = v + ' horas';
+        setTimeout(gerarDespacho, 300);
+      }
+    });
+  } else if(S.inciso === 'PERNOITE'){
+    await mBot('Qual é a <strong>finalidade</strong> do pernoite?');
+    chips([
+      {l:'⚖️ Audiência',                v:'comparecimento em audiência'},
+      {l:'🚐 Apoio para Transferência', v:'__transferencia'},
+      {l:'🏥 Consulta Médica',          v:'realização de consulta médica'},
+      {l:'✏️ Outro motivo',             v:'__outro'},
+    ], function(v){
+      if(v === '__outro'){
+        mBot('Descreva a finalidade:').then(function(){
+          inp('Ex.: atendimento jurídico, exame pericial...', function(val){
+            S.pernoiteMotivo = val;
+            S.pernoiteSGPe = '';
+            setTimeout(gerarDespacho, 300);
+          });
+        });
+      } else if(v === '__transferencia'){
+        S.pernoiteMotivo = 'apoio logístico para transferência';
+        mBot('Informe o <strong>número do Processo SGPe</strong>:<span class="sub">Ex.: SEJURI 123456/2026</span>').then(function(){
+          inp('Ex.: SEJURI 123456/2026', function(val){
+            S.pernoiteSGPe = val;
+            setTimeout(gerarDespacho, 300);
+          });
+        });
+      } else {
+        S.pernoiteMotivo = v;
+        S.pernoiteSGPe = '';
+        setTimeout(gerarDespacho, 300);
+      }
+    });
+  } else {
+    // PERMUTA deferimento e demais incisos sem pergunta extra
+    gerarDespacho();
+  }
+}
+
+async function passo3IndDev(){
+  var label = S.resultado === 'ind' ? 'indeferimento' : 'devolução para retificação';
+  await mBot('Selecione o(s) <strong>motivo(s) do '+label+'</strong>:');
+  buildPainelMotivos(S.resultado);
+}
+
+// ════════════════════════════════════════════════════════════
+// INDEFERIMENTO — PROCEDIMENTOS (reunião 05/05/2025)
+// ════════════════════════════════════════════════════════════
+function gerarDespachoProc(){
+  var texto =
+    'Indefere-se o pedido por inobservância das regras estabelecidas e convencionadas em reunião realizada em 05 de maio de 2025, notadamente a obrigatoriedade de elaboração do ofício por meio do Gerador disponível no site desta CRV (https://crv-dpp-sc.github.io/manual/) e do preenchimento do campo "Observação" com o texto do Resumo Sintético gerado ao final do ofício — o qual reúne todas as informações da transferência. Novo pedido poderá ser formulado com a observância dos referidos procedimentos.';
+
+  exibirDespacho(
+    '❌ INDEFERIDO',
+    'badge-ind',
+    'Inobservância de Procedimentos — Reunião de 05/05/2025',
+    texto
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// GERAÇÃO DO TEXTO
+// ════════════════════════════════════════════════════════════
+var LABEL_INCISO = {
+  'I':   'Art. 21, inciso I (gerenciamento de crises ou emergências)',
+  'II':  'Art. 21, inciso II (pedido da pessoa privada de liberdade ou familiar)',
+  'III': 'Art. 21, inciso III (adequação da capacidade de ocupação)',
+};
+
+function gerarDespacho(){
+  var inc = S.inciso;
+  var res = S.resultado;
+  var texto = '';
+  var badge = '';
+  var badgeClass = '';
+
+  // ── PERMUTA ───────────────────────────────────────────────
+  if(inc === 'PERMUTA'){
+    var linc = LABEL_INCISO[S.permulaInciso];
+    var subtitPermuta = 'Transferência em Permuta — Resolução Conjunta Interinstitucional n. 01/2026 — ' + linc;
+
+    if(res === 'def'){
+      badgeClass = 'badge-def';
+      badge = '✅ DEFERIDO';
+      texto = 'Trata-se de pedido de transferência administrativa, na modalidade "transferência em permuta", enquadrado no ' + linc + ', da Resolução Conjunta Interinstitucional n. 01/2026.\n\n'
+            + 'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, encontrando-se atendidos os requisitos formais e materiais exigidos para a modalidade requerida.\n\n'
+            + 'Após a efetivação da transferência, os estabelecimentos penais deverão comunicar ao Juízo competente no prazo máximo de 24 (vinte e quatro) horas em dias úteis, ou no primeiro dia útil seguinte, caso a movimentação ocorra no fim de semana ou feriado, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.\n\n'
+            + 'Destaca-se, ainda, a necessidade de a unidade prisional de origem encaminhar, no momento da remoção, junto ao apenado, os itens de higiene pessoal e os uniformes que lhe foram entregues.';
+    } else {
+      // INDEFERIMENTO PERMUTA — texto fixo
+      badgeClass = 'badge-ind';
+      badge = '❌ INDEFERIDO';
+      texto = 'Trata-se de pedido de transferência administrativa, na modalidade "transferência em permuta", submetido à apreciação desta Central de Regulação de Vagas.\n\n'
+            + 'Após análise do pleito, esta Central de Regulação de Vagas decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas na instrução do expediente:\n\n'
+            + '   * O fluxo procedimental não foi observado na integralidade, conforme as normas internas da CRV/DPP dispostas no Ofício-Circular nº 001/2026/PPSC/CRV (Processo SEJURI nº 00034889/2026) e os requisitos estabelecidos pela Resolução Conjunta Interinstitucional n. 01/2026.\n\n'
+            + 'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação.\n\n'
+            + 'Deste modo, o interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central, dispostas no Ofício-Circular nº 001/2026/PPSC/CRV.\n\n'
+            + 'Eventuais dúvidas poderão ser sanadas diretamente no site desta CRV (https://crv-dpp-sc.github.io/manual/), através dos menus "Hipóteses", "Fluxo Operacional" e "Documentos" — neste último há um checklist disponível —, ou pelo telefone/WhatsApp do plantão: (48) 3665-7330, disponível 24 horas.';
+    }
+    exibirDespacho(badge, badgeClass, subtitPermuta, texto);
+    return;
+  }
+
+  // ── PERNOITE ──────────────────────────────────────────────
+  var linc = LABEL_INCISO[inc];
+  var subtit = inc === 'PERNOITE'
+    ? 'Pernoite — Medida Excepcional Administrativa'
+    : 'Resolução Conjunta Interinstitucional n. 01/2026 — ' + linc;
+
+  if(inc === 'PERNOITE'){
+    if(res === 'def'){
+      badgeClass = 'badge-def';
+      badge = '✅ DEFERIDO';
+      var refDoc = S.pernoiteSGPe ? 'Processo SGPe nº '+S.pernoiteSGPe : 'documentação retro';
+      texto = 'Trata-se de pedido de pernoite, haja vista necessidade de '+S.pernoiteMotivo+'.\n\n'
+            + 'Em análise ao '+refDoc+', a Central de Regulação de Vagas decide pela aprovação do pedido, eis que em conformidade com a legislação aplicável.\n\n'
+            + 'Destaca-se, ainda, a necessidade de a unidade prisional de origem encaminhar, no momento da remoção, junto ao apenado, os itens de higiene pessoal e os uniformes que lhe foram entregues.';
+    } else {
+      var mot = S.motivos || {};
+      var lm = [];
+      if(mot.fluxo) lm.push('   * O fluxo procedimental não foi observado na integralidade, conforme as normas internas da CRV/DPP.');
+      if(mot.ass && mot.ass.length) mot.ass.forEach(function(a){ lm.push('   * Ausência de assinatura: '+a+'.'); });
+      if(mot.doc && mot.doc.length) mot.doc.forEach(function(d){ lm.push('   * Ausência de documento obrigatório: '+d+'.'); });
+      var pC = 'Eventuais dúvidas poderão ser sanadas diretamente no site desta CRV (https://crv-dpp-sc.github.io/manual/), através dos menus "Hipóteses", "Fluxo Operacional" e "Documentos" — neste último há um checklist disponível —, ou pelo telefone/WhatsApp do plantão: (48) 3665-7330, disponível 24 horas.';
+
+      if(res === 'ind'){
+        badgeClass = 'badge-ind'; badge = '❌ INDEFERIDO';
+        var pts = ['Trata-se de pedido de pernoite submetido à apreciação desta Central de Regulação de Vagas.',
+          'Após análise da documentação encaminhada, esta Central decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas:'];
+        if(lm.length) pts.push(lm.join('\n'));
+        pts.push('Diante das irregularidades constatadas, o pedido não atende aos requisitos exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído.\n\n'+pC);
+        texto = pts.join('\n\n');
+      } else {
+        badgeClass = 'badge-dev'; badge = '🔄 DEVOLVIDO PARA RETIFICAÇÃO';
+        var ptd = ['Trata-se de pedido de pernoite submetido à apreciação desta Central de Regulação de Vagas.',
+          'Após análise preliminar, esta Central decide pela devolução do expediente para retificação, tendo em vista as seguintes pendências:'];
+        if(lm.length) ptd.push(lm.join('\n'));
+        ptd.push('Após a devida regularização, o pedido poderá ser novamente submetido à apreciação desta CRV.\n\n'+pC);
+        texto = ptd.join('\n\n');
+      }
+    }
+    exibirDespacho(badge, badgeClass, subtit, texto);
+    return;
+  }
+
+  // ── TRANSFERÊNCIAS (I, II, III) ───────────────────────────
+  if(res === 'def'){
+    badgeClass = 'badge-def';
+    badge = '✅ DEFERIDO';
+    var p1 = 'Trata-se de pedido de transferência administrativa enquadrado no '+linc+', da Resolução Conjunta Interinstitucional n. 01/2026.';
+    var p2 = 'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, encontrando-se atendidos os requisitos formais e materiais exigidos para a modalidade requerida.';
+    var p3x = inc === 'I' ? 'Por se tratar de situação de emergência, a transferência deverá ser realizada no prazo máximo de '+S.prazo+', contados a partir da ciência do presente despacho.' : '';
+    var pF = 'Após a efetivação da transferência, os estabelecimentos penais deverão comunicar ao Juízo competente no prazo máximo de 24 (vinte e quatro) horas em dias úteis, ou no primeiro dia útil seguinte, caso a movimentação ocorra no fim de semana ou feriado, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
+    var pK = 'Destaca-se, ainda, a necessidade de a unidade prisional de origem encaminhar, no momento da remoção, junto ao apenado, os itens de higiene pessoal e os uniformes que lhe foram entregues.';
+    var pp = [p1, p2];
+    if(p3x) pp.push(p3x);
+    pp.push(pF); pp.push(pK);
+    texto = pp.join('\n\n');
+  } else {
+    var mot = S.motivos || {};
+    var lm = [];
+    if(mot.fluxo) lm.push('   * O fluxo procedimental não foi observado na integralidade, conforme as normas internas da CRV/DPP e os requisitos estabelecidos pela Resolução Conjunta Interinstitucional n. 01/2026.');
+    if(mot.ass && mot.ass.length) mot.ass.forEach(function(a){ lm.push('   * Ausência de assinatura: '+a+'.'); });
+    if(mot.doc && mot.doc.length) mot.doc.forEach(function(d){ lm.push('   * Ausência de documento obrigatório: '+d+'.'); });
+
+    var p1 = 'Trata-se de pedido de transferência administrativa enquadrado no '+linc+', da Resolução Conjunta Interinstitucional n. 01/2026, submetido à apreciação desta Central de Regulação de Vagas.';
+    var pC = 'Eventuais dúvidas poderão ser sanadas diretamente no site desta CRV (https://crv-dpp-sc.github.io/manual/), através dos menus "Hipóteses", "Fluxo Operacional" e "Documentos" — neste último há um checklist disponível —, ou pelo telefone/WhatsApp do plantão: (48) 3665-7330, disponível 24 horas.';
+
+    if(res === 'ind'){
+      badgeClass = 'badge-ind'; badge = '❌ INDEFERIDO';
+      var p2 = 'Após análise da documentação encaminhada, esta Central de Regulação de Vagas decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas na instrução do expediente:';
+      var pF = 'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+pC;
+      var pp = [p1, p2];
+      if(lm.length) pp.push(lm.join('\n'));
+      pp.push(pF);
+      texto = pp.join('\n\n');
+    } else {
+      badgeClass = 'badge-dev'; badge = '🔄 DEVOLVIDO PARA RETIFICAÇÃO';
+      var p2d = 'Após análise preliminar da documentação encaminhada, esta Central de Regulação de Vagas decide pela devolução do expediente para retificação, tendo em vista a necessidade de complementação da instrução processual, conforme as pendências identificadas abaixo:';
+      var pFd = 'Após a devida regularização de todas as pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central de Regulação de Vagas. Ressalta-se que a reapresentação deverá observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV/DPP.\n\n'+pC;
+      var ppd = [p1, p2d];
+      if(lm.length) ppd.push(lm.join('\n'));
+      ppd.push(pFd);
+      texto = ppd.join('\n\n');
+    }
+  }
+
+  exibirDespacho(badge, badgeClass, subtit, texto);
+}
+
+// ════════════════════════════════════════════════════════════
+// EXIBIÇÃO
+// ════════════════════════════════════════════════════════════
+function exibirDespacho(badge, badgeClass, subtit, texto){
+  mBot('Despacho gerado com sucesso! Revise e copie abaixo.', 0).then(function(){
+    setTimeout(function(){
+      document.getElementById('despBadge').textContent = badge;
+      document.getElementById('despBadge').className = 'desp-badge '+badgeClass;
+      document.getElementById('despSubtit').textContent = subtit;
+      document.getElementById('despTexto').textContent = texto;
+
+      document.getElementById('chatArea').style.display='none';
+      document.getElementById('ow').style.display='none';
+      document.getElementById('iw').style.display='none';
+      document.getElementById('despWrap').classList.add('vis');
+      document.getElementById('btnNovo').classList.add('vis');
+      window.scrollTo({top:0,behavior:'smooth'});
+    },600);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// AÇÕES DO DESPACHO
+// ════════════════════════════════════════════════════════════
+function copiarDespacho(){
+  var txt = document.getElementById('despTexto').innerText || document.getElementById('despTexto').textContent;
+  navigator.clipboard.writeText(txt)
+    .then(function(){ toast('✅ Texto copiado!'); })
+    .catch(function(){
+      var ta=document.createElement('textarea');
+      ta.value=txt; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('✅ Texto copiado!');
+    });
+}
+
+function baixarDoc(){
+  var badge = document.getElementById('despBadge').textContent;
+  var txt = document.getElementById('despTexto').innerText || document.getElementById('despTexto').textContent;
+  var hoje = new Date();
+  var meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var data = hoje.getDate()+' de '+meses[hoje.getMonth()]+' de '+hoje.getFullYear();
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<style>body{font-family:Arial,sans-serif;font-size:11pt;margin:3cm 2.5cm 2.5cm 3cm;color:#000;line-height:1.6}'
+    +'h2{font-size:10pt;font-weight:bold;text-transform:uppercase;margin-bottom:4pt}'
+    +'p{margin:0 0 12pt;white-space:pre-wrap;text-align:justify}'
+    +'.cab{border-bottom:1.5pt solid #333;padding-bottom:8pt;margin-bottom:16pt}'
+    +'.badge{font-weight:bold;font-size:11pt;}'
+    +'.sub{font-size:9pt;color:#555;margin-top:3pt}'
+    +'.data{text-align:right;font-size:10pt;margin-bottom:20pt;}'
+    +'</style></head><body>'
+    +'<div class="cab">'
+    +'<h2>CENTRAL DE REGULAÇÃO DE VAGAS — CRV/DPP</h2>'
+    +'<div class="sub">Departamento de Polícia Penal · Secretaria de Estado de Justiça e Reintegração Social · SC</div>'
+    +'</div>'
+    +'<div class="data">Florianópolis, '+data+'.</div>'
+    +'<div class="badge">'+esc(badge)+'</div>'
+    +'<div class="sub" style="margin-bottom:16pt">'+esc(document.getElementById('despSubtit').textContent)+'</div>'
+    +'<p>'+esc(txt).replace(/\n/g,'<br>')+'</p>'
+    +'</body></html>';
+
+  var blob=new Blob(['\ufeff'+html],{type:'application/msword'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='despacho-crv.doc';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('📄 Download iniciado!');
+}
+
+// ════════════════════════════════════════════════════════════
+// REINICIAR
+// ════════════════════════════════════════════════════════════
+function reiniciar(){
+  rS();
+  document.getElementById('ci').innerHTML='';
+  document.getElementById('despWrap').classList.remove('vis');
+  document.getElementById('chatArea').style.display='';
+  document.getElementById('btnNovo').classList.remove('vis');
+  lp();
+  iniciar();
+}
+
+// BOOT
+document.addEventListener('DOMContentLoaded', function(){ iniciar(); });
+</script>
+</body>
+</html>

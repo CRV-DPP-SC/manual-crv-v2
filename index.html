@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="claro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Procedimentos Operacionais da CRV — Central de Regulação de Vagas. Polícia Penal de Santa Catarina." />
+  <title>Procedimentos Operacionais CRV — Polícia Penal SC</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800;900&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="icon" href="img/brasao.png" />
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<header class="topbar">
+  <button class="btn-menu" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+  <img src="img/brasao.png" alt="Brasão Polícia Penal SC" class="topbar-brasao" />
+  <div class="topbar-sep"></div>
+  <div class="topbar-hero">
+    <div class="topbar-hero-badge">🛡️ Res. Conjunta Interinstitucional nº 1/2026 · TJSC + SEJURI</div>
+    <div class="topbar-hero-titulo">Central de Regulação de Vagas <span>— CRV</span></div>
+    <div class="topbar-hero-sub">Polícia Penal SC · DPP · Procedimentos Operacionais</div>
+  </div>
+  <div id="topbar-user-area" class="topbar-user-area"></div>
+  <button class="btn-tema" onclick="toggleTema()" title="Alternar modo escuro/claro" aria-label="Alternar tema">🌙</button>
+</header>
+
+<!-- ══════════════════ LAYOUT ══════════════════ -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Manual</div>
+      <button class="nav-item ativo" data-secao="inicio" onclick="navegarPara('inicio')">
+        <span class="nav-icon">🏠</span> Início
+      </button>
+      <button class="nav-item" data-secao="hipoteses" onclick="navegarPara('hipoteses')">
+        <span class="nav-icon">📌</span> Hipóteses
+      </button>
+      <button class="nav-item" data-secao="fluxo" onclick="navegarPara('fluxo')">
+        <span class="nav-icon">🔄</span> Fluxo Operacional
+      </button>
+      <button class="nav-item" data-secao="documentos" onclick="navegarPara('documentos')">
+        <span class="nav-icon">📂</span> Documentos Necessários
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Ferramentas</div>
+      <a class="nav-item" href="gerador-oficios-v2/index.html" target="_blank">
+        <span class="nav-icon">⚙️</span> Gerador de Ofícios ↗
+      </a>
+      <a class="nav-item" href="guia_crv_dpp.html" target="_blank">
+        <span class="nav-icon">📄</span> Guia — Gerador de Ofícios ↗
+      </a>
+      <a class="nav-item" href="https://ppsc.com.br" target="_blank" rel="noopener">
+        <span class="nav-icon">🌐</span> Portal de Transferências ↗
+      </a>
+      <button class="nav-item" data-secao="unidades" onclick="navegarPara('unidades')">
+        <span class="nav-icon">🏛️</span> Unidades Prisionais
+      </button>
+      <button class="nav-item" data-secao="legislacao" onclick="navegarPara('legislacao')">
+        <span class="nav-icon">📚</span> Legislação
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Acesso</div>
+      <a class="nav-item nav-item-painel" href="painel.html" target="_blank">
+        <span class="nav-icon">🏛️</span> Painel da Unidade ↗
+      </a>
+      <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
+        <span class="nav-icon">🔒</span> CRV
+      </button>
+    </div>
+    <div class="sidebar-rodape">
+      <p>Res. Conj. Interinst. nº 1/2026<br>TJSC + SEJURI · DJ nº 4.661<br>04/02/2026 · DPP / SEJURI / SC</p>
+    </div>
+  </nav>
+
+  <!-- Overlay mobile -->
+  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- ══════ CONTEÚDO ══════ -->
+  <main class="conteudo">
+
+    <!-- ══════════════════════════════════════════
+         INÍCIO
+    ══════════════════════════════════════════ -->
+    <section id="inicio" class="secao ativa">
+
+      <div class="wrapper">
+
+        <div class="card mb-4">
+          <div class="card-header"><span>🏛️</span><h3>O que é a CRV</h3></div>
+          <div class="card-body">
+            <div class="sobre-grid">
+              <div class="sobre-col">
+                <h3>📋 Função</h3>
+                <p>A <strong>Central de Regulação de Vagas (CRV)</strong> é o órgão subordinado diretamente ao <strong>Diretor Geral do DPP</strong>, responsável por analisar, coordenar e autorizar todas as transferências de pessoas privadas de liberdade no sistema prisional de Santa Catarina.</p>
+                <p>Criada no âmbito do <strong>Plano Pena Justa</strong> — iniciativa nacional do MJSP e CNJ —, atua na interface entre o Poder Judiciário e o Poder Executivo para gerenciar o índice de ocupação prisional.</p>
+              </div>
+              <div class="sobre-col">
+                <h3>⚖️ Base Normativa</h3>
+                <p>Os procedimentos da CRV são regidos pela <strong>Resolução Conjunta Interinstitucional nº 1/2026</strong>, editada em conjunto pelo <strong>TJSC</strong> e pela <strong>SEJURI</strong>.</p>
+                <p>A atuação é orientada pelo princípio constitucional da <strong>Dignidade da Pessoa Humana</strong> (art. 1º, III, CF/88), assegurando distribuição racional de vagas como obrigação constitucional e convencional.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="norma-badge-bar">
+          <span>📌</span>
+          <div><strong>Res. Conj. Interinst. nº 1/2026 — TJSC + SEJURI</strong><br>
+          <span style="font-size:.72rem;opacity:.8;">Em vigor desde 04/02/2026 · DJ nº 4.661 · Programa Pena Justa · DPP/SEJURI/SC</span></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         HIPÓTESES
+    ══════════════════════════════════════════ -->
+    <section id="hipoteses" class="secao">
+      <div class="page-hero">
+        <h2>📌 Hipóteses de Transferência</h2>
+        <p>Situações previstas na Res. Conjunta nº 1/2026 que autorizam o pedido de transferência.</p>
+      </div>
+      <div class="wrapper">
+        <div class="alerta alerta-atencao mb-3">
+          <span class="alerta-icone">⚠️</span>
+          <div>O pedido que não se enquadre em nenhuma das hipóteses abaixo será <strong>indeferido de plano</strong> pela CRV.</div>
+        </div>
+        <div class="accordion">
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🚨 &nbsp;I — Segurança / Emergência (Art. 21, I)<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <p>A transferência em caráter emergencial somente será admitida quando houver <strong>risco atual, concreto e relevante</strong>, devidamente demonstrado pela unidade solicitante.</p><br>
+              <p>A transferência possui natureza <strong>administrativa e não punitiva</strong>.</p><br>
+              <div style="border-left:4px solid var(--vermelho);padding:.5rem 1rem;margin-bottom:1rem;background:rgba(220,38,38,.06);border-radius:0 4px 4px 0;">
+                <p style="font-size:.87rem;margin:0 0 .5rem;">Abrange situações de instabilidade interna, conflitos, risco à ordem da unidade, risco à integridade física do reeducando ou de terceiros, ameaças, motins, rebeliões.</p>
+                <p style="font-size:.87rem;margin:.5rem 0 0;"><strong>Com PAD:</strong> isolamento preventivo por até 10 dias, prorrogável por mais 20. <strong>Sem PAD:</strong> preso em cela de convívio, com todos os direitos preservados.</p>
+              </div>
+              <p><strong>Assinaturas obrigatórias:</strong> Diretor de Origem + Diretor de Destino + Superintendente(s) Regional(is).</p>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🔄 &nbsp;II — Pedido Voluntário (Art. 21, II)<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <div class="alerta alerta-info" style="margin:0;">
+                <span class="alerta-icone">🌐</span>
+                <div><strong>Portal Online — PPSC</strong><br>
+                Para solicitações por pedido do preso, familiar ou advogado, acesse o <strong>Portal da Polícia Penal de SC</strong>: <a href="https://ppsc.com.br" target="_blank" rel="noopener" style="font-weight:700;">ppsc.com.br ↗</a>. Envios de memorandos diretamente à CRV serão indeferidos.</div>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">⚖️ &nbsp;III — Adequação da Capacidade de Ocupação (Art. 21, III)<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <p><strong>Definição:</strong> Redistribuição administrativa destinada à adequação da capacidade de ocupação das unidades prisionais.</p><br>
+              <ul style="margin:.75rem 0 0 1.25rem;list-style:disc;font-size:.87rem;line-height:2.1;">
+                <li><strong>Larga escala / complexo:</strong> Transferência rotineira dentro do mesmo Complexo;</li>
+                <li><strong>Pontual:</strong> Transferência individual por perfil específico;</li>
+                <li><strong>Alteração de Regime:</strong> Transferência para unidade adequada em razão de progressão, regressão ou prisão provisória.</li>
+              </ul><br>
+              <div style="background:var(--azul-50);border-left:4px solid var(--azul-400);padding:.7rem 1rem;border-radius:0 6px 6px 0;font-size:.86rem;line-height:1.7;">
+                📋 <strong>Mesmo Complexo Prisional:</strong> não será necessário o envio de ofício via SGPe, sendo suficiente o cadastro no i-PEN com menção ao contato prévio com o Diretor da unidade de destino.
+              </div><br>
+              <p><strong>Metas — Plano Pena Justa:</strong> 130% (1º ano) → 120% (2º ano) → 100% (3º ano).</p>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🏛️ &nbsp;IV — Mandado de Prisão de Comarca Diversa<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <p>Preso capturado em comarca diversa daquela que expediu a ordem de prisão, devendo ser transferido para a unidade responsável pela circunscrição da autoridade judiciária expedidora.</p><br>
+              <ul style="margin:.75rem 0 0 1.25rem;list-style:disc;font-size:.87rem;line-height:2.1;">
+                <li>Mandado de prisão expedido pela Vara competente;</li>
+                <li>O Diretor da unidade de destino deve anuir ao expediente.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🌙 &nbsp;V — Pernoite<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <p>Necessidade de permanência temporária do custodiado em unidade diversa da sua por motivo fundamentado.</p><br>
+              <div style="background:var(--azul-50);border-left:4px solid var(--azul-400);padding:.7rem 1rem;border-radius:0 6px 6px 0;font-size:.86rem;">
+                📋 Não é necessário ofício via SGPe — basta cadastro no i-PEN. Consignar contato prévio com o Diretor ou Chefe de Segurança da unidade de destino.
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🔒 &nbsp;VI — Unidade de Segurança Máxima / RDD<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <p>Inclusão de preso de alta periculosidade na USM, mediante decisão judicial de RDD e deliberação da Comissão Deliberativa do DPP.</p><br>
+              <ul style="margin:.75rem 0 0 1.25rem;list-style:disc;font-size:.87rem;line-height:2.1;">
+                <li>A gestão local somente pode solicitar o RDD ao Judiciário <strong>após autorização expressa do DPP</strong>;</li>
+                <li>Com o RDD deferido, o processo é encaminhado à CRV para cadastro no sistema.</li>
+              </ul><br>
+              <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;">
+                🔒 <strong>Sigilo no SGPe:</strong> ao cadastrar o processo, alterar o controle de acesso para: <em>"Usuários em setor de tramitação do Processo, Interessado e Setor de Competência"</em>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         FLUXO OPERACIONAL
+    ══════════════════════════════════════════ -->
+    <section id="fluxo" class="secao">
+      <div class="page-hero">
+        <h2>🔄 Fluxo Operacional Passo a Passo</h2>
+        <p>Etapas do processo de transferência. Clique em cada etapa para expandir.</p>
+      </div>
+      <div class="wrapper">
+        <div class="alerta alerta-urgente mb-3">
+          <span class="alerta-icone">🚨</span>
+          <div><strong>Emergenciais — Ligue imediatamente para a CRV:</strong> <strong>(48) 3665-7330</strong></div>
+        </div>
+        <div class="flow-wrapper">
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">1</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-actor">Unidade Prisional de Origem</div>
+              <div class="flow-title">Identificação da hipótese e elaboração do Ofício</div>
+              <div class="flow-desc">Identificar a hipótese que justifica o pedido e elaborar o ofício endereçado à CRV.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <ul>
+                  <li>Identificar a hipótese: emergencial (Art. 21, I), adequação de vagas (Art. 21, III) ou mandado de comarca diversa</li>
+                  <li>Acesse o <a href="gerador-oficios-v2/index.html" target="_blank">Gerador de Ofícios</a> para criar o documento com formatação oficial</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">2</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-actor">Unidade Prisional de Origem</div>
+              <div class="flow-title">Processo SGPe — único e permanente</div>
+              <div class="flow-desc">Cada unidade deve possuir um <strong>Processo SGPe único e permanente</strong> para coleta de assinaturas.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <div class="flow-alert flow-alert-info">ℹ️ O processo SGPe é <strong>único por unidade e permanente</strong>, acumulando todos os pedidos ao longo do tempo.</div>
+                <ul>
+                  <li><strong>Assunto:</strong> 2850 — Movimentação Penitenciária</li>
+                  <li><strong>Classe:</strong> 2 — Solicitação de Transferência da Pessoa Presa</li>
+                  <li><strong>Setor de Competência:</strong> Central de Regulação de Vagas (PPSC/CRV)</li>
+                  <li>Inserir documentos em ordem cronológica: <strong>Ofício → demais documentos</strong></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">3</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-title">Assinaturas obrigatórias</div>
+              <div class="flow-desc">Diretor de Origem + Diretor de Destino + Superintendente(s) Regional(is).</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <div class="flow-alert flow-alert-warn">⚠️ A ausência de qualquer assinatura ensejará a <strong>reprovação do pedido</strong>.</div>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">4</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-actor">Superintendência(s) Regional(is)</div>
+              <div class="flow-title">Anuência do(s) Superintendente(s)</div>
+              <div class="flow-desc">SR de origem sempre obrigatória. Se envolver outra SR, a de destino também deve anuir.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <ul>
+                  <li>Mesma SR: apenas SR de origem</li>
+                  <li>SRs diferentes: SR de origem + SR de destino</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">5</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-title">Materialização dos Documentos no SGPe</div>
+              <div class="flow-desc">Selecionar as peças pertinentes e executar a materialização, gerando um único PDF consolidado.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <ul><li>Ordem: <strong>Autuação → Ofício → Demais Documentos</strong></li></ul>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">6</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-title">Cadastro no i-PEN</div>
+              <div class="flow-desc">Cadastrar o pedido no i-PEN anexando o PDF materializado.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <ul>
+                  <li>Na fundamentação: mencionar o motivo (Art. 21, I, II ou III) e a anuência dos gestores</li>
+                  <li>Annexar o arquivo PDF materializado</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">7</div><div class="flow-line"></div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-actor">CRV</div>
+              <div class="flow-title">Análise e deliberação pela CRV</div>
+              <div class="flow-desc">A CRV recebe, analisa e delibera: deferir, indeferir ou devolver para saneamento.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <ul>
+                  <li><strong>Deferir:</strong> autoriza a transferência</li>
+                  <li><strong>Indeferir:</strong> pedido não atende os requisitos</li>
+                  <li><strong>Devolver:</strong> documentação incompleta</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-left"><div class="flow-circle">8</div></div>
+            <div class="flow-step-body" onclick="toggleFlowStep(this)">
+              <div class="flow-actor">Unidade Prisional</div>
+              <div class="flow-title">Execução + Comunicação ao Judiciário</div>
+              <div class="flow-desc">Após autorização: efetivação e comunicação ao Juízo competente em <strong>até 24 horas</strong>.</div>
+              <span class="flow-toggle-btn">▶ Ver detalhes</span>
+              <div class="flow-details">
+                <ul>
+                  <li>Comunicar ao Juízo de Saída e ao Juízo de Entrada</li>
+                  <li>Prazo: <strong>até 24 horas</strong> após a efetivação</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         DOCUMENTOS
+    ══════════════════════════════════════════ -->
+    <section id="documentos" class="secao">
+      <div class="page-hero">
+        <h2>📂 Documentos Necessários</h2>
+        <p>Checklist por hipótese. Pedidos incompletos serão devolvidos.</p>
+      </div>
+      <div class="wrapper">
+        <div class="accordion">
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🚨 Segurança / Emergência — Checklist<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <p style="font-size:.83rem;font-weight:700;color:var(--vermelho);margin-bottom:.5rem;">Com PAD</p>
+              <ul style="list-style:none;font-size:.875rem;line-height:2.3;margin-bottom:1rem;">
+                <li>☐ <strong>Ofício</strong> — Modelo A (Com PAD); Art. 21, I da Res. nº 1/2026</li>
+                <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino + Superintendente(s)</li>
+              </ul>
+              <p style="font-size:.83rem;font-weight:700;color:var(--azul-500);margin-bottom:.5rem;">Sem PAD</p>
+              <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
+                <li>☐ <strong>Ofício</strong> — Modelo B (Sem PAD); Art. 21, I da Res. nº 1/2026</li>
+                <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino + Superintendente(s)</li>
+              </ul>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">⚖️ Adequação da Capacidade de Ocupação — Checklist<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
+                <li>☐ <strong>Ofício</strong> — Art. 21, III da Res. nº 1/2026</li>
+                <li>☐ <strong>Lista dos presos indicados</strong> — nome, IPEN, regime, perfil</li>
+                <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino (+ SR se unidades distintas)</li>
+                <li style="color:var(--azul-500);font-size:.82rem;border-top:1px dashed var(--border);padding-top:.4rem;margin-top:.2rem;">📋 <strong>Mesmo Complexo:</strong> basta cadastro no i-PEN com menção ao contato prévio.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🏛️ Mandado de Prisão de Comarca Diversa — Checklist<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
+                <li>☐ <strong>Ofício da Direção</strong> — Art. 21, III da Res. nº 1/2026 e Art. 24 da PN 2189/2025</li>
+                <li>☐ <strong>Cópia do Mandado de Prisão</strong></li>
+                <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino</li>
+              </ul>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🌙 Pernoite — Checklist<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
+                <li>☐ <strong>Pedido cadastrado no i-PEN</strong> com fundamentação</li>
+                <li>☐ <strong>Menção expressa</strong> de contato prévio com o Diretor de destino</li>
+                <li style="color:var(--txt-3);font-size:.8rem;">ℹ️ Não é exigida anuência dos Superintendentes nem envio via SGPe.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">🔒 Segurança Máxima / RDD — Checklist<span class="accordion-seta">▼</span></div>
+            <div class="accordion-body">
+              <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
+                <li>☐ <strong>Autorização expressa do DPP</strong> — Comissão Deliberativa da USM</li>
+                <li>☐ <strong>Ofício de solicitação de RDD</strong> ao juízo competente</li>
+                <li>☐ <strong>Decisão judicial</strong> que determina a inclusão em RDD</li>
+                <li>☐ <strong>BO, PAD, Relatórios</strong> e demais documentos pertinentes</li>
+                <li>☐ <strong>Assinaturas:</strong> Diretor + Superintendente Regional de origem</li>
+              </ul>
+              <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-top:10px;">
+                🔒 <strong>Sigilo no SGPe:</strong> alterar o controle de acesso para <em>"Usuários em setor de tramitação do Processo, Interessado e Setor de Competência"</em>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         LEGISLAÇÃO
+    ══════════════════════════════════════════ -->
+    <section id="legislacao" class="secao">
+      <div class="page-hero">
+        <h2>📚 Legislação</h2>
+        <p>Base normativa aplicável aos procedimentos da CRV em Santa Catarina.</p>
+      </div>
+      <div class="wrapper">
+        <div class="leg-grid">
+          <a class="leg-card" href="https://busca.tjsc.jus.br/buscatextual/integra.do?cdSistema=1&cdDocumento=188528&cdCategoria=261" target="_blank" rel="noopener">
+            <div class="leg-icon">📜</div>
+            <div class="leg-body">
+              <div class="leg-title">Res. Conj. Interinst. n.º 1/2026</div>
+              <span class="leg-type-badge norma-principal">📌 Norma Principal</span>
+              <div class="leg-sub">Cria e regulamenta a Central de Regulação de Vagas do sistema prisional de SC.</div>
+              <span class="leg-badge">🔗 TJSC</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.sap.sc.gov.br/download/portaria-2189-2025-procedimentos-operacionais-dpp/" target="_blank" rel="noopener">
+            <div class="leg-icon">📋</div>
+            <div class="leg-body">
+              <div class="leg-title">Portaria n.º 2189/GABS/SEJURI/2025</div>
+              <div class="leg-sub">Instrução Normativa DPP/SC — procedimentos operacionais do Departamento de Polícia Penal.</div>
+              <span class="leg-badge">🔗 SAP/SC</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.sap.sc.gov.br/download/01_lei-complementar-no-774-de-27-de-outubro-de-2021/" target="_blank" rel="noopener">
+            <div class="leg-icon">🏛️</div>
+            <div class="leg-body">
+              <div class="leg-title">LC Estadual n.º 774/2021 — Estatuto da Polícia Penal/SC</div>
+              <div class="leg-sub">Dispõe sobre o Estatuto da Polícia Penal do Estado de Santa Catarina.</div>
+              <span class="leg-badge">🔗 SAP/SC</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/leis/l7210.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">⚖️</div>
+            <div class="leg-body">
+              <div class="leg-title">Lei de Execução Penal</div>
+              <span class="leg-type-badge norma-federal">🏛️ Lei Federal</span>
+              <div class="leg-sub">Lei n.º 7.210/1984 — regula a execução das penas e medidas de segurança.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/_ato2007-2010/2008/lei/l11671.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">🔐</div>
+            <div class="leg-body">
+              <div class="leg-title">Transferência para Presídios Federais</div>
+              <div class="leg-sub">Lei n.º 11.671/2008 — inclusão de presos em estabelecimentos federais de segurança máxima.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/decreto-lei/del2848compilado.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">📗</div>
+            <div class="leg-body">
+              <div class="leg-title">Código Penal</div>
+              <div class="leg-sub">Decreto-Lei n.º 2.848/1940 — tipos penais, penas e regime de cumprimento.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/decreto-lei/del3689.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">📘</div>
+            <div class="leg-body">
+              <div class="leg-title">Código de Processo Penal</div>
+              <div class="leg-sub">Decreto-Lei n.º 3.689/1941 — regras do processo penal, prisão e execução.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/leis/l8072.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">🔒</div>
+            <div class="leg-body">
+              <div class="leg-title">Lei de Crimes Hediondos</div>
+              <div class="leg-sub">Lei n.º 8.072/1990 — crimes inafiançáveis, regime de cumprimento e restrições.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2006/lei/l11340.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">🛡️</div>
+            <div class="leg-body">
+              <div class="leg-title">Lei Maria da Penha</div>
+              <div class="leg-sub">Lei n.º 11.340/2006 — mecanismos de coibição e prevenção da violência doméstica.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/lei/l12850.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">🕵️</div>
+            <div class="leg-body">
+              <div class="leg-title">Lei das Organizações Criminosas</div>
+              <div class="leg-sub">Lei n.º 12.850/2013 — define organização criminosa e dispõe sobre investigação criminal.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+          <a class="leg-card" href="https://www.planalto.gov.br/ccivil_03/_ato2004-2006/2006/lei/l11343.htm" target="_blank" rel="noopener">
+            <div class="leg-icon">💊</div>
+            <div class="leg-body">
+              <div class="leg-title">Lei do SISNAD</div>
+              <div class="leg-sub">Lei n.º 11.343/2006 — Sistema Nacional de Políticas Públicas sobre Drogas.</div>
+              <span class="leg-badge">🔗 Planalto</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         UNIDADES PRISIONAIS
+    ══════════════════════════════════════════ -->
+    <section id="unidades" class="secao">
+      <div class="page-hero">
+        <h2>🏛️ Unidades Prisionais</h2>
+        <p>Diretores, contatos e endereços por Superintendência Regional.</p>
+      </div>
+      <div class="wrapper">
+        <div class="busca-unidade-bar">
+          <input type="search" id="buscaUnidade" placeholder="🔍 Buscar unidade, cidade, diretor…" oninput="filtrarUnidades()" />
+          <select id="filtroSR" onchange="filtrarUnidades()">
+            <option value="">Todas as Regionais</option>
+            <option value="sr01">SR01 — Grande Florianópolis</option>
+            <option value="sr02">SR02 — Sul</option>
+            <option value="sr03">SR03 — Norte Catarinense</option>
+            <option value="sr04">SR04 — Vale do Itajaí</option>
+            <option value="sr05">SR05 — Serrana</option>
+            <option value="sr06">SR06 — Oeste</option>
+            <option value="sr07">SR07 — Médio Vale do Itajaí</option>
+            <option value="sr08">SR08 — Planalto Norte</option>
+          </select>
+        </div>
+        <div id="unidades-container">
+          <div style="text-align:center;padding:32px;color:var(--txt-3);">⏳ Carregando unidades…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         ÁREA RESTRITA
+    ══════════════════════════════════════════ -->
+    <section id="restrito" class="secao">
+      <div class="page-hero">
+        <h2>🔒 CRV</h2>
+        <p id="restrito-usuario-info"></p>
+      </div>
+      <div class="wrapper">
+        <div id="restrito-placeholder"></div>
+      </div>
+    </section>
+
+
+    <!-- ══ RODAPÉ ══ -->
+    <footer class="rodape">
+      <div class="rodape-inner">
+        <div class="rodape-col">
+          <img src="img/brasao.png" alt="Brasão" style="height:48px;width:48px;object-fit:contain;opacity:.55;margin-bottom:10px;filter:grayscale(20%);" />
+          <strong>CRV — Central de Regulação de Vagas</strong>
+          <span>Departamento de Polícia Penal · SEJURI · SC</span>
+        </div>
+        <div class="rodape-col">
+          <strong>Base normativa</strong>
+          <span>Res. Conj. Interinst. nº 1/2026</span>
+          <span>TJSC + SEJURI · DJ nº 4.661 · 04/02/2026</span>
+          <span>Programa Pena Justa · MJSP · CNJ</span>
+        </div>
+        <div class="rodape-col">
+          <strong>Contato CRV</strong>
+          <span>📞 (48) 3665-7330</span>
+          <span>📧 crv@pp.sc.gov.br</span>
+          <span>🕐 Seg–Sex · 08h–18h</span>
+        </div>
+      </div>
+    </footer>
+  </main>
+</div>
+
+
+<!-- ══ MODAL LOGIN ══ -->
+<div id="modal-login" class="modal-overlay" onclick="if(event.target===this)fecharModalLogin()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div><h3>🔒 CRV</h3><p>Acesso exclusivo para servidores autorizados</p></div>
+      <button class="modal-fechar" onclick="fecharModalLogin()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="tela-login">
+        <div class="form-group">
+          <label class="form-label">E-mail institucional</label>
+          <input id="login-email" type="email" class="form-input" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')fazerLogin()" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <div class="form-input-wrap">
+            <input id="login-senha" type="password" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" />
+            <button class="form-input-eye" onclick="toggleSenhaVis('login-senha')">👁</button>
+          </div>
+        </div>
+        <div id="login-erro" class="form-erro"></div>
+        <button id="btn-entrar" class="btn-primario" onclick="fazerLogin()">Entrar</button>
+        <p class="form-hint">Primeiro acesso na CRV? Use a senha temporária enviada pelo administrador.</p>
+        <p class="form-hint" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
+          Servidor da unidade prisional?
+          <button type="button" style="background:none;border:none;color:var(--azul-500);font-weight:600;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;" onclick="abrirCadastro()">Solicitar acesso →</button>
+        </p>
+      </div>
+      <div id="tela-trocar-senha" style="display:none;">
+        <div class="alerta alerta-atencao mb-3">
+          <span class="alerta-icone">🔑</span>
+          <div><strong>Primeiro acesso!</strong><br>Crie uma senha pessoal agora.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nova senha</label>
+          <div class="form-input-wrap">
+            <input id="nova-senha" type="password" class="form-input" placeholder="Mínimo 8 caracteres" />
+            <button class="form-input-eye" onclick="toggleSenhaVis('nova-senha')">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar nova senha</label>
+          <div class="form-input-wrap">
+            <input id="confirmar-senha" type="password" class="form-input" placeholder="Repita a senha" />
+            <button class="form-input-eye" onclick="toggleSenhaVis('confirmar-senha')">👁</button>
+          </div>
+        </div>
+        <div id="trocar-erro" class="form-erro"></div>
+        <button class="btn-primario" onclick="trocarSenha()">Salvar nova senha e entrar</button>
+      </div>
+
+      <!-- ══ TELA CADASTRO ══ -->
+      <div id="tela-cadastro" style="display:none;overflow-y:auto;max-height:72vh;">
+        <div class="alerta alerta-info" style="margin-bottom:16px;">
+          <span class="alerta-icone">ℹ️</span>
+          <div>Preencha os dados abaixo. O <strong>CPEN da sua unidade</strong> receberá uma solicitação de aprovação.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nome completo</label>
+          <input id="cad-nome" type="text" class="form-input" placeholder="Seu nome completo" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail pessoal</label>
+          <input id="cad-email" type="email" class="form-input" placeholder="seu@email.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">CPF</label>
+          <input id="cad-cpf" type="text" class="form-input" placeholder="000.000.000-00" maxlength="14" oninput="window._mascaraCPF(this)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data de nascimento</label>
+          <input id="cad-data-nasc" type="date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unidade prisional</label>
+          <select id="cad-unidade" class="form-input" style="cursor:pointer;">
+            <option value="">Selecione a unidade...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <div class="form-input-wrap">
+            <input id="cad-senha" type="password" class="form-input" placeholder="Mínimo 8 caracteres" />
+            <button class="form-input-eye" onclick="toggleSenhaVis('cad-senha')">👁</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar senha</label>
+          <div class="form-input-wrap">
+            <input id="cad-confirmar" type="password" class="form-input" placeholder="Repita a senha" />
+            <button class="form-input-eye" onclick="toggleSenhaVis('cad-confirmar')">👁</button>
+          </div>
+        </div>
+        <div id="cad-erro" class="form-erro"></div>
+        <button id="btn-cadastrar" class="btn-primario" onclick="fazerCadastro()">Solicitar acesso</button>
+        <p class="form-hint" style="margin-top:10px;">
+          <button type="button" style="background:none;border:none;color:var(--azul-500);cursor:pointer;padding:0;font-size:.75rem;font-family:inherit;" onclick="voltarParaLogin()">← Voltar ao login</button>
+        </p>
+      </div>
+
+      <!-- ══ TELA AGUARDANDO APROVAÇÃO ══ -->
+      <div id="tela-aguardando" style="display:none;">
+        <div style="text-align:center;padding:12px 0 20px;">
+          <div style="font-size:2.8rem;margin-bottom:14px;">⏳</div>
+          <p style="font-size:.95rem;font-weight:600;color:var(--txt-1);margin-bottom:10px;">Cadastro realizado!</p>
+          <p style="font-size:.84rem;color:var(--txt-3);line-height:1.7;">
+            Sua solicitação foi enviada ao <strong style="color:var(--txt-2);">CPEN da sua unidade</strong>.<br>
+            Assim que for aprovado, você poderá acessar normalmente.
+          </p>
+        </div>
+        <button class="btn-primario" onclick="fecharModalLogin()">Entendido</button>
+      </div>
+
+      <!-- ══ TELA RECUSADO ══ -->
+      <div id="tela-recusado" style="display:none;">
+        <div style="text-align:center;padding:12px 0 20px;">
+          <div style="font-size:2.8rem;margin-bottom:14px;">❌</div>
+          <p style="font-size:.95rem;font-weight:600;color:var(--txt-1);margin-bottom:10px;">Acesso recusado</p>
+          <p style="font-size:.84rem;color:var(--txt-3);line-height:1.7;">
+            Seu pedido foi recusado pelo CPEN da unidade.
+          </p>
+          <p id="recusado-motivo" style="font-size:.82rem;color:var(--txt-3);margin-top:6px;font-style:italic;"></p>
+        </div>
+        <button class="btn-primario" onclick="abrirCadastro()">Tentar novamente</button>
+        <p class="form-hint" style="margin-top:10px;">
+          <button type="button" style="background:none;border:none;color:var(--azul-500);cursor:pointer;padding:0;font-size:.75rem;font-family:inherit;" onclick="fecharModalLogin()">Fechar</button>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL GRUPO CRV ══ -->
+<div id="modal-grupo-crv" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
+  <div class="modal-box" style="max-width:860px;">
+    <div class="modal-header modal-header--crv">
+      <div><h3>📁 CRV — Ferramentas do Setor</h3><p>Central de Regulação de Vagas · DPP/SC</p></div>
+      <button class="modal-fechar" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto')">✕</button>
+    </div>
+    <div class="grupo-grid">
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirCalculadora()">
+        <div class="grupo-item-icon">📊</div>
+        <div class="grupo-item-titulo">Calculadora de Gestão de Vagas</div>
+        <div class="grupo-item-sub">Déficit, excedente e taxa de ocupação</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('gerador_despachos_crv.html','_blank')">
+        <div class="grupo-item-icon">⚖️</div>
+        <div class="grupo-item-titulo">Gerador de Despachos</div>
+        <div class="grupo-item-sub">Deferir, Indeferir e Devolver — CRV</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')">
+        <div class="grupo-item-icon">📋</div>
+        <div class="grupo-item-titulo">Trello CRV</div>
+        <div class="grupo-item-sub">Gestão de tarefas da equipe</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('https://sparkle-spark-spark.lovable.app','_blank')">
+        <div class="grupo-item-icon">📅</div>
+        <div class="grupo-item-titulo">Escala de Plantão</div>
+        <div class="grupo-item-sub">Acesso à escala da equipe</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirCaixinha()">
+        <div class="grupo-item-icon">☕</div>
+        <div class="grupo-item-titulo">Caixinha do Setor</div>
+        <div class="grupo-item-sub">Controle de depósitos e prestação de contas</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('formulario-diarias-sc.html','_blank')">
+        <div class="grupo-item-icon">✈️</div>
+        <div class="grupo-item-titulo">Sistema de Diárias</div>
+        <div class="grupo-item-sub">MLR-41 e MLR-42</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirViagens()">
+        <div class="grupo-item-icon">🗺️</div>
+        <div class="grupo-item-titulo">Controle de Viagens</div>
+        <div class="grupo-item-sub">Registro de saídas e itinerários</div>
+      </div>
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirEditorUnidades()">
+        <div class="grupo-item-icon">✏️</div>
+        <div class="grupo-item-titulo">Atualização — Unidades Prisionais</div>
+        <div class="grupo-item-sub">Editar diretores, e-mails e telefones</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL GRUPO JUDICIÁRIO ══ -->
+<div id="modal-grupo-jud" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
+  <div class="modal-box">
+    <div class="modal-header modal-header--jud">
+      <div><h3>⚖️ Sistemas — Judiciário</h3><p>Sistemas do Poder Judiciário de SC</p></div>
+      <button class="modal-fechar" onclick="document.getElementById('modal-grupo-jud').classList.remove('aberto')">✕</button>
+    </div>
+    <div class="grupo-grid">
+      <a class="grupo-item" href="https://seeu.pje.jus.br/seeu/" target="_blank"><div class="grupo-item-icon">⚖️</div><div class="grupo-item-titulo">SEEU</div><div class="grupo-item-sub">Sistema Eletrônico de Execução Unificado</div></a>
+      <a class="grupo-item" href="https://eproc1g.tjsc.jus.br/eproc/" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 1º Grau</div><div class="grupo-item-sub">Processo eletrônico 1ª instância</div></a>
+      <a class="grupo-item" href="https://eproc2g.tjsc.jus.br/eproc/externo_controlador.php?acao=principal" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 2º Grau</div><div class="grupo-item-sub">Processo eletrônico 2ª instância</div></a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL GRUPO ESTADO ══ -->
+<div id="modal-grupo-estado" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
+  <div class="modal-box">
+    <div class="modal-header modal-header--estado">
+      <div><h3>🏛️ Sistemas — Estado</h3><p>Sistemas do Estado de Santa Catarina</p></div>
+      <button class="modal-fechar" onclick="document.getElementById('modal-grupo-estado').classList.remove('aberto')">✕</button>
+    </div>
+    <div class="grupo-grid">
+      <a class="grupo-item" href="https://sigrhportal.sea.sc.gov.br/SIGRHNovoPortal/#/auth" target="_blank"><div class="grupo-item-icon">👤</div><div class="grupo-item-titulo">SIGRHPORTAL</div><div class="grupo-item-sub">Recursos Humanos SC</div></a>
+      <a class="grupo-item" href="https://www.sc.gov.br/sap/ipen/signin" target="_blank"><div class="grupo-item-icon">🔗</div><div class="grupo-item-titulo">i-PEN</div><div class="grupo-item-sub">Sistema prisional SC</div></a>
+      <a class="grupo-item" href="https://sgpe.sea.sc.gov.br" target="_blank"><div class="grupo-item-icon">📄</div><div class="grupo-item-titulo">SGPe</div><div class="grupo-item-sub">Gestão de Processos Eletrônicos</div></a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITOR DE UNIDADES ══ -->
+<div id="modal-editor-unidades" class="modal-overlay" onclick="if(event.target===this)fecharEditorUnidades()">
+  <div class="modal-box" style="max-width:900px;">
+    <div class="modal-header modal-header--crv">
+      <div><h3>✏️ Atualização — Unidades Prisionais</h3><p>Edite e baixe o JSON atualizado para publicar no repositório</p></div>
+      <button class="modal-fechar" onclick="fecharEditorUnidades()">✕</button>
+    </div>
+    <div class="modal-aviso">
+      ⚠️ As alterações ficam ativas imediatamente na sessão. Para publicar permanentemente, faça upload do <strong>unidades.json</strong> gerado na pasta <code>data/</code> do repositório.
+    </div>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto;padding:12px 16px;">
+      <div id="editor-unidades-lista"></div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--cinza-4);display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="fecharEditorUnidades()" style="height:38px;padding:0 18px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;font-size:.84rem;cursor:pointer;">Cancelar</button>
+      <button onclick="salvarEdicaoUnidades()" style="height:38px;padding:0 20px;background:var(--azul-500);color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer;">💾 Salvar e baixar JSON</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOVIDADES ══ -->
+<div id="modal-novidades" class="novidades-overlay" onclick="if(event.target===this)fecharNovidades()">
+  <div class="modal-box">
+    <div class="modal-header"><div><h3>🆕 Novidades desde seu último acesso</h3></div><button class="modal-fechar" onclick="fecharNovidades()">✕</button></div>
+    <div class="modal-body"><div id="novidades-conteudo"></div><button class="btn-primario" onclick="fecharNovidades()" style="margin-top:12px;">Entendido ✓</button></div>
+  </div>
+</div>
+
+<!-- ══ IFRAME MODALS ══ -->
+<div id="modal-caixinha" class="iframe-modal">
+  <div class="iframe-topbar"><span>☕ Caixinha do Setor</span><button onclick="fecharCaixinha()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="caixinha-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
+<div id="modal-usm" class="iframe-modal">
+  <div class="iframe-topbar"><span>🔐 USM — Controle</span><button onclick="fecharUSMControle()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="usm-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
+<div id="modal-calculadora" class="iframe-modal">
+  <div class="iframe-topbar"><span>📊 Calculadora de Gestão de Vagas</span><button onclick="fecharCalculadora()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="calc-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
+<div id="modal-viagens" class="iframe-modal">
+  <div class="iframe-topbar"><span>🗺️ Controle de Viagens</span><button onclick="fecharViagens()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="viagens-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
+
+
+
+<!-- Botão topo -->
+<button id="btnTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
+
+<script src="js/app.js" defer></script>
+<script type="module" src="js/firebase.js"></script>
+</body>
+</html>

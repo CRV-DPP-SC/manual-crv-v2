@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Ofícios — CRV/DPP</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/oficio.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+</head>
+<body>
+
+<!-- ════════════════════════ BARRA SUPERIOR ════════════════════════ -->
+<header class="topo">
+  <img src="assets/brasao.png" alt="Brasão SC">
+  <div class="topo-titulo">
+    <h1>Gerador de Ofícios — CRV/DPP</h1>
+    <p>Central de Regulação de Vagas · Departamento de Polícia Penal · SC</p>
+  </div>
+
+  <!-- Abas mobile -->
+  <div class="topo-tabs">
+    <button class="tab-btn at" data-aba="form"    onclick="_setAba('form')">Formulário</button>
+    <button class="tab-btn"    data-aba="preview" onclick="_setAba('preview')">Ofício</button>
+  </div>
+
+  <!-- Ações desktop/notebook -->
+  <div class="topo-acoes"></div>
+</header>
+
+<!-- ════════════════════════ LAYOUT DOIS PAINÉIS ════════════════════════ -->
+<div class="layout">
+
+  <!-- ── Painel Formulário ── -->
+  <div id="painel-form">
+    <div id="form-area">
+      <!-- Renderizado por FormularioCtrl.inicializar() -->
+    </div>
+  </div>
+
+  <!-- ── Painel Pré-visualização ── -->
+  <div id="painel-prev">
+
+    <!-- Barra de ações (sticky) -->
+    <div class="preview-acoes">
+      <button id="btnCopiar" class="btn-acao btn-pri" onclick="copiar()" title="Copiar com formatação">📋 Copiar</button>
+      <button id="btnDoc"    class="btn-acao btn-doc" onclick="baixarDoc()" title="Baixar .doc">📄 .doc</button>
+      <button id="btnPdf"    class="btn-acao btn-pdf" onclick="baixarPDF()" title="Baixar PDF">📄 PDF</button>
+      <button id="btnEditar" class="btn-acao btn-edit" onclick="toggleModoEditar()" title="Editar texto do ofício">✏ Editar</button>
+      <button id="btnResumo"  class="btn-acao btn-res"  onclick="abrirResumoSintetico()" style="display:none" title="Gerar Resumo Sintético IPEN">📄 Resumo IPEN</button>
+      <button id="btnAssinar" class="btn-acao btn-ass"  onclick="abrirModalAssinaturas()" style="display:none" title="Solicitar assinaturas">✍ Solicitar Assinatura</button>
+      <button id="btnComunicarJud" class="btn-acao btn-jud" onclick="abrirModalCJ()" style="display:none">⚖ Comunicar Jud.</button>
+      <button class="btn-acao btn-sec" onclick="FormularioCtrl.limpar()" title="Novo ofício">↩ Novo</button>
+      <span id="previewAviso" class="preview-aviso"></span>
+    </div>
+
+    <!-- Banner modo edição -->
+    <div id="editBanner" class="edit-banner">
+      ✏ <strong>Modo edição ativo.</strong> Clique em qualquer texto do ofício para editá-lo.
+      Alterar o formulário descartará as edições. <strong><a href="#" onclick="toggleModoEditar();return false;">Finalizar Edição</a></strong>
+    </div>
+
+    <!-- Documento -->
+    <div class="preview-documento">
+      <div id="oficio-preview">
+        <div class="preview-placeholder">
+          <p>Selecione o tipo de ofício<br>para visualizar o documento em tempo real.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /painel-prev -->
+
+</div><!-- /layout -->
+
+<!-- ════════════════════════ BOTÃO FLUTUANTE MOBILE ════════════════════════ -->
+<button class="btn-flutuante" id="btnFlutuante" onclick="_setAba('preview')">📄 Ver Ofício →</button>
+
+<!-- ════════════════════════ TOAST ════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ════════════════════════ MODAL — SELETOR DE UNIDADE ════════════════════════ -->
+<div class="modal-bg" id="umBg">
+  <div class="modal" style="width:min(96vw,560px);padding:0;">
+    <div class="modal-head">
+      <h3 id="umTitulo">Escolher Unidade</h3>
+      <button onclick="fecharModalUnidade()">✕</button>
+    </div>
+    <div class="um-search">
+      <input id="umSearch" type="text" placeholder="🔍 Buscar por nome ou cidade...">
+    </div>
+    <div class="sr-tabs" id="umTabs"></div>
+    <div class="un-list" id="umList" style="max-height:50vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════ MODAL — COMUNICAÇÃO JUDICIAL ════════════════════════ -->
+<div class="modal-bg" id="mcjBg" style="z-index:220;">
+  <div class="modal" style="width:min(97vw,700px);">
+    <div class="modal-head">
+      <h3>⚖ Comunicar Judiciário — Saída/Transferência</h3>
+      <button onclick="fecharModalCJ()">✕</button>
+    </div>
+    <div class="modal-body" id="mcjBody" style="overflow-y:auto;max-height:65vh;display:flex;flex-direction:column;gap:12px;"></div>
+    <div class="modal-foot" id="mcjFoot"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════ MODAL — RESUMO SINTÉTICO ════════════════════════ -->
+<div class="modal-bg" id="resumoBg" style="z-index:230;">
+  <div class="modal" style="width:min(96vw,660px);">
+    <div class="modal-head">
+      <h3>📄 Resumo Sintético IPEN</h3>
+      <button onclick="fecharResumoSintetico()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="resumoTexto" style="font-size:.9rem;line-height:1.7;text-align:justify;color:var(--texto);"></p>
+      <textarea id="resumoEdit" style="display:none;width:100%;min-height:120px;font-size:.9rem;line-height:1.7;border:1.5px solid var(--borda);border-radius:8px;padding:10px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-acao btn-pri" onclick="copiarResumo()">📋 Copiar texto</button>
+      <button class="btn-acao btn-edit" onclick="baixarResumoTxt()">📥 Baixar .txt</button>
+      <button id="btnEditarResumo" class="btn-acao btn-sec" onclick="toggleEditarResumo()">✏ Editar</button>
+      <button class="btn-acao btn-sec" onclick="fecharResumoSintetico()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ MODAL — SOLICITAR ASSINATURAS ════════════════════════ -->
+<div class="modal-bg" id="assBg" style="z-index:240;">
+  <div class="modal" style="width:min(96vw,560px);">
+    <div class="modal-head">
+      <h3>✍ Solicitar Assinaturas</h3>
+      <button onclick="fecharModalAssinaturas()">✕</button>
+    </div>
+    <div class="modal-body" id="assBody"></div>
+    <div class="modal-foot" id="assFoot"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════ SCRIPTS (ordem de dependência) ════════════════════════ -->
+<script type="module" src="js/firebase-v2.js"></script>
+<script src="js/dados.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/documento.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/estado.js"></script>
+<script src="js/persistencia.js"></script>
+<script src="js/exportar.js"></script>
+<script src="js/modal-unidade.js"></script>
+<script src="js/modal-cj.js"></script>
+<script src="js/preview.js"></script>
+<script src="js/formulario.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

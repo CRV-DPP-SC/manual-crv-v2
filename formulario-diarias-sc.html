@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diárias SC — SEJURI/DPP</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, onSnapshot, serverTimestamp, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
+    authDomain: "crv-dpp-sc.firebaseapp.com",
+    projectId: "crv-dpp-sc",
+    storageBucket: "crv-dpp-sc.firebasestorage.app",
+    messagingSenderId: "707080008192",
+    appId: "1:707080008192:web:64f44c65629c0fc5941ee5"
+  };
+
+  // Reutiliza app já inicializado se existir (evita conflito)
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // Monitora sessão — mostra aviso se não estiver logado
+  onAuthStateChanged(auth, user => {
+    const aviso = document.getElementById('aviso-login');
+    if (!user && aviso) aviso.style.display = 'block';
+    // Inicia escuta dos servidores independente do login
+    // (funciona porque as regras permitem leitura com write:true/read:true
+    //  ou quando o usuário está autenticado via sessão compartilhada)
+    if (typeof window._iniciarEscutaServidores === 'function')
+      window._iniciarEscutaServidores();
+  });
+
+  // ── DIÁRIAS ──────────────────────────────────────────────────
+  window._saveToFirebase = async function(dados) {
+    try {
+      const docRef = await addDoc(collection(db, "diarias"), {
+        ...dados, criadoEm: serverTimestamp()
+      });
+      return { ok: true, id: docRef.id };
+    } catch(e) { return { ok: false, erro: e.message }; }
+  };
+
+  window._consultarDiariasDoMes = async function(matricula) {
+    try {
+      const agora = new Date();
+      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      const fimMes   = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59);
+      const q = query(
+        collection(db, "diarias"),
+        where("srv.matricula", "==", matricula),
+        where("tipo", "==", "requerimento")
+      );
+      const snap = await getDocs(q);
+      let total = 0;
+      snap.forEach(d => {
+        const ts = d.data().criadoEm?.toDate?.();
+        if (ts && ts >= inicioMes && ts <= fimMes)
+          total += parseFloat(d.data().totalDiarias || 0);
+      });
+      return { ok: true, total };
+    } catch(e) { return { ok: false, erro: e.message }; }
+  };
+
+  // ── SERVIDORES — CRUD ────────────────────────────────────────
+  window._iniciarEscutaServidores = function() {
+    const q = query(collection(db, "servidores"), orderBy("nome"));
+    onSnapshot(q, snap => {
+      const lista = [];
+      snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
+      window._servidoresCache = lista;
+      if (typeof window._onServidoresAtualizado === 'function')
+        window._onServidoresAtualizado(lista);
+    }, err => console.error("Erro ao escutar servidores:", err));
+  };
+
+  window._salvarServidor = async function(dados, id = null) {
+    try {
+      if (id) {
+        await updateDoc(doc(db, "servidores", id), dados);
+        return { ok: true, id };
+      } else {
+        const ref = await addDoc(collection(db, "servidores"),
+          { ...dados, criadoEm: serverTimestamp() });
+        return { ok: true, id: ref.id };
+      }
+    } catch(e) { return { ok: false, erro: e.message }; }
+  };
+
+  window._excluirServidor = async function(id) {
+    try {
+      await deleteDoc(doc(db, "servidores", id));
+      return { ok: true };
+    } catch(e) { return { ok: false, erro: e.message }; }
+  };
+</script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --verde:#0F6E56;--verde-claro:#E1F5EE;--verde-medio:#1D9E75;--verde-escuro:#085041;
+  --texto:#1a1a1a;--texto-sec:#555;--borda:#d0d0cc;--fundo:#f7f6f2;--branco:#fff;
+  --acento:#BA7517;--acento-claro:#FAEEDA;--erro:#A32D2D;--erro-claro:#FCEBEB;
+  --aviso:#854F0B;--aviso-claro:#FAEEDA;
+  --sucesso:#3B6D11;--sucesso-claro:#EAF3DE;
+  --raio:10px;--raio-lg:16px;--fonte:'Sora',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--fonte);background:var(--fundo);color:var(--texto);min-height:100vh;}
+
+header{background:var(--verde-escuro);padding:1.25rem 2rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.25);}
+.brasao{width:48px;height:48px;background:rgba(255,255,255,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+header h1{font-size:1rem;font-weight:600;color:#fff;line-height:1.3;}
+header p{font-size:0.72rem;color:rgba(255,255,255,0.65);margin-top:2px;font-family:var(--mono);letter-spacing:0.04em;}
+.header-badge{margin-left:auto;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:0.7rem;font-family:var(--mono);padding:4px 10px;border-radius:20px;white-space:nowrap;}
+
+.abas{background:var(--branco);border-bottom:1px solid var(--borda);display:flex;padding:0 2rem;gap:0;overflow-x:auto;}
+.aba-btn{padding:0.9rem 1.5rem;font-family:var(--fonte);font-size:0.82rem;font-weight:500;color:var(--texto-sec);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;}
+.aba-btn:hover{color:var(--verde);}
+.aba-btn.ativa{color:var(--verde);border-bottom-color:var(--verde-medio);}
+.aba-tag{display:inline-block;background:var(--verde-claro);color:var(--verde-escuro);font-size:0.65rem;font-family:var(--mono);padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+
+.container{max-width:880px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.painel{display:none;}
+.painel.ativo{display:block;animation:fadeIn 0.25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.secao{background:var(--branco);border:1px solid var(--borda);border-radius:var(--raio-lg);padding:1.5rem;margin-bottom:1.25rem;}
+.secao-titulo{font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:1px solid var(--verde-claro);display:flex;align-items:center;gap:8px;}
+.secao-titulo::before{content:'';width:3px;height:14px;background:var(--verde-medio);border-radius:2px;display:inline-block;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+.campo{display:flex;flex-direction:column;gap:5px;}
+label{font-size:0.72rem;font-weight:500;color:var(--texto-sec);letter-spacing:0.02em;}
+label .obrig{color:var(--acento);}
+
+input[type="text"],input[type="email"],input[type="date"],input[type="time"],input[type="number"],select,textarea{
+  font-family:var(--fonte);font-size:0.85rem;color:var(--texto);background:var(--fundo);
+  border:1px solid var(--borda);border-radius:var(--raio);padding:0.55rem 0.75rem;
+  transition:border-color 0.2s,background 0.2s;width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde-medio);background:var(--branco);box-shadow:0 0 0 3px rgba(29,158,117,0.12);}
+textarea{resize:vertical;min-height:80px;}
+
+/* Card do servidor */
+.servidor-card{background:var(--verde-claro);border:1px solid #9FE1CB;border-radius:var(--raio-lg);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none;}
+.servidor-card.visivel{display:block;animation:fadeIn 0.2s ease;}
+.servidor-nome{font-size:1.1rem;font-weight:600;color:var(--verde-escuro);margin-bottom:0.5rem;}
+.servidor-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:0.5rem 1.5rem;}
+.servidor-info-item{display:flex;flex-direction:column;gap:1px;}
+.srv-label{font-size:0.67rem;color:var(--verde);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;}
+.srv-val{font-size:0.82rem;color:var(--verde-escuro);font-weight:500;}
+
+/* Badge contador diárias */
+.badge-diarias{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;font-family:var(--mono);margin-top:0.6rem;}
+.badge-ok{background:var(--sucesso-claro);color:var(--sucesso);border:1px solid #C0DD97;}
+.badge-aviso{background:#FAEEDA;color:#633806;border:1px solid #FAC775;}
+.badge-erro{background:var(--erro-claro);color:var(--erro);border:1px solid #F7C1C1;}
+
+/* Tabela deslocamentos */
+.tabela-wrap{overflow-x:auto;}
+table.desloc{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:700px;}
+table.desloc th{background:var(--fundo);color:var(--texto-sec);font-size:0.65rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;padding:0.5rem 0.5rem;border-bottom:1px solid var(--borda);text-align:left;white-space:nowrap;}
+table.desloc td{padding:0.35rem 0.4rem;border-bottom:1px solid #eee;vertical-align:middle;}
+table.desloc tr:last-child td{border-bottom:none;}
+table.desloc input,table.desloc select{padding:0.3rem 0.45rem;font-size:0.79rem;border-radius:6px;}
+
+.btn-add-linha,.btn-rem-linha{font-family:var(--fonte);font-size:0.75rem;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid;cursor:pointer;transition:all 0.15s;}
+.btn-add-linha{background:var(--verde-claro);border-color:#9FE1CB;color:var(--verde-escuro);margin-top:0.75rem;}
+.btn-add-linha:hover{background:#9FE1CB;}
+.btn-rem-linha{background:var(--erro-claro);border-color:#F7C1C1;color:var(--erro);font-size:0.7rem;padding:0.25rem 0.5rem;}
+
+/* Painel de cálculo automático */
+.calc-auto{background:#f0faf6;border:1px solid #9FE1CB;border-radius:var(--raio-lg);padding:1.25rem;margin-top:1rem;}
+.calc-auto-titulo{font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;display:flex;align-items:center;gap:6px;}
+.calc-auto-titulo::before{content:'⚡';font-size:0.85rem;}
+
+.resumo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.75rem;margin-bottom:1rem;}
+.resumo-card{background:var(--branco);border:1px solid var(--borda);border-radius:var(--raio);padding:0.75rem 1rem;text-align:center;}
+.resumo-card .rc-label{font-size:0.65rem;color:var(--texto-sec);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+.resumo-card .rc-val{font-size:1.15rem;font-weight:600;color:var(--verde-escuro);font-family:var(--mono);}
+.resumo-card .rc-sub{font-size:0.7rem;color:var(--texto-sec);margin-top:2px;}
+.resumo-card.destaque{border-color:var(--verde-medio);background:var(--verde-claro);}
+.resumo-card.destaque .rc-val{color:var(--verde);}
+
+.detalhe-linha{display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid #e8f5ee;font-size:0.8rem;}
+.detalhe-linha:last-child{border-bottom:none;}
+.detalhe-linha .dl-tag{font-family:var(--mono);font-size:0.7rem;padding:2px 8px;border-radius:4px;font-weight:600;}
+.tag-inteira{background:#C0DD97;color:var(--sucesso);}
+.tag-meia{background:#FAEEDA;color:var(--acento);}
+.tag-pernoite{background:#B5D4F4;color:#0C447C;}
+.tag-sem{background:#F7C1C1;color:var(--erro);}
+
+.prazo-box{background:var(--acento-claro);border:1px solid #FAC775;border-radius:var(--raio);padding:0.6rem 1rem;font-size:0.78rem;color:#633806;margin-top:0.75rem;display:none;}
+.prazo-box.visivel{display:block;}
+
+/* Checkboxes */
+.checkboxes{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.25rem;}
+.check-pill{display:flex;align-items:center;gap:5px;background:var(--fundo);border:1px solid var(--borda);border-radius:20px;padding:4px 12px;font-size:0.75rem;cursor:pointer;transition:all 0.15s;user-select:none;}
+.check-pill:has(input:checked){background:var(--verde-claro);border-color:#9FE1CB;color:var(--verde-escuro);font-weight:500;}
+.check-pill input[type="checkbox"]{width:13px;height:13px;accent-color:var(--verde);cursor:pointer;}
+
+/* Botões */
+.acoes{display:flex;gap:1rem;margin-top:2rem;flex-wrap:wrap;}
+.btn-primario,.btn-sec{font-family:var(--fonte);font-size:0.85rem;font-weight:500;padding:0.75rem 1.5rem;border-radius:var(--raio);cursor:pointer;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;}
+.btn-primario{background:var(--verde);color:#fff;}
+.btn-primario:hover{background:var(--verde-escuro);transform:translateY(-1px);}
+.btn-primario:disabled{background:#aaa;cursor:not-allowed;transform:none;}
+.btn-sec{background:var(--branco);color:var(--texto);border:1px solid var(--borda);}
+.btn-sec:hover{background:var(--fundo);}
+
+/* Alertas */
+.alerta{border-radius:var(--raio);padding:0.75rem 1rem;font-size:0.78rem;margin-bottom:1rem;line-height:1.5;}
+.alerta-info{background:var(--acento-claro);border:1px solid #FAC775;color:#633806;}
+.alerta-erro{background:var(--erro-claro);border:1px solid #F7C1C1;color:var(--erro);}
+.alerta-ok{background:var(--sucesso-claro);border:1px solid #C0DD97;color:var(--sucesso);}
+
+/* Toast */
+#toast{position:fixed;bottom:2rem;right:2rem;background:var(--verde-escuro);color:#fff;padding:0.75rem 1.25rem;border-radius:var(--raio);font-size:0.82rem;font-weight:500;opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:9999;max-width:340px;pointer-events:none;}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.erro{background:var(--erro);}
+#toast.aviso{background:var(--acento);}
+
+/* Resultado */
+.resultado-box{background:var(--sucesso-claro);border:1px solid #C0DD97;border-radius:var(--raio-lg);padding:1.25rem;margin-top:1.5rem;display:none;}
+.resultado-box.visivel{display:block;animation:fadeIn 0.3s ease;}
+.resultado-box h3{font-size:0.85rem;color:var(--sucesso);margin-bottom:0.5rem;}
+.doc-id{font-family:var(--mono);font-size:0.78rem;color:var(--sucesso);background:#C0DD97;display:inline-block;padding:3px 10px;border-radius:6px;margin-top:4px;}
+
+@media(max-width:640px){
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  header{padding:1rem;}
+  .container{padding:1rem;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brasao">🏛️</div>
+  <div>
+    <h1>Sistema de Diárias — Estado de Santa Catarina</h1>
+    <p>SEJURI · Departamento de Polícia Penal · DPP</p>
+  </div>
+  <span class="header-badge">MLR-41 / MLR-42 · Dec. 650/2020</span>
+</header>
+
+<div class="abas">
+  <button class="aba-btn ativa" onclick="trocarAba('requerimento',this)">Requerimento <span class="aba-tag">MLR-41</span></button>
+  <button class="aba-btn" onclick="trocarAba('relatorio',this)">Relatório de Viagem <span class="aba-tag">MLR-42</span></button>
+  <button class="aba-btn" onclick="trocarAba('servidores',this)">Servidores Cadastrados</button>
+  <button class="aba-btn" onclick="trocarAba('regras',this)">Regras de Diárias</button>
+</div>
+
+<div class="container">
+
+<!-- Aviso de sessão -->
+<div id="aviso-login" style="display:none;background:var(--erro-claro);border:1px solid #F7C1C1;border-radius:var(--raio);padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:var(--erro);">
+  ⚠️ <strong>Sessão não detectada.</strong> Acesse este sistema pelo botão <strong>Sistema de Diárias</strong> na <a href="https://crv-dpp-sc.github.io/manual/#restrito" style="color:var(--erro);font-weight:600;">Área Restrita</a> do site principal — é necessário estar logado para carregar os servidores.
+</div>
+
+<!-- ════════ ABA 1 — REQUERIMENTO MLR-41 ════════ -->
+<div id="painel-requerimento" class="painel ativo">
+
+  <div class="alerta alerta-info">
+    💡 Preencha os <strong>horários de saída e chegada</strong> de cada deslocamento — o sistema calcula as diárias automaticamente conforme o Decreto nº 1.662/2022.
+  </div>
+
+  <div class="alerta" style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--raio);padding:0.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <span style="font-size:0.82rem;color:#166534;">🔄 <strong>Sincronização automática:</strong> ao trocar para a aba <strong>MLR-42</strong>, os campos idênticos serão preenchidos automaticamente. Você também pode sincronizar manualmente.</span>
+    <button class="btn-sec" style="white-space:nowrap;font-size:0.8rem;padding:0.35rem 0.9rem;" onclick="sincronizarForms('r','rl');trocarAba('relatorio',document.querySelectorAll('.aba-btn')[1])">➜ Sincronizar com MLR-42</button>
+  </div>
+
+  <!-- SERVIDOR -->
+  <div class="secao">
+    <div class="secao-titulo">Servidor</div>
+    <div class="campo">
+      <label>Selecionar servidor <span class="obrig">*</span></label>
+      <select id="r-servidor" onchange="preencherServidor('r')">
+        <option value="">— Selecione o servidor —</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="servidor-card" id="r-card-servidor">
+    <div class="servidor-nome" id="r-srv-nome"></div>
+    <div class="servidor-info-grid">
+      <div class="servidor-info-item"><span class="srv-label">CPF</span><span class="srv-val" id="r-srv-cpf"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Matrícula</span><span class="srv-val" id="r-srv-mat"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Cargo</span><span class="srv-val" id="r-srv-cargo"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Lotação</span><span class="srv-val" id="r-srv-lot"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Banco</span><span class="srv-val" id="r-srv-banco"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Agência / Conta</span><span class="srv-val" id="r-srv-conta"></span></div>
+    </div>
+    <div id="r-badge-diarias"></div>
+  </div>
+
+  <!-- DADOS FUNCIONAIS -->
+  <div class="secao">
+    <div class="secao-titulo">Dados Funcionais</div>
+    <div class="grid-2">
+      <div class="campo"><label>Órgão / Entidade</label><input type="text" id="r-orgao" list="lista-orgaos-r" value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"><datalist id="lista-orgaos-r"><option value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"></datalist></div>
+      <div class="campo"><label>Sigla do Local de Trabalho</label><input type="text" id="r-sigla" value="DPP"></div>
+      <div class="campo"><label>Nome Social (se diferente)</label><input type="text" id="r-nome-social" placeholder="Deixe em branco se igual ao nome civil"></div>
+      <div class="campo"><label>Município do Local de Trabalho</label><select id="r-municipio"></select></div>
+      <div class="campo"><label>E-mail</label><input type="email" id="r-email" placeholder="servidor@sc.gov.br"></div>
+      <div class="campo"><label>Celular</label><input type="text" id="r-celular" placeholder="(47) 99999-9999"></div>
+      <div class="campo"><label>Competência (uso exclusivo SES)</label><input type="text" id="r-competencia" placeholder="Ex.: MÉDICO"></div>
+      <div class="campo"><label>Local e Data</label><input type="text" id="r-local-data" placeholder="FLORIANÓPOLIS, 10/04/2026"></div>
+    </div>
+    <div style="margin-top:1rem;">
+      <label style="display:block;margin-bottom:0.4rem;">Código/Nível do Cargo (para não efetivos)</label>
+      <div class="checkboxes" id="r-codigos-cargo">
+        <label class="check-pill"><input type="checkbox" value="DGS-1"> DGS-1</label>
+        <label class="check-pill"><input type="checkbox" value="DGS-2"> DGS-2</label>
+        <label class="check-pill"><input type="checkbox" value="DGS-3"> DGS-3</label>
+        <label class="check-pill"><input type="checkbox" value="FTG-1"> FTG-1</label>
+        <label class="check-pill"><input type="checkbox" value="FTG-2"> FTG-2</label>
+        <label class="check-pill"><input type="checkbox" value="FTG-3"> FTG-3</label>
+        <label class="check-pill"><input type="checkbox" value="FG-1"> FG-1</label>
+        <label class="check-pill"><input type="checkbox" value="FG-2"> FG-2</label>
+        <label class="check-pill"><input type="checkbox" value="FG-3"> FG-3</label>
+        <label class="check-pill"><input type="checkbox" value="DGI-1"> DGI-1 (Codificado)</label>
+        <label class="check-pill"><input type="checkbox" value="ADM-SUP-3"> ADM. SUPERIOR-3</label>
+        <label class="check-pill"><input type="checkbox" value="ADM-SUP-8"> ADM. SUPERIOR-8</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESLOCAMENTOS -->
+  <div class="secao">
+    <div class="secao-titulo">Deslocamentos</div>
+    <div class="tabela-wrap">
+      <table class="desloc">
+        <thead><tr>
+          <th>Data</th><th>Origem</th><th>Destino</th>
+          <th>Saída</th><th>Chegada</th><th>Transporte</th><th></th>
+        </tr></thead>
+        <tbody id="r-linhas-desloc"></tbody>
+      </table>
+    </div>
+    <button class="btn-add-linha" onclick="adicionarLinha('r')">+ Adicionar deslocamento</button>
+
+    <!-- PAINEL DE CÁLCULO AUTOMÁTICO -->
+    <div class="calc-auto" id="r-calc-auto" style="display:none;">
+      <div class="calc-auto-titulo">Cálculo Automático — Decreto nº 1.662/2022</div>
+      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
+        <label>Grupo do Cargo (Anexo Único Dec. 650/2020)</label>
+        <select id="r-grupo-cargo" onchange="recalcular('r')">
+          <option value="1">1º Grupo</option>
+          <option value="2">2º Grupo</option>
+          <option value="3">3º Grupo</option>
+        </select>
+      </div>
+      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
+        <label>Tipo de deslocamento</label>
+        <select id="r-tipo-desloc" onchange="recalcular('r')">
+          <option value="estado">Dentro do Estado</option>
+          <option value="fora">Fora do Estado</option>
+        </select>
+      </div>
+      <div class="resumo-grid" id="r-resumo-grid"></div>
+      <div id="r-detalhe-linhas"></div>
+      <div class="prazo-box" id="r-prazo-box"></div>
+    </div>
+  </div>
+
+  <!-- OBJETIVO -->
+  <div class="secao">
+    <div class="secao-titulo">Objetivo(s) da Viagem</div>
+    <div class="campo"><label>Descrição do objetivo <span class="obrig">*</span></label>
+    <textarea id="r-objetivo" rows="4" placeholder="Descreva o objetivo da viagem..."></textarea></div>
+  </div>
+
+  <div class="acoes">
+    <button class="btn-primario" id="r-btn-salvar" onclick="salvarEGerarPDF('requerimento')">⬇ Salvar + Gerar PDF (MLR-41)</button>
+    <button class="btn-sec" onclick="limpar('r')">Limpar</button>
+  </div>
+
+  <div class="resultado-box" id="r-resultado">
+    <h3>✓ Requerimento salvo com sucesso!</h3>
+    <p style="font-size:0.8rem;color:var(--sucesso);margin-top:4px;">ID Firebase:</p>
+    <span class="doc-id" id="r-doc-id"></span>
+    <p style="font-size:0.78rem;color:var(--sucesso);margin-top:8px;">PDF MLR-41 gerado — download iniciado automaticamente.</p>
+  </div>
+</div>
+
+<!-- ════════ ABA 2 — RELATÓRIO MLR-42 ════════ -->
+<div id="painel-relatorio" class="painel">
+  <div class="alerta alerta-info">💡 Preencha o relatório após a realização da viagem. Os horários aqui devem refletir o que realmente ocorreu.</div>
+
+  <div class="alerta" style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--raio);padding:0.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <span style="font-size:0.82rem;color:#166534;">🔄 <strong>Sincronização automática:</strong> ao trocar para a aba <strong>MLR-41</strong>, os campos idênticos serão preenchidos automaticamente. Você também pode sincronizar manualmente.</span>
+    <button class="btn-sec" style="white-space:nowrap;font-size:0.8rem;padding:0.35rem 0.9rem;" onclick="sincronizarForms('rl','r');trocarAba('requerimento',document.querySelectorAll('.aba-btn')[0])">➜ Sincronizar com MLR-41</button>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Servidor</div>
+    <div class="campo"><label>Selecionar servidor <span class="obrig">*</span></label>
+    <select id="rl-servidor" onchange="preencherServidor('rl')"><option value="">— Selecione o servidor —</option></select></div>
+  </div>
+
+  <div class="servidor-card" id="rl-card-servidor">
+    <div class="servidor-nome" id="rl-srv-nome"></div>
+    <div class="servidor-info-grid">
+      <div class="servidor-info-item"><span class="srv-label">CPF</span><span class="srv-val" id="rl-srv-cpf"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Matrícula</span><span class="srv-val" id="rl-srv-mat"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Cargo</span><span class="srv-val" id="rl-srv-cargo"></span></div>
+      <div class="servidor-info-item"><span class="srv-label">Lotação</span><span class="srv-val" id="rl-srv-lot"></span></div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Dados Funcionais</div>
+    <div class="grid-2">
+      <div class="campo"><label>Órgão / Entidade</label><input type="text" id="rl-orgao" list="lista-orgaos" value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"><datalist id="lista-orgaos"><option value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"></datalist></div>
+      <div class="campo"><label>Sigla</label><input type="text" id="rl-sigla" value="DPP"></div>
+      <div class="campo"><label>Nome Social (se diferente)</label><input type="text" id="rl-nome-social" placeholder="Deixe em branco se igual ao nome civil"></div>
+      <div class="campo"><label>Município do Local de Trabalho</label><select id="rl-municipio"></select></div>
+      <div class="campo"><label>E-mail</label><input type="email" id="rl-email" placeholder="servidor@sc.gov.br"></div>
+      <div class="campo"><label>Celular</label><input type="text" id="rl-celular" placeholder="(47) 99999-9999"></div>
+      <div class="campo"><label>Data da Assinatura</label><input type="text" id="rl-data-ass" placeholder="10/04/2026"></div>
+    </div>
+    <div style="margin-top:1rem;">
+      <label style="display:block;margin-bottom:0.4rem;">Código/Nível do Cargo (para não efetivos)</label>
+      <div class="checkboxes" id="rl-codigos-cargo">
+        <label class="check-pill"><input type="checkbox" value="DGS-1"> DGS-1</label>
+        <label class="check-pill"><input type="checkbox" value="DGS-2"> DGS-2</label>
+        <label class="check-pill"><input type="checkbox" value="DGS-3"> DGS-3</label>
+        <label class="check-pill"><input type="checkbox" value="FTG-1"> FTG-1</label>
+        <label class="check-pill"><input type="checkbox" value="FTG-2"> FTG-2</label>
+        <label class="check-pill"><input type="checkbox" value="FTG-3"> FTG-3</label>
+        <label class="check-pill"><input type="checkbox" value="FG-1"> FG-1</label>
+        <label class="check-pill"><input type="checkbox" value="FG-2"> FG-2</label>
+        <label class="check-pill"><input type="checkbox" value="FG-3"> FG-3</label>
+        <label class="check-pill"><input type="checkbox" value="DGI-1"> DGI-1 (Codificado)</label>
+        <label class="check-pill"><input type="checkbox" value="ADM-SUP-3"> ADM. SUPERIOR-3</label>
+        <label class="check-pill"><input type="checkbox" value="ADM-SUP-8"> ADM. SUPERIOR-8</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Deslocamentos Realizados</div>
+    <div class="tabela-wrap">
+      <table class="desloc"><thead><tr>
+        <th>Data</th><th>Origem</th><th>Destino</th>
+        <th>Saída</th><th>Chegada</th><th>Transporte</th><th></th>
+      </tr></thead><tbody id="rl-linhas-desloc"></tbody></table>
+    </div>
+    <button class="btn-add-linha" onclick="adicionarLinha('rl')">+ Adicionar deslocamento</button>
+
+    <div class="calc-auto" id="rl-calc-auto" style="display:none;">
+      <div class="calc-auto-titulo">Diárias Recebidas — Cálculo Automático</div>
+      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
+        <label>Grupo do Cargo</label>
+        <select id="rl-grupo-cargo" onchange="recalcular('rl')">
+          <option value="1">1º Grupo</option>
+          <option value="2">2º Grupo</option>
+          <option value="3">3º Grupo</option>
+        </select>
+      </div>
+      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
+        <label>Tipo de deslocamento</label>
+        <select id="rl-tipo-desloc" onchange="recalcular('rl')">
+          <option value="estado">Dentro do Estado</option>
+          <option value="fora">Fora do Estado</option>
+        </select>
+      </div>
+      <div class="resumo-grid" id="rl-resumo-grid"></div>
+      <div id="rl-detalhe-linhas"></div>
+      <div class="prazo-box visivel" id="rl-prazo-box" style="display:block!important;"></div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-titulo">Resultado da Viagem</div>
+    <div class="campo"><label>Descreva se os objetivos foram alcançados <span class="obrig">*</span></label>
+    <textarea id="rl-resultado-texto" rows="5" placeholder="Descreva o resultado em consonância com os objetivos propostos..."></textarea></div>
+  </div>
+
+  <div class="acoes">
+    <button class="btn-primario" onclick="salvarEGerarPDF('relatorio')">⬇ Salvar + Gerar PDF (MLR-42)</button>
+    <button class="btn-sec" onclick="limpar('rl')">Limpar</button>
+  </div>
+  <div class="resultado-box" id="rl-resultado-box">
+    <h3>✓ Relatório salvo com sucesso!</h3>
+    <p style="font-size:0.8rem;color:var(--sucesso);margin-top:4px;">ID Firebase:</p>
+    <span class="doc-id" id="rl-doc-id"></span>
+    <p style="font-size:0.78rem;color:var(--sucesso);margin-top:8px;">PDF MLR-42 gerado — download iniciado automaticamente.</p>
+  </div>
+</div>
+
+<!-- ════════ ABA 3 — SERVIDORES ════════ -->
+<div id="painel-servidores" class="painel">
+
+  <!-- Cabeçalho -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+    <div>
+      <div style="font-size:1rem;font-weight:600;color:var(--verde-escuro);">👥 Servidores Cadastrados</div>
+      <div style="font-size:0.78rem;color:var(--texto-sec);margin-top:3px;">Dados carregados do Firebase em tempo real</div>
+    </div>
+    <button class="btn-primario" onclick="abrirModalServidor(null)" style="gap:6px;">
+      + Novo Servidor
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div id="serv-loading" style="text-align:center;padding:3rem;color:var(--texto-sec);font-size:0.85rem;">
+    ⏳ Carregando servidores...
+  </div>
+
+  <!-- Lista -->
+  <div id="lista-servidores" style="display:grid;gap:1rem;"></div>
+
+  <!-- Vazio -->
+  <div id="serv-vazio" style="display:none;text-align:center;padding:3rem;">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem;">👤</div>
+    <div style="font-weight:600;color:var(--texto-sec);margin-bottom:0.5rem;">Nenhum servidor cadastrado</div>
+    <div style="font-size:0.82rem;color:var(--texto-sec);">Clique em "Novo Servidor" para começar.</div>
+  </div>
+</div>
+
+<!-- ════ MODAL SERVIDOR ════ -->
+<div id="modal-servidor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--raio-lg);width:100%;max-width:680px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+
+    <!-- Header modal -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--borda);position:sticky;top:0;background:#fff;z-index:1;">
+      <div style="font-size:1rem;font-weight:600;color:var(--verde-escuro);" id="modal-srv-titulo">Novo Servidor</div>
+      <button onclick="fecharModalServidor()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--texto-sec);line-height:1;">×</button>
+    </div>
+
+    <div style="padding:1.5rem;">
+      <input type="hidden" id="srv-id">
+
+      <!-- DADOS PESSOAIS -->
+      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--verde-claro);">Dados Pessoais</div>
+      <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="campo" style="grid-column:span 2;">
+          <label>Nome Civil completo <span class="obrig">*</span></label>
+          <input type="text" id="srv-nome" placeholder="NOME COMPLETO DO SERVIDOR" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="campo">
+          <label>CPF <span class="obrig">*</span></label>
+          <input type="text" id="srv-cpf" placeholder="000.000.000-00" maxlength="14" oninput="mascaraCPF(this)">
+        </div>
+        <div class="campo">
+          <label>Matrícula (DV e Vínculo) <span class="obrig">*</span></label>
+          <input type="text" id="srv-matricula" placeholder="0000000-0-00">
+        </div>
+      </div>
+
+      <!-- DADOS FUNCIONAIS -->
+      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--verde-claro);">Dados Funcionais</div>
+      <div class="grid-2" style="margin-bottom:1rem;">
+        <div class="campo" style="grid-column:span 2;">
+          <label>Cargo/Emprego <span class="obrig">*</span></label>
+          <input type="text" id="srv-cargo" placeholder="CARGO DO SERVIDOR" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="campo">
+          <label>Lotação</label>
+          <input type="text" id="srv-lotacao" value="DEPARTAMENTO DE POLICIA PENAL" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="campo">
+          <label>Município</label>
+          <select id="srv-municipio"></select>
+        </div>
+        <div class="campo">
+          <label>E-mail</label>
+          <input type="email" id="srv-email" placeholder="servidor@sc.gov.br">
+        </div>
+        <div class="campo">
+          <label>Celular</label>
+          <input type="text" id="srv-celular" placeholder="(47) 99999-9999">
+        </div>
+        <div class="campo">
+          <label>Telefone</label>
+          <input type="text" id="srv-telefone" placeholder="(47) 3333-3333">
+        </div>
+      </div>
+
+      <!-- DADOS BANCÁRIOS -->
+      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--verde-claro);">Dados Bancários</div>
+      <div class="grid-3" style="margin-bottom:1.5rem;">
+        <div class="campo">
+          <label>Banco</label>
+          <input type="text" id="srv-banco" placeholder="BANCO DO BRASIL" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="campo">
+          <label>Agência</label>
+          <input type="text" id="srv-agencia" placeholder="0000-0">
+        </div>
+        <div class="campo">
+          <label>Conta</label>
+          <input type="text" id="srv-conta" placeholder="000000-0">
+        </div>
+      </div>
+
+      <!-- Erro -->
+      <div id="modal-srv-erro" style="display:none;background:var(--erro-claro);border:1px solid #F7C1C1;border-radius:var(--raio);padding:0.7rem 1rem;font-size:0.8rem;color:var(--erro);margin-bottom:1rem;"></div>
+
+      <!-- Botões -->
+      <div style="display:flex;gap:1rem;justify-content:flex-end;">
+        <button class="btn-sec" onclick="fecharModalServidor()">Cancelar</button>
+        <button class="btn-primario" id="modal-srv-btn" onclick="salvarServidor()">✓ Salvar Servidor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ ABA 4 — REGRAS ════════ -->
+<div id="painel-regras" class="painel">
+  <div class="secao">
+    <div class="secao-titulo">Regras de Diárias — Decreto nº 1.662/2022</div>
+    <div style="display:grid;gap:1rem;">
+      <div style="background:#f0faf6;border:1px solid #9FE1CB;border-radius:var(--raio);padding:1rem;">
+        <div style="font-weight:600;font-size:0.85rem;color:var(--verde-escuro);margin-bottom:0.5rem;">⏱ Período de deslocamento</div>
+        <div style="font-size:0.82rem;line-height:1.7;color:var(--texto);">
+          <strong>≥ 12 horas</strong> → Diária inteira (R$ 110,00)<br>
+          <strong>Entre 4h e 12h (exclusive)</strong> → Meia diária (R$ 55,00)<br>
+          <strong>≤ 4 horas</strong> → Sem direito a diária<br>
+          <strong>Com pernoite (meia-noite às 6h)</strong> → R$ 220,00 (grupos 1, 2 e 3 dentro do Estado)
+        </div>
+      </div>
+      <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--raio);padding:1rem;">
+        <div style="font-weight:600;font-size:0.85rem;color:#633806;margin-bottom:0.5rem;">📅 Limite mensal</div>
+        <div style="font-size:0.82rem;line-height:1.7;color:#633806;">
+          Máximo de <strong>10 diárias por mês</strong> por servidor (Art. 16, Dec. 650/2020).<br>
+          Exceções dispensadas de prévia autorização da SEA: cursos, operações policiais, operações de escolta SAP, comissões de sindicância/PAD, comitivas do Governador/Vice-Governador.
+        </div>
+      </div>
+      <div style="background:#E6F1FB;border:1px solid #B5D4F4;border-radius:var(--raio);padding:1rem;">
+        <div style="font-weight:600;font-size:0.85rem;color:#0C447C;margin-bottom:0.5rem;">📋 Prestação de contas</div>
+        <div style="font-size:0.82rem;line-height:1.7;color:#0C447C;">
+          O servidor deve prestar contas em até <strong>5 dias úteis após o retorno</strong> (Art. 11, Dec. 650/2020), mediante formulário MLR-42 + documentos comprobatórios de deslocamento e estada.
+        </div>
+      </div>
+      <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:var(--raio);padding:1rem;">
+        <div style="font-weight:600;font-size:0.85rem;color:var(--texto);margin-bottom:0.5rem;">🚫 Quando não cabe diária</div>
+        <div style="font-size:0.82rem;line-height:1.7;color:var(--texto);">
+          • Entre municípios limítrofes sem necessidade de pernoite (Dec. 1.394/2021)<br>
+          • Quando despesas forem custeadas por instituição pública ou empresa privada<br>
+          • Quando o Estado fornecer 3 refeições + acomodação
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// CIDADES DE SANTA CATARINA
+// ══════════════════════════════════════════════════
+const CIDADES_SC = [
+  "FLORIANÓPOLIS","JOINVILLE","BLUMENAU","SÃO JOSÉ","CHAPECÓ","CRICIÚMA","ITAJAÍ","LAGES",
+  "JARAGUÁ DO SUL","PALHOÇA","BALNEÁRIO CAMBORIÚ","BRUSQUE","TUBARÃO","SÃO BENTO DO SUL",
+  "CAÇADOR","CONCÓRDIA","NAVEGANTES","IÇARA","GASPAR","ARARANGUÁ","MAFRA","INDAIAL",
+  "CAMBORIÚ","RIO DO SUL","TIJUCAS","BIGUAÇU","GUARAMIRIM","LAGUNA","IMBITUBA","XANXERÊ",
+  "CANOINHAS","VIDEIRA","FRAIBURGO","ITAPEMA","PORTO BELO","PENHA","BOMBINHAS","PIÇARRAS",
+  "ARMAÇÃO DOS BÚZIOS","GOVERNADOR CELSO RAMOS","ANTÔNIO CARLOS","ANGELINA","ANITÁPOLIS",
+  "SÃO PEDRO DE ALCÂNTARA","SANTO AMARO DA IMPERATRIZ","PAULO LOPES","GAROPABA","IMBITUBA",
+  "IMARUÍ","JAGUARUNA","SANGÃO","TREZE DE MAIO","GRAVATAL","PEDRAS GRANDES","ORLEANS",
+  "SÃO LUDGERO","BRAÇO DO NORTE","GRÃO PARÁ","RIO FORTUNA","SANTA ROSA DE LIMA","ARMAZÉM",
+  "SÃO MARTINHO","IMARUÍ","FLORIANO PEIXOTO","LAURO MÜLLER","TREVISO","SIDERÓPOLIS","NOVA VENEZA",
+  "FORQUILHINHA","MARACAJÁ","ERMO","TURVO","JACINTO MACHADO","SÃO JOÃO DO SUL","PRAIA GRANDE",
+  "PASSO DE TORRES","BALNEÁRIO GAIVOTA","SOMBRIO","SANTA ROSA DO SUL","MELEIRO","MORRO GRANDE",
+  "TIMBÉ DO SUL","ROMELÂNDIA","PALMA SOLA","ANCHIETA","GUARACIABA","CORONEL FREITAS","NOVA ERECHIM",
+  "CUNHATAÍ","CAIBI","PALMITOS","RIQUEZA","SÃO LOURENÇO DO OESTE","QUILOMBO","ABELARDO LUZ",
+  "VARGEÃO","GALVÃO","IPUAÇU","LAJEADO GRANDE","BOM JESUS","ENTRE RIOS","FAXINAL DOS GUEDES",
+  "PONTE SERRADA","PASSOS MAIA","NOVO HORIZONTE","ÁGUA DOCE","IOMERÊ","TANGARÁ","PINHEIRO PRETO",
+  "CAPINZAL","OURO","LACERDÓPOLIS","JOAÇABA","HERVAL D'OESTE","LUZERNA","TREZE TÍLIAS","ERVAL VELHO",
+  "VARGEM BONITA","MONTE CARLO","BRUNÓPOLIS","CAMPOS NOVOS","ZORTÉA","CELSO RAMOS","ABDON BATISTA",
+  "ANITA GARIBALDI","CERRO NEGRO","CAMPO BELO DO SUL","CAPÃO ALTO","CORREIA PINTO","PALMEIRA",
+  "PONTE ALTA","PONTE ALTA DO NORTE","SANTA CECÍLIA","CURITIBANOS","FREI ROGÉRIO","PONTE ALTA",
+  "LEBON RÉGIS","TIMBÓ GRANDE","PORTO UNIÃO","IRINEÓPOLIS","MAJOR VIEIRA","TRÊS BARRAS","PAPANDUVA",
+  "MONTE CASTELO","ITAIÓPOLIS","MAFRA","RIO NEGRINHO","SÃO FRANCISCO DO SUL","ARAQUARI","BARRA VELHA",
+  "CORUPÁ","MASSARANDUBA","SCHROEDER","BENEDITO NOVO","DOUTOR PEDRINHO","RODEIO","ASCURRA","APIÚNA",
+  "PRESIDENTE GETÚLIO","IBIRAMA","VITOR MEIRELES","JOSÉ BOITEUX","WITMARSUN","AURORA","AGRONÔMICA",
+  "TROMBUDO CENTRAL","LAURENTINO","SALETE","TAIÓ","MIRIM DOCE","PETROLÂNDIA","VIDAL RAMOS",
+  "IMBUIA","ITUPORANGA","ALFREDO WAGNER","LEOBERTO LEAL","NOVA TRENTO","CANELINHA","SÃO JOÃO BATISTA",
+  "MAJOR GERCINO","BOTUVERÁ","GUABIRUBA","POMERODE","TIMBÓ","RIO DOS CEDROS","LUÍS ALVES",
+  "MASSARANDUBA","ITAPOÁ","GARUVA","JOINVILLE","CAMPO ALEGRE","RIO NEGRINHO","SÃO BENTO DO SUL",
+  "BALNEÁRIO BARRA DO SUL","BRAÇO DO TROMBUDO","POUSO REDONDO","TAIÓ","WITMARSUM"
+].filter((v,i,a)=>a.indexOf(v)===i).sort();
+
+// Garante Florianópolis no topo
+const CIDADES_SC_ORDENADAS = ["FLORIANÓPOLIS", ...CIDADES_SC.filter(c => c !== "FLORIANÓPOLIS")];
+
+function popularSelectMunicipio(id, valorSelecionado = "FLORIANÓPOLIS") {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = CIDADES_SC_ORDENADAS.map(c =>
+    `<option value="${c}"${c === valorSelecionado ? ' selected' : ''}>${c}</option>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════════
+// SERVIDORES — dinâmico via Firebase
+// ══════════════════════════════════════════════════
+window._servidoresCache = []; // preenchido pelo onSnapshot
+
+// Callback chamado sempre que os servidores são atualizados
+window._onServidoresAtualizado = function(lista) {
+  popularSelectsServidores(lista);
+  renderizarListaServidores(lista);
+};
+
+function popularSelectsServidores(lista) {
+  ['r-servidor','rl-servidor'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = '<option value="">— Selecione o servidor —</option>';
+    lista.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.nome;
+      sel.appendChild(o);
+    });
+    if (val) sel.value = val; // mantém seleção se já havia
+  });
+}
+
+function renderizarListaServidores(lista) {
+  const loading = document.getElementById('serv-loading');
+  const vazio   = document.getElementById('serv-vazio');
+  const grid    = document.getElementById('lista-servidores');
+  if (loading) loading.style.display = 'none';
+  if (!lista.length) {
+    if (vazio) vazio.style.display = 'block';
+    grid.innerHTML = '';
+    return;
+  }
+  if (vazio) vazio.style.display = 'none';
+  grid.innerHTML = lista.map((s, i) => `
+    <div class="secao" style="position:relative;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.75rem;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:38px;height:38px;border-radius:50%;background:var(--verde-claro);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.85rem;color:var(--verde-escuro);flex-shrink:0;">${i+1}</div>
+          <div>
+            <div style="font-weight:600;font-size:0.9rem;color:var(--texto);">${s.nome}</div>
+            <div style="font-size:0.75rem;color:var(--texto-sec);font-family:var(--mono);">${s.cargo||'—'}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="abrirModalServidor('${s.id}')"
+            style="font-family:var(--fonte);font-size:0.75rem;padding:5px 12px;border-radius:6px;border:1px solid var(--borda);background:var(--fundo);cursor:pointer;color:var(--texto);">
+            ✏️ Editar
+          </button>
+          <button onclick="confirmarExclusao('${s.id}','${s.nome.replace(/'/g,"\\\'")}')"
+            style="font-family:var(--fonte);font-size:0.75rem;padding:5px 12px;border-radius:6px;border:1px solid #F7C1C1;background:var(--erro-claro);cursor:pointer;color:var(--erro);">
+            🗑 Excluir
+          </button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:0.4rem 1.5rem;font-size:0.78rem;">
+        <div><span style="color:var(--texto-sec);">CPF:</span> ${s.cpf||'—'}</div>
+        <div><span style="color:var(--texto-sec);">Matrícula:</span> ${s.matricula||'—'}</div>
+        <div><span style="color:var(--texto-sec);">Município:</span> ${s.municipio||'—'}</div>
+        <div><span style="color:var(--texto-sec);">Celular:</span> ${s.celular||'—'}</div>
+        <div><span style="color:var(--texto-sec);">E-mail:</span> ${s.email||'—'}</div>
+        <div><span style="color:var(--texto-sec);">Banco:</span> ${s.banco||'—'} — Ag: ${s.agencia||'—'} / Cta: ${s.conta||'—'}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Modal servidor ────────────────────────────────
+function abrirModalServidor(id) {
+  const modal = document.getElementById('modal-servidor');
+  const titulo = document.getElementById('modal-srv-titulo');
+  const erro   = document.getElementById('modal-srv-erro');
+  erro.style.display = 'none';
+
+  // Popula select de município no modal
+  popularSelectMunicipio('srv-municipio', 'FLORIANÓPOLIS');
+
+  if (id) {
+    const s = window._servidoresCache.find(x => x.id === id);
+    if (!s) return;
+    titulo.textContent = '✏️ Editar Servidor';
+    document.getElementById('srv-id').value        = id;
+    document.getElementById('srv-nome').value      = s.nome      || '';
+    document.getElementById('srv-cpf').value       = s.cpf       || '';
+    document.getElementById('srv-matricula').value = s.matricula || '';
+    document.getElementById('srv-cargo').value     = s.cargo     || '';
+    document.getElementById('srv-lotacao').value   = s.lotacao   || 'DEPARTAMENTO DE POLICIA PENAL';
+    document.getElementById('srv-email').value     = s.email     || '';
+    document.getElementById('srv-celular').value   = s.celular   || '';
+    document.getElementById('srv-telefone').value  = s.telefone  || '';
+    document.getElementById('srv-banco').value     = s.banco     || '';
+    document.getElementById('srv-agencia').value   = s.agencia   || '';
+    document.getElementById('srv-conta').value     = s.conta     || '';
+    popularSelectMunicipio('srv-municipio', s.municipio || 'FLORIANÓPOLIS');
+  } else {
+    titulo.textContent = '+ Novo Servidor';
+    document.getElementById('srv-id').value = '';
+    ['srv-nome','srv-cpf','srv-matricula','srv-cargo','srv-email',
+     'srv-celular','srv-telefone','srv-banco','srv-agencia','srv-conta'].forEach(f => {
+      document.getElementById(f).value = '';
+    });
+    document.getElementById('srv-lotacao').value = 'DEPARTAMENTO DE POLICIA PENAL';
+  }
+
+  modal.style.display = 'flex';
+  document.getElementById('srv-nome').focus();
+}
+
+function fecharModalServidor() {
+  document.getElementById('modal-servidor').style.display = 'none';
+}
+
+async function salvarServidor() {
+  const id    = document.getElementById('srv-id').value;
+  const nome  = document.getElementById('srv-nome').value.trim();
+  const cpf   = document.getElementById('srv-cpf').value.trim();
+  const mat   = document.getElementById('srv-matricula').value.trim();
+  const cargo = document.getElementById('srv-cargo').value.trim();
+  const erro  = document.getElementById('modal-srv-erro');
+
+  if (!nome || !cpf || !mat || !cargo) {
+    erro.textContent = 'Preencha os campos obrigatórios: Nome, CPF, Matrícula e Cargo.';
+    erro.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('modal-srv-btn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const dados = {
+    nome,
+    cpf,
+    matricula : mat,
+    cargo,
+    lotacao   : document.getElementById('srv-lotacao').value.trim(),
+    municipio : document.getElementById('srv-municipio').value,
+    email     : document.getElementById('srv-email').value.trim(),
+    celular   : document.getElementById('srv-celular').value.trim(),
+    telefone  : document.getElementById('srv-telefone').value.trim(),
+    banco     : document.getElementById('srv-banco').value.trim(),
+    agencia   : document.getElementById('srv-agencia').value.trim(),
+    conta     : document.getElementById('srv-conta').value.trim(),
+  };
+
+  const res = await window._salvarServidor(dados, id || null);
+  btn.disabled = false;
+  btn.textContent = '✓ Salvar Servidor';
+
+  if (res.ok) {
+    fecharModalServidor();
+    toast('Servidor salvo com sucesso!');
+  } else {
+    erro.textContent = 'Erro ao salvar: ' + res.erro;
+    erro.style.display = 'block';
+  }
+}
+
+async function confirmarExclusao(id, nome) {
+  if (!confirm(`Excluir o servidor "${nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  const res = await window._excluirServidor(id);
+  if (res.ok) toast('Servidor excluído.');
+  else toast('Erro ao excluir: ' + res.erro, 'erro');
+}
+
+// Máscara CPF
+function mascaraCPF(input) {
+  let v = input.value.replace(/\D/g,'').substring(0,11);
+  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
+  input.value = v;
+}
+
+const TRANSPORTES = ['Veículo Oficial','Veículo Próprio','Ônibus','Avião'];
+const fmtR = v => 'R$ ' + v.toFixed(2).replace('.',',');
+
+
+
+// ══════════════════════════════════════════════════
+// CÁLCULO DE DIÁRIAS — lógica central (Dec. 1.662/2022)
+//
+// Regra: calcula o PERÍODO TOTAL DA MISSÃO —
+// da primeira saída de Florianópolis até a última chegada.
+// A cada 24h completas = 1 pernoite (R$ 220,00).
+// O restante (< 24h) segue: ≥12h = integral (R$110),
+// 4–12h = meia (R$55), ≤4h = sem direito.
+// ══════════════════════════════════════════════════
+
+function toMin(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Converte data "YYYY-MM-DD" + hora "HH:MM" em minutos absolutos
+function toMinAbs(data, hora) {
+  if (!data || !hora) return null;
+  const [ano, mes, dia] = data.split('-').map(Number);
+  const [h, m] = hora.split(':').map(Number);
+  // Minutos desde 01/01/2020 (referência arbitrária)
+  const ref = new Date(2020, 0, 1);
+  const dt  = new Date(ano, mes - 1, dia, h, m);
+  return Math.round((dt - ref) / 60000);
+}
+
+// Calcula o resultado dado o total de minutos da missão
+function calcularMissao(totalMin, tipoViagem) {
+  const H24 = 24 * 60;
+  const pernoites  = Math.floor(totalMin / H24);
+  const restMin    = totalMin % H24;
+  const restHoras  = restMin / 60;
+
+  let qtdExtra = 0, valorExtra = 0, labelExtra = '';
+  if (restHoras > 12) {
+    qtdExtra = 1; valorExtra = 110; labelExtra = 'diária inteira';
+  } else if (restHoras > 4) {
+    qtdExtra = 0.5; valorExtra = 55; labelExtra = 'meia diária';
+  }
+
+  const valorPernoite = 220;
+  const totalValor = pernoites * valorPernoite + valorExtra;
+  const totalQtd   = pernoites + qtdExtra;
+
+  return { pernoites, qtdExtra, valorExtra, labelExtra, totalValor, totalQtd, totalMin, restMin };
+}
+
+// ══════════════════════════════════════════════════
+// RECALCULAR — lê linhas da tabela e atualiza painel
+// ══════════════════════════════════════════════════
+function recalcular(p) {
+  const linhas     = coletarDeslocamentos(p);
+  const grupo      = document.getElementById(p + '-grupo-cargo').value;
+  const tipoViagem = document.getElementById(p + '-tipo-desloc').value;
+  const calcDiv    = document.getElementById(p + '-calc-auto');
+  const resumoGrid = document.getElementById(p + '-resumo-grid');
+  const detalheDiv = document.getElementById(p + '-detalhe-linhas');
+  const prazoBox   = document.getElementById(p + '-prazo-box');
+
+  const validas = linhas.filter(l => l.data && l.saida && l.chegada);
+  if (validas.length === 0) { calcDiv.style.display = 'none'; return; }
+  calcDiv.style.display = 'block';
+
+  // Ordena por data+hora de saída
+  validas.sort((a, b) => {
+    const ma = toMinAbs(a.data, a.saida), mb = toMinAbs(b.data, b.saida);
+    return (ma || 0) - (mb || 0);
+  });
+
+  // Período total: primeira saída → última chegada
+  const primSaida   = validas[0];
+  const ultChegada  = validas[validas.length - 1];
+  const minInicio   = toMinAbs(primSaida.data, primSaida.saida);
+  const minFim      = toMinAbs(ultChegada.data, ultChegada.chegada);
+
+  if (minInicio === null || minFim === null) {
+    calcDiv.style.display = 'none'; return;
+  }
+
+  const totalMin = minFim - minInicio;
+  if (totalMin <= 0) { calcDiv.style.display = 'none'; return; }
+
+  const missao = calcularMissao(totalMin, tipoViagem);
+
+  // Para contador e PDF
+  const qtInteiras  = missao.qtdExtra === 1 ? 1 : 0;
+  const qtMetades   = missao.qtdExtra === 0.5 ? 1 : 0;
+  const qtPernoites = missao.pernoites;
+  const totalQtd    = missao.totalQtd;
+  const totalValor  = missao.totalValor;
+
+  // Última data para prazo de prestação de contas
+  const ultimaData = ultChegada.data;
+
+  // Monta descrição do período
+  const hTot = Math.floor(totalMin / 60), mTot = totalMin % 60;
+  const duracaoStr = `${hTot}h${mTot > 0 ? mTot + 'min' : ''}`;
+
+  const hRest = Math.floor(missao.restMin / 60), mRest = missao.restMin % 60;
+  const restStr = missao.restMin > 0 ? `${hRest}h${mRest > 0 ? mRest + 'min' : ''}` : '0h';
+
+  // Detalhe da missão
+  let detalhesHTML = `
+    <div class="detalhe-linha" style="flex-direction:column;align-items:flex-start;gap:0.5rem;">
+      <div>
+        <strong style="font-size:0.85rem;">📍 Período total da missão: ${duracaoStr}</strong>
+        <div style="font-size:0.75rem;color:var(--texto-sec);margin-top:3px;">
+          Saída: ${primSaida.data} às ${primSaida.saida} · Retorno: ${ultChegada.data} às ${ultChegada.chegada}
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.25rem;">`;
+
+  if (missao.pernoites > 0) {
+    detalhesHTML += `<span class="dl-tag tag-pernoite">${missao.pernoites} pernoite${missao.pernoites > 1 ? 's' : ''} × R$ 220,00 = ${fmtR(missao.pernoites * 220)}</span>`;
+  }
+  if (missao.qtdExtra > 0) {
+    const tagClass = missao.qtdExtra === 1 ? 'tag-inteira' : 'tag-meia';
+    detalhesHTML += `<span class="dl-tag ${tagClass}">Restam ${restStr} → ${missao.labelExtra} = ${fmtR(missao.valorExtra)}</span>`;
+  }
+  if (missao.pernoites === 0 && missao.qtdExtra === 0) {
+    detalhesHTML += `<span class="dl-tag tag-sem">Até 4h — sem direito a diária</span>`;
+  }
+
+  detalhesHTML += `</div>`;
+
+  // Lista dos trechos
+  detalhesHTML += `<div style="font-size:0.72rem;color:var(--texto-sec);margin-top:0.25rem;line-height:1.6;">
+    ${validas.map(d => `${d.data} · ${d.origem} → ${d.destino} (${d.saida}–${d.chegada}) · ${d.transporte}`).join('<br>')}
+  </div></div>`;
+
+  // Resumo
+  resumoGrid.innerHTML = `
+    <div class="resumo-card"><div class="rc-label">Duração total</div><div class="rc-val">${duracaoStr}</div><div class="rc-sub">${validas.length} trecho(s)</div></div>
+    <div class="resumo-card"><div class="rc-label">Pernoites</div><div class="rc-val">${missao.pernoites}</div><div class="rc-sub">× R$ 220,00</div></div>
+    <div class="resumo-card"><div class="rc-label">${missao.labelExtra || 'Sem adicional'}</div><div class="rc-val">${missao.qtdExtra > 0 ? fmtR(missao.valorExtra) : '—'}</div><div class="rc-sub">${restStr} restantes</div></div>
+    <div class="resumo-card destaque"><div class="rc-label">Total a Pagar</div><div class="rc-val">${fmtR(totalValor)}</div><div class="rc-sub">${totalQtd} diária(s)</div></div>`;
+
+  detalheDiv.innerHTML = detalhesHTML;
+
+  // Prazo prestação de contas (MLR-42)
+  if (ultimaData && p === 'rl') {
+    const dtRetorno = new Date(ultimaData + 'T12:00:00');
+    let diasUteis = 0, dt = new Date(dtRetorno);
+    while (diasUteis < 5) { dt.setDate(dt.getDate() + 1); if (dt.getDay() !== 0 && dt.getDay() !== 6) diasUteis++; }
+    prazoBox.innerHTML = `📋 <strong>Prazo para prestação de contas:</strong> até ${dt.toLocaleDateString('pt-BR')} (5 dias úteis após o retorno — Art. 11, Dec. 650/2020)`;
+    prazoBox.style.display = 'block';
+  }
+
+  // Guarda resultado global para salvar/PDF
+  window[p + '_calc'] = { totalQtd, totalValor, qtInteiras, qtMetades, qtPernoites, grupo, tipoViagem };
+}
+
+
+// ══════════════════════════════════════════════════
+// CONTADOR DIÁRIAS DO MÊS
+// ══════════════════════════════════════════════════
+async function verificarContadorMes(matricula, prefixo) {
+  const badgeEl = document.getElementById(prefixo + '-badge-diarias');
+  if (!badgeEl) return;
+  badgeEl.innerHTML = '<span class="badge-diarias badge-ok" style="opacity:0.5">Consultando Firebase...</span>';
+
+  if (typeof window._consultarDiariasDoMes !== 'function') {
+    badgeEl.innerHTML = '<span class="badge-diarias badge-aviso">⚠ Firebase não configurado — limite mensal não verificado</span>';
+    return;
+  }
+
+  const res = await window._consultarDiariasDoMes(matricula);
+  if (!res.ok) {
+    badgeEl.innerHTML = `<span class="badge-diarias badge-aviso">⚠ Não foi possível consultar o Firebase</span>`;
+    return;
+  }
+
+  const usadas = parseFloat(res.total) || 0;
+  const restantes = 10 - usadas;
+  const mes = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+
+  if (usadas >= 10) {
+    badgeEl.innerHTML = `<span class="badge-diarias badge-erro">🚫 LIMITE ATINGIDO — ${usadas}/10 diárias em ${mes}. Necessário autorização da SEA.</span>`;
+    if (prefixo === 'r') document.getElementById('r-btn-salvar').disabled = true;
+  } else if (usadas >= 8) {
+    badgeEl.innerHTML = `<span class="badge-diarias badge-aviso">⚠ Atenção — ${usadas}/10 diárias em ${mes}. Restam ${restantes}.</span>`;
+  } else {
+    badgeEl.innerHTML = `<span class="badge-diarias badge-ok">✓ ${usadas}/10 diárias em ${mes}. Restam ${restantes}.</span>`;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+function inicializar() {
+  popularSelectMunicipio('r-municipio', 'FLORIANÓPOLIS');
+  popularSelectMunicipio('rl-municipio', 'FLORIANÓPOLIS');
+  adicionarLinha('r');
+  adicionarLinha('rl');
+
+  // Data de hoje formatada
+  const hoje = new Date();
+  const hojeStr = hoje.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const cidadeData = 'FLORIANÓPOLIS, ' + hojeStr;
+  document.getElementById('r-local-data').value = cidadeData;
+  document.getElementById('rl-data-ass').value  = hojeStr;
+
+  // Fechar modal ao clicar fora
+  document.getElementById('modal-servidor').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-servidor')) fecharModalServidor();
+  });
+
+  // _iniciarEscutaServidores é chamado pelo onAuthStateChanged no bloco Firebase
+  // Mas como fallback, tenta também após 2s caso a auth já esteja resolvida
+  setTimeout(() => {
+    if (typeof window._iniciarEscutaServidores === 'function' &&
+        (!window._servidoresCache || window._servidoresCache.length === 0)) {
+      window._iniciarEscutaServidores();
+    }
+  }, 2000);
+}
+
+// ══════════════════════════════════════════════════
+// SINCRONIZAÇÃO BIDIRECIONAL MLR-41 ↔ MLR-42
+// Campos idênticos: servidor, orgao, sigla, nome-social,
+//                   municipio, email, celular, codigos-cargo, deslocamentos
+// ══════════════════════════════════════════════════
+function sincronizarForms(origem, destino) {
+  // 1. Servidor
+  const sidOrig = document.getElementById(origem + '-servidor').value;
+  const sidDest = document.getElementById(destino + '-servidor');
+  if (sidOrig && sidDest.value !== sidOrig) {
+    sidDest.value = sidOrig;
+    preencherServidor(destino);
+  }
+
+  // 2. Campos de texto simples (mapeamento origem → destino)
+  const mapa = {
+    'orgao': 'orgao',
+    'sigla': 'sigla',
+    'nome-social': 'nome-social',
+    'email': 'email',
+    'celular': 'celular',
+  };
+  Object.entries(mapa).forEach(([campoOrig, campoDest]) => {
+    const elOrig = document.getElementById(origem + '-' + campoOrig);
+    const elDest = document.getElementById(destino + '-' + campoDest);
+    if (elOrig && elDest && elOrig.value) elDest.value = elOrig.value;
+  });
+
+  // 3. Município (select)
+  const munOrig = document.getElementById(origem + '-municipio')?.value;
+  if (munOrig) popularSelectMunicipio(destino + '-municipio', munOrig);
+
+  // 4. Códigos de cargo (checkboxes)
+  const checkedOrig = Array.from(
+    document.querySelectorAll('#' + origem + '-codigos-cargo input:checked')
+  ).map(c => c.value);
+  document.querySelectorAll('#' + destino + '-codigos-cargo input').forEach(c => {
+    c.checked = checkedOrig.includes(c.value);
+  });
+
+  // 5. Deslocamentos — sincronizar linhas existentes da tabela
+  const tbodyOrig = document.getElementById(origem + '-linhas-desloc');
+  const tbodyDest = document.getElementById(destino + '-linhas-desloc');
+  const linhasOrig = Array.from(tbodyOrig.querySelectorAll('tr'));
+  const linhasDest = Array.from(tbodyDest.querySelectorAll('tr'));
+
+  // Garante que o destino tenha o mesmo número de linhas
+  while (tbodyDest.querySelectorAll('tr').length < linhasOrig.length) adicionarLinha(destino);
+  while (tbodyDest.querySelectorAll('tr').length > linhasOrig.length) {
+    const ultima = tbodyDest.querySelector('tr:last-child');
+    if (ultima) ultima.remove();
+  }
+
+  // Copia os valores célula a célula
+  Array.from(tbodyOrig.querySelectorAll('tr')).forEach((trOrig, i) => {
+    const trDest = tbodyDest.querySelectorAll('tr')[i];
+    if (!trDest) return;
+    const cellsOrig = trOrig.querySelectorAll('td');
+    const cellsDest = trDest.querySelectorAll('td');
+    [0,1,2,3,4,5].forEach(ci => {
+      const inputOrig  = cellsOrig[ci]?.querySelector('input,select');
+      const inputDest  = cellsDest[ci]?.querySelector('input,select');
+      if (inputOrig && inputDest) inputDest.value = inputOrig.value;
+    });
+  });
+  recalcular(destino);
+
+  toast('✔ Dados sincronizados com ' + (origem === 'r' ? 'MLR-41' : 'MLR-42'), 'ok');
+}
+
+function trocarAba(id, btn) {
+  // Detecta qual aba estava ativa antes de trocar
+  const abaAtiva = document.querySelector('.painel.ativo');
+  const idAtiva  = abaAtiva ? abaAtiva.id.replace('painel-', '') : null;
+
+  document.querySelectorAll('.painel').forEach(p => p.classList.remove('ativo'));
+  document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
+  document.getElementById('painel-' + id).classList.add('ativo');
+  btn.classList.add('ativa');
+
+  // Sincroniza automaticamente ao trocar entre requerimento e relatorio
+  if (idAtiva === 'requerimento' && id === 'relatorio') {
+    sincronizarForms('r', 'rl');
+  } else if (idAtiva === 'relatorio' && id === 'requerimento') {
+    sincronizarForms('rl', 'r');
+  }
+}
+
+function preencherServidor(p) {
+  const id   = document.getElementById(p + '-servidor').value;
+  const card = document.getElementById(p + '-card-servidor');
+  if (!id) { card.classList.remove('visivel'); return; }
+  const s = window._servidoresCache.find(x => x.id === id);
+  if (!s) { card.classList.remove('visivel'); return; }
+  card.classList.add('visivel');
+  document.getElementById(p + '-srv-nome').textContent  = s.nome;
+  document.getElementById(p + '-srv-cpf').textContent   = s.cpf;
+  document.getElementById(p + '-srv-mat').textContent   = s.matricula;
+  document.getElementById(p + '-srv-cargo').textContent = s.cargo;
+  document.getElementById(p + '-srv-lot').textContent   = s.lotacao;
+  if (p === 'r') {
+    document.getElementById('r-srv-banco').textContent = s.banco || '—';
+    document.getElementById('r-srv-conta').textContent = (s.agencia || '—') + ' / ' + (s.conta || '—');
+    if (s.municipio) popularSelectMunicipio('r-municipio', s.municipio.toUpperCase());
+    if (s.celular)   document.getElementById('r-celular').value = s.celular;
+    if (s.email)     document.getElementById('r-email').value   = s.email;
+    document.getElementById('r-btn-salvar').disabled = false;
+    verificarContadorMes(s.matricula, 'r');
+  } else {
+    if (s.municipio) popularSelectMunicipio('rl-municipio', s.municipio.toUpperCase());
+    if (s.celular)   document.getElementById('rl-celular').value = s.celular;
+    if (s.email)     document.getElementById('rl-email').value   = s.email;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// LINHAS DE DESLOCAMENTO
+// ══════════════════════════════════════════════════
+function adicionarLinha(p) {
+  const tbody = document.getElementById(p + '-linhas-desloc');
+  const tr = document.createElement('tr');
+  const opts = CIDADES_SC_ORDENADAS.map(c => `<option value="${c}">${c}</option>`).join('');
+  tr.innerHTML = `
+    <td><input type="date" style="width:128px;" oninput="recalcular('${p}')"></td>
+    <td><select style="width:140px;" onchange="recalcular('${p}')">${opts}</select></td>
+    <td><select style="width:140px;" onchange="recalcular('${p}')">${opts}</select></td>
+    <td><input type="time" style="width:82px;" oninput="recalcular('${p}')"></td>
+    <td><input type="time" style="width:82px;" oninput="recalcular('${p}')"></td>
+    <td><select style="width:128px;" onchange="recalcular('${p}')">${TRANSPORTES.map(t=>`<option>${t}</option>`).join('')}</select></td>
+    <td><button class="btn-rem-linha" onclick="this.closest('tr').remove();recalcular('${p}')">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function coletarDeslocamentos(p) {
+  return Array.from(document.querySelectorAll('#' + p + '-linhas-desloc tr')).map(tr => {
+    const cells = tr.querySelectorAll('td');
+    const data       = cells[0]?.querySelector('input')?.value  || '';
+    const origem     = cells[1]?.querySelector('select')?.value || '';
+    const destino    = cells[2]?.querySelector('select')?.value || '';
+    const saida      = cells[3]?.querySelector('input')?.value  || '';
+    const chegada    = cells[4]?.querySelector('input')?.value  || '';
+    const transporte = cells[5]?.querySelector('select')?.value || '';
+    return { data, origem, destino, saida, chegada, transporte };
+  }).filter(d => d.origem || d.destino || d.data);
+}
+
+// ══════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════
+function toast(msg, tipo = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = (tipo === 'ok' ? '✓ ' : tipo === 'aviso' ? '⚠ ' : '✕ ') + msg;
+  t.className = 'show' + (tipo !== 'ok' ? ' ' + tipo : '');
+  setTimeout(() => { t.className = ''; }, 4000);
+}
+
+// ══════════════════════════════════════════════════
+// LIMPAR
+// ══════════════════════════════════════════════════
+function limpar(p) {
+  document.getElementById(p + '-servidor').value = '';
+  document.getElementById(p + '-card-servidor').classList.remove('visivel');
+  document.getElementById(p + '-linhas-desloc').innerHTML = '';
+  document.getElementById(p + '-calc-auto').style.display = 'none';
+  adicionarLinha(p);
+  document.querySelectorAll('#' + p + '-codigos-cargo input').forEach(c => c.checked = false);
+  popularSelectMunicipio(p + '-municipio', 'FLORIANÓPOLIS');
+  const campos = p === 'r'
+    ? ['r-objetivo','r-nome-social','r-local-data','r-email','r-celular','r-competencia']
+    : ['rl-resultado-texto','rl-nome-social','rl-email','rl-celular','rl-data-ass'];
+  campos.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  const boxId = p === 'r' ? 'r-resultado' : 'rl-resultado-box';
+  document.getElementById(boxId).classList.remove('visivel');
+  if (p === 'r') {
+    document.getElementById('r-btn-salvar').disabled = false;
+    document.getElementById('r-badge-diarias').innerHTML = '';
+  }
+  window[p + '_calc'] = null;
+}
+
+// ══════════════════════════════════════════════════
+// EXTENSO
+// ══════════════════════════════════════════════════
+function numeroParaExtenso(n) {
+  const un=['','UM','DOIS','TRÊS','QUATRO','CINCO','SEIS','SETE','OITO','NOVE','DEZ','ONZE','DOZE','TREZE','QUATORZE','QUINZE','DEZESSEIS','DEZESSETE','DEZOITO','DEZENOVE'];
+  const dz=['','','VINTE','TRINTA','QUARENTA','CINQUENTA','SESSENTA','SETENTA','OITENTA','NOVENTA'];
+  const ct=['','CENTO','DUZENTOS','TREZENTOS','QUATROCENTOS','QUINHENTOS','SEISCENTOS','SETECENTOS','OITOCENTOS','NOVECENTOS'];
+  if (n === 0) return 'ZERO REAIS';
+  const int = Math.floor(n), centavos = Math.round((n - int) * 100);
+  const porCem = v => v===100?'CEM':v>100?ct[Math.floor(v/100)]+(v%100?' E '+(v%100<20?un[v%100]:dz[Math.floor(v%100/10)]+(v%10?' E '+un[v%10]:'')):''):(v<20?un[v]:dz[Math.floor(v/10)]+(v%10?' E '+un[v%10]:''));
+  return porCem(int) + ' REAL' + (int !== 1 ? 'IS' : '') + (centavos ? ' E ' + porCem(centavos) + ' CENTAVO' + (centavos !== 1 ? 'S' : '') : '');
+}
+
+// ══════════════════════════════════════════════════
+// GERAÇÃO PDF MLR-41
+// ══════════════════════════════════════════════════
+function gerarPDF_MLR41(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pW=210, mL=12, mR=12, mT=10, cW=186;
+  let y = mT;
+
+  const rct=(x,yy,w,h,fill)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.25);if(fill){doc.setFillColor(...fill);doc.rect(x,yy,w,h,'FD');}else doc.rect(x,yy,w,h);};
+  const t=(str,x,yy,sz,bold,align)=>{doc.setFontSize(sz||8);doc.setFont('helvetica',bold?'bold':'normal');const s=String(str||'');if(align==='center')doc.text(s,x,yy,{align:'center'});else if(align==='right')doc.text(s,x,yy,{align:'right'});else doc.text(s,x,yy);};
+  const tw=(str,x,yy,maxW,sz)=>{doc.setFontSize(sz||7.5);doc.setFont('helvetica','normal');const lines=doc.splitTextToSize(String(str||''),maxW);doc.text(lines,x,yy);return lines.length;};
+  const ln=(x1,y1,x2,y2)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.2);doc.line(x1,y1,x2,y2);};
+
+  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
+  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('REQUERIMENTO DE DIÁRIAS',pW-mR,y+5,12,true,'right');y+=17;
+
+  rct(mL,y,cW*0.72,8);rct(mL+cW*0.72,y,cW*0.28,8);
+  t('DESCRIÇÃO DO ÓRGÃO/ENTIDADE:',mL+1,y+3.5,5.5,true);t('LOCAL DE TRABALHO (SIGLA):',mL+cW*0.72+1,y+3.5,5.5,true);
+  t(d.orgao,mL+1,y+7,7);t(d.sigla,mL+cW*0.72+1,y+7,7);y+=9;
+
+  rct(mL,y,cW,6,[225,225,225]);t('SERVIDOR',mL+2,y+4.5,8,true);y+=6;
+  rct(mL,y,cW,5,[240,240,240]);t('DADOS CADASTRAIS E FUNCIONAIS',pW/2,y+3.8,8,true,'center');y+=5;
+
+  rct(mL,y,cW*0.45,10);rct(mL+cW*0.45,y,cW*0.55,10);
+  t('CPF:',mL+1,y+3.5,5.5,true);t('MATRÍCULA (DV E VÍNCULO):',mL+cW*0.45+1,y+3.5,5.5,true);
+  t(d.srv.cpf,mL+1,y+8.5,8);t(d.srv.matricula,mL+cW*0.45+1,y+8.5,8);y+=10;
+
+  rct(mL,y,cW,10);t('NOME SOCIAL:',mL+1,y+3.5,5.5,true);t(d.nomeSocial||d.srv.nome,mL+1,y+8.5,8);y+=10;
+  rct(mL,y,cW,10);t('NOME CIVIL:',mL+1,y+3.5,5.5,true);t(d.srv.nome,mL+1,y+8.5,8);y+=10;
+
+  rct(mL,y,cW*0.55,10);rct(mL+cW*0.55,y,cW*0.45,10);
+  t('LOCAL DE TRABALHO (LOTAÇÃO):',mL+1,y+3.5,5.5,true);t('MUNICÍPIO DO LOCAL DE TRABALHO:',mL+cW*0.55+1,y+3.5,5.5,true);
+  t(d.srv.lotacao,mL+1,y+8.5,7.5);t(d.municipio||d.srv.municipio,mL+cW*0.55+1,y+8.5,7.5);y+=10;
+
+  rct(mL,y,cW*0.65,10);rct(mL+cW*0.65,y,cW*0.35,10);
+  t('CARGO/EMPREGO:',mL+1,y+3.5,5.5,true);t('COMPETÊNCIA: (1)',mL+cW*0.65+1,y+3.5,5.5,true);
+  tw(d.srv.cargo,mL+1,y+8.5,cW*0.63,7.5);t(d.competencia||'',mL+cW*0.65+1,y+8.5,7.5);y+=10;
+
+  rct(mL,y,cW*0.72,17);rct(mL+cW*0.72,y,cW*0.28,17);
+  t('CÓDIGO/NÍVEL DO CARGO/FUNÇÃO OCUPADA (2)',mL+1,y+3.5,5.5,true);
+  const codAll=['DGS-1','DGS-2','DGS-3','FTG-1','FTG-2','FTG-3','FG-1','FG-2','FG-3'];
+  let cx=mL+1;codAll.forEach(c=>{t('('+( (d.codigosCargo||[]).includes(c)?'X':' ')+') '+c,cx,y+9,5.5);cx+=21;});
+  t('( ) DGI-1 (CODIFICADO)',mL+1,y+14,5.5);t('( ) OUTRO. QUAL? __',mL+50,y+14,5.5);
+  t('( ) ADM. SUPERIOR-3 (AGENTE POLÍTICO)',mL+cW*0.72+1,y+8,5.5);
+  t('( ) ADM. SUPERIOR-8 (NÃO CODIFICADO)',mL+cW*0.72+1,y+14,5.5);y+=18;
+
+  rct(mL,y,cW*0.5,8);rct(mL+cW*0.5,y,cW*0.25,8);rct(mL+cW*0.75,y,cW*0.25,8);
+  t('E-MAIL:',mL+1,y+3,5.5,true);t('TELEFONE:',mL+cW*0.5+1,y+3,5.5,true);t('CELULAR:',mL+cW*0.75+1,y+3,5.5,true);
+  t(d.email||'',mL+1,y+7,7);t(d.srv.telefone||'',mL+cW*0.5+1,y+7,7);t(d.celular||d.srv.celular||'',mL+cW*0.75+1,y+7,7);y+=9;
+
+  rct(mL,y,cW,5,[240,240,240]);t('DADOS BANCÁRIOS',pW/2,y+3.8,8,true,'center');y+=5;
+  rct(mL,y,cW*0.4,10);rct(mL+cW*0.4,y,cW*0.3,10);rct(mL+cW*0.7,y,cW*0.3,10);
+  t('BANCO:',mL+1,y+3.5,5.5,true);t('AGÊNCIA:',mL+cW*0.4+1,y+3.5,5.5,true);t('NÚMERO DA CONTA:',mL+cW*0.7+1,y+3.5,5.5,true);
+  t(d.srv.banco||'',mL+1,y+8.5,8);t(d.srv.agencia||'',mL+cW*0.4+1,y+8.5,8);t(d.srv.conta||'',mL+cW*0.7+1,y+8.5,8);y+=11;
+
+  rct(mL,y,cW,5,[240,240,240]);t('DESLOCAMENTOS',pW/2,y+3.8,8,true,'center');y+=5;
+  const cX=[mL,mL+23,mL+62,mL+101,mL+120,mL+139];
+  const cLab=['DIA/MÊS','DE (ORIGEM)','PARA (DESTINO)','SAÍDA','CHEGADA','MEIO DE TRANSPORTE'];
+  rct(mL,y,cW,8,[238,238,238]);cX.forEach((x,i)=>t(cLab[i],x+1,y+5,5,true));y+=8;
+  const dls=[];for(let i=0;i<10;i++)dls.push(d.deslocamentos[i]||{data:'',origem:'',destino:'',saida:'',chegada:'',transporte:''});
+  dls.forEach(dl=>{rct(mL,y,cW,7);cX.forEach(x=>ln(x,y,x,y+7));t(dl.data,cX[0]+1,y+5,7);t((dl.origem||'').toUpperCase(),cX[1]+1,y+5,7);t((dl.destino||'').toUpperCase(),cX[2]+1,y+5,7);t(dl.saida||'',cX[3]+1,y+5,7);t(dl.chegada||'',cX[4]+1,y+5,7);t(dl.transporte||'',cX[5]+1,y+5,7);y+=7;});
+
+  rct(mL,y,cW,5,[240,240,240]);t('OBJETIVO(S) DA VIAGEM',pW/2,y+3.8,8,true,'center');y+=5;
+  rct(mL,y,cW,22);tw(d.objetivo,mL+2,y+5,cW-4,8);y+=24;
+
+  rct(mL,y,cW,5);t('*Declaro, para os devidos fins e efeitos, que não me enquadro em qualquer das situações impeditivas para o recebimento de diária(s).',mL+2,y+3.5,5.5);y+=5;
+  rct(mL,y,cW*0.35,8);rct(mL+cW*0.35,y,cW*0.65,8);
+  t('LOCAL E DATA:',mL+1,y+3.5,5.5,true);t('ASSINATURA DO SERVIDOR (1)  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.35+2,y+3.5,5.5);
+  t(d.localData||'',mL+1,y+7,7);y+=10;
+
+  // PÁGINA 2
+  doc.addPage();y=mT;
+  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
+  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('REQUERIMENTO DE DIÁRIAS',pW-mR,y+5,12,true,'right');y+=17;
+
+  const secAssin=(titulo,cargo)=>{rct(mL,y,cW,5,[225,225,225]);t(titulo,mL+1,y+3.8,6,true);y+=5;rct(mL,y,cW,5);t('( ) AUTORIZO    ( ) NÃO AUTORIZO',pW/2,y+3.8,8,false,'center');y+=5;rct(mL,y,cW*0.15,10);rct(mL+cW*0.15,y,cW*0.85,10);t('DATA:',mL+1,y+6,6,true);t('ASSINATURA '+cargo+'  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.15+2,y+6,5.5);y+=13;};
+  secAssin('CHEFIA IMEDIATA DO SERVIDOR REQUERENTE','DA CHEFIA IMEDIATA');
+  secAssin('DIRETOR OU EQUIVALENTE DA ÁREA DE LOTAÇÃO (EXERCÍCIO) DO SERVIDOR REQUERENTE','DO DIRETOR/EQUIVALENTE');
+  secAssin('ORDENADOR DE DESPESA OU AGENTE DELEGADO (DIRETOR OU EQUIVALENTE DA ÁREA FINANCEIRA/FUNDO)','DO ORDENADOR DE DESPESA');
+
+  // Tabela diárias calculadas
+  const calc = d.calc || {};
+  const qE = calc.qtInteiras || 0;
+  const qP = calc.qtPernoites || 0;
+  const qM = calc.qtMetades || 0;
+  const totVal = calc.totalValor || 0;
+
+  rct(mL,y,cW,5,[225,225,225]);t('SERVIDOR RESPONSÁVEL PELO CÁLCULO E PAGAMENTO/ADIANTAMENTO DE DIÁRIAS',mL+1,y+3.8,6,true);y+=5;
+  rct(mL,y,cW,5,[240,240,240]);t('DIÁRIAS A PAGAR',pW/2,y+3.8,8,true,'center');y+=5;
+  rct(mL,y,cW*0.1,8,[238,238,238]);rct(mL+cW*0.1,y,cW*0.35,8,[238,238,238]);rct(mL+cW*0.45,y,cW*0.15,8,[238,238,238]);rct(mL+cW*0.6,y,cW*0.2,8,[238,238,238]);rct(mL+cW*0.8,y,cW*0.2,8,[238,238,238]);
+  t('GRUPO (4)',mL+1,y+5,5,true);t('DESLOCAMENTO',mL+cW*0.1+2,y+5,5,true);t('QUANTIDADE',mL+cW*0.45+2,y+5,5,true);t('DIÁRIA VALOR',mL+cW*0.6+2,y+5,5,true);t('TOTAL, POR TIPO',mL+cW*0.8+2,y+5,5,true);y+=8;
+
+  const g = calc.grupo||'1';
+  const valorPer = 220, valorInt = 110, valorMeia = 55;
+  [
+    ['NO ESTADO (sem pernoite)', qE, valorInt, qE*valorInt],
+    ['PERNOITE', qP, valorPer, qP*valorPer],
+    ['MEIA DIÁRIA (4h–12h)', qM, valorMeia, qM*valorMeia],
+  ].forEach(([lbl,q,v,tv],i)=>{
+    rct(mL,y,cW*0.1,8);rct(mL+cW*0.1,y,cW*0.35,8);rct(mL+cW*0.45,y,cW*0.15,8);rct(mL+cW*0.6,y,cW*0.2,8);rct(mL+cW*0.8,y,cW*0.2,8);
+    if(i===0){t('('+( g==='1'?'X':' ')+') 1º',mL+1,y+4,5.5);t('('+( g==='2'?'X':' ')+') 2º',mL+1,y+7.5,5.5);}
+    else if(i===2){t('('+( g==='3'?'X':' ')+') 3º',mL+1,y+5.5,5.5);}
+    t(lbl,mL+cW*0.1+2,y+5.5,7);t(String(q),mL+cW*0.45+2,y+5.5,7);t(fmtR(v),mL+cW*0.6+2,y+5.5,7);t(fmtR(tv),mL+cW*0.8+2,y+5.5,7);y+=8;
+  });
+  rct(mL,y,cW,8);t('TOTAL',mL+cW*0.45+2,y+5.5,8,true);t(fmtR(totVal),mL+cW*0.8+2,y+5.5,8,true);y+=10;
+  rct(mL,y,cW*0.2,10);rct(mL+cW*0.2,y,cW*0.8,10);t('DATA:',mL+1,y+4,6,true);t(d.localData||'',mL+1,y+8.5,7);t('ASSINATURA DO RESPONSÁVEL PELO PAGTO/ADIANT. DE DIÁRIAS  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);y+=13;
+
+  rct(mL,y,cW,5,[225,225,225]);t('NOTAS EXPLICATIVAS',mL+1,y+3.8,7,true);y+=5;
+  const notas=['(1) CAMPO DE USO EXCLUSIVO DE SERVIDOR EFETIVO DA SECRETARIA DE ESTADO DA SAÚDE (SES).','(2) CAMPO OBRIGATÓRIO A SER PREENCHIDO POR SERVIDOR QUE NÃO OCUPA CARGO EFETIVO.','(3) NO CASO DE USO DE PASSAGENS É OBRIGATÓRIA A DEVOLUÇÃO DOS RESPECTIVOS BILHETES.','(4) O GRUPO DO CARGO CONSTA NO ANEXO I DO DECRETO Nº 650/2020 (atualizado pelo Dec. 652/2024).','Valores: ≥12h = R$ 110,00 | ≥12h c/ pernoite = R$ 220,00 | 4h–12h = R$ 55,00 (Dec. 1.662/2022).','ANEXAR: DOCUMENTOS QUE COMPROVEM E/OU RATIFIQUEM O OBJETIVO DA VIAGEM.'];
+  const totalH=notas.reduce((acc,n)=>{const l=doc.splitTextToSize(n,cW-4);return acc+l.length*5+2;},6);
+  rct(mL,y,cW,totalH);notas.forEach(n=>{tw(n,mL+2,y+4,cW-4,5.5);const l=doc.splitTextToSize(n,cW-4);y+=l.length*5+2;});
+  y+=4;t('MLR-41',pW-mR,y+5,7,true,'right');
+
+  doc.save('MLR-41_'+d.srv.nome.replace(/\s+/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
+}
+
+// ══════════════════════════════════════════════════
+// GERAÇÃO PDF MLR-42
+// ══════════════════════════════════════════════════
+function gerarPDF_MLR42(d) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pW=210, mL=12, mR=12, mT=10, cW=186;
+  let y = mT;
+
+  const rct=(x,yy,w,h,fill)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.25);if(fill){doc.setFillColor(...fill);doc.rect(x,yy,w,h,'FD');}else doc.rect(x,yy,w,h);};
+  const t=(str,x,yy,sz,bold,align)=>{doc.setFontSize(sz||8);doc.setFont('helvetica',bold?'bold':'normal');const s=String(str||'');if(align==='center')doc.text(s,x,yy,{align:'center'});else if(align==='right')doc.text(s,x,yy,{align:'right'});else doc.text(s,x,yy);};
+  const tw=(str,x,yy,maxW,sz)=>{doc.setFontSize(sz||7.5);doc.setFont('helvetica','normal');const lines=doc.splitTextToSize(String(str||''),maxW);doc.text(lines,x,yy);return lines.length;};
+  const ln=(x1,y1,x2,y2)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.2);doc.line(x1,y1,x2,y2);};
+
+  t('2',pW-mR,y+4,10,true,'right');y+=6;
+  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
+  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('RELATÓRIO DE VIAGEM',pW-mR,y+5,12,true,'right');y+=17;
+
+  rct(mL,y,cW*0.72,8);rct(mL+cW*0.72,y,cW*0.28,8);
+  t('DESCRIÇÃO DO ÓRGÃO/ENTIDADE:',mL+1,y+3.5,5.5,true);t('LOCAL DE TRABALHO (SIGLA):',mL+cW*0.72+1,y+3.5,5.5,true);
+  t(d.orgao,mL+1,y+7,7);t(d.sigla,mL+cW*0.72+1,y+7,7);y+=9;
+
+  rct(mL,y,cW,6,[225,225,225]);t('SERVIDOR',mL+2,y+4.5,8,true);y+=6;
+  rct(mL,y,cW,5,[240,240,240]);t('DADOS CADASTRAIS E FUNCIONAIS',pW/2,y+3.8,8,true,'center');y+=5;
+
+  rct(mL,y,cW*0.45,10);rct(mL+cW*0.45,y,cW*0.55,10);
+  t('CPF:',mL+1,y+3.5,5.5,true);t('MATRÍCULA (DV E VÍNCULO):',mL+cW*0.45+1,y+3.5,5.5,true);
+  t(d.srv.cpf,mL+1,y+8.5,8);t(d.srv.matricula,mL+cW*0.45+1,y+8.5,8);y+=10;
+
+  rct(mL,y,cW,10);t('NOME SOCIAL:',mL+1,y+3.5,5.5,true);t(d.nomeSocial||d.srv.nome,mL+1,y+8.5,8);y+=10;
+  rct(mL,y,cW,10);t('NOME CIVIL:',mL+1,y+3.5,5.5,true);t(d.srv.nome,mL+1,y+8.5,8);y+=10;
+
+  rct(mL,y,cW*0.55,10);rct(mL+cW*0.55,y,cW*0.45,10);
+  t('LOCAL DE TRABALHO (LOTAÇÃO):',mL+1,y+3.5,5.5,true);t('MUNICÍPIO DO LOCAL DE TRABALHO:',mL+cW*0.55+1,y+3.5,5.5,true);
+  t(d.srv.lotacao,mL+1,y+8.5,7.5);t(d.municipio||d.srv.municipio,mL+cW*0.55+1,y+8.5,7.5);y+=10;
+
+  rct(mL,y,cW*0.65,10);rct(mL+cW*0.65,y,cW*0.35,10);
+  t('CARGO/EMPREGO:',mL+1,y+3.5,5.5,true);t('COMPETÊNCIA: (1)',mL+cW*0.65+1,y+3.5,5.5,true);
+  tw(d.srv.cargo,mL+1,y+8.5,cW*0.63,7.5);y+=10;
+
+  rct(mL,y,cW*0.72,17);rct(mL+cW*0.72,y,cW*0.28,17);
+  t('CÓDIGO/NÍVEL DO CARGO/FUNÇÃO OCUPADA (2)',mL+1,y+3.5,5.5,true);
+  const codAll=['DGS-1','DGS-2','DGS-3','FTG-1','FTG-2','FTG-3','FG-1','FG-2','FG-3'];
+  let cx=mL+1;codAll.forEach(c=>{t('('+( (d.codigosCargo||[]).includes(c)?'X':' ')+') '+c,cx,y+9,5.5);cx+=21;});
+  t('( ) DGI-1 (CODIFICADO)',mL+1,y+14,5.5);t('( ) OUTRO. QUAL? __',mL+50,y+14,5.5);
+  t('( ) ADM. SUPERIOR-3 (AGENTE POLÍTICO)',mL+cW*0.72+1,y+8,5.5);
+  t('( ) ADM. SUPERIOR-8 (NÃO CODIFICADO)',mL+cW*0.72+1,y+14,5.5);y+=18;
+
+  rct(mL,y,cW*0.5,8);rct(mL+cW*0.5,y,cW*0.25,8);rct(mL+cW*0.75,y,cW*0.25,8);
+  t('E-MAIL:',mL+1,y+3,5.5,true);t('TELEFONE:',mL+cW*0.5+1,y+3,5.5,true);t('CELULAR:',mL+cW*0.75+1,y+3,5.5,true);
+  t(d.email||'',mL+1,y+7,7);t(d.srv.telefone||'',mL+cW*0.5+1,y+7,7);t(d.celular||d.srv.celular||'',mL+cW*0.75+1,y+7,7);y+=9;
+
+  rct(mL,y,cW,5,[240,240,240]);t('DESLOCAMENTOS',pW/2,y+3.8,8,true,'center');y+=5;
+  const cX=[mL,mL+23,mL+62,mL+101,mL+120,mL+139];
+  const cLab=['DIA/MÊS','DE (ORIGEM)','PARA (DESTINO)','SAÍDA','CHEGADA','MEIO DE TRANSPORTE'];
+  rct(mL,y,cW,8,[238,238,238]);cX.forEach((x,i)=>t(cLab[i],x+1,y+5,5,true));y+=8;
+  const dls=[];for(let i=0;i<10;i++)dls.push(d.deslocamentos[i]||{data:'',origem:'',destino:'',saida:'',chegada:'',transporte:''});
+  dls.forEach(dl=>{rct(mL,y,cW,7);cX.forEach(x=>ln(x,y,x,y+7));t(dl.data,cX[0]+1,y+5,7);t((dl.origem||'').toUpperCase(),cX[1]+1,y+5,7);t((dl.destino||'').toUpperCase(),cX[2]+1,y+5,7);t(dl.saida||'',cX[3]+1,y+5,7);t(dl.chegada||'',cX[4]+1,y+5,7);t(dl.transporte||'',cX[5]+1,y+5,7);y+=7;});
+
+  rct(mL,y,cW,5,[240,240,240]);t('RESULTADO DA VIAGEM, EM CONSONÂNCIA COM O(S) OBJETIVO(S) (3)',pW/2,y+3.8,8,true,'center');y+=5;
+  rct(mL,y,cW,28);tw(d.resultado||'',mL+2,y+5,cW-4,8);y+=30;
+
+  // PÁGINA 2 MLR-42
+  doc.addPage();y=mT;
+  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
+  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('RELATÓRIO DE VIAGEM',pW-mR,y+5,12,true,'right');y+=17;
+
+  const calc = d.calc || {};
+  const qE2 = calc.qtInteiras||0, qP2 = calc.qtPernoites||0, qM2 = calc.qtMetades||0;
+  const totVal2 = calc.totalValor||0;
+
+  rct(mL,y,cW,5,[240,240,240]);t('DIÁRIAS RECEBIDAS',pW/2,y+3.8,8,true,'center');y+=5;
+  rct(mL,y,cW*0.35,8,[238,238,238]);rct(mL+cW*0.35,y,cW*0.2,8,[238,238,238]);rct(mL+cW*0.55,y,cW*0.23,8,[238,238,238]);rct(mL+cW*0.78,y,cW*0.22,8,[238,238,238]);
+  t('DESLOCAMENTO',mL+2,y+5.5,5.5,true);t('QUANTIDADE',mL+cW*0.35+2,y+5.5,5.5,true);t('VALOR UNITÁRIO',mL+cW*0.55+2,y+5.5,5.5,true);t('TOTAL',mL+cW*0.78+2,y+5.5,5.5,true);y+=8;
+  [['NO ESTADO (sem pernoite)',qE2,110,qE2*110],['PERNOITE',qP2,220,qP2*220],['MEIA DIÁRIA (4h–12h)',qM2,55,qM2*55]].forEach(([lbl,q,v,tv])=>{
+    rct(mL,y,cW*0.35,8);rct(mL+cW*0.35,y,cW*0.2,8);rct(mL+cW*0.55,y,cW*0.23,8);rct(mL+cW*0.78,y,cW*0.22,8);
+    t(lbl,mL+2,y+5.5,7);t(String(q),mL+cW*0.35+2,y+5.5,7);t(fmtR(v),mL+cW*0.55+2,y+5.5,7);t(fmtR(tv),mL+cW*0.78+2,y+5.5,7);y+=8;
+  });
+
+  rct(mL,y,cW*0.35,18);rct(mL+cW*0.35,y,cW*0.65,18);
+  t('TOTAL GERAL',mL+2,y+6,8,true);t(fmtR(totVal2),mL+cW*0.78+2,y+6,8,true);
+  t('POR EXTENSO:',mL+cW*0.35+2,y+5,5.5,true);t(numeroParaExtenso(totVal2),mL+cW*0.35+2,y+11,7.5);y+=20;
+
+  rct(mL,y,cW*0.2,12);rct(mL+cW*0.2,y,cW*0.8,12);
+  t('DATA:',mL+1,y+4,6,true);t(d.dataAss||'',mL+1,y+9,7);
+  t('ASSINATURA DO SERVIDOR  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);y+=14;
+
+  rct(mL,y,cW,5,[225,225,225]);t('ORDENADOR DE DESPESA OU AGENTE DELEGADO (DIRETOR OU EQUIVALENTE DA ÁREA FINANCEIRA/FUNDO)',mL+1,y+3.8,5.5,true);y+=5;
+  rct(mL,y,cW*0.2,12);rct(mL+cW*0.2,y,cW*0.8,12);
+  t('DATA:',mL+1,y+4,6,true);t(d.dataAss||'',mL+1,y+9,7);
+  t('ASSINATURA DO ORDENADOR DA DESPESA  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);y+=16;
+
+  rct(mL,y,cW,5,[225,225,225]);t('NOTAS EXPLICATIVAS',mL+1,y+3.8,7,true);y+=5;
+  const notas2=['(1) CAMPO DE USO EXCLUSIVO DE SERVIDOR EFETIVO DA SES.','(2) CAMPO OBRIGATÓRIO A SER PREENCHIDO POR SERVIDOR QUE NÃO OCUPA CARGO EFETIVO.','(3) DESCREVER SE OS OBJETIVOS PROPOSTOS FORAM ALCANÇADOS, JUSTIFICANDO.','* ANEXAR OS DOCUMENTOS EXIGIDOS PARA PRESTAÇÃO DE CONTAS (Art. 11, Dec. 650/2020).'];
+  const totalH=notas2.reduce((acc,n)=>{const l=doc.splitTextToSize(n,cW-4);return acc+l.length*5+2;},6);
+  rct(mL,y,cW,totalH);notas2.forEach(n=>{tw(n,mL+2,y+4,cW-4,5.5);const l=doc.splitTextToSize(n,cW-4);y+=l.length*5+2;});
+  y+=4;t('MLR-42',pW-mR,y+5,7,true,'right');
+
+  doc.save('MLR-42_'+d.srv.nome.replace(/\s+/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
+}
+
+// ══════════════════════════════════════════════════
+// SALVAR + GERAR PDF
+// ══════════════════════════════════════════════════
+async function salvarEGerarPDF(tipo) {
+  const p   = tipo === 'requerimento' ? 'r' : 'rl';
+  const sid = document.getElementById(p + '-servidor').value;
+  if (!sid) { toast('Selecione um servidor primeiro.', 'erro'); return; }
+  const srv = window._servidoresCache.find(x => x.id === sid);
+  if (!srv) { toast('Servidor não encontrado. Recarregue a página.', 'erro'); return; }
+  const deslocs    = coletarDeslocamentos(p);
+  const calcResult = window[p + '_calc'] || {};
+
+  let dados = { tipo, srv, deslocamentos: deslocs, calc: calcResult,
+    totalDiarias: calcResult.totalQtd || 0 };
+
+  if (tipo === 'requerimento') {
+    dados = { ...dados,
+      orgao: document.getElementById('r-orgao').value,
+      sigla: document.getElementById('r-sigla').value,
+      nomeSocial: document.getElementById('r-nome-social').value,
+      municipio: document.getElementById('r-municipio').value,
+      competencia: document.getElementById('r-competencia').value,
+      email: document.getElementById('r-email').value,
+      celular: document.getElementById('r-celular').value,
+      codigosCargo: Array.from(document.querySelectorAll('#r-codigos-cargo input:checked')).map(c=>c.value),
+      objetivo: document.getElementById('r-objetivo').value,
+      localData: document.getElementById('r-local-data').value,
+    };
+  } else {
+    dados = { ...dados,
+      orgao: document.getElementById('rl-orgao').value,
+      sigla: document.getElementById('rl-sigla').value,
+      nomeSocial: document.getElementById('rl-nome-social').value,
+      municipio: document.getElementById('rl-municipio').value,
+      email: document.getElementById('rl-email').value,
+      celular: document.getElementById('rl-celular').value,
+      codigosCargo: Array.from(document.querySelectorAll('#rl-codigos-cargo input:checked')).map(c=>c.value),
+      resultado: document.getElementById('rl-resultado-texto').value,
+      dataAss: document.getElementById('rl-data-ass').value,
+    };
+  }
+
+  toast('Salvando no Firebase...');
+  let firebaseId = '(Firebase não configurado)';
+  if (typeof window._saveToFirebase === 'function') {
+    const res = await window._saveToFirebase(dados);
+    if (res.ok) { firebaseId = res.id; toast('Salvo! Gerando PDF...'); }
+    else toast('Firebase: ' + res.erro, 'aviso');
+  }
+
+  try {
+    if (tipo === 'requerimento') gerarPDF_MLR41(dados);
+    else gerarPDF_MLR42(dados);
+    toast('PDF gerado com sucesso!');
+  } catch(e) {
+    toast('Erro ao gerar PDF: ' + e.message, 'erro');
+    console.error(e); return;
+  }
+
+  const boxId = tipo === 'requerimento' ? 'r-resultado' : 'rl-resultado-box';
+  document.getElementById(boxId).classList.add('visivel');
+  document.getElementById(tipo === 'requerimento' ? 'r-doc-id' : 'rl-doc-id').textContent = firebaseId;
+}
+
+// ══════════════════════════════════════════════════
+inicializar();
+</script>
+</body>
+</html>

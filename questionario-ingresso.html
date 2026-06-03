@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxo — Ingresso de Presos / Exame de Corpo de Delito</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-dark: #0a1628;
+    --blue-mid: #0d2247;
+    --blue-accent: #1a4fa0;
+    --blue-light: #2563eb;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --white: #ffffff;
+    --gray-100: #f0f4fb;
+    --gray-200: #dde6f5;
+    --gray-400: #8fa3cc;
+    --gray-600: #4a6494;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--blue-dark);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2rem 1rem 4rem;
+    position: relative; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(26,79,160,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(201,168,76,0.12) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+  .page { position: relative; z-index: 1; width: 100%; max-width: 680px; }
+
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 1.5rem 2rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius); margin-bottom: 1.5rem;
+    backdrop-filter: blur(8px);
+  }
+  .header-logo {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue-accent), var(--blue-light));
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border: 1.5px solid rgba(201,168,76,0.4);
+  }
+  .header-logo svg { width: 24px; height: 24px; }
+  .header-text { flex: 1; }
+  .header-text h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px; color: var(--white); line-height: 1.3; font-weight: 400;
+  }
+  .header-text p { font-size: 12px; color: var(--gold); margin-top: 3px; letter-spacing: .04em; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #4ade80; box-shadow: 0 0 8px #4ade80; flex-shrink: 0;
+  }
+
+  .progress-wrap { margin-bottom: 1.25rem; }
+  .progress-track { height: 3px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--blue-light), var(--gold));
+    border-radius: 99px; transition: width 0.5s cubic-bezier(.4,0,.2,1); width: 0%;
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between; margin-top: 6px;
+    font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: .04em;
+  }
+
+  .chat-area {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem;
+    min-height: 120px; backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .msg { display: flex; gap: 10px; align-items: flex-end; }
+  .msg.bot { flex-direction: row; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-av {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; align-self: flex-start;
+  }
+  .msg.bot .msg-av { background: rgba(37,99,235,0.2); border: 1px solid rgba(37,99,235,0.4); }
+  .msg.user .msg-av { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); }
+  .msg-av svg { width: 16px; height: 16px; }
+  .bubble {
+    max-width: 82%; padding: 11px 15px; font-size: 14px; line-height: 1.6; border-radius: 16px;
+  }
+  .msg.bot .bubble {
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.9); border-bottom-left-radius: 4px;
+  }
+  .msg.user .bubble {
+    background: linear-gradient(135deg, var(--blue-accent), var(--blue-light));
+    color: white; border-bottom-right-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
+  }
+  .bubble strong { color: var(--gold-light); font-weight: 500; }
+  .msg.user .bubble strong { color: rgba(255,255,255,0.9); }
+
+  .typing { display: flex; gap: 5px; align-items: center; padding: 4px 2px; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,0.4); animation: blink 1.3s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+
+  .input-panel {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--radius); padding: 1.25rem 1.5rem; backdrop-filter: blur(8px);
+  }
+  .input-label {
+    font-size: 10px; letter-spacing: .1em; color: var(--gold);
+    text-transform: uppercase; margin-bottom: 12px; font-weight: 500;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 9px 16px; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 99px; background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.8); font-size: 13px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all .2s;
+  }
+  .chip:hover { background: rgba(37,99,235,0.25); border-color: rgba(37,99,235,0.6); color: white; transform: translateY(-1px); }
+  .chip.col { border-radius: var(--radius-sm); width: 100%; text-align: left; }
+
+  .field {
+    width: 100%; font-size: 14px; padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.06); color: white;
+    font-family: 'DM Sans', sans-serif; outline: none; transition: border-color .2s; margin-bottom: 8px;
+  }
+  .field:focus { border-color: var(--blue-light); background: rgba(37,99,235,0.1); }
+  .field option { background: #0d2247; color: white; }
+  textarea.field { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+  .btn-send {
+    padding: 10px 22px;
+    background: linear-gradient(135deg, var(--blue-accent), var(--blue-light));
+    color: white; border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: all .2s; letter-spacing: .02em;
+  }
+  .btn-send:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .btn-send:active { transform: translateY(0); }
+  .btn-send.green { background: linear-gradient(135deg, #166534, #15803d); }
+
+  .row { display: flex; gap: 8px; margin-top: 4px; align-items: center; }
+  .row .field { margin-bottom: 0; flex: 1; }
+  .dist-hint { font-size: 12px; color: var(--gray-400); white-space: nowrap; }
+
+  /* optgroup styling hint */
+  .field optgroup { font-weight: 600; color: var(--gold-light); background: #0a1a3a; }
+
+  .success-box { text-align: center; padding: 2rem 1rem; }
+  .success-circle {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;
+  }
+  .success-box h2 { font-family: 'DM Serif Display', serif; font-size: 22px; color: white; font-weight: 400; margin-bottom: 8px; }
+  .success-box p { font-size: 14px; color: var(--gray-400); margin-bottom: 1.5rem; }
+  .success-box strong { color: var(--gold-light); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a7 7 0 0 1 7 7c0 4-3 6.5-4 8H9c-1-1.5-4-4-4-8a7 7 0 0 1 7-7z"/>
+        <path d="M9 21h6"/><path d="M9.5 17.5c0-1.5 2.5-3 2.5-5"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1>Fluxo — Ingresso de Presos / Exame de Corpo de Delito</h1>
+      <p>Polícia Penal de Santa Catarina</p>
+    </div>
+    <div class="status-dot"></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="pgbar"></div></div>
+    <div class="progress-meta">
+      <span id="pg-step">Etapa 0 de 8</span>
+      <span id="pg-pct">0%</span>
+    </div>
+  </div>
+
+  <div class="chat-area" id="msgs"></div>
+  <div class="input-panel" id="input-panel"></div>
+
+</div>
+<script>
+// ── Unidades agrupadas por Regional ──────────────────────────────────────────
+const REGIONAIS = [
+  { sr: 'SR01', nome: 'Grande Florianópolis', unidades: [
+    'Colônia Agroindustrial de Palhoça',
+    'Complexo Penitenciário do Estado',
+    'Hospital de Custódia e Tratamento Psiquiátrico – HCTP',
+    'Penitenciária de Florianópolis',
+    'Presídio Feminino Regional de Florianópolis',
+    'Presídio Masculino Regional de Florianópolis',
+    'Presídio Regional de Biguaçu',
+    'Presídio Regional de Tijucas',
+    'Unidade de Monitoramento Eletrônico',
+  ]},
+  { sr: 'SR02', nome: 'Sul', unidades: [
+    'Penitenciária Feminina de Criciúma',
+    'Penitenciária Masculina de Tubarão',
+    'Penitenciária Sul',
+    'Presídio Regional de Araranguá',
+    'Presídio Regional de Criciúma',
+    'Presídio Regional de Imbituba',
+    'Presídio Regional de Laguna',
+    'Presídio Regional de Tubarão',
+  ]},
+  { sr: 'SR03', nome: 'Norte Catarinense', unidades: [
+    'Penitenciária Industrial de Joinville',
+    'Presídio Feminino Regional de Joinville',
+    'Presídio Regional de Barra Velha',
+    'Presídio Regional de Joinville',
+    'Presídio Regional de São Francisco do Sul',
+  ]},
+  { sr: 'SR04', nome: 'Vale do Itajaí', unidades: [
+    'Penitenciária Masculina do Vale do Itajaí',
+    'Presídio Feminino Regional de Itajaí',
+    'Presídio Regional de Brusque',
+    'Presídio Regional de Itajaí',
+    'Presídio Regional de Itapema',
+  ]},
+  { sr: 'SR05', nome: 'Serrana', unidades: [
+    'Penitenciária Industrial de São Cristóvão do Sul',
+    'Penitenciária Regional de Curitibanos',
+    'Presídio Masculino de Lages',
+    'Presídio Regional de Caçador',
+    'Presídio Regional de Campos Novos',
+    'Presídio Regional de Lages',
+    'Presídio Regional de Videira',
+    'Unidade de Segurança Máxima de São Cristóvão do Sul',
+  ]},
+  { sr: 'SR06', nome: 'Oeste', unidades: [
+    'Penitenciária Agrícola de Chapecó',
+    'Penitenciária Industrial de Chapecó',
+    'Presídio Feminino Regional de Chapecó',
+    'Presídio Regional de Chapecó',
+    'Presídio Regional de Concórdia',
+    'Presídio Regional de Joaçaba',
+    'Presídio Regional de Maravilha',
+    'Presídio Regional de São José do Cedro',
+    'Presídio Regional de São Miguel do Oeste',
+    'Presídio Regional de Xanxerê',
+  ]},
+  { sr: 'SR07', nome: 'Médio Vale do Itajaí', unidades: [
+    'Penitenciária Industrial de Blumenau',
+    'Presídio Regional de Blumenau',
+    'Presídio Regional de Indaial',
+    'Presídio Regional de Ituporanga',
+    'Presídio Regional de Rio do Sul',
+  ]},
+  { sr: 'SR08', nome: 'Planalto Norte', unidades: [
+    'Penitenciária Industrial de São Bento do Sul',
+    'Presídio Regional de Canoinhas',
+    'Presídio Regional de Jaraguá do Sul',
+    'Presídio Regional de Mafra',
+    'Presídio Regional de Porto União',
+  ]},
+];
+
+// ── Gênero gramatical por tipo de unidade ────────────────────────────────────
+// Retorna { artigo: 'o'|'a', preposicao: 'do'|'da', adj_suffix }
+function generoUnidade(nome) {
+  const masc = /^(Presídio|Hospital de Custódia|Complexo|Unidade de Monitoramento)/i.test(nome);
+  return masc
+    ? { art: 'o', prep: 'no', prep2: 'ao', De: 'Do' }
+    : { art: 'a', prep: 'na', prep2: 'à', De: 'Da' };
+}
+
+// Retorna string como "o Presídio Regional de Lages" ou "a Penitenciária Sul"
+function uRef() {
+  if (!ans.unidade) return 'a Unidade Prisional';
+  const g = generoUnidade(ans.unidade);
+  return `${g.art} <strong>${ans.unidade}</strong>`;
+}
+function uPrep() {
+  // "dos presos recebidos pelo/pela X"
+  if (!ans.unidade) return 'da Unidade Prisional';
+  const g = generoUnidade(ans.unidade);
+  return `${g.prep} <strong>${ans.unidade}</strong>`;
+}
+function uNome() { return ans.unidade || 'a Unidade Prisional'; }
+
+// ── Municípios SC ─────────────────────────────────────────────────────────────
+const SC = ["Abdon Batista","Abelardo Luz","Agrolândia","Agronômica","Água Doce","Águas de Chapecó","Águas Frias","Águas Mornas","Alfredo Wagner","Alto Bela Vista","Anchieta","Angelina","Anita Garibaldi","Anitápolis","Antônio Carlos","Apiúna","Arabutã","Araquari","Araranguá","Armazém","Arroio Trinta","Arvoredo","Ascurra","Atalanta","Aurora","Balneário Arroio do Silva","Balneário Barra do Sul","Balneário Camboriú","Balneário Gaivota","Balneário Piçarras","Balneário Rincão","Bandeirante","Barra Bonita","Barra Velha","Bela Vista do Toldo","Belmonte","Benedito Novo","Biguaçu","Blumenau","Bocaina do Sul","Bom Jardim da Serra","Bom Jesus","Bom Jesus do Oeste","Bom Retiro","Bombinhas","Botuverá","Braço do Norte","Braço do Trombudo","Brunópolis","Brusque","Caçador","Caibi","Calmon","Camboriú","Campo Alegre","Campo Belo do Sul","Campo Erê","Campos Novos","Canelinha","Canoinhas","Capão Alto","Capinzal","Capivari de Baixo","Catanduvas","Caxambu do Sul","Celso Ramos","Cerro Negro","Chapadão do Lageado","Chapecó","Cocal do Sul","Concórdia","Cordilheira Alta","Coronel Freitas","Coronel Martins","Correia Pinto","Corupá","Criciúma","Cunha Porã","Cunhataí","Curitibanos","Descanso","Dionísio Cerqueira","Dona Emma","Doutor Pedrinho","Entre Rios","Ermo","Erval Velho","Faxinal dos Guedes","Flor do Sertão","Florianópolis","Formosa do Sul","Forquilhinha","Fraiburgo","Frei Rogério","Galvão","Garopaba","Garuva","Gaspar","Governador Celso Ramos","Grão Pará","Gravatal","Guabiruba","Guaraciaba","Guaramirim","Guarujá do Sul","Guatambú","Herval d'Oeste","Ibiam","Ibicaré","Ibirama","Içara","Ilhota","Imaruí","Imbituba","Imbuia","Indaial","Iomerê","Ipira","Iporã do Oeste","Ipuaçu","Ipumirim","Iraceminha","Irani","Irati","Irineópolis","Itá","Itaiópolis","Itajaí","Itapema","Itapiranga","Itapoá","Ituporanga","Jaborá","Jacinto Machado","Jaguaruna","Jaraguá do Sul","Jardinópolis","Joaçaba","Joinville","José Boiteux","Jupiá","Lacerdópolis","Lages","Laguna","Lajeado Grande","Laurentino","Lauro Muller","Lebon Régis","Leoberto Leal","Lindóia do Sul","Lontras","Luiz Alves","Luzerna","Macieira","Mafra","Major Gercino","Major Vieira","Maracajá","Maravilha","Marema","Massaranduba","Matos Costa","Meleiro","Mirim Doce","Modelo","Mondaí","Monte Carlo","Monte Castelo","Morro da Fumaça","Morro Grande","Navegantes","Nova Erechim","Nova Itaberaba","Nova Trento","Nova Veneza","Novo Horizonte","Orleans","Otacílio Costa","Ouro","Ouro Verde","Paial","Painel","Palhoça","Palma Sola","Palmeira","Palmitos","Papanduva","Paraíso","Passo de Torres","Passos Maia","Paulo Lopes","Pedras Grandes","Penha","Peritiba","Pescaria Brava","Petrolândia","Pinhalzinho","Pinheiro Preto","Piratuba","Planalto Alegre","Pomerode","Ponte Alta","Ponte Alta do Norte","Ponte Serrada","Porto Belo","Porto União","Pouso Redondo","Praia Grande","Presidente Castello Branco","Presidente Getúlio","Presidente Nereu","Princesa","Quilombo","Rancho Queimado","Rio das Antas","Rio do Campo","Rio do Oeste","Rio do Sul","Rio dos Cedros","Rio Fortuna","Rio Negrinho","Rio Rufino","Riqueza","Rodeio","Romelândia","Salete","Saltinho","Salto Veloso","Sangão","Santa Cecília","Santa Helena","Santa Rosa de Lima","Santa Rosa do Sul","Santa Terezinha","Santa Terezinha do Progresso","Santiago do Sul","Santo Amaro da Imperatriz","São Bento do Sul","São Bernardino","São Carlos","São Cristóvão do Sul","São Domingos","São Francisco do Sul","São João Batista","São João do Itaperiú","São João do Oeste","São João do Sul","São Joaquim","São José","São José do Cedro","São José do Cerrito","São Lourenço do Oeste","São Ludgero","São Martinho","São Miguel da Boa Vista","São Miguel do Oeste","São Pedro de Alcântara","Saudades","Schroeder","Seara","Serra Alta","Siderópolis","Sombrio","Sul Brasil","Taió","Tangará","Tigrinhos","Tijucas","Timbé do Sul","Timbó","Timbó Grande","Três Barras","Treviso","Treze de Maio","Treze Tílias","Trombudo Central","Tubarão","Tunápolis","Turvo","União do Oeste","Urubici","Urupema","Urussanga","Vargeão","Vargem","Vargem Bonita","Vidal Ramos","Videira","Vitor Meireles","Witmarsum","Xanxerê","Xavantina","Xaxim","Zortéa"];
+
+const ans = {};
+let step = 0;
+const TOTAL = 8;
+
+const botSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 2a7 7 0 0 1 7 7c0 4-3 6.5-4 8H9c-1-1.5-4-4-4-8a7 7 0 0 1 7-7z"/><path d="M9 21h6"/></svg>`;
+const userSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`;
+
+const scOpts = () => SC.map(m => `<option value="${m}">${m}</option>`).join('');
+
+function unidadeOpts() {
+  return REGIONAIS.map(r =>
+    `<optgroup label="${r.sr} — ${r.nome}">${r.unidades.map(u => `<option value="${u}">${u}</option>`).join('')}</optgroup>`
+  ).join('');
+}
+
+function updateProgress() {
+  const pct = Math.round((step / TOTAL) * 100);
+  document.getElementById('pgbar').style.width = pct + '%';
+  document.getElementById('pg-step').textContent = `Etapa ${step} de ${TOTAL}`;
+  document.getElementById('pg-pct').textContent = pct + '%';
+}
+
+function addMsg(who, html) {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg ' + who;
+  div.innerHTML = `<div class="msg-av">${who === 'bot' ? botSVG : userSVG}</div><div class="bubble">${html}</div>`;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function showTyping() {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typ';
+  div.innerHTML = `<div class="msg-av">${botSVG}</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+function removeTyping() { const t = document.getElementById('typ'); if (t) t.remove(); }
+function clearInput() { document.getElementById('input-panel').innerHTML = ''; }
+
+function botSay(html, delay = 650) {
+  return new Promise(res => {
+    showTyping();
+    setTimeout(() => { removeTyping(); addMsg('bot', html); res(); }, delay);
+  });
+}
+
+function chips(opts) {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">Selecione uma opção</div><div class="chips" id="chip-grp"></div>`;
+    const grp = document.getElementById('chip-grp');
+    opts.forEach(o => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (o.col ? ' col' : '');
+      btn.textContent = o.label;
+      btn.onclick = () => { clearInput(); addMsg('user', o.label); res(o); };
+      grp.appendChild(btn);
+    });
+  });
+}
+
+function selectUnidade() {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">Selecione a Unidade Prisional por Regional</div>
+      <select class="field" id="sel-und"><option value="">— Selecione a Regional e a Unidade —</option>${unidadeOpts()}</select>
+      <div class="row" style="margin-top:8px"><button class="btn-send" onclick="sendUnidade()">Confirmar</button></div>`;
+    window.sendUnidade = () => {
+      const v = document.getElementById('sel-und').value;
+      if (!v) return;
+      clearInput(); addMsg('user', v); res(v);
+    };
+  });
+}
+
+function selectUnidadeDestino(labelTexto) {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">${labelTexto}</div>
+      <select class="field" id="sel-dest"><option value="">— Selecione a Regional e a Unidade —</option>${unidadeOpts()}</select>
+      <div class="row" style="margin-top:8px"><button class="btn-send" onclick="sendDest()">Confirmar</button></div>`;
+    window.sendDest = () => {
+      const v = document.getElementById('sel-dest').value;
+      if (!v) return;
+      clearInput(); addMsg('user', v); res(v);
+    };
+  });
+}
+
+function twoInputs(p1, p2) {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">Preencha os campos</div>
+      <input type="text" class="field" id="in1" placeholder="${p1}">
+      <input type="text" class="field" id="in2" placeholder="${p2}">
+      <div class="row" style="margin-top:4px"><button class="btn-send" onclick="send2()">Enviar</button></div>`;
+    document.getElementById('in1').focus();
+    window.send2 = () => {
+      const v1 = document.getElementById('in1').value.trim();
+      const v2 = document.getElementById('in2').value.trim();
+      if (!v1 || !v2) return;
+      clearInput(); addMsg('user', `${v1} — ${v2}`); res({ v1, v2 });
+    };
+  });
+}
+
+function textInput(placeholder) {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">Digite sua resposta</div>
+      <div class="row"><input type="text" class="field" id="txt-in" placeholder="${placeholder}" style="margin-bottom:0">
+      <button class="btn-send" onclick="sendTxt()">Enviar</button></div>`;
+    const inp = document.getElementById('txt-in');
+    inp.focus();
+    window.sendTxt = () => { const v = inp.value.trim(); if (!v) return; clearInput(); addMsg('user', v); res(v); };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') window.sendTxt(); });
+  });
+}
+
+function textArea(placeholder) {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">Descreva com suas palavras</div>
+      <textarea class="field" id="ta-in" placeholder="${placeholder}"></textarea>
+      <div class="row" style="justify-content:flex-end"><button class="btn-send" onclick="sendTA()">Enviar</button></div>`;
+    document.getElementById('ta-in').focus();
+    window.sendTA = () => { const v = document.getElementById('ta-in').value.trim(); if (!v) return; clearInput(); addMsg('user', v); res(v); };
+  });
+}
+
+function selectWithDist(label) {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">${label}</div>
+      <select class="field" id="sel-mun"><option value="">— Selecione o município —</option>${scOpts()}</select>
+      <div class="row">
+        <input type="number" class="field" id="dist-in" placeholder="Ex: 45" min="0" style="margin-bottom:0">
+        <span class="dist-hint">km (aprox.)</span>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn-send" onclick="sendSD()">Confirmar</button></div>`;
+    window.sendSD = () => {
+      const mun = document.getElementById('sel-mun').value;
+      const dist = document.getElementById('dist-in').value;
+      if (!mun || !dist || isNaN(dist) || Number(dist) < 0) return;
+      clearInput(); addMsg('user', `${mun} — ${dist} km (aprox.)`);
+      res({ mun, dist: dist + ' km (aprox.)' });
+    };
+  });
+}
+
+// ── Plantão: campo único ──────────────────────────────────────────────────────
+function plantaoUnico() {
+  return new Promise(res => {
+    const panel = document.getElementById('input-panel');
+    panel.innerHTML = `<div class="input-label">Município do IGP de plantão e distância</div>
+      <select class="field" id="sel-plantao"><option value="">— Selecione o município —</option>${scOpts()}</select>
+      <div class="row">
+        <input type="number" class="field" id="dist-plantao" placeholder="Ex: 30" min="0" style="margin-bottom:0">
+        <span class="dist-hint">km (aprox.)</span>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="btn-send" onclick="sendPlantao()">Confirmar</button></div>`;
+    window.sendPlantao = () => {
+      const mun = document.getElementById('sel-plantao').value;
+      const dist = document.getElementById('dist-plantao').value;
+      if (!mun || !dist || isNaN(dist) || Number(dist) < 0) return;
+      clearInput(); addMsg('user', `${mun} — ${dist} km (aprox.)`);
+      res({ mun, dist: dist + ' km (aprox.)' });
+    };
+  });
+}
+
+// ── Fluxo principal ───────────────────────────────────────────────────────────
+async function flow() {
+  updateProgress();
+
+  await botSay('Olá! Sou o assistente para coleta de informações sobre o <strong>fluxo de ingresso de presos e exame de corpo de delito</strong> nas Unidades Prisionais de Santa Catarina. Vamos começar?', 900);
+
+  await botSay('Selecione a <strong>Unidade Prisional</strong>. As unidades estão organizadas por Superintendência Regional:', 550);
+  ans.unidade = await selectUnidade();
+  step++; updateProgress();
+
+  const g = generoUnidade(ans.unidade);
+
+  await botSay(`Obrigado! Agora, qual é o <strong>nome e a função</strong> do responsável pelo preenchimento?`, 700);
+  const resp = await twoInputs('Nome completo', 'Função / Cargo');
+  ans.resp_nome = resp.v1; ans.resp_funcao = resp.v2;
+  step++; updateProgress();
+
+  await botSay(`${g.art.charAt(0).toUpperCase() + g.art.slice(1)} <strong>${ans.unidade}</strong> recebe presos? Ou seja, é uma unidade porta de entrada?`, 700);
+  const recebe = await chips([{ value: 'SIM', label: 'Sim' }, { value: 'NÃO', label: 'Não' }]);
+  ans.recebe_presos = recebe.value;
+  step++; updateProgress();
+
+  if (recebe.value === 'SIM') {
+    await botSay(`Qual o público recebido ${g.prep} <strong>${ans.unidade}</strong>?`, 600);
+    const sexo = await chips([{ value: 'MASCULINO', label: 'Masculino' }, { value: 'FEMININO', label: 'Feminino' }, { value: 'AMBOS', label: 'Ambos' }]);
+    ans.sexo_presos = sexo.label;
+
+    // Se recebe só masculino → perguntar para onde vão as femininas
+    if (sexo.value === 'MASCULINO') {
+      await botSay(`E as <strong>presas femininas</strong>, para qual Unidade Prisional são encaminhadas?`, 650);
+      ans.encaminhamento_feminino = await selectUnidadeDestino('Selecione a Unidade Prisional de destino das femininas');
+    }
+    // Se recebe só feminino → perguntar para onde vão os masculinos
+    if (sexo.value === 'FEMININO') {
+      await botSay(`E os <strong>presos masculinos</strong>, para qual Unidade Prisional são encaminhados?`, 650);
+      ans.encaminhamento_masculino = await selectUnidadeDestino('Selecione a Unidade Prisional de destino dos masculinos');
+    }
+
+  } else {
+    // Não recebe presos → perguntar destino de cada sexo e encerrar
+    await botSay(`Para qual <strong>Unidade Prisional</strong> são encaminhados os <strong>presos masculinos</strong> quando chegam ${g.prep} <strong>${ans.unidade}</strong>?`, 700);
+    ans.encaminhamento_masculino = await selectUnidadeDestino('Selecione a Unidade Prisional de destino dos masculinos');
+
+    await botSay(`E as <strong>presas femininas</strong>, para qual Unidade Prisional são encaminhadas?`, 650);
+    ans.encaminhamento_feminino = await selectUnidadeDestino('Selecione a Unidade Prisional de destino das femininas');
+
+    // Salvar e encerrar
+    clearInput();
+    await botSay(`Obrigado, <strong>${ans.resp_nome}</strong>! As informações ${g.prep} <strong>${ans.unidade}</strong> foram registradas. Salvando...`, 800);
+
+    function detectarRegional(nomeUnidade) {
+      for (const r of REGIONAIS) {
+        if (r.unidades.includes(nomeUnidade)) return { sr: r.sr, nome: r.nome };
+      }
+      return { sr: 'SR00', nome: 'Não identificada' };
+    }
+
+    const regional = detectarRegional(ans.unidade);
+    const agora = new Date();
+
+    const registro = {
+      unidade:                  ans.unidade || '',
+      regional_sr:              regional.sr,
+      regional_nome:            regional.nome,
+      resp_nome:                ans.resp_nome || '',
+      resp_funcao:              ans.resp_funcao || '',
+      recebe_presos:            'NÃO',
+      encaminhamento_masculino: ans.encaminhamento_masculino || '',
+      encaminhamento_feminino:  ans.encaminhamento_feminino || '',
+      timestamp:                agora.toISOString(),
+      data_br:                  agora.toLocaleDateString('pt-BR'),
+      hora_br:                  agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    let salvo = false;
+    try {
+      const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js');
+      const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+      const firebaseConfig = {
+        apiKey:            "AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
+        authDomain:        "crv-dpp-sc.firebaseapp.com",
+        projectId:         "crv-dpp-sc",
+        storageBucket:     "crv-dpp-sc.firebasestorage.app",
+        messagingSenderId: "707080008192",
+        appId:             "1:707080008192:web:64f44c65629c0fc5941ee5"
+      };
+      const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+      const db  = getFirestore(app);
+      await addDoc(collection(db, 'Respostas_Fluxo_Ingresso_Presos'), registro);
+      salvo = true;
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+    }
+
+    setTimeout(() => {
+      document.getElementById('input-panel').innerHTML = salvo ? `
+        <div class="success-box">
+          <div class="success-circle">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h2>Enviado com sucesso!</h2>
+          <p>Os dados ${g.prep} <strong>${ans.unidade}</strong> foram salvos em <strong>${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>.</p>
+          <button class="btn-send green" onclick="location.reload()">Novo preenchimento</button>
+        </div>` : `
+        <div class="success-box">
+          <div class="success-circle" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h2>Erro ao salvar</h2>
+          <p>Não foi possível salvar no banco de dados. Verifique sua conexão e tente novamente.</p>
+          <button class="btn-send" onclick="location.reload()">Tentar novamente</button>
+        </div>`;
+    }, 600);
+    return; // encerra o fluxo aqui
+  }
+
+  await botSay(`Onde são realizados os <strong>Exames de Corpo de Delito</strong> dos presos recebidos ${g.prep} <strong>${ans.unidade}</strong>? Selecione o município do IGP e a distância aproximada.`, 800);
+  const ecd = await selectWithDist('Município onde está localizado o IGP');
+  ans.ecd_cidade = ecd.mun; ans.ecd_distancia = ecd.dist;
+  step++; updateProgress();
+
+  await botSay(`Nos <strong>períodos de plantão</strong> (noturno, finais de semana e feriados), onde é realizado o Exame de Corpo de Delito para ${g.art} <strong>${ans.unidade}</strong>? Informe o município do IGP de plantão e a distância aproximada.`, 900);
+  const plantao = await plantaoUnico();
+  ans.plantao_mun = plantao.mun; ans.plantao_dist = plantao.dist;
+  step++; updateProgress();
+
+  await botSay(`Na prática, as forças de segurança (PM/PC/PRF/GM, etc.) levam presos ${g.prep} <strong>${ans.unidade}</strong> em <strong>qualquer horário durante o plantão</strong>, ou há algum acordo informal sobre os horários de entrega?`, 900);
+  const forca = await chips([
+    { value: 'QUALQUER', label: 'Levam em qualquer horário, sem restrição' },
+    { value: 'ACORDO', label: 'Há um acordo/combinado sobre os horários', col: true },
+  ]);
+  ans.forca_horario = forca.value;
+  if (forca.value === 'ACORDO') {
+    await botSay(`Descreva como funciona esse acordo na prática entre ${g.art} <strong>${ans.unidade}</strong> e a PM/PC:`, 600);
+    ans.forca_acordo_desc = await textArea('Ex: PM e PC evitam trazer presos após meia-noite; presos detidos de madrugada aguardam na delegacia até o amanhecer...');
+  }
+  step++; updateProgress();
+
+  await botSay(`No caso de <strong>flagrante delito</strong>, após a conclusão do APF, como os presos chegam ${g.prep2} <strong>${ans.unidade}</strong>?`, 800);
+  const flag = await chips([
+    { value: 'PC_LEVA', label: `Polícia Civil leva os presos ${g.prep2} ${ans.unidade}`, col: true },
+    { value: 'PP_BUSCA', label: 'Polícia Penal busca os presos na Delegacia', col: true },
+    { value: 'OUTRO', label: 'Outro' },
+  ]);
+  ans.flagrante_transporte = flag.value;
+  if (flag.value === 'OUTRO') {
+    await botSay('Como ocorre o transporte? Descreva:', 500);
+    ans.flagrante_outro = await textInput('Descreva...');
+  }
+  step++; updateProgress();
+
+  await botSay(`No <strong>cumprimento de Mandado de Prisão</strong>, o preso passa pela Delegacia antes de ser encaminhado ${g.prep2} <strong>${ans.unidade}</strong>, ou é levado diretamente?`, 800);
+  const mandado = await chips([
+    { value: 'PASSA_DELEGACIA', label: 'Passa pela Delegacia de Polícia', col: true },
+    { value: 'DIRETO_UNIDADE', label: `Vai direto ${g.prep2} ${ans.unidade}`, col: true },
+    { value: 'OUTRO', label: 'Outro' },
+  ]);
+  ans.mandado_fluxo = mandado.value;
+  if (mandado.value === 'OUTRO') {
+    await botSay('Descreva o fluxo:', 500);
+    ans.mandado_outro = await textInput('Descreva...');
+  }
+  step++; updateProgress();
+
+  clearInput();
+  await botSay(`Perfeito, <strong>${ans.resp_nome}</strong>! Todas as informações ${g.prep} <strong>${ans.unidade}</strong> foram registradas. Salvando no banco de dados...`, 800);
+
+  // ── Salvar no Firebase Firestore ──────────────────────────────────────────
+  // Detecta a Regional da unidade selecionada
+  function detectarRegional(nomeUnidade) {
+    for (const r of REGIONAIS) {
+      if (r.unidades.includes(nomeUnidade)) return { sr: r.sr, nome: r.nome };
+    }
+    return { sr: 'SR00', nome: 'Não identificada' };
+  }
+
+  const regional = detectarRegional(ans.unidade);
+  const agora = new Date();
+
+  const registro = {
+    // Identificação
+    unidade:          ans.unidade || '',
+    regional_sr:      regional.sr,
+    regional_nome:    regional.nome,
+    resp_nome:        ans.resp_nome || '',
+    resp_funcao:      ans.resp_funcao || '',
+    // Respostas
+    sexo_presos:              ans.sexo_presos || '',
+    recebe_presos:            ans.recebe_presos || '',
+    encaminhamento_masculino: ans.encaminhamento_masculino || '',
+    encaminhamento_feminino:  ans.encaminhamento_feminino || '',
+    forca_horario:    ans.forca_horario || '',
+    forca_acordo_desc:ans.forca_acordo_desc || '',
+    flagrante_transporte: ans.flagrante_transporte || '',
+    flagrante_outro:  ans.flagrante_outro || '',
+    ecd_cidade:       ans.ecd_cidade || '',
+    ecd_distancia:    ans.ecd_distancia || '',
+    plantao_mun:      ans.plantao_mun || '',
+    plantao_dist:     ans.plantao_dist || '',
+    mandado_fluxo:    ans.mandado_fluxo || '',
+    mandado_outro:    ans.mandado_outro || '',
+    // Timestamp
+    timestamp:        agora.toISOString(),
+    data_br:          agora.toLocaleDateString('pt-BR'),
+    hora_br:          agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  };
+
+  let salvo = false;
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js');
+    const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+
+    const firebaseConfig = {
+      apiKey:            "AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
+      authDomain:        "crv-dpp-sc.firebaseapp.com",
+      projectId:         "crv-dpp-sc",
+      storageBucket:     "crv-dpp-sc.firebasestorage.app",
+      messagingSenderId: "707080008192",
+      appId:             "1:707080008192:web:64f44c65629c0fc5941ee5"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    await addDoc(collection(db, 'Respostas_Fluxo_Ingresso_Presos'), registro);
+    salvo = true;
+  } catch (err) {
+    console.error('Erro ao salvar:', err);
+  }
+
+  setTimeout(() => {
+    document.getElementById('input-panel').innerHTML = salvo ? `
+      <div class="success-box">
+        <div class="success-circle">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h2>Enviado com sucesso!</h2>
+        <p>Os dados ${g.prep} <strong>${ans.unidade}</strong> foram salvos em <strong>${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>.</p>
+        <button class="btn-send green" onclick="location.reload()">Novo preenchimento</button>
+      </div>` : `
+      <div class="success-box">
+        <div class="success-circle" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2>Erro ao salvar</h2>
+        <p>Não foi possível salvar no banco de dados. Verifique sua conexão e tente novamente.</p>
+        <button class="btn-send" onclick="location.reload()">Tentar novamente</button>
+      </div>`;
+  }, 600);
+}
+
+flow();
+</script>
+</body>
+</html>

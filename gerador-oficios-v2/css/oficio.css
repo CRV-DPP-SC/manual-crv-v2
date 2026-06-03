@@ -1,0 +1,264 @@
+/* ============================================================
+   OFICIO.CSS — estilos do documento em papel
+   Usados tanto no preview em tela quanto na exportação.
+   ============================================================ */
+
+/* ── Placeholder para campos não preenchidos ── */
+.ofc-placeholder {
+  color: #aaa;
+  font-style: italic;
+  font-weight: normal;
+}
+
+/* ── Estrutura do ofício ── */
+#oficio {
+  background: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.0;
+  color: #111;
+  width: 100%;
+  max-width: 21cm;
+  margin: 0 auto;
+  border-collapse: collapse;
+}
+
+.ofc-print-header {
+  padding: 1cm 1.5cm 0.3cm 1.5cm;
+  vertical-align: top;
+}
+
+.ofc-print-body {
+  padding: 0.3cm 1.5cm 0 1.5cm;
+  vertical-align: top;
+}
+
+.ofc-print-footer {
+  padding: 0.3cm 1.5cm 0.5cm 1.5cm;
+}
+
+.ofc-ass-page {
+  page-break-before: always;
+  break-before: page;
+  padding-top: 0.3cm;
+}
+
+.oficio-corpo {
+  padding-bottom: 0;
+}
+
+/* ── Cabeçalho ── */
+.ofc-cab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: none;
+  padding-bottom: 6px;
+  margin-bottom: 0;
+}
+
+.ofc-cab img {
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.ofc-cab-txt {
+  flex: 1;
+  text-align: left;
+  line-height: 1.3;
+  padding-left: 6px;
+}
+
+.ofc-cab-txt .c1,
+.ofc-cab-txt .c2,
+.ofc-cab-txt .c3 {
+  font-size: 10pt;
+  font-weight: normal;
+  text-transform: uppercase;
+  font-family: Arial, sans-serif;
+  display: block;
+}
+
+.ofc-cab-txt .c4 {
+  font-size: 10pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-family: Arial, sans-serif;
+  display: block;
+  margin-top: 1px;
+}
+
+/* ── Número e data ── */
+.ofc-numdata {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11pt;
+  line-height: 1.0;
+  font-family: Arial, sans-serif;
+}
+
+.ofc-data-only {
+  text-align: right;
+  font-size: 11pt;
+  line-height: 1.0;
+  font-family: Arial, sans-serif;
+}
+
+/* ── Linha em branco ── */
+.lb {
+  display: block;
+  height: 11pt;
+  line-height: 11pt;
+  font-family: Arial, sans-serif;
+}
+
+/* ── Corpo ── */
+.ofc-sau {
+  font-size: 11pt;
+  line-height: 1.0;
+  text-indent: 1.25cm;
+  font-family: Arial, sans-serif;
+}
+
+.ofc-p {
+  text-align: justify;
+  text-indent: 1.25cm;
+  font-size: 11pt;
+  line-height: 1.0;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.ofc-p-lista {
+  text-indent: 0 !important;
+}
+
+.ofc-campo {
+  font-weight: bold;
+}
+
+/* ── Fechamento e assinatura ── */
+.ofc-desp {
+  margin-left: 7cm;
+  font-size: 11pt;
+  line-height: 1.0;
+  font-family: Arial, sans-serif;
+}
+
+.ass-bloco {
+  margin-left: 7cm;
+  font-size: 11pt;
+  line-height: 1.3;
+  font-family: Arial, sans-serif;
+}
+
+.ass-dig {
+  font-style: italic;
+  color: #444;
+  font-size: 10pt;
+  display: block;
+}
+
+.ass-nome {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 11pt;
+  display: block;
+}
+
+.ass-cargo {
+  font-weight: normal;
+  font-size: 10pt;
+  color: #222;
+  display: block;
+}
+
+/* ── Destinatário ── */
+.ofc-dest-wrap {
+  padding-top: 18pt;
+}
+
+.ofc-dest {
+  font-size: 11pt;
+  line-height: 1.0;
+  font-family: Arial, sans-serif;
+}
+
+.dest-t  { font-weight: normal; display: block; margin: 0; padding: 0; }
+.dest-n  { font-weight: bold; text-transform: uppercase; display: block; margin: 0; padding: 0; }
+.dest-l  { font-weight: normal; display: block; margin: 0; padding: 0; }
+
+/* ── Listas ── */
+.ofc-lista {
+  margin: 3pt 0 3pt 1.5cm;
+  padding: 0;
+  list-style: disc;
+  font-size: 11pt;
+  line-height: 1.0;
+  font-family: Arial, sans-serif;
+  text-align: left;
+}
+
+.ofc-lista li { margin-bottom: 2pt; }
+.ofc-lista-wrap { margin: 0; padding: 0; }
+
+/* ── Rodapé ── */
+.ofc-rodape {
+  border-top: none;
+  padding: 6px 0 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+}
+
+.rod-info {
+  text-align: center;
+  font-size: 8.5pt;
+  color: #222;
+  line-height: 1.5;
+}
+
+.rod-dpp  { font-weight: bold; font-size: 9pt; text-transform: uppercase; display: block; color: #111; }
+.rod-un   { font-weight: bold; color: #111; display: block; font-size: 8.5pt; }
+.rod-cont { font-weight: normal; font-size: 8pt; display: block; color: #333; }
+
+/* ── Anexo ── */
+.anexo-wrapper {
+  font-family: Arial, sans-serif;
+  page-break-before: always;
+}
+
+.anexo-tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ── Preview: separador de quebra de página ── */
+.page-break-preview {
+  border-top: 2px dashed #bcd;
+  margin: 24px 0;
+  text-align: center;
+  color: #aaa;
+  font-size: 0.75rem;
+}
+
+/* ── Impressão / PDF ── */
+@page {
+  size: A4;
+  margin: 0.3cm 2cm 0.3cm 3cm;
+}
+
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+  header, footer, .ofc-no-print { display: none !important; }
+  .ofc-placeholder { display: none; }
+
+  #oficio { border: none !important; box-shadow: none !important; }
+  .ofc-cab img { height: 52pt !important; }
+  .ofc-print-header { padding: 0.4cm 0 0.3cm 0; }
+  .ofc-print-body   { padding: 0.2cm 0 0; }
+  .ofc-print-footer { padding: 0.3cm 0 0.4cm 0; }
+}

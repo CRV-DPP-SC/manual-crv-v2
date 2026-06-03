@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Viagens — CRV/DPP</title>
+<style>
+:root {
+  --az: #1a2a4a; --azm: #0d2b55; --azc: #3b82f6;
+  --vd: #0f6e56; --dou: #b8860b; --cin: #6b7280;
+  --bg: #f4f6f9; --br: #ffffff; --bd: #e5e7eb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2937;min-height:100vh}
+
+/* ─── HEADER ─────────────────────────────────────────────────────── */
+.hdr{background:var(--az);color:#fff;padding:.9rem 1.4rem;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:.6rem;position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 14px rgba(0,0,0,.3)}
+.hdr-t{font-size:1rem;font-weight:700;display:flex;align-items:center;gap:.4rem}
+.hdr-a{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center}
+
+/* ─── BOTÕES ─────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .9rem;border:none;
+  border-radius:7px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.bp{background:var(--azc);color:#fff}.bp:hover{background:#2563eb}
+.bv{background:var(--vd);color:#fff}.bv:hover{background:#0a5240}
+.bn{background:#fff;color:var(--az);border:1.5px solid var(--az)}.bn:hover{background:#f0f4ff}
+.br2{background:#dc2626;color:#fff}.br2:hover{background:#b91c1c}
+.bsm{padding:.28rem .6rem;font-size:.75rem}
+.bamb{background:#f59e0b;color:#fff}.bamb:hover{background:#d97706}
+
+/* ─── STATUS FB ──────────────────────────────────────────────────── */
+.fbs{font-size:.7rem;padding:.22rem .55rem;border-radius:20px;font-weight:700}
+.fbok{background:#d1fae5;color:#065f46}.fberr{background:#fee2e2;color:#991b1b}.fbld{background:#fef3c7;color:#92400e}
+
+/* ─── CONTAINER ──────────────────────────────────────────────────── */
+.wrap{max-width:1280px;margin:0 auto;padding:1.3rem 1rem}
+
+/* ─── TABS ───────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:0;margin-bottom:1.2rem;border-bottom:2px solid var(--bd)}
+.tab{padding:.55rem 1.3rem;font-size:.85rem;font-weight:600;color:var(--cin);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.on{color:var(--az);border-bottom-color:var(--az)}
+.tab:hover:not(.on){color:var(--az);background:#f0f4ff}
+.pane{display:none}.pane.on{display:block}
+
+/* ─── STATS ──────────────────────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem;margin-bottom:1.3rem}
+.sc{background:var(--br);border:1.5px solid var(--bd);border-radius:10px;padding:.85rem 1rem;text-align:center}
+.sn{font-size:1.8rem;font-weight:800;color:var(--az);line-height:1}
+.sl{font-size:.7rem;color:var(--cin);margin-top:.25rem;font-weight:500}
+
+/* ─── FILTROS ────────────────────────────────────────────────────── */
+.fbar{background:var(--br);border:1.5px solid var(--bd);border-radius:10px;padding:.8rem 1rem;
+  margin-bottom:1.1rem;display:flex;gap:.55rem;flex-wrap:wrap;align-items:center}
+.fbar input,.fbar select{padding:.38rem .65rem;border:1.5px solid var(--bd);border-radius:6px;
+  font-size:.81rem;font-family:inherit;color:#374151}
+.fbar input:focus,.fbar select:focus{outline:none;border-color:var(--azc)}
+
+/* ─── TABELA ─────────────────────────────────────────────────────── */
+.tbl-wrap{background:var(--br);border:1.5px solid var(--bd);border-radius:12px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.81rem;min-width:680px}
+thead{background:var(--az);color:#fff}
+thead th{padding:.7rem .85rem;text-align:left;font-weight:600;font-size:.75rem;letter-spacing:.03em;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--bd);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8faff}
+td{padding:.65rem .85rem;vertical-align:top;color:#374151}
+.tcell{display:flex;flex-wrap:wrap;gap:.2rem}
+.tg{font-size:.68rem;font-weight:600;padding:.12rem .4rem;border-radius:20px;white-space:nowrap}
+.tgu{background:#dbeafe;color:#1d4ed8}.tgs{background:#d1fae5;color:#065f46}
+.obs-c{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--cin);font-size:.77rem}
+.ac{display:flex;gap:.3rem;flex-wrap:nowrap}
+.nodata{text-align:center;padding:2.5rem;color:var(--cin);font-size:.88rem}
+
+/* ─── MODAL ──────────────────────────────────────────────────────── */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;
+  align-items:center;justify-content:center;padding:1rem}
+.ov.on{display:flex}
+.mdl{background:#fff;border-radius:14px;width:100%;max-width:780px;max-height:93vh;
+  overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.mhdr{background:var(--az);color:#fff;padding:.95rem 1.2rem;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:10;border-radius:14px 14px 0 0}
+.mt{font-size:.92rem;font-weight:700}
+.mx{background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1}
+.mbody{padding:1.2rem;display:flex;flex-direction:column;gap:.95rem}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:480px){.frow{grid-template-columns:1fr}}
+.fg{display:flex;flex-direction:column;gap:.28rem}
+.fg label{font-size:.78rem;font-weight:600;color:var(--az)}
+.fg input,.fg textarea{padding:.48rem .7rem;border:1.5px solid var(--bd);border-radius:7px;
+  font-size:.84rem;font-family:inherit;color:#1f2937;transition:border-color .15s}
+.fg input:focus,.fg textarea:focus{outline:none;border-color:var(--azc)}
+.fg textarea{resize:vertical;min-height:78px}
+.mft{padding:.95rem 1.2rem;background:#f8faff;border-top:1px solid var(--bd);
+  display:flex;justify-content:flex-end;gap:.45rem;border-radius:0 0 14px 14px;position:sticky;bottom:0}
+
+/* ─── DROPDOWN MULTI-SELECT ──────────────────────────────────────── */
+.dms-wrap{position:relative}
+.dms-trigger{width:100%;padding:.48rem .7rem;border:1.5px solid var(--bd);border-radius:7px;
+  font-size:.84rem;font-family:inherit;color:#374151;background:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;user-select:none;min-height:38px}
+.dms-trigger:focus-within{border-color:var(--azc)}
+.dms-trigger-txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dms-arrow{flex-shrink:0;margin-left:.4rem;font-size:.75rem;transition:transform .2s}
+.dms-arrow.open{transform:rotate(180deg)}
+.dms-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;
+  border:1.5px solid var(--bd);border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,.14);
+  z-index:500;display:none;max-height:270px;overflow:hidden;flex-direction:column}
+.dms-panel.open{display:flex}
+.dms-search{padding:.4rem .65rem;border:none;border-bottom:1px solid var(--bd);font-size:.82rem;
+  font-family:inherit;background:#fafafa;outline:none}
+.dms-list{overflow-y:auto;flex:1}
+.dms-item{display:flex;align-items:center;gap:.45rem;padding:.32rem .7rem;cursor:pointer;
+  font-size:.81rem;transition:background .1s}
+.dms-item:hover{background:#f0f4ff}
+.dms-item input{cursor:pointer;accent-color:var(--azc)}
+.dms-chips{display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.35rem;min-height:18px}
+.chip{font-size:.7rem;font-weight:600;padding:.18rem .5rem .18rem .4rem;border-radius:20px;
+  display:inline-flex;align-items:center;gap:.28rem}
+.chip-s{background:var(--azc);color:#fff}.chip-u{background:var(--vd);color:#fff}
+.chip button{background:none;border:none;color:#fff;cursor:pointer;font-size:.82rem;line-height:1;padding:0;opacity:.8}
+.chip button:hover{opacity:1}
+
+/* ─── RELATÓRIO ──────────────────────────────────────────────────── */
+.rel-filters{background:var(--br);border:1.5px solid var(--bd);border-radius:12px;
+  padding:1.1rem 1.2rem;margin-bottom:1.1rem}
+.rel-filters h3{font-size:.88rem;font-weight:700;color:var(--az);margin-bottom:.85rem;
+  display:flex;align-items:center;gap:.4rem}
+.rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.8rem}
+.rel-grid .fg label{font-size:.77rem}
+.rel-grid .fg select,.rel-grid .fg input{font-size:.82rem}
+.rel-actions{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+
+/* ─── RELATÓRIO RESULTADO ────────────────────────────────────────── */
+.rel-result{background:var(--br);border:1.5px solid var(--bd);border-radius:12px;overflow:hidden}
+.rel-result-hdr{background:var(--az);color:#fff;padding:.7rem 1rem;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:.4rem}
+.rel-result-hdr span{font-size:.82rem;font-weight:600}
+.rel-result-acts{display:flex;gap:.4rem}
+
+/* ─── ÁREA IMPRIMÍVEL ────────────────────────────────────────────── */
+#printArea{display:none}
+@media print{
+  body>*{display:none!important}
+  #printArea{display:block!important;margin:0;padding:0}
+  @page{size:A4 landscape;margin:10mm 12mm 10mm 12mm}
+  .pa-hdr{margin-bottom:6mm}
+  .pa-title{font-size:13pt;font-weight:700;color:#1a2a4a}
+  .pa-sub{font-size:8pt;color:#6b7280;margin-top:2mm}
+  .pa-meta{font-size:8pt;color:#374151;margin-top:3mm;display:flex;gap:8mm;flex-wrap:wrap}
+  .pa-table{width:100%;border-collapse:collapse;font-size:7.5pt;margin-top:5mm}
+  .pa-table th{background:#1a2a4a;color:#fff;padding:3mm 2.5mm;text-align:left;font-weight:700;font-size:7pt}
+  .pa-table td{padding:2.5mm 2.5mm;border-bottom:0.3mm solid #e5e7eb;vertical-align:top}
+  .pa-table tr:nth-child(even) td{background:#f8faff}
+  .pa-footer{font-size:7pt;color:#9ca3af;margin-top:4mm;text-align:right}
+  .no-break{page-break-inside:avoid}
+}
+
+/* ─── DET MODAL ──────────────────────────────────────────────────── */
+.ds{margin-bottom:.8rem}
+.dl{font-size:.7rem;font-weight:700;color:var(--cin);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.2rem}
+.dv{font-size:.86rem;color:#1f2937}
+
+/* ─── TOAST ──────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:1.8rem;left:50%;transform:translateX(-50%) translateY(100px);
+  background:#1a2a4a;color:#fff;padding:.6rem 1.2rem;border-radius:8px;font-size:.8rem;font-weight:600;
+  box-shadow:0 4px 18px rgba(0,0,0,.25);transition:transform .3s;z-index:10000;white-space:nowrap;pointer-events:none}
+#toast.vis{transform:translateX(-50%) translateY(0)}
+
+/* ─── MULTI-SELECT REGIONAL (para relatório) ─────────────────────── */
+.reg-dms .dms-panel{max-height:310px}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ════════════════════════════════════════════════════════════════ -->
+<div class="hdr">
+  <div class="hdr-t">✈️ Controle de Viagens — CRV/DPP</div>
+  <div class="hdr-a">
+    <span class="fbs fbld" id="fbSt">⏳ Conectando...</span>
+    <button class="btn bv" onclick="abrirNova()">＋ Nova Viagem</button>
+    <button class="btn bn" onclick="exportarCSV()">⬇ CSV</button>
+  </div>
+</div>
+
+<!-- ═══ CONTAINER ═════════════════════════════════════════════════════════════ -->
+<div class="wrap">
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab on" onclick="switchTab('reg')">📋 Registros</div>
+    <div class="tab" onclick="switchTab('rel')">📊 Relatório</div>
+  </div>
+
+  <!-- ══ PANE REGISTROS ════════════════════════════════════════════════════════ -->
+  <div class="pane on" id="pane-reg">
+    <div class="stats" id="statsBar"></div>
+    <div class="fbar">
+      <input type="text" id="filtroTxt" placeholder="🔍 Buscar unidade, servidor, obs..." oninput="renderTabela()">
+      <input type="date" id="filtroIni" oninput="renderTabela()">
+      <span style="font-size:.78rem;color:var(--cin)">até</span>
+      <input type="date" id="filtroFim" oninput="renderTabela()">
+      <button class="btn bn bsm" onclick="limparFiltros()">✕ Limpar</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:88px">Saída</th><th style="width:88px">Retorno</th>
+          <th>Unidades Visitadas</th><th style="width:150px">Servidores</th>
+          <th style="width:160px">Observações</th><th style="width:110px">Ações</th>
+        </tr></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+      <div class="nodata" id="nodata" style="display:none">Nenhuma viagem registrada. Clique em <strong>+ Nova Viagem</strong>.</div>
+    </div>
+  </div>
+
+  <!-- ══ PANE RELATÓRIO ════════════════════════════════════════════════════════ -->
+  <div class="pane" id="pane-rel">
+    <div class="rel-filters">
+      <h3>🔍 Filtros do Relatório</h3>
+      <div class="rel-grid">
+
+        <!-- Mês -->
+        <div class="fg">
+          <label>📅 Mês</label>
+          <input type="month" id="rMes">
+        </div>
+
+        <!-- Data início / fim -->
+        <div class="fg">
+          <label>📅 Data de Início</label>
+          <input type="date" id="rIni">
+        </div>
+        <div class="fg">
+          <label>📅 Data de Fim</label>
+          <input type="date" id="rFim">
+        </div>
+
+        <!-- Servidores (multi dropdown) -->
+        <div class="fg">
+          <label>👥 Servidor(es)</label>
+          <div class="dms-wrap" id="dmsRelSrv">
+            <div class="dms-trigger" tabindex="0" onclick="toggleDms('dmsRelSrv')">
+              <span class="dms-trigger-txt" id="dmsRelSrv-lbl">Todos</span>
+              <span class="dms-arrow" id="dmsRelSrv-arr">▼</span>
+            </div>
+            <div class="dms-panel" id="dmsRelSrv-panel">
+              <input class="dms-search" placeholder="🔍 Buscar servidor..." oninput="filterDms('dmsRelSrv',this.value)">
+              <div class="dms-list" id="dmsRelSrv-list"></div>
+            </div>
+          </div>
+          <div class="dms-chips" id="dmsRelSrv-chips"></div>
+        </div>
+
+        <!-- Superintendências (multi dropdown) -->
+        <div class="fg">
+          <label>🏢 Superintendência Regional</label>
+          <div class="dms-wrap reg-dms" id="dmsRelSR">
+            <div class="dms-trigger" tabindex="0" onclick="toggleDms('dmsRelSR')">
+              <span class="dms-trigger-txt" id="dmsRelSR-lbl">Todas</span>
+              <span class="dms-arrow" id="dmsRelSR-arr">▼</span>
+            </div>
+            <div class="dms-panel" id="dmsRelSR-panel">
+              <input class="dms-search" placeholder="🔍 Buscar SR..." oninput="filterDms('dmsRelSR',this.value)">
+              <div class="dms-list" id="dmsRelSR-list"></div>
+            </div>
+          </div>
+          <div class="dms-chips" id="dmsRelSR-chips"></div>
+        </div>
+
+        <!-- Unidades (multi dropdown) -->
+        <div class="fg">
+          <label>🏛 Unidade(s) Prisional(is)</label>
+          <div class="dms-wrap" id="dmsRelUN">
+            <div class="dms-trigger" tabindex="0" onclick="toggleDms('dmsRelUN')">
+              <span class="dms-trigger-txt" id="dmsRelUN-lbl">Todas</span>
+              <span class="dms-arrow" id="dmsRelUN-arr">▼</span>
+            </div>
+            <div class="dms-panel" id="dmsRelUN-panel">
+              <input class="dms-search" placeholder="🔍 Buscar unidade..." oninput="filterDms('dmsRelUN',this.value)">
+              <div class="dms-list" id="dmsRelUN-list"></div>
+            </div>
+          </div>
+          <div class="dms-chips" id="dmsRelUN-chips"></div>
+        </div>
+
+      </div><!-- /rel-grid -->
+      <div class="rel-actions">
+        <button class="btn bp" onclick="gerarRelatorio()">🔍 Gerar Relatório</button>
+        <button class="btn bn bsm" onclick="limparRelFiltros()">✕ Limpar filtros</button>
+      </div>
+    </div><!-- /rel-filters -->
+
+    <!-- Resultado -->
+    <div class="rel-result" id="relResult" style="display:none">
+      <div class="rel-result-hdr">
+        <span id="relResultTitle">Relatório</span>
+        <div class="rel-result-acts">
+          <button class="btn bamb bsm" onclick="baixarPDF()">⬇ PDF</button>
+          <button class="btn bn bsm" onclick="imprimirRel()">🖨 Imprimir</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="relTable" style="min-width:700px">
+          <thead id="relThead"></thead>
+          <tbody id="relTbody"></tbody>
+        </table>
+        <div class="nodata" id="relNoData" style="display:none">Nenhuma viagem encontrada com os filtros selecionados.</div>
+      </div>
+    </div>
+  </div><!-- /pane-rel -->
+</div><!-- /wrap -->
+
+<!-- ═══ ÁREA IMPRIMÍVEL / PDF ══════════════════════════════════════════════════ -->
+<div id="printArea"></div>
+
+<!-- ═══ MODAL NOVA/EDITAR VIAGEM ══════════════════════════════════════════════ -->
+<div class="ov" id="ovViagem">
+  <div class="mdl">
+    <div class="mhdr">
+      <span class="mt" id="mdlTitulo">✈️ Nova Viagem</span>
+      <button class="mx" onclick="closeOv('ovViagem')">×</button>
+    </div>
+    <div class="mbody">
+      <!-- Datas -->
+      <div class="frow">
+        <div class="fg"><label>📅 Data de Saída *</label><input type="date" id="cSaida"></div>
+        <div class="fg"><label>📅 Data de Retorno *</label><input type="date" id="cRetorno"></div>
+      </div>
+
+      <!-- Unidades — multi select dropdown por regional -->
+      <div class="fg">
+        <label>🏛 Unidades Prisionais Visitadas *</label>
+        <div class="dms-wrap" id="dmsUN">
+          <div class="dms-trigger" tabindex="0" onclick="toggleDms('dmsUN')">
+            <span class="dms-trigger-txt" id="dmsUN-lbl">Selecione...</span>
+            <span class="dms-arrow" id="dmsUN-arr">▼</span>
+          </div>
+          <div class="dms-panel" id="dmsUN-panel" style="max-height:280px">
+            <input class="dms-search" placeholder="🔍 Buscar unidade ou regional..." oninput="filterDmsUN(this.value)">
+            <div class="dms-list" id="dmsUN-list"></div>
+          </div>
+        </div>
+        <div class="dms-chips" id="dmsUN-chips"></div>
+      </div>
+
+      <!-- Servidores — dropdown multi -->
+      <div class="fg">
+        <label>👥 Servidores *</label>
+        <div class="dms-wrap" id="dmsSRV">
+          <div class="dms-trigger" tabindex="0" onclick="toggleDms('dmsSRV')">
+            <span class="dms-trigger-txt" id="dmsSRV-lbl">Selecione...</span>
+            <span class="dms-arrow" id="dmsSRV-arr">▼</span>
+          </div>
+          <div class="dms-panel" id="dmsSRV-panel">
+            <input class="dms-search" placeholder="🔍 Buscar servidor..." oninput="filterDms('dmsSRV',this.value)">
+            <div class="dms-list" id="dmsSRV-list"></div>
+          </div>
+        </div>
+        <div class="dms-chips" id="dmsSRV-chips"></div>
+        <!-- Adicionar "outro" -->
+        <div style="display:flex;gap:.4rem;margin-top:.35rem;align-items:center">
+          <input type="text" id="outroSrv" placeholder="Outro servidor (nome)..." style="flex:1;padding:.38rem .65rem;border:1.5px solid var(--bd);border-radius:7px;font-size:.81rem;font-family:inherit">
+          <button class="btn bp bsm" onclick="addOutro()">+ Add</button>
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div class="fg">
+        <label>📝 Observações / Constatações</label>
+        <textarea id="cObs" placeholder="Registre observações, reuniões, situações encontradas..."></textarea>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn bn" onclick="closeOv('ovViagem')">Cancelar</button>
+      <button class="btn bp" id="btnSalvar" onclick="salvarViagem()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL DETALHES ═════════════════════════════════════════════════════════ -->
+<div class="ov" id="ovDet">
+  <div class="mdl">
+    <div class="mhdr">
+      <span class="mt">📋 Detalhes da Viagem</span>
+      <button class="mx" onclick="closeOv('ovDet')">×</button>
+    </div>
+    <div class="mbody" id="detBody"></div>
+    <div class="mft"><button class="btn bn" onclick="closeOv('ovDet')">Fechar</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<script type="module">
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import{getFirestore,collection,addDoc,getDocs,updateDoc,deleteDoc,doc,query,orderBy}
+  from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+const CFG={apiKey:"AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",authDomain:"crv-dpp-sc.firebaseapp.com",
+  projectId:"crv-dpp-sc",storageBucket:"crv-dpp-sc.firebasestorage.app",
+  messagingSenderId:"707080008192",appId:"1:707080008192:web:64f44c65629c0fc5941ee5"};
+const fbApp=getApps().length?getApps()[0]:initializeApp(CFG);
+const db=getFirestore(fbApp);
+const COL="controle_viagens";
+
+// ── DADOS ─────────────────────────────────────────────────────────────────────
+const REGS=[
+  {id:'SR01',label:'SR01 — Grande Florianópolis',
+   sr:'Superintendência Regional da Grande Florianópolis',
+   uns:['Penitenciária de Florianópolis','Complexo Penitenciário do Estado','Presídio Regional de Tijucas',
+        'Hospital de Custódia e Tratamento Psiquiátrico — HCTP','Presídio Regional de Biguaçu',
+        'Presídio Masculino Regional de Florianópolis','Presídio Feminino Regional de Florianópolis',
+        'Unidade de Monitoramento Eletrônico','Colônia Agroindustrial de Palhoça']},
+  {id:'SR02',label:'SR02 — Sul',sr:'Superintendência Regional Sul',
+   uns:['Penitenciária Feminina de Criciúma','Penitenciária Masculina de Tubarão','Penitenciária Sul',
+        'Presídio Regional de Araranguá','Presídio Regional de Criciúma','Presídio Regional de Imbituba',
+        'Presídio Regional de Laguna','Presídio Regional de Tubarão']},
+  {id:'SR03',label:'SR03 — Norte Catarinense',sr:'Superintendência Regional do Norte Catarinense',
+   uns:['Penitenciária Industrial de Joinville','Presídio Feminino Regional de Joinville',
+        'Presídio Regional de Joinville','Presídio Regional de Barra Velha','Presídio Regional de São Francisco do Sul']},
+  {id:'SR04',label:'SR04 — Vale do Itajaí',sr:'Superintendência Regional do Vale do Itajaí',
+   uns:['Penitenciária Masculina do Vale do Itajaí','Presídio Feminino Regional de Itajaí',
+        'Presídio Regional de Brusque','Presídio Regional de Itajaí','Presídio Regional de Itapema']},
+  {id:'SR05',label:'SR05 — Serrana',sr:'Superintendência Regional Serrana',
+   uns:['Penitenciária Industrial de São Cristóvão do Sul','Penitenciária Regional de Curitibanos',
+        'Presídio Masculino de Lages','Presídio Regional de Lages','Presídio Regional de Caçador',
+        'Presídio Regional de Campos Novos','Presídio Regional de Videira',
+        'Unidade de Segurança Máxima de São Cristóvão do Sul']},
+  {id:'SR06',label:'SR06 — Oeste',sr:'Superintendência Regional Oeste',
+   uns:['Penitenciária Agrícola de Chapecó','Penitenciária Industrial de Chapecó',
+        'Presídio Feminino Regional de Chapecó','Presídio Regional de Chapecó',
+        'Presídio Regional de Concórdia','Presídio Regional de Joaçaba','Presídio Regional de Maravilha',
+        'Presídio Regional de São José do Cedro','Presídio Regional de São Miguel do Oeste','Presídio Regional de Xanxerê']},
+  {id:'SR07',label:'SR07 — Médio Vale do Itajaí',sr:'Superintendência Regional do Médio Vale do Itajaí',
+   uns:['Penitenciária Industrial de Blumenau','Presídio Regional de Blumenau',
+        'Presídio Regional de Indaial','Presídio Regional de Ituporanga','Presídio Regional de Rio do Sul']},
+  {id:'SR08',label:'SR08 — Planalto Norte',sr:'Superintendência Regional do Planalto Norte',
+   uns:['Penitenciária Industrial de São Bento do Sul','Presídio Regional de Canoinhas',
+        'Presídio Regional de Jaraguá do Sul','Presídio Regional de Mafra','Presídio Regional de Porto União']},
+];
+const TODAS_UNS=REGS.flatMap(r=>[r.sr,...r.uns]);
+const SERV_FIXOS=['Alissandro','Bruna','Day','Ivana','Jessica','Ju','Ricardo','Rodrigo'];
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+let viagens=[];
+let editId=null;
+// seleções formulário
+const SEL={UN:[],SRV:[]};
+// seleções relatório
+const RSEL={SRV:[],SR:[],UN:[]};
+
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+function fbSt(s){
+  const el=document.getElementById('fbSt');
+  if(s==='ok'){el.className='fbs fbok';el.textContent='✅ Firebase';}
+  else if(s==='err'){el.className='fbs fberr';el.textContent='❌ Offline';}
+  else{el.className='fbs fbld';el.textContent='⏳ Conectando...';}
+}
+async function carregar(){
+  fbSt('ld');
+  try{
+    const q=query(collection(db,COL),orderBy('saida','desc'));
+    const sn=await getDocs(q);
+    viagens=sn.docs.map(d=>({id:d.id,...d.data()}));
+    fbSt('ok');renderTabela();
+  }catch(e){fbSt('err');toast('❌ Firebase: '+e.message);console.error(e);}
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+window.switchTab=function(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    const ids=['reg','rel'];
+    el.classList.toggle('on',ids[i]===t);
+  });
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pane-'+t).classList.add('on');
+  // init rel dropdowns once
+  if(t==='rel'&&!window._relInit){window._relInit=true;initRelDropdowns();}
+};
+
+// ── TABELA REGISTROS ──────────────────────────────────────────────────────────
+function renderTabela(){
+  const txt=document.getElementById('filtroTxt').value.toLowerCase();
+  const de=document.getElementById('filtroIni').value;
+  const ate=document.getElementById('filtroFim').value;
+  let lista=viagens.filter(v=>{
+    if(de&&v.saida<de)return false;
+    if(ate&&v.retorno>ate)return false;
+    if(txt){const h=((v.unidades||[]).join(' ')+' '+(v.servidores||[]).join(' ')+' '+(v.obs||'')).toLowerCase();
+      if(!h.includes(txt))return false;}
+    return true;
+  });
+  const tb=document.getElementById('tblBody');
+  const nd=document.getElementById('nodata');
+  const thead=tb.closest('table').querySelector('thead');
+  tb.innerHTML='';
+  if(!lista.length){nd.style.display='block';thead.style.display='none';}
+  else{nd.style.display='none';thead.style.display='';}
+  lista.forEach(v=>{
+    const tr=document.createElement('tr');
+    const uT=(v.unidades||[]).map(u=>`<span class="tg tgu">${esc(u)}</span>`).join('');
+    const sT=(v.servidores||[]).map(s=>`<span class="tg tgs">${esc(s)}</span>`).join('');
+    tr.innerHTML=`<td>${fd(v.saida)}</td><td>${fd(v.retorno)}</td>
+      <td><div class="tcell">${uT||'—'}</div></td>
+      <td><div class="tcell">${sT||'—'}</div></td>
+      <td><div class="obs-c" title="${esc(v.obs)}">${esc(v.obs)||'—'}</div></td>
+      <td><div class="ac">
+        <button class="btn bn bsm" onclick="verDet('${v.id}')">👁</button>
+        <button class="btn bp bsm" onclick="editV('${v.id}')">✏️</button>
+        <button class="btn br2 bsm" onclick="excluirV('${v.id}')">🗑</button>
+      </div></td>`;
+    tb.appendChild(tr);
+  });
+  renderStats();
+}
+function renderStats(){
+  const h=new Date().toISOString().slice(0,10);
+  const tot=viagens.length;
+  const cur=viagens.filter(v=>v.saida<=h&&v.retorno>=h).length;
+  const mes=viagens.filter(v=>v.saida&&v.saida.slice(0,7)===h.slice(0,7)).length;
+  const uns=[...new Set(viagens.flatMap(v=>v.unidades||[]))].length;
+  document.getElementById('statsBar').innerHTML=`
+    <div class="sc"><div class="sn">${tot}</div><div class="sl">Total Viagens</div></div>
+    <div class="sc"><div class="sn" style="color:var(--vd)">${cur}</div><div class="sl">Em Curso Hoje</div></div>
+    <div class="sc"><div class="sn" style="color:var(--azc)">${mes}</div><div class="sl">Neste Mês</div></div>
+    <div class="sc"><div class="sn" style="color:var(--dou)">${uns}</div><div class="sl">Unidades Distintas</div></div>`;
+}
+window.limparFiltros=function(){['filtroTxt','filtroIni','filtroFim'].forEach(id=>document.getElementById(id).value='');renderTabela();};
+
+// ── DMS (Dropdown Multi-Select) ENGINE ────────────────────────────────────────
+// wrapId: id do .dms-wrap
+// items: [{val,label,group?}]
+// selArr: referência ao array de selecionados
+// chipClass: classe do chip
+// onChangeCallback: chamado após cada mudança
+const DMS_STATE={};
+
+function initDms(wrapId,items,selArr,chipClass,onChange){
+  DMS_STATE[wrapId]={items,selArr,chipClass,onChange,filter:''};
+  renderDmsList(wrapId);
+  renderDmsChips(wrapId);
+  updateDmsLabel(wrapId);
+}
+
+window.toggleDms=function(wrapId){
+  const panel=document.getElementById(wrapId+'-panel');
+  const arr=document.getElementById(wrapId+'-arr');
+  const isOpen=panel.classList.contains('open');
+  // fechar todos
+  document.querySelectorAll('.dms-panel.open').forEach(p=>{p.classList.remove('open');});
+  document.querySelectorAll('.dms-arrow.open').forEach(a=>{a.classList.remove('open');});
+  if(!isOpen){panel.classList.add('open');arr.classList.add('open');}
+};
+
+// Fechar dropdowns ao clicar fora
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.dms-wrap')){
+    document.querySelectorAll('.dms-panel.open').forEach(p=>p.classList.remove('open'));
+    document.querySelectorAll('.dms-arrow.open').forEach(a=>a.classList.remove('open'));
+  }
+});
+
+window.filterDms=function(wrapId,val){
+  if(!DMS_STATE[wrapId])return;
+  DMS_STATE[wrapId].filter=val.toLowerCase();
+  renderDmsList(wrapId);
+};
+
+function renderDmsList(wrapId){
+  const st=DMS_STATE[wrapId];if(!st)return;
+  const cont=document.getElementById(wrapId+'-list');
+  cont.innerHTML='';
+  const f=st.filter;
+  let lastGroup=null;
+  st.items.forEach(it=>{
+    if(f&&!it.label.toLowerCase().includes(f)&&!(it.group&&it.group.toLowerCase().includes(f)))return;
+    // grupo header
+    if(it.group&&it.group!==lastGroup){
+      lastGroup=it.group;
+      const gh=document.createElement('div');
+      gh.style.cssText='padding:.3rem .7rem;background:#e8eef8;font-size:.7rem;font-weight:700;color:#1a2a4a;letter-spacing:.05em;text-transform:uppercase';
+      gh.textContent=it.group;
+      cont.appendChild(gh);
+    }
+    const lbl=document.createElement('label');
+    lbl.className='dms-item';
+    const cb=document.createElement('input');
+    cb.type='checkbox';
+    cb.checked=st.selArr.includes(it.val);
+    cb.addEventListener('change',()=>{
+      if(cb.checked){if(!st.selArr.includes(it.val))st.selArr.push(it.val);}
+      else{const i=st.selArr.indexOf(it.val);if(i>=0)st.selArr.splice(i,1);}
+      renderDmsList(wrapId);renderDmsChips(wrapId);updateDmsLabel(wrapId);
+      if(st.onChange)st.onChange();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(' '+it.label));
+    cont.appendChild(lbl);
+  });
+}
+
+function renderDmsChips(wrapId){
+  const st=DMS_STATE[wrapId];if(!st)return;
+  const cont=document.getElementById(wrapId+'-chips');
+  if(!cont)return;
+  cont.innerHTML=st.selArr.map(v=>{
+    const it=st.items.find(i=>i.val===v);
+    const lbl=it?it.label:v;
+    return`<span class="chip ${st.chipClass}">${esc(lbl)} <button type="button" onclick="dmsRemove('${wrapId}','${esc(v)}')">×</button></span>`;
+  }).join('');
+}
+
+window.dmsRemove=function(wrapId,val){
+  const st=DMS_STATE[wrapId];if(!st)return;
+  const i=st.selArr.indexOf(val);if(i>=0)st.selArr.splice(i,1);
+  renderDmsList(wrapId);renderDmsChips(wrapId);updateDmsLabel(wrapId);
+  if(st.onChange)st.onChange();
+};
+
+function updateDmsLabel(wrapId){
+  const st=DMS_STATE[wrapId];if(!st)return;
+  const el=document.getElementById(wrapId+'-lbl');if(!el)return;
+  if(!st.selArr.length){el.textContent=st.placeholder||'Selecione...';}
+  else if(st.selArr.length===1){const it=st.items.find(i=>i.val===st.selArr[0]);el.textContent=it?it.label:st.selArr[0];}
+  else{el.textContent=st.selArr.length+' selecionado(s)';}
+}
+
+// ── DMS ESPECIAL: UNIDADES POR REGIONAL (formulário) ─────────────────────────
+function buildUnItems(){
+  const items=[];
+  REGS.forEach(r=>{
+    // SR como item
+    items.push({val:r.sr,label:'📍 '+r.sr,group:r.label});
+    r.uns.forEach(u=>items.push({val:u,label:u,group:r.label}));
+  });
+  return items;
+}
+window.filterDmsUN=function(val){
+  DMS_STATE['dmsUN'].filter=val.toLowerCase();
+  renderDmsUN();
+};
+function renderDmsUN(){
+  const st=DMS_STATE['dmsUN'];if(!st)return;
+  const cont=document.getElementById('dmsUN-list');
+  cont.innerHTML='';
+  const f=st.filter;
+  REGS.forEach(r=>{
+    const srM=r.sr.toLowerCase().includes(f)||r.label.toLowerCase().includes(f);
+    const unF=r.uns.filter(u=>u.toLowerCase().includes(f));
+    const show=!f||srM||unF.length>0;
+    if(!show)return;
+    const gh=document.createElement('div');
+    gh.style.cssText='padding:.3rem .7rem;background:#e8eef8;font-size:.7rem;font-weight:700;color:#1a2a4a;letter-spacing:.05em';
+    gh.textContent=r.label;
+    cont.appendChild(gh);
+    // SR item
+    if(!f||srM){
+      const lbl=document.createElement('label');
+      lbl.className='dms-item';
+      lbl.style.fontWeight='600';
+      const cb=document.createElement('input');cb.type='checkbox';
+      cb.checked=SEL.UN.includes(r.sr);
+      cb.addEventListener('change',()=>{
+        if(cb.checked){if(!SEL.UN.includes(r.sr))SEL.UN.push(r.sr);}
+        else{const i=SEL.UN.indexOf(r.sr);if(i>=0)SEL.UN.splice(i,1);}
+        renderDmsUN();renderDmsChips('dmsUN');updateDmsLabel('dmsUN');
+      });
+      lbl.appendChild(cb);lbl.appendChild(document.createTextNode(' 📍 '+r.sr));
+      cont.appendChild(lbl);
+    }
+    (f&&!srM?unF:r.uns).forEach(u=>{
+      const lbl=document.createElement('label');lbl.className='dms-item';
+      const cb=document.createElement('input');cb.type='checkbox';
+      cb.checked=SEL.UN.includes(u);
+      cb.addEventListener('change',()=>{
+        if(cb.checked){if(!SEL.UN.includes(u))SEL.UN.push(u);}
+        else{const i=SEL.UN.indexOf(u);if(i>=0)SEL.UN.splice(i,1);}
+        renderDmsUN();renderDmsChips('dmsUN');updateDmsLabel('dmsUN');
+      });
+      lbl.appendChild(cb);lbl.appendChild(document.createTextNode(' '+u));
+      cont.appendChild(lbl);
+    });
+  });
+}
+
+// ── INIT DMS FORMULÁRIO ───────────────────────────────────────────────────────
+function initFormDms(){
+  // Unidades (especial por regional)
+  DMS_STATE['dmsUN']={items:buildUnItems(),selArr:SEL.UN,chipClass:'chip-u',filter:'',placeholder:'Selecione...',onChange:null};
+  renderDmsUN();
+  renderDmsChips('dmsUN');
+  updateDmsLabel('dmsUN');
+
+  // Servidores
+  const srvItems=[...SERV_FIXOS.map(s=>({val:s,label:s}))];
+  initDms('dmsSRV',srvItems,SEL.SRV,'chip-s',null);
+  DMS_STATE['dmsSRV'].placeholder='Selecione...';
+}
+
+// ── INIT DMS RELATÓRIO ────────────────────────────────────────────────────────
+function initRelDropdowns(){
+  // Servidores
+  const allSrv=[...new Set([...SERV_FIXOS,...viagens.flatMap(v=>v.servidores||[])])].sort();
+  initDms('dmsRelSrv',allSrv.map(s=>({val:s,label:s})),RSEL.SRV,'chip-s',null);
+  DMS_STATE['dmsRelSrv'].placeholder='Todos';
+  updateDmsLabel('dmsRelSrv');
+
+  // SRs
+  initDms('dmsRelSR',REGS.map(r=>({val:r.id,label:r.label})),RSEL.SR,'chip-s',null);
+  DMS_STATE['dmsRelSR'].placeholder='Todas';
+  updateDmsLabel('dmsRelSR');
+
+  // Unidades
+  initDms('dmsRelUN',TODAS_UNS.map(u=>({val:u,label:u})),RSEL.UN,'chip-u',null);
+  DMS_STATE['dmsRelUN'].placeholder='Todas';
+  updateDmsLabel('dmsRelUN');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+window.closeOv=function(id){document.getElementById(id).classList.remove('on');};
+function openOv(id){document.getElementById(id).classList.add('on');}
+['ovViagem','ovDet'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)closeOv(id);});
+});
+
+function resetForm(){
+  SEL.UN.length=0;SEL.SRV.length=0;
+  document.getElementById('cSaida').value='';
+  document.getElementById('cRetorno').value='';
+  document.getElementById('cObs').value='';
+  document.getElementById('outroSrv').value='';
+  renderDmsUN();renderDmsChips('dmsUN');updateDmsLabel('dmsUN');
+  renderDmsList('dmsSRV');renderDmsChips('dmsSRV');updateDmsLabel('dmsSRV');
+}
+
+window.abrirNova=function(){
+  editId=null;resetForm();
+  document.getElementById('mdlTitulo').textContent='✈️ Nova Viagem';
+  openOv('ovViagem');
+};
+window.editV=function(id){
+  const v=viagens.find(x=>x.id===id);if(!v)return;
+  editId=id;
+  SEL.UN.length=0;(v.unidades||[]).forEach(u=>SEL.UN.push(u));
+  SEL.SRV.length=0;(v.servidores||[]).forEach(s=>SEL.SRV.push(s));
+  document.getElementById('cSaida').value=v.saida||'';
+  document.getElementById('cRetorno').value=v.retorno||'';
+  document.getElementById('cObs').value=v.obs||'';
+  document.getElementById('outroSrv').value='';
+  // Atualiza SRV items para incluir "outros"
+  const allSrv=[...new Set([...SERV_FIXOS,...SEL.SRV])];
+  DMS_STATE['dmsSRV'].items=allSrv.map(s=>({val:s,label:s}));
+  renderDmsUN();renderDmsChips('dmsUN');updateDmsLabel('dmsUN');
+  renderDmsList('dmsSRV');renderDmsChips('dmsSRV');updateDmsLabel('dmsSRV');
+  document.getElementById('mdlTitulo').textContent='✏️ Editar Viagem';
+  openOv('ovViagem');
+};
+window.salvarViagem=async function(){
+  const saida=document.getElementById('cSaida').value;
+  const ret=document.getElementById('cRetorno').value;
+  const obs=document.getElementById('cObs').value.trim();
+  if(!saida)return toast('⚠️ Informe a data de saída.');
+  if(!ret)return toast('⚠️ Informe a data de retorno.');
+  if(ret<saida)return toast('⚠️ Retorno não pode ser anterior à saída.');
+  if(!SEL.UN.length)return toast('⚠️ Selecione ao menos uma unidade.');
+  if(!SEL.SRV.length)return toast('⚠️ Selecione ao menos um servidor.');
+  const btn=document.getElementById('btnSalvar');
+  btn.disabled=true;btn.textContent='⏳ Salvando...';
+  const dados={saida,retorno:ret,unidades:[...SEL.UN],servidores:[...SEL.SRV],obs,ts:new Date().toISOString()};
+  try{
+    if(editId){
+      await updateDoc(doc(db,COL,editId),dados);
+      const i=viagens.findIndex(v=>v.id===editId);
+      viagens[i]={...viagens[i],...dados};toast('✅ Viagem atualizada!');
+    }else{
+      const ref=await addDoc(collection(db,COL),dados);
+      viagens.unshift({id:ref.id,...dados});toast('✅ Viagem registrada!');
+    }
+    closeOv('ovViagem');renderTabela();
+  }catch(e){toast('❌ Erro: '+e.message);console.error(e);}
+  btn.disabled=false;btn.textContent='💾 Salvar';
+};
+window.addOutro=function(){
+  const inp=document.getElementById('outroSrv');
+  const n=inp.value.trim();if(!n)return toast('⚠️ Digite o nome.');
+  // add to items se não existir
+  if(!DMS_STATE['dmsSRV'].items.find(i=>i.val===n))
+    DMS_STATE['dmsSRV'].items.push({val:n,label:n});
+  if(!SEL.SRV.includes(n))SEL.SRV.push(n);
+  inp.value='';
+  renderDmsList('dmsSRV');renderDmsChips('dmsSRV');updateDmsLabel('dmsSRV');
+};
+window.verDet=function(id){
+  const v=viagens.find(x=>x.id===id);if(!v)return;
+  const uT=(v.unidades||[]).map(u=>`<span class="tg tgu" style="margin:.15rem">${esc(u)}</span>`).join('');
+  const sT=(v.servidores||[]).map(s=>`<span class="tg tgs" style="margin:.15rem">${esc(s)}</span>`).join('');
+  document.getElementById('detBody').innerHTML=`
+    <div class="ds"><div class="dl">Data de Saída</div><div class="dv">${fd(v.saida)}</div></div>
+    <div class="ds"><div class="dl">Data de Retorno</div><div class="dv">${fd(v.retorno)}</div></div>
+    <div class="ds"><div class="dl">Unidades Prisionais Visitadas</div><div style="display:flex;flex-wrap:wrap;margin-top:.3rem">${uT||'—'}</div></div>
+    <div class="ds"><div class="dl">Servidores</div><div style="display:flex;flex-wrap:wrap;margin-top:.3rem">${sT||'—'}</div></div>
+    <div class="ds"><div class="dl">Observações / Constatações</div><div class="dv" style="white-space:pre-wrap">${esc(v.obs)||'<em>Nenhuma.</em>'}</div></div>`;
+  openOv('ovDet');
+};
+window.excluirV=async function(id){
+  if(!confirm('Excluir esta viagem permanentemente?'))return;
+  try{
+    await deleteDoc(doc(db,COL,id));
+    viagens=viagens.filter(v=>v.id!==id);
+    renderTabela();toast('🗑 Viagem excluída.');
+  }catch(e){toast('❌ Erro: '+e.message);}
+};
+
+// ── RELATÓRIO ─────────────────────────────────────────────────────────────────
+window.gerarRelatorio=function(){
+  const mes=document.getElementById('rMes').value;         // YYYY-MM
+  const ini=document.getElementById('rIni').value;
+  const fim=document.getElementById('rFim').value;
+  const srvSel=RSEL.SRV;
+  const srSel=RSEL.SR;   // IDs das SRs (SR01, SR02…)
+  const unSel=RSEL.UN;
+
+  // Expandir SRs para incluir todas as unidades da SR
+  let unFiltroEff=[...unSel];
+  srSel.forEach(srId=>{
+    const r=REGS.find(x=>x.id===srId);
+    if(r){
+      if(!unFiltroEff.includes(r.sr))unFiltroEff.push(r.sr);
+      r.uns.forEach(u=>{if(!unFiltroEff.includes(u))unFiltroEff.push(u);});
+    }
+  });
+
+  let lista=viagens.filter(v=>{
+    // Filtro mês
+    if(mes&&v.saida&&!v.saida.startsWith(mes))return false;
+    // Filtro período
+    if(ini&&v.saida<ini)return false;
+    if(fim&&v.retorno&&v.retorno>fim)return false;
+    // Filtro servidores
+    if(srvSel.length&&!(v.servidores||[]).some(s=>srvSel.includes(s)))return false;
+    // Filtro unidades (incluindo SR expandida)
+    if(unFiltroEff.length&&!(v.unidades||[]).some(u=>unFiltroEff.includes(u)))return false;
+    return true;
+  });
+
+  // Ordenar por saída asc para relatório
+  lista=lista.slice().sort((a,b)=>a.saida.localeCompare(b.saida));
+
+  // Montar tabela resultado
+  const thead=document.getElementById('relThead');
+  const tbody=document.getElementById('relTbody');
+  const nodata=document.getElementById('relNoData');
+  const result=document.getElementById('relResult');
+  result.style.display='block';
+
+  const relTitle=document.getElementById('relResultTitle');
+  let desc='Relatório';
+  if(mes){const[y,m]=mes.split('-');desc+=` — ${m}/${y}`;}
+  if(ini||fim)desc+=` — ${ini?fd(ini):'*'} a ${fim?fd(fim):'*'}`;
+  relTitle.textContent=desc+` (${lista.length} viagem${lista.length!==1?'s':''})`;
+
+  thead.innerHTML=`<tr>
+    <th style="width:80px">Saída</th><th style="width:80px">Retorno</th>
+    <th>Unidades Visitadas</th><th style="width:140px">Servidores</th>
+    <th style="width:180px">Observações</th>
+  </tr>`;
+  tbody.innerHTML='';
+
+  if(!lista.length){nodata.style.display='block';return;}
+  nodata.style.display='none';
+
+  lista.forEach(v=>{
+    const tr=document.createElement('tr');
+    const uT=(v.unidades||[]).map(u=>`<span class="tg tgu">${esc(u)}</span>`).join('');
+    const sT=(v.servidores||[]).map(s=>`<span class="tg tgs">${esc(s)}</span>`).join('');
+    tr.innerHTML=`<td>${fd(v.saida)}</td><td>${fd(v.retorno)}</td>
+      <td><div class="tcell">${uT||'—'}</div></td>
+      <td><div class="tcell">${sT||'—'}</div></td>
+      <td style="font-size:.79rem;color:#6b7280">${esc(v.obs)||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Guardar para PDF/print
+  window._relDados={lista,desc};
+};
+
+window.limparRelFiltros=function(){
+  document.getElementById('rMes').value='';
+  document.getElementById('rIni').value='';
+  document.getElementById('rFim').value='';
+  RSEL.SRV.length=0;RSEL.SR.length=0;RSEL.UN.length=0;
+  ['dmsRelSrv','dmsRelSR','dmsRelUN'].forEach(id=>{
+    if(DMS_STATE[id]){
+      renderDmsList(id);renderDmsChips(id);updateDmsLabel(id);
+    }
+  });
+  document.getElementById('relResult').style.display='none';
+};
+
+// ── PRINT / PDF ───────────────────────────────────────────────────────────────
+function buildPrintHTML(){
+  const d=window._relDados;if(!d)return'';
+  const hoje=new Date().toLocaleDateString('pt-BR');
+  let rows='';
+  d.lista.forEach(v=>{
+    const uT=(v.unidades||[]).join('; ');
+    const sT=(v.servidores||[]).join(', ');
+    rows+=`<tr class="no-break">
+      <td>${fd(v.saida)}</td><td>${fd(v.retorno)}</td>
+      <td>${esc(uT)}</td><td>${esc(sT)}</td>
+      <td>${esc(v.obs||'')}</td>
+    </tr>`;
+  });
+  return`<div class="pa-hdr">
+    <div class="pa-title">✈️ Controle de Viagens — CRV/DPP</div>
+    <div class="pa-sub">Central de Regulação de Vagas · Departamento de Polícia Penal · SC</div>
+    <div class="pa-meta">
+      <span><b>Relatório:</b> ${esc(d.desc)}</span>
+      <span><b>Total:</b> ${d.lista.length} viagem${d.lista.length!==1?'s':''}</span>
+      <span><b>Gerado em:</b> ${hoje}</span>
+    </div>
+  </div>
+  <table class="pa-table">
+    <thead><tr>
+      <th style="width:9%">Saída</th><th style="width:9%">Retorno</th>
+      <th style="width:32%">Unidades Visitadas</th>
+      <th style="width:18%">Servidores</th>
+      <th style="width:32%">Observações / Constatações</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="pa-footer">CRV/DPP — Uso exclusivo de servidores autorizados — Gerado em ${hoje}</div>`;
+}
+
+window.imprimirRel=function(){
+  if(!window._relDados)return toast('⚠️ Gere o relatório primeiro.');
+  document.getElementById('printArea').innerHTML=buildPrintHTML();
+  setTimeout(()=>window.print(),200);
+};
+
+window.baixarPDF=function(){
+  if(!window._relDados)return toast('⚠️ Gere o relatório primeiro.');
+  const html=buildPrintHTML();
+  const full=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório Viagens CRV</title>
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;padding:10mm 12mm;font-size:8pt}
+  @page{size:A4 landscape;margin:10mm 12mm}
+  .pa-title{font-size:13pt;font-weight:700;color:#1a2a4a}
+  .pa-sub{font-size:8pt;color:#6b7280;margin-top:2mm}
+  .pa-meta{font-size:8pt;color:#374151;margin-top:3mm;display:flex;gap:8mm;flex-wrap:wrap}
+  .pa-meta span{margin-right:8mm}
+  .pa-table{width:100%;border-collapse:collapse;font-size:7.5pt;margin-top:5mm}
+  .pa-table th{background:#1a2a4a;color:#fff;padding:2.5mm 2mm;text-align:left;font-size:7pt}
+  .pa-table td{padding:2mm 2mm;border-bottom:0.3mm solid #e5e7eb;vertical-align:top}
+  .pa-table tr:nth-child(even) td{background:#f8faff}
+  .pa-footer{font-size:7pt;color:#9ca3af;margin-top:4mm;text-align:right}
+  .pa-hdr{margin-bottom:4mm}
+  </style></head><body>${html}</body></html>`;
+  const blob=new Blob([full],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='relatorio_viagens_crv.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 Abra o arquivo baixado e use Ctrl+P → Salvar como PDF (Paisagem).');
+};
+
+// ── CSV ───────────────────────────────────────────────────────────────────────
+window.exportarCSV=function(){
+  if(!viagens.length)return toast('Nenhuma viagem para exportar.');
+  const cab='Data Saída,Data Retorno,Unidades,Servidores,Observações\n';
+  const lin=viagens.map(v=>`"${v.saida}","${v.retorno}","${(v.unidades||[]).join('; ')}","${(v.servidores||[]).join('; ')}","${(v.obs||'').replace(/"/g,'""')}"`).join('\n');
+  const b=new Blob(['\uFEFF'+cab+lin],{type:'text/csv;charset=utf-8;'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');
+  a.href=u;a.download='controle_viagens_crv.csv';a.click();URL.revokeObjectURL(u);
+  toast('📥 CSV exportado!');
+};
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function fd(d){if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg){
+  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('vis');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('vis'),3500);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+initFormDms();
+carregar();
+</script>
+</body>
+</html>
