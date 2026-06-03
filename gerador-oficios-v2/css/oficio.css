@@ -236,7 +236,7 @@
    ════════════════════════════════════════════ */
 @page {
   size: A4;
-  margin: 2.8cm 2cm 2.5cm 3cm;
+  margin: 1.3cm 1.75cm 1cm 2.5cm;
 }
 
 @media print {
@@ -265,17 +265,17 @@
   .ofc-cab {
     position: fixed;
     top: 0; left: 0; right: 0;
-    padding: 0.35cm 2cm 0.2cm 3cm;
+    padding: 0.2cm 1.75cm 0.15cm 2.5cm;
     background: #fff;
     z-index: 100;
   }
-  .ofc-cab img { height: 38pt !important; }
+  .ofc-cab img { height: 36pt !important; }
 
   /* Rodapé fixo no FUNDO de cada página */
   .ofc-rodape {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    padding: 0.15cm 2cm 0.35cm 3cm;
+    padding: 0.1cm 1.75cm 0.2cm 2.5cm;
     background: #fff;
     z-index: 100;
     margin-top: 0;
@@ -283,11 +283,11 @@
 
   /* Corpo: padding para não sobrepor cab e rod fixos */
   .oficio-corpo {
-    padding: 1.5cm 0 1.1cm 0;
+    padding: 0.9cm 0 0.7cm 0;
   }
 
   /* Espaços em branco na impressão */
-  .lb { height: 8pt !important; line-height: 8pt !important; }
+  .lb { height: 6pt !important; line-height: 6pt !important; }
 
   /* Assinaturas e destinatário: não cortar entre páginas */
   .ass-bloco {
