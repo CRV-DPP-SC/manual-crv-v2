@@ -45,8 +45,9 @@ function _textoSaudeIndividual(s) {
   return parags;
 }
 
-/* ── Tabela Anexo ── */
-function gerarAnexoTabela(reed, numAnexo, tituloExtra, saudeOpcao, temRegime) {
+/* ── Tabela Anexo ──
+   noPageBreak: true quando o chamador já cuida do page-break (e.g. _gerarPaginasAnexos) */
+function gerarAnexoTabela(reed, numAnexo, tituloExtra, saudeOpcao, temRegime, noPageBreak) {
   numAnexo = numAnexo || 'I';
   var ordenacao = {Convívio:1, Seguro:2, SEGURO:3, 'Não informado':4};
   var reedOrdenado = temRegime
@@ -88,7 +89,8 @@ function gerarAnexoTabela(reed, numAnexo, tituloExtra, saudeOpcao, temRegime) {
     ? (mostrarSaude ? 'Relação de Reeducandos — Situação Penal e Informações de Saúde' : 'Relação de Reeducandos — Situação Penal')
     : 'Relação de Custodiados');
 
-  return '<div class="anexo-wrapper" style="font-family:Arial,sans-serif;">'
+  var wrapCls = noPageBreak ? 'anexo-inner' : 'anexo-wrapper';
+  return '<div class="' + wrapCls + '" style="font-family:Arial,sans-serif;">'
     + '<div style="padding:8pt 0 10pt 0;text-align:center;">'
     + '<div style="font-size:12pt;font-weight:bold;text-transform:uppercase;letter-spacing:1pt;">ANEXO ' + numAnexo + '</div>'
     + '<div style="font-size:10pt;margin-top:4pt;">' + subtitulo + '</div>'

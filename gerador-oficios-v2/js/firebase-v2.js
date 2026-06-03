@@ -83,13 +83,14 @@ onAuthStateChanged(auth, async (user) => {
   window._v2Usuario = user || null;
 
   if (user) {
-    window._v2CriarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos }) {
+    window._v2CriarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo }) {
       const uns  = typeof getUns === 'function' ? getUns()
                  : (typeof UNS !== 'undefined'  ? UNS : []);
       const uObj = uns.find(u => u.em === unidadeOrigem) || {};
       const ref  = await addDoc(collection(db, 'solicitacoes'), {
         titulo,
         conteudo,
+        resumo:             resumo || '',
         presos:             (presos || []).map(p => ({ nome: p.nome || '', ipen: p.ipen || '' })),
         emailUnidadeOrigem: unidadeOrigem,
         nomeUnidadeOrigem:  uObj.n || '',

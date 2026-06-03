@@ -667,7 +667,95 @@ var FormularioCtrl = (function() {
   }
 
   function editarSaudeReed(i) {
-    _toast('Saúde individual por reeducando: clique no ícone 🩺 para editar (em breve).');
+    var s = Estado.get();
+    var r = s.reed[i];
+    if (!r) return;
+
+    var existing = document.getElementById('modal-saude-reed');
+    if (existing) existing.remove();
+
+    function _listaHtml(field) {
+      var items = (r[field] || []);
+      return items.map(function(item, ci) {
+        return '<div class="lista-item"><span>' + _esc(item) + '</span>'
+          + '<button onclick="FormularioCtrl._saudeRemoverItem(' + i + ',\'' + field + '\',' + ci + ')">✕</button></div>';
+      }).join('');
+    }
+
+    var modal = document.createElement('div');
+    modal.id = 'modal-saude-reed';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML =
+      '<div style="background:var(--bg-card,#fff);border-radius:12px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.22);">'
+      + '<div style="background:#1d4ed8;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">'
+        + '<h3 style="font-size:.92rem;font-weight:700;color:#fff;margin:0;">🩺 Saúde — ' + _esc(r.nome || ('Reeducando ' + (i + 1))) + '</h3>'
+        + '<button onclick="document.getElementById(\'modal-saude-reed\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.8rem;">✕</button>'
+      + '</div>'
+      + '<div style="padding:16px;">'
+        + '<div class="campo-label">Comorbidades</div>'
+        + '<div id="msr-com-lista">' + _listaHtml('comorbidades') + '</div>'
+        + '<div class="lista-add-row">'
+          + '<input id="msr-com-inp" class="inp-lista" placeholder="Ex.: Hipertensão arterial">'
+          + '<button class="btn-add-item" onclick="FormularioCtrl._saudeAddItem(' + i + ',\'comorbidades\')">+</button>'
+        + '</div>'
+        + '<div class="campo-label" style="margin-top:12px;">Medicamentos de uso contínuo</div>'
+        + '<div id="msr-med-lista">' + _listaHtml('medicamentos') + '</div>'
+        + '<div class="lista-add-row">'
+          + '<input id="msr-med-inp" class="inp-lista" placeholder="Ex.: Losartana 50mg">'
+          + '<button class="btn-add-item" onclick="FormularioCtrl._saudeAddItem(' + i + ',\'medicamentos\')">+</button>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:flex-end;margin-top:16px;">'
+          + '<button class="btn-limpar" onclick="document.getElementById(\'modal-saude-reed\').remove()">Fechar</button>'
+        + '</div>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+
+    /* Enter nos inputs adiciona o item */
+    var comInp = document.getElementById('msr-com-inp');
+    var medInp = document.getElementById('msr-med-inp');
+    if (comInp) comInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); FormularioCtrl._saudeAddItem(i, 'comorbidades'); } });
+    if (medInp) medInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); FormularioCtrl._saudeAddItem(i, 'medicamentos'); } });
+  }
+
+  function _saudeAddItem(reedIdx, field) {
+    var inpId = field === 'comorbidades' ? 'msr-com-inp' : 'msr-med-inp';
+    var inp = document.getElementById(inpId);
+    if (!inp || !inp.value.trim()) return;
+    var reed = Estado.get('reed');
+    if (!reed[reedIdx]) return;
+    if (!Array.isArray(reed[reedIdx][field])) reed[reedIdx][field] = [];
+    reed[reedIdx][field].push(inp.value.trim());
+    var saved = inp.value.trim();
+    inp.value = '';
+    Estado.set('reed', reed);
+    /* Atualiza lista no modal sem re-renderizar formulário inteiro */
+    var listId = field === 'comorbidades' ? 'msr-com-lista' : 'msr-med-lista';
+    var listEl = document.getElementById(listId);
+    if (listEl) {
+      var ci = reed[reedIdx][field].length - 1;
+      listEl.insertAdjacentHTML('beforeend',
+        '<div class="lista-item"><span>' + _esc(saved) + '</span>'
+        + '<button onclick="FormularioCtrl._saudeRemoverItem(' + reedIdx + ',\'' + field + '\',' + ci + ')">✕</button></div>');
+    }
+    inp.focus();
+  }
+
+  function _saudeRemoverItem(reedIdx, field, itemIdx) {
+    var reed = Estado.get('reed');
+    if (!reed[reedIdx] || !Array.isArray(reed[reedIdx][field])) return;
+    reed[reedIdx][field].splice(itemIdx, 1);
+    Estado.set('reed', reed);
+    /* Re-renderiza lista completa para acertar índices */
+    var listId = field === 'comorbidades' ? 'msr-com-lista' : 'msr-med-lista';
+    var listEl = document.getElementById(listId);
+    if (listEl) {
+      listEl.innerHTML = reed[reedIdx][field].map(function(item, ci) {
+        return '<div class="lista-item"><span>' + _esc(item) + '</span>'
+          + '<button onclick="FormularioCtrl._saudeRemoverItem(' + reedIdx + ',\'' + field + '\',' + ci + ')">✕</button></div>';
+      }).join('');
+    }
   }
 
   /* ── Inicialização ── */
@@ -690,6 +778,8 @@ var FormularioCtrl = (function() {
     atualizarCampoUnidade: atualizarCampoUnidade,
     sincronizar: sincronizar,
     editarSaudeReed: editarSaudeReed,
+    _saudeAddItem: _saudeAddItem,
+    _saudeRemoverItem: _saudeRemoverItem,
   };
 })();
 

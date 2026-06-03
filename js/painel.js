@@ -353,7 +353,12 @@ async function _verificarPendenciasLogin() {
               ? `<div style="font-size:.75rem;color:var(--azul-600);margin-top:3px;">👤 ${s.presos.map(p => escHtml(p.nome || '')).join(' · ')}</div>`
               : ''}
             <div style="font-size:.72rem;color:var(--txt-3);margin-top:2px;">${escHtml(s.nomeUnidadeOrigem || s.emailUnidadeOrigem || '—')}</div>
-            ${s.resumo ? `<div style="margin-top:6px;padding:6px 10px;background:var(--bg-card);border-left:2.5px solid var(--azul-400);border-radius:0 4px 4px 0;font-size:.72rem;color:var(--txt-2);line-height:1.55;">${escHtml(s.resumo)}</div>` : ''}
+            ${s.resumo
+              ? `<div style="margin-top:8px;padding:8px 12px;background:#eff6ff;border-left:3px solid var(--azul-400);border-radius:0 6px 6px 0;">
+                   <div style="font-size:.6rem;font-weight:800;color:var(--azul-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Resumo Sintético — IPEN</div>
+                   <p style="font-size:.78rem;color:#1e3a8a;line-height:1.6;margin:0;">${escHtml(s.resumo)}</p>
+                 </div>`
+              : '<div style="margin-top:6px;font-size:.72rem;color:var(--txt-4);font-style:italic;">Resumo não disponível para este documento.</div>'}
           </div>`).join('')}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;">

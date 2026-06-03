@@ -11,7 +11,7 @@ function cab(s) {
     + '<img src="assets/brasao.png" alt="Brasão SC">'
     + '<div class="ofc-cab-txt">'
     + '<span class="c1">Estado de Santa Catarina</span>'
-    + '<span class="c2">Secretaria de Estado da Segurança Pública</span>'
+    + '<span class="c2">Secretaria de Estado de Justiça e Reintegração Social</span>'
     + '<span class="c3">Departamento de Polícia Penal</span>'
     + '<span class="c4">' + nomeUn + '</span>'
     + '</div>'
@@ -86,17 +86,20 @@ function dJuizo(s) {
 
 /* ── Rodapé ── */
 function rod(s) {
-  var o = s ? s.ori : null;
-  var tel  = o ? o.tel : '';
-  var em   = o ? o.em  : '';
-  var end  = o ? o.e   : '';
+  var o   = s ? s.ori : null;
+  var tel = o ? o.tel : '';
+  var em  = o ? o.em  : '';
+  var end = o ? o.e   : '';
+  var contato = [
+    tel ? 'Fone: ' + tel : '',
+    em  ? 'e-mail: ' + em : ''
+  ].filter(Boolean).join(' / ');
   return '<div class="ofc-rodape">'
+    + '<div class="rod-linha"></div>'
     + '<div class="rod-info">'
-    + '<span class="rod-dpp">Departamento de Polícia Penal — DPP</span>'
-    + (o ? '<span class="rod-un">' + o.n + '</span>' : '')
-    + '<span class="rod-cont">'
-    + [tel, em, end].filter(Boolean).join(' · ')
-    + '</span>'
+    + '<span class="rod-dpp">Polícia Penal de Santa Catarina</span>'
+    + (end ? '<span class="rod-end">' + end + '</span>' : '')
+    + (contato ? '<span class="rod-cont">' + contato + '</span>' : '')
     + '</div></div>';
 }
 
@@ -115,60 +118,55 @@ function montarOficio(s) {
   var corpo = gerarCorpo(s);
   var ec    = s.mod === 'comunicacao';
 
-  /* ── Página 1 (e eventuais páginas intermediárias de anexos): corpo do ofício ── */
-  var paginaCorpo = '<table id="oficio" class="ofc-print-table">'
+  /*
+   * Estrutura correta (baseada no modelo oficial PPSC):
+   * 1. Tabela principal: cabeçalho + corpo + fechamento + assinatura + destinatário + rodapé
+   * 2. Páginas de anexos (se houver): cada uma em tabela própria com cabeçalho e rodapé
+   */
+  var paginaPrincipal = '<table id="oficio" class="ofc-print-table">'
     + '<thead><tr><td class="ofc-print-header">' + cab(s) + '</td></tr></thead>'
     + '<tbody><tr><td class="ofc-print-body">'
     + '<div class="oficio-corpo">'
     + numData(s) + lb(4)
     + '<div class="ofc-sau">' + (s.sau || ph('Saudação')) + '</div>' + lb(4)
-    + corpo + lb(5)
-    + '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>'
+    + corpo + lb(4)
+    + '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>' + lb(5)
+    + blocoAss(s) + lb(2)
+    + (ec ? dJuizo(s) : dCRV())
     + '</div>'
-    + gerarAnexos(s)
     + '</td></tr></tbody>'
     + '<tfoot><tr><td class="ofc-print-footer">' + rod(s) + '</td></tr></tfoot>'
     + '</table>';
 
-  /* ── Página de assinaturas: tabela própria com cabeçalho e rodapé ── */
-  var paginaAss = '<div style="page-break-before:always;break-before:page;">'
-    + '<table class="ofc-print-table" style="width:100%;">'
-    + '<thead><tr><td class="ofc-print-header">' + cab(s) + '</td></tr></thead>'
-    + '<tbody><tr><td class="ofc-print-body">'
-    + lb(5) + blocoAss(s) + lb(2)
-    + (ec ? dJuizo(s) : dCRV())
-    + '</td></tr></tbody>'
-    + '<tfoot><tr><td class="ofc-print-footer">' + rod(s) + '</td></tr></tfoot>'
-    + '</table>'
-    + '</div>';
-
-  return paginaCorpo + paginaAss;
+  return paginaPrincipal + _gerarPaginasAnexos(s);
 }
 
-/* ── Gera todos os anexos necessários ── */
-function gerarAnexos(s) {
-  var html = '';
+/* ── Gera páginas de anexos (APÓS a assinatura), cada uma com cabeçalho e rodapé ── */
+function _gerarPaginasAnexos(s) {
   var isMulti = s.numero === 'P' && s.reed && s.reed.length > 0;
-  if (!isMulti) return html;
+  if (!isMulti) return '';
 
-  /* Permuta pode ter Anexo I (origem) + Anexo II (destino) */
-  if (s.mod === 'permuta') {
-    var tituloI = isMulti
-      ? 'Relação de Reeducandos — ' + (s.ori ? s.ori.n : 'Unidade de Origem') + ' (Unidade de Origem)'
-      : null;
-    if (isMulti) html += gerarAnexoTabela(s.reed, 'I', tituloI, s.saudeOpcao, true);
-    if (s.permutaDes && s.permutaDes.length > 1) {
-      var numII = isMulti ? 'II' : 'I';
-      var tituloII = 'Relação de Reeducandos — ' + (s.des ? s.des.n : 'Unidade de Destino') + ' (Em Contrapartida)';
-      var qp = isMulti ? '<div style="page-break-before:always;"></div>' : '';
-      html += qp + gerarAnexoTabela(s.permutaDes, numII, tituloII, null, true);
-    }
-    return html;
+  function _paginaAnexo(conteudo) {
+    return '<div style="page-break-before:always;break-before:page;">'
+      + '<table class="ofc-print-table" style="width:100%;">'
+      + '<thead><tr><td class="ofc-print-header">' + cab(s) + '</td></tr></thead>'
+      + '<tbody><tr><td class="ofc-print-body" style="padding-top:0.4cm;">' + conteudo + '</td></tr></tbody>'
+      + '<tfoot><tr><td class="ofc-print-footer">' + rod(s) + '</td></tr></tfoot>'
+      + '</table></div>';
   }
 
-  /* Demais modalidades: só Anexo I */
-  var temRegime = s.reed.some(function(r) { return r.regime && r.regime.length > 0; });
-  var titulo = temRegime ? null : 'Relação de Custodiados';
-  html += gerarAnexoTabela(s.reed, 'I', titulo, s.saudeOpcao, temRegime);
+  var html = '';
+  if (s.mod === 'permuta') {
+    var tituloI = 'Relação de Reeducandos — ' + (s.ori ? s.ori.n : 'Unidade de Origem') + ' (Unidade de Origem)';
+    html += _paginaAnexo(gerarAnexoTabela(s.reed, 'I', tituloI, s.saudeOpcao, true, true));
+    if (s.permutaDes && s.permutaDes.length > 1) {
+      var tituloII = 'Relação de Reeducandos — ' + (s.des ? s.des.n : 'Unidade de Destino') + ' (Em Contrapartida)';
+      html += _paginaAnexo(gerarAnexoTabela(s.permutaDes, 'II', tituloII, null, true, true));
+    }
+  } else {
+    var temRegime = s.reed.some(function(r) { return r.regime && r.regime.length > 0; });
+    var titulo    = temRegime ? null : 'Relação de Custodiados';
+    html += _paginaAnexo(gerarAnexoTabela(s.reed, 'I', titulo, s.saudeOpcao, temRegime, true));
+  }
   return html;
 }

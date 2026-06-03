@@ -304,7 +304,11 @@ function _iniciarListener(email) {
     });
     _pendentes = pend;
     _atualizarUI();
-  }, () => { /* ignora erros de permissão */ });
+  }, () => {
+    /* Erro de permissão — mantém botão visível sem badge */
+    _pendentes = [];
+    _atualizarUI();
+  });
 }
 
 function _pararListener() {
@@ -480,7 +484,10 @@ function _ntfToast(msg) {
 _injetarDOM();
 
 onAuthStateChanged(_auth, user => {
-  if (user && (_podeSinalizar(user.email) || true /* servidores aprovados também assinam */)) {
+  if (user) {
+    /* Exibe o botão imediatamente (sem badge) enquanto o Firestore carrega */
+    const btn = document.getElementById('ntf-btn');
+    if (btn) btn.style.display = 'flex';
     _iniciarListener(user.email);
   } else {
     _pararListener();

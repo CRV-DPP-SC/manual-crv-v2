@@ -205,13 +205,13 @@
 
 /* ── Rodapé ── */
 .ofc-rodape {
-  border-top: none;
-  padding: 6px 0 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  padding: 0 0 10px;
   font-family: Arial, sans-serif;
+}
+
+.rod-linha {
+  border-top: 0.5pt solid #555;
+  margin-bottom: 5px;
 }
 
 .rod-info {
@@ -221,9 +221,12 @@
   line-height: 1.5;
 }
 
-.rod-dpp  { font-weight: bold; font-size: 9pt; text-transform: uppercase; display: block; color: #111; }
-.rod-un   { font-weight: bold; color: #111; display: block; font-size: 8.5pt; }
+.rod-dpp  { font-weight: bold; font-size: 9pt; text-transform: uppercase; display: block; color: #111; letter-spacing: .03em; }
+.rod-end  { font-weight: normal; font-size: 8pt; display: block; color: #333; }
 .rod-cont { font-weight: normal; font-size: 8pt; display: block; color: #333; }
+
+/* Anexo sem page-break (o page-break é controlado pelo wrapper externo) */
+.anexo-inner { font-family: Arial, sans-serif; }
 
 /* ── Anexo ── */
 .anexo-wrapper {

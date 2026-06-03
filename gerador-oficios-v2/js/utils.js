@@ -57,7 +57,7 @@ function dHoje(cidade) {
   var d = new Date();
   var m = ['janeiro','fevereiro','março','abril','maio','junho',
            'julho','agosto','setembro','outubro','novembro','dezembro'];
-  return (cidade ? cidade + ', ' : '') + d.getDate() + ' de ' + m[d.getMonth()] + ' de ' + d.getFullYear();
+  return (cidade ? cidade + ', ' : '') + d.getDate() + ' de ' + m[d.getMonth()] + ' de ' + d.getFullYear() + '.';
 }
 
 /* ── Auto-incremento do número do ofício ── */
