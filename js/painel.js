@@ -1476,6 +1476,49 @@ window.verResumoOficio = async function (id) {
 };
 window.fecharResumoOficio = function () {
   document.getElementById('p-modal-resumo').style.display = 'none';
+  /* Sai do modo edição ao fechar */
+  const p = document.querySelector('#p-resumo-corpo p[contenteditable]');
+  if (p) p.removeAttribute('contenteditable');
+  const btn = document.getElementById('btn-resumo-editar');
+  if (btn) btn.textContent = '✏ Editar';
+};
+
+window.toggleEditarResumo = function () {
+  const p = document.querySelector('#p-resumo-corpo p');
+  const btn = document.getElementById('btn-resumo-editar');
+  if (!p || !btn) return;
+  if (p.contentEditable === 'true') {
+    p.removeAttribute('contenteditable');
+    p.style.outline = '';
+    btn.textContent = '✏ Editar';
+  } else {
+    p.contentEditable = 'true';
+    p.style.outline = '2px solid #2563b0';
+    p.style.borderRadius = '4px';
+    p.focus();
+    /* Posiciona cursor no final */
+    const range = document.createRange();
+    range.selectNodeContents(p);
+    range.collapse(false);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    btn.textContent = '✔ Salvar';
+  }
+};
+
+window.copiarResumoModal = function () {
+  const p = document.querySelector('#p-resumo-corpo p');
+  if (!p) return;
+  navigator.clipboard.writeText(p.innerText || p.textContent)
+    .then(function () { showToastPainel('Resumo copiado!'); })
+    .catch(function () {
+      const ta = document.createElement('textarea');
+      ta.value = p.innerText || p.textContent;
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToastPainel('Resumo copiado!');
+    });
 };
 
 // ── ESCAPE HTML (evita quebra de DOM ao inserir conteúdo do Firestore) ──
