@@ -31,8 +31,8 @@ var FormularioCtrl = (function() {
 
   /* ── Seleciona modalidade ── */
   function selecionarMod(mod) {
-    /* Comunicação usa saudação fixa para o juízo */
-    var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : '';
+    /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV */
+    var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : 'Senhor(a) Coordenador(a),';
     Estado.setMany({ mod: mod, sub: null, sau: sauInicial });
     _renderizarFormulario();
   }

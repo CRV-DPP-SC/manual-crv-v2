@@ -257,7 +257,7 @@
 @media print {
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
   header, footer, .ofc-no-print { display: none !important; }
-  .ofc-placeholder { display: none; }
+  .ofc-placeholder, .page-break-preview, .ofc-no-print { display: none !important; }
 
   #oficio { border: none !important; box-shadow: none !important; }
   .ofc-cab img { height: 52pt !important; }

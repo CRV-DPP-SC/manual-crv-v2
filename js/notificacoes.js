@@ -48,14 +48,15 @@ function _esc(s) {
 // ════════════════════════════════════════
 const CSS = `
   #ntf-btn {
-    position: fixed; bottom: 28px; right: 28px; z-index: 9000;
-    width: 52px; height: 52px; border-radius: 50%;
+    position: fixed; bottom: 84px; right: 22px; z-index: 9001;
+    width: 46px; height: 46px; border-radius: 50%;
     background: #1d4ed8; color: #fff; border: none; cursor: pointer;
     box-shadow: 0 4px 18px rgba(29,78,216,.45);
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.35rem; transition: background .2s, transform .15s;
+    font-size: 1.25rem; transition: background .2s, transform .15s;
     outline: none;
   }
+  #ntf-btn.ntf-oculto { display: none !important; }
   #ntf-btn:hover { background: #1e40af; transform: scale(1.07); }
   #ntf-badge {
     position: absolute; top: -4px; right: -4px;
@@ -66,7 +67,7 @@ const CSS = `
     padding: 0 4px; border: 2px solid #fff; pointer-events: none;
   }
   #ntf-painel {
-    position: fixed; bottom: 92px; right: 28px; z-index: 8999;
+    position: fixed; bottom: 138px; right: 22px; z-index: 8999;
     width: min(92vw, 380px);
     background: #fff; border-radius: 14px;
     box-shadow: 0 8px 40px rgba(0,0,0,.18);
@@ -200,7 +201,7 @@ const CSS = `
 
   /* Toast */
   #ntf-toast {
-    position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
     background: #1e293b; color: #fff; padding: 10px 20px;
     border-radius: 10px; font-size: .84rem; font-weight: 600;
     z-index: 9600; opacity: 0; transition: opacity .25s;
@@ -220,7 +221,7 @@ function _injetarDOM() {
 
   document.body.insertAdjacentHTML('beforeend', `
     <!-- Widget Notificações CRV -->
-    <button id="ntf-btn" title="Assinaturas pendentes" style="display:none;" onclick="_ntfToggle()">
+    <button id="ntf-btn" class="ntf-oculto" title="Assinaturas pendentes" onclick="_ntfToggle()">
       🔔
       <span id="ntf-badge" style="display:none;"></span>
     </button>
@@ -259,18 +260,24 @@ function _injetarDOM() {
     <div id="ntf-toast"></div>
   `);
 
-  /* Ajusta link do painel conforme profundidade da página */
-  const prof = (location.pathname.match(/\//g) || []).length;
-  const base  = prof > 2 ? '../' : '';
-  const link  = document.getElementById('ntf-link-painel');
-  if (link) link.href = base + 'painel.html';
+  /* Calcula caminho relativo correto para painel.html */
+  const _parts = location.pathname.split('/').filter(Boolean);
+  /* _parts[0] = repo name ('manual-crv-v2'), _parts[-1] = filename */
+  /* depth = number of subdirectories between repo root and the file */
+  const _depth = Math.max(0, _parts.length - 2);
+  const _painelHref = '../'.repeat(_depth) + 'painel.html';
+  const link = document.getElementById('ntf-link-painel');
+  if (link) link.href = _painelHref;
 
   /* Fecha painel ao clicar fora */
   document.addEventListener('click', function(e) {
     const painel = document.getElementById('ntf-painel');
     const btn    = document.getElementById('ntf-btn');
-    if (painel && painel.classList.contains('aberto')
-        && !painel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    if (!painel || !btn) return;
+    if (painel.classList.contains('aberto')
+        && !painel.contains(e.target)
+        && e.target !== btn
+        && !btn.contains(e.target)) {
       painel.classList.remove('aberto');
     }
   });
@@ -316,7 +323,7 @@ function _pararListener() {
   _pendentes    = [];
   _emailUsuario = null;
   const btn = document.getElementById('ntf-btn');
-  if (btn) btn.style.display = 'none';
+  if (btn) btn.classList.add('ntf-oculto');
 }
 
 // ════════════════════════════════════════
@@ -328,8 +335,8 @@ function _atualizarUI() {
   if (!btn) return;
 
   const n = _pendentes.length;
-  btn.style.display = 'flex';
-  badge.textContent  = n > 0 ? (n > 9 ? '9+' : String(n)) : '';
+  btn.classList.remove('ntf-oculto');   /* garante visível independente de inline style */
+  badge.textContent   = n > 0 ? (n > 9 ? '9+' : String(n)) : '';
   badge.style.display = n > 0 ? 'flex' : 'none';
 
   /* Se o painel já está aberto, re-renderiza */
@@ -463,9 +470,9 @@ window._ntfAssinar = async function() {
 };
 
 window._ntfVerNoPainel = function(id) {
-  const prof = (location.pathname.match(/\//g) || []).length;
-  const base  = prof > 2 ? '../' : '';
-  window.open(base + 'painel.html', '_blank');
+  const _pts  = location.pathname.split('/').filter(Boolean);
+  const _dep  = Math.max(0, _pts.length - 2);
+  window.open('../'.repeat(_dep) + 'painel.html', '_blank');
   _ntfFechar();
 };
 
@@ -485,9 +492,9 @@ _injetarDOM();
 
 onAuthStateChanged(_auth, user => {
   if (user) {
-    /* Exibe o botão imediatamente (sem badge) enquanto o Firestore carrega */
+    /* Exibe imediatamente enquanto o Firestore carrega */
     const btn = document.getElementById('ntf-btn');
-    if (btn) btn.style.display = 'flex';
+    if (btn) btn.classList.remove('ntf-oculto');
     _iniciarListener(user.email);
   } else {
     _pararListener();

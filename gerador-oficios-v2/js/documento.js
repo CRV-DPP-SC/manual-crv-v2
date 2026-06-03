@@ -147,7 +147,8 @@ function _gerarPaginasAnexos(s) {
   if (!isMulti) return '';
 
   function _paginaAnexo(conteudo) {
-    return '<div style="page-break-before:always;break-before:page;">'
+    return '<div class="page-break-preview ofc-no-print">— Nova página: Anexo —</div>'
+      + '<div style="page-break-before:always;break-before:page;">'
       + '<table class="ofc-print-table" style="width:100%;">'
       + '<thead><tr><td class="ofc-print-header">' + cab(s) + '</td></tr></thead>'
       + '<tbody><tr><td class="ofc-print-body" style="padding-top:0.4cm;">' + conteudo + '</td></tr></tbody>'
