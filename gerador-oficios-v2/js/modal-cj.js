@@ -199,64 +199,43 @@ function gerarOficiosCJ() {
 }
 
 function _montarOficioCJ(cfg) {
-  var o    = cfg.ori;
-  var data = dHoje(o ? o.c : '');
-  var ndHTML = cfg.numOficio
-    ? '<div class="ofc-numdata"><span class="ofc-num">' + cfg.numOficio + '</span><span class="ofc-data">' + data + '</span></div>'
-    : '<div class="ofc-data-only">' + data + '</div>';
+  var o = cfg.ori;
 
+  /* Reutiliza cab() / numData() / rod() com estado mínimo */
+  var sMini = {ori: o, des: cfg.des || Estado.get('des'), numOficio: cfg.numOficio, sau: cfg.sau, desp: cfg.desp, dd: false, sro: false, srd: false};
+
+  /* Número + data — igual a numData() */
+  var ndHTML = numData(sMini);
+
+  /* Presos */
   var txtPresos;
   var anexoHTML = '';
   if (cfg.presos.length === 1) {
     txtPresos = 'o(a) custodiado(a) <strong>' + _esc(cfg.presos[0].nome.toUpperCase()) + '</strong>, IPEN nº <strong>' + _esc(cfg.presos[0].ipen) + '</strong>, foi transferido(a)';
   } else {
     txtPresos = 'os(as) custodiados(as) relacionados(as) no <strong>Anexo I</strong> deste ofício foram transferidos(as)';
-    var td = 'padding:5pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif;';
-    var th = 'padding:6pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif;';
-    var linhas = cfg.presos.map(function(pr, i) {
-      var bg = i % 2 === 0 ? '#f5f8ff' : '#ffffff';
-      return '<tr style="background:' + bg + '">'
-        + '<td style="' + td + 'text-align:center;">' + (i+1) + '</td>'
-        + '<td style="' + td + 'font-weight:bold;">' + _esc(pr.nome.toUpperCase()) + '</td>'
-        + '<td style="' + td + 'text-align:center;">' + _esc(pr.ipen) + '</td>'
-        + '</tr>';
-    }).join('');
-    anexoHTML = '<div style="font-family:Arial,sans-serif;padding-top:1cm">'
-      + '<div style="text-align:center;padding-bottom:8pt;font-weight:bold;text-transform:uppercase;letter-spacing:1pt;">ANEXO I</div>'
-      + '<table style="width:100%;border-collapse:collapse;"><thead>'
-      + '<tr style="background:#0d2b55;color:#fff;">'
-      + '<th style="' + th + 'text-align:center;">#</th>'
-      + '<th style="' + th + 'text-align:left;">Nome</th>'
-      + '<th style="' + th + 'text-align:center;">IPEN</th>'
-      + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+    anexoHTML = '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
+      + gerarAnexoTabela(cfg.presos.map(function(pr) { return {nome: pr.nome, ipen: pr.ipen}; }), 'I', 'Relação de Custodiados', null, false);
   }
 
-  var destCidade = cfg.ori ? cfg.ori.c + '/SC' : '';
+  var destCidade = o ? o.c + '/SC' : '';
   var nomeDestinoCJ = cfg.des ? cfg.des.n : (Estado.get('des') ? Estado.get('des').n : '');
+  var motivo = cfg.motivo ? '<strong>' + _esc(cfg.motivo) + '</strong>' : ph('motivo da transferência');
+
   var p1 = 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(nomeDestinoCJ) + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
-  var p2 = 'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que <strong>' + _esc(cfg.motivo) + '</strong>.';
+  var p2 = 'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motivo + '.';
   var p3 = 'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.';
 
-  var destHtml = '<div class="ofc-dest-wrap"><div class="ofc-dest">'
-    + '<div class="dest-t">Ao(À) Senhor(a)</div>'
-    + '<div class="dest-n">Dr(a). ' + _esc((cfg.juiz || '').toUpperCase()) + '</div>'
-    + '<div class="dest-l">Juiz(a) de Direito</div>'
-    + (cfg.vara ? '<div class="dest-l">' + _esc(cfg.vara) + '</div>' : '')
-    + (cfg.cidJuizo ? '<div class="dest-l">' + _esc(cfg.cidJuizo) + '</div>' : '')
-    + '</div></div>';
-
-  var assHTML = o ? ass(o.dir, o.cg, o.n, true) : '';
-
-  /* Reutiliza cab() e rod() com estado mínimo */
-  var sMini = {ori: o, des: cfg.des || Estado.get('des'), numOficio: cfg.numOficio, sau: cfg.sau, desp: cfg.desp, dd: false, sro: false, srd: false};
+  var destHtml = dJuizo({nomejuiz: cfg.juiz, vara: cfg.vara, cidJuizo: cfg.cidJuizo});
+  var assHTML  = o ? ass(o.dir, o.cg, o.n, true) : '';
 
   return cab(sMini) + lb(1)
     + '<div class="oficio-corpo">'
     + ndHTML + lb(4)
     + '<div class="ofc-sau">' + _esc(cfg.sau) + '</div>' + lb(4)
-    + '<div class="ofc-p">' + p1 + '</div>' + lb(1)
-    + '<div class="ofc-p">' + p2 + '</div>' + lb(1)
-    + '<div class="ofc-p">' + p3 + '</div>' + lb(4)
+    + p(p1) + lb(1)
+    + p(p2) + lb(1)
+    + p(p3) + lb(4)
     + '<div class="ofc-desp">' + _esc(cfg.desp) + '</div>' + lb(5)
     + assHTML
     + destHtml
