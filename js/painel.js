@@ -313,7 +313,7 @@ function _mostrarModalAcessosPendentes(lista) {
         </div>`).join('')}
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
-      <button class="p-btn p-btn-outline" onclick="fecharModalPendencias()">Fechar</button>
+      <button class="p-btn p-btn-outline" onclick="fecharModalPendencias()">← Retornar ao Painel</button>
       <button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="fecharModalPendencias();carregarAba('acessos')">Ver solicitações →</button>
     </div>`;
   document.getElementById('p-modal-pendencias').style.display = 'flex';
@@ -357,7 +357,7 @@ async function _verificarPendenciasLogin() {
           </div>`).join('')}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;">
-        <button class="p-btn p-btn-outline" onclick="fecharModalPendencias()">Fechar</button>
+        <button class="p-btn p-btn-outline" onclick="fecharModalPendencias()">← Retornar ao Painel</button>
         <button class="p-btn p-btn-assinar" onclick="fecharModalPendencias();carregarAba('pendentes')">Ver pendências →</button>
       </div>`;
     document.getElementById('p-modal-pendencias').style.display = 'flex';
@@ -689,21 +689,70 @@ function calcularStatusGeral(assinantes, statusDoc) {
 
 // ── ASSINAR ──
 window.assinarOficio = async function (id) {
+  /* Carrega o doc para exibir resumo na confirmação */
   try {
     const ref  = doc(db, 'solicitacoes', id);
     const snap = await getDoc(ref);
     if (!snap.exists()) return;
-    const assinantes = (snap.data().assinantes || []).map(a =>
-      a.email === usuarioAtual.email
-        ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() }
-        : a
-    );
-    await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
-    showToastPainel('Documento assinado com sucesso.');
-    carregarAba('pendentes');
+    const s = snap.data();
+
+    /* Monta corpo do modal de confirmação */
+    const modalConf = document.getElementById('p-modal-confirmar-ass');
+    const confCorpo = document.getElementById('p-conf-ass-corpo');
+    const confId    = document.getElementById('p-conf-ass-id');
+    if (!modalConf || !confCorpo || !confId) {
+      /* fallback sem modal */
+      await _executarAssinatura(ref, snap);
+      return;
+    }
+
+    confId.value = id;
+    confCorpo.innerHTML = `
+      <p style="font-size:.88rem;font-weight:600;color:var(--txt-1);margin:0 0 10px;">${escHtml(s.titulo || 'Ofício s/ título')}</p>
+      ${s.presos && s.presos.length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+          ${s.presos.map(p => `<span class="p-preso-tag">👤 ${escHtml(p.nome || '—')} · IPEN ${escHtml(p.ipen || '—')}</span>`).join('')}
+        </div>` : ''}
+      ${s.resumo ? `
+        <div style="background:#eff6ff;border-left:3px solid var(--azul-400);padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:12px;">
+          <div style="font-size:.62rem;font-weight:700;color:var(--azul-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Resumo Sintético — Cadastro IPEN</div>
+          <p style="font-size:.84rem;color:#1e3a8a;line-height:1.65;margin:0;">${escHtml(s.resumo)}</p>
+        </div>` : ''}
+      <p style="font-size:.82rem;color:var(--txt-3);margin:0;">Confirma sua anuência ao presente expediente?</p>`;
+
+    modalConf.style.display = 'flex';
+  } catch (e) {
+    showToastPainel('Erro ao carregar documento: ' + e.message);
+  }
+};
+
+async function _executarAssinatura(ref, snap) {
+  const assinantes = (snap.data().assinantes || []).map(a =>
+    a.email === usuarioAtual.email
+      ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() }
+      : a
+  );
+  await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+  showToastPainel('Documento assinado com sucesso.');
+  carregarAba('pendentes');
+}
+
+window.confirmarAssinatura = async function () {
+  const id = document.getElementById('p-conf-ass-id').value;
+  fecharModalConfirmarAss();
+  try {
+    const ref  = doc(db, 'solicitacoes', id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    await _executarAssinatura(ref, snap);
   } catch (e) {
     showToastPainel('Erro ao assinar: ' + e.message);
   }
+};
+
+window.fecharModalConfirmarAss = function () {
+  const m = document.getElementById('p-modal-confirmar-ass');
+  if (m) m.style.display = 'none';
 };
 
 // ── NEGAR ──
@@ -1510,12 +1559,13 @@ await carregarDados();
 // ══════════════════════════════════════════════
 // API EXPORTADA — usada pelo Gerador de Ofícios V2
 // ══════════════════════════════════════════════
-window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos }) {
+window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo }) {
   if (!usuarioAtual) throw new Error('Usuário não autenticado.');
   const unidade = UNIDADES.find(u => u.email === unidadeOrigem) || {};
   const docRef  = await addDoc(collection(db, 'solicitacoes'), {
     titulo,
     conteudo,
+    resumo:             resumo || '',
     presos:             (presos || []).map(p => ({ nome: p.nome || '', ipen: p.ipen || '' })),
     emailUnidadeOrigem: unidadeOrigem,
     nomeUnidadeOrigem:  unidade.nome || '',

@@ -526,6 +526,24 @@
   </div>
 </div>
 
+<!-- ══ MODAL CONFIRMAR ASSINATURA ══ -->
+<div id="p-modal-confirmar-ass" class="p-modal" onclick="if(event.target===this)fecharModalConfirmarAss()">
+  <div class="p-modal-box">
+    <div class="p-modal-header">
+      <h3>✅ Confirmar Assinatura</h3>
+      <button class="p-modal-fechar" onclick="fecharModalConfirmarAss()">✕</button>
+    </div>
+    <div class="p-modal-body">
+      <input type="hidden" id="p-conf-ass-id" />
+      <div id="p-conf-ass-corpo" style="margin-bottom:16px;"></div>
+      <div class="p-modal-acoes">
+        <button class="p-btn p-btn-outline" onclick="fecharModalConfirmarAss()">Cancelar</button>
+        <button class="p-btn p-btn-assinar" onclick="confirmarAssinatura()">✅ Confirmar assinatura</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL CANCELAR ══ -->
 <div id="p-modal-cancelar" class="p-modal" onclick="if(event.target===this)fecharModalCancelar()">
   <div class="p-modal-box">

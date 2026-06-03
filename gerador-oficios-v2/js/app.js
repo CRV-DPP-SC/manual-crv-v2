@@ -179,8 +179,11 @@ async function enviarSolicitacaoAssinatura() {
   var btnEnv = document.getElementById('btnEnviarAss');
   if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
 
+  /* Gera o resumo sintético para salvar junto à solicitação */
+  var resumoTexto = gerarTextoResumo(s);
+
   try {
-    await fnCriar({ titulo: _assModalData.titulo, conteudo: conteudo, unidadeOrigem: unidadeOrigem, assinantes: _assModalData.assinantes, presos: presos });
+    await fnCriar({ titulo: _assModalData.titulo, conteudo: conteudo, unidadeOrigem: unidadeOrigem, assinantes: _assModalData.assinantes, presos: presos, resumo: resumoTexto });
     fecharModalAssinaturas();
     _toast('Solicitação de assinaturas enviada com sucesso!');
   } catch (e) {
