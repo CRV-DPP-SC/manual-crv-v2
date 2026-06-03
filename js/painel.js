@@ -1589,12 +1589,6 @@ window.gerarPDFValidado = async function (id) {
 <body>
 ${s.conteudo || ''}
 <table class="stamp-table">
-  <tfoot><tr><td>
-    <div class="ofc-rodape"><div class="rod-info">
-      <span class="rod-dpp">Departamento de Polícia Penal — DPP</span>
-      ${s.nomeUnidadeOrigem ? `<span class="rod-un">${escHtml(s.nomeUnidadeOrigem)}</span>` : ''}
-    </div></div>
-  </td></tr></tfoot>
   <tbody><tr><td>
     <div style="font-family:Arial,sans-serif;padding-top:0.4cm;">
       <div class="stamp-box">
@@ -1602,7 +1596,7 @@ ${s.conteudo || ''}
         <div class="stamp-meta">
           Protocolo: ${escHtml(id)}<br>
           Criado por: ${escHtml(s.nomeCriador || s.emailCriador || '—')} · ${escHtml(dataCriacao)}
-          ${datas.length ? `<br>Concluído em: ${datas[0].toLocaleDateString('pt-BR')} às ${datas[0].toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+          ${datas.length ? `<br>${todosSig ? 'Concluído em' : 'Última ação em'}: ${datas[0].toLocaleDateString('pt-BR')} às ${datas[0].toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
         </div>
       </div>
       ${cancelHtml}
