@@ -23,7 +23,7 @@ var Estado = (function() {
       nomejuiz: '', vara: '', cidJuizo: '',
       regime: '', alocacao: '',
       bpi: '', bpiMotivo: '',
-      dd: false, sro: false, srd: false,
+      dd: true, sro: false, srd: false,
       comorbidades: [], medicamentos: [],
       saudeOpcao: null,
     };

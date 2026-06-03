@@ -375,13 +375,12 @@ var FormularioCtrl = (function() {
 
   /* ── Seção: Assinaturas ── */
   function _secaoAssinaturas(s) {
-    var html = '<div class="campo-hint">Diretor(a) de Origem: sempre incluído automaticamente.</div>'
+    var html = '<div class="campo-hint">Diretor(a) de Origem e Diretor(a) de Destino: sempre incluídos automaticamente.</div>'
       + '<div class="check-group">'
-      + _check('dd',  'Diretor(a) da Unidade de Destino',      s.dd)
       + _check('sro', 'Superintendente Regional de Origem',     s.sro)
       + _check('srd', 'Superintendente Regional de Destino',    s.srd)
       + '</div>';
-    return _secao('assinaturas', 'Assinaturas adicionais', html, '✓', false);
+    return _secao('assinaturas', 'Assinaturas', html, '✓', false);
   }
 
   /* ── Seção: BPI ── */
