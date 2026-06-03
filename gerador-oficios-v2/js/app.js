@@ -46,9 +46,9 @@ function toggleModoEditar() {
 function _alertarEdicaoPendente() {
   if (!_modoEdicao) return;
   if (confirm('Alterar o formulário descartará as edições manuais no documento. Continuar?')) {
-    _modoEdicao = false;
-    toggleModoEditar(); /* desativa */
-    toggleModoEditar(); /* reativa para reconstruir */
+    /* Desativa modo edição e reconstrói o preview com os dados atuais */
+    _modoEdicao = true;
+    toggleModoEditar();
   }
 }
 
@@ -273,8 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
   /* Resize */
   window.addEventListener('resize', function() {
     if (window.innerWidth <= 767) {
-      document.getElementById('painel-form').style.display = '';
-      document.getElementById('painel-prev').style.display = 'none';
+      _setAba('form');
     } else {
       document.getElementById('painel-form').style.display = '';
       document.getElementById('painel-prev').style.display = '';

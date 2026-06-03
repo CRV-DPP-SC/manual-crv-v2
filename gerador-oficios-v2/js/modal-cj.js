@@ -190,6 +190,7 @@ function gerarOficiosCJ() {
       sau:       sau,
       desp:      desp,
       ori:       o,
+      des:       Estado.get('des'),
     });
   });
 
@@ -231,7 +232,8 @@ function _montarOficioCJ(cfg) {
   }
 
   var destCidade = cfg.ori ? cfg.ori.c + '/SC' : '';
-  var p1 = 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(cfg.presos[0] ? '' : '') + (Estado.get('des') ? _esc(Estado.get('des').n) : '') + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
+  var nomeDestinoCJ = cfg.des ? cfg.des.n : (Estado.get('des') ? Estado.get('des').n : '');
+  var p1 = 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(nomeDestinoCJ) + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
   var p2 = 'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que <strong>' + _esc(cfg.motivo) + '</strong>.';
   var p3 = 'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.';
 
@@ -246,7 +248,7 @@ function _montarOficioCJ(cfg) {
   var assHTML = o ? ass(o.dir, o.cg, o.n, true) : '';
 
   /* Reutiliza cab() e rod() com estado mínimo */
-  var sMini = {ori: o, des: Estado.get('des'), numOficio: cfg.numOficio, sau: cfg.sau, desp: cfg.desp, dd: false, sro: false, srd: false};
+  var sMini = {ori: o, des: cfg.des || Estado.get('des'), numOficio: cfg.numOficio, sau: cfg.sau, desp: cfg.desp, dd: false, sro: false, srd: false};
 
   return cab(sMini) + lb(1)
     + '<div class="oficio-corpo">'

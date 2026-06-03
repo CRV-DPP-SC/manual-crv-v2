@@ -363,7 +363,7 @@ function _injetarSaude(s, ps, isMulti, isPermuta) {
   /* Permuta injeta saúde de forma especial (após os demais) */
   if (isPermuta) {
     var psSp = textoSaudeOficio(s, isMulti);
-    if (psSp.length > 0) ps.splice(ps.length, 0, ...psSp);
+    if (psSp.length > 0) ps.push.apply(ps, psSp);
     return ps;
   }
   /* Larga escala: saúde já está inline */
@@ -375,7 +375,8 @@ function _injetarSaude(s, ps, isMulti, isPermuta) {
   if (psSaude.length > 0) {
     /* Insere antes do último parágrafo (desfecho) */
     var idx = ps.length - 1;
-    ps.splice(idx, 0, ...psSaude);
+    var args = [idx, 0].concat(psSaude);
+    ps.splice.apply(ps, args);
   }
   return ps;
 }

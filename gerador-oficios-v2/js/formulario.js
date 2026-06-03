@@ -31,7 +31,9 @@ var FormularioCtrl = (function() {
 
   /* ── Seleciona modalidade ── */
   function selecionarMod(mod) {
-    Estado.setMany({ mod: mod, sub: null });
+    /* Comunicação usa saudação fixa para o juízo */
+    var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : '';
+    Estado.setMany({ mod: mod, sub: null, sau: sauInicial });
     _renderizarFormulario();
   }
 
@@ -83,7 +85,7 @@ var FormularioCtrl = (function() {
     var sub = '';
     if (s.sub) {
       var subs = {com_pad:'Com PAD — falta grave', sem_pad:'Sem PAD — risco à integridade',
-        pontual:'Transferência', regime:'Alteração de Regime',
+        pontual:'Transferência', regime:'Alteração de Regime', coletiva:'Transferência Coletiva',
         saida:'Saída', entrada:'Entrada'};
       sub = subs[s.sub] ? '<span class="header-sub">' + subs[s.sub] + '</span>' : '';
     }
@@ -102,7 +104,7 @@ var FormularioCtrl = (function() {
     if (!['emergencial','adequacao','comunicacao'].includes(mod)) return '';
     var opts = [];
     if (mod === 'emergencial') opts = [['com_pad','📋 Com PAD — falta grave'],['sem_pad','⚠ Sem PAD — risco à integridade']];
-    if (mod === 'adequacao')   opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime']];
+    if (mod === 'adequacao')   opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime'],['coletiva','👥 Transferência Coletiva']];
     if (mod === 'comunicacao') opts = [['saida','🚀 Saída — preso saiu desta unidade'],['entrada','🏠 Entrada — preso chegou nesta unidade']];
 
     var chips = opts.map(function(o) {

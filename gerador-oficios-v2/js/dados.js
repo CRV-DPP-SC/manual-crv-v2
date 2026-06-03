@@ -107,7 +107,6 @@ const TXT_DESFECHO_SINGULAR        = 'Diante do exposto, solicita-se a análise 
 const TXT_DESFECHO_PLURAL_CELERE   = 'Diante do exposto, solicita-se análise e célere deliberação da Central de Regulação de Vagas quanto à viabilidade das transferências.';
 const TXT_DESFECHO_SINGULAR_CELERE = 'Diante do exposto, solicita-se análise e célere deliberação da Central de Regulação de Vagas quanto à viabilidade da transferência.';
 const TXT_DESFECHO_PLEITO          = 'Diante do exposto, solicita-se a análise e deliberação da Central de Regulação de Vagas quanto à viabilidade do pleito.';
-const TXT_DESFECHO_ADM             = 'Diante do exposto, solicita-se a análise e deliberação da Central de Regulação de Vagas quanto à viabilidade da transferência administrativa.';
 const TXT_DESFECHO_PERMUTA         = 'Diante do exposto, solicita-se a análise e deliberação da Central de Regulação de Vagas quanto à viabilidade da permuta.';
 const TXT_DESFECHO_CIVIL_PLURAL    = 'Diante do exposto, solicita-se a análise e célere deliberação da Central de Regulação de Vagas quanto à viabilidade das transferências.';
 const TXT_DESFECHO_CIVIL_SINGULAR  = 'Diante do exposto, solicita-se a análise e célere deliberação da Central de Regulação de Vagas quanto à viabilidade da transferência.';

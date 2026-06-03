@@ -104,6 +104,14 @@ function rod(s) {
 function montarOficio(s) {
   if (!s || !s.mod) return '';
 
+  /* resumo_ipen não gera ofício — exibe apenas instrução */
+  if (s.mod === 'resumo_ipen') {
+    return '<div class="preview-placeholder" style="padding:2rem;">'
+      + '<p>Este modo gera apenas o <strong>Resumo Sintético IPEN</strong>.<br>'
+      + 'Preencha os campos e clique em <strong>📄 Resumo IPEN</strong> para visualizar e copiar o texto.</p>'
+      + '</div>';
+  }
+
   var corpo = gerarCorpo(s);
   var ec    = s.mod === 'comunicacao';
 
