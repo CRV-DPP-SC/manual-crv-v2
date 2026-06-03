@@ -18,7 +18,7 @@ function getCSS() {
       /* Rodapé fixo no fundo de CADA página */
       '.ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.1cm 1.75cm 0.2cm 2.5cm;background:#fff;z-index:100;margin-top:0}',
       /* Corpo: padding para não sobrepor os elementos fixos */
-      '.oficio-corpo{padding:0.9cm 0 0.7cm 0}',
+      '.oficio-corpo{padding:1.6cm 0 0.7cm 0}',
       /* Espaços em branco em print */
       '.lb{height:11pt!important;line-height:11pt!important}',
       /* Assinaturas */
