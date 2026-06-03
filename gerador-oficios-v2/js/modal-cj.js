@@ -285,6 +285,8 @@ function _renderizarCJPreview() {
     '<button class="btn-acao btn-sec" onclick="_renderizarCJForm()">← Voltar</button>'
     + '<button class="btn-acao btn-sec" onclick="_cjCopiar()">📋 Copiar</button>'
     + '<button class="btn-acao btn-sec" onclick="_cjDoc()">📄 .doc</button>'
+    + '<button class="btn-acao btn-sec" id="btnCJEditar" onclick="_cjEditar()">✏ Editar</button>'
+    + '<button class="btn-acao btn-sec" onclick="_cjPDF()">⬇ PDF</button>'
     + '<button class="btn-acao btn-pri" onclick="fecharModalCJ()">Fechar</button>';
 }
 
@@ -295,6 +297,40 @@ function _cjCopiar() {
   window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
   try { document.execCommand('copy'); _toast('Copiado!'); } catch(e) { _toast('Erro ao copiar.'); }
   window.getSelection().removeAllRanges();
+}
+
+function _cjEditar() {
+  var el = document.querySelector('.mcj-oficio-wrap #oficio');
+  var btn = document.getElementById('btnCJEditar');
+  if (!el || !btn) return;
+  if (el.contentEditable === 'true') {
+    el.contentEditable = 'false';
+    el.style.outline = '';
+    btn.textContent = '✏ Editar';
+    _toast('Edição salva.');
+  } else {
+    el.contentEditable = 'true';
+    el.style.outline = '2px solid #2563b0';
+    el.focus();
+    btn.textContent = '✔ Salvar';
+    _toast('Clique no texto para editar. Salvar quando terminar.');
+  }
+}
+
+function _cjPDF() {
+  var el = document.querySelector('.mcj-oficio-wrap #oficio');
+  if (!el) return;
+  var css = getCSS();
+  var janela = window.open('', '_blank');
+  if (!janela) { _toast('Permita pop-ups para gerar o PDF.'); return; }
+  janela.document.write(
+    '<html><head><meta charset="UTF-8"><title>Ofício CJ</title>'
+    + '<style>' + css + '</style></head><body>'
+    + el.outerHTML
+    + '<scr' + 'ipt>window.onload=function(){window.print();}<\/scr' + 'ipt></body></html>'
+  );
+  janela.document.close();
+  _toast('Janela de impressão/PDF aberta!');
 }
 
 function _cjDoc() {

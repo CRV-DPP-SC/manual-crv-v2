@@ -124,14 +124,14 @@
 
 /* ── Fechamento e assinatura ── */
 .ofc-desp {
-  margin-left: 7cm;
+  margin-left: 8cm;
   font-size: 11pt;
   line-height: 1.0;
   font-family: Arial, sans-serif;
 }
 
 .ass-bloco {
-  margin-left: 7cm;
+  margin-left: 8cm;
   font-size: 11pt;
   line-height: 1.3;
   font-family: Arial, sans-serif;
@@ -203,7 +203,7 @@
 }
 
 .rod-dpp  { font-weight: bold; font-size: 9pt; text-transform: uppercase; display: block; color: #111; letter-spacing: .03em; }
-.rod-un   { font-weight: bold; color: #174b8a; display: block; font-size: 8.5pt; }
+.rod-un   { font-weight: bold; color: #111; display: block; font-size: 8.5pt; }
 .rod-cont { font-size: 8pt; display: block; color: #333; }
 
 /* ── Anexo ── */
@@ -283,18 +283,18 @@
 
   /* Corpo: padding para não sobrepor cab e rod fixos */
   .oficio-corpo {
-    padding: 0.3cm 0 1.1cm 0;
+    padding: 1.5cm 0 1.1cm 0;
   }
 
-  /* Compactar espaços em branco na impressão */
-  .lb { height: 3pt !important; line-height: 3pt !important; }
+  /* Espaços em branco na impressão */
+  .lb { height: 8pt !important; line-height: 8pt !important; }
 
   /* Assinaturas e destinatário: não cortar entre páginas */
   .ass-bloco {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     line-height: 1.2 !important;
-    margin-left: 5.5cm !important;
+    margin-left: 8cm !important;
   }
   .ass-dig  { font-size: 9pt !important; }
   .ass-nome { font-size: 10pt !important; white-space: nowrap; }
@@ -318,6 +318,6 @@
   .ofc-sau { margin-bottom: 5pt; }
 
   /* Cabeçalho: fonte compacta */
-  .c1, .c2, .c3 { font-size: 9pt !important; }
-  .c4 { font-size: 9.5pt !important; white-space: nowrap; }
+  .c1, .c2, .c3 { font-size: 8pt !important; }
+  .c4 { font-size: 9pt !important; white-space: nowrap; }
 }

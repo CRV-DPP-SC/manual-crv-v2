@@ -18,18 +18,18 @@ function getCSS() {
       /* Rodapé fixo no fundo de CADA página */
       '.ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.15cm 2cm 0.35cm 3cm;background:#fff;z-index:100;margin-top:0}',
       /* Corpo: padding para não sobrepor os elementos fixos */
-      '.oficio-corpo{padding:0.3cm 0 1.1cm 0}',
-      /* Compactar lb em print */
-      '.lb{height:3pt!important;line-height:3pt!important}',
+      '.oficio-corpo{padding:1.5cm 0 1.1cm 0}',
+      /* Espaços em branco em print */
+      '.lb{height:8pt!important;line-height:8pt!important}',
       /* Assinaturas */
-      '.ass-bloco{page-break-inside:avoid!important;break-inside:avoid!important;line-height:1.2!important;margin-left:5.5cm!important}',
+      '.ass-bloco{page-break-inside:avoid!important;break-inside:avoid!important;line-height:1.2!important;margin-left:8cm!important}',
       '.ass-dig{font-size:9pt!important}.ass-nome{font-size:10pt!important;white-space:nowrap}.ass-cargo{font-size:8.5pt!important;line-height:1.25!important}',
       /* Destinatário */
       '.ofc-dest-wrap{page-break-inside:avoid;break-inside:avoid;margin-top:8pt;padding-top:14pt;margin-bottom:0.5cm}',
       '.ofc-dest{page-break-inside:avoid;break-inside:avoid;font-size:10pt!important}',
       /* Parágrafos */
       '.ofc-p{orphans:3;widows:3;margin-bottom:5pt}.ofc-sau{margin-bottom:5pt}',
-      '.c1,.c2,.c3{font-size:9pt!important}.c4{font-size:9.5pt!important;white-space:nowrap}',
+      '.c1,.c2,.c3{font-size:8pt!important}.c4{font-size:9pt!important;white-space:nowrap}',
     '}',
     /* Estilos gerais (screen + export .doc) */
     'body{font-family:Arial,sans-serif;font-size:11pt;line-height:1.0;color:#111;margin:0;padding:0}',
@@ -47,8 +47,8 @@ function getCSS() {
     '.ofc-p{text-align:justify;text-indent:1.25cm;font-size:11pt;line-height:1.0;margin:0;font-family:Arial,sans-serif}',
     '.ofc-p-lista{text-indent:0!important}',
     '.ofc-campo{font-weight:bold}',
-    '.ofc-desp{margin-left:7cm;font-size:11pt;line-height:1.0;font-family:Arial,sans-serif}',
-    '.ass-bloco{margin-left:7cm;font-size:11pt;line-height:1.3;font-family:Arial,sans-serif;page-break-inside:avoid}',
+    '.ofc-desp{margin-left:8cm;font-size:11pt;line-height:1.0;font-family:Arial,sans-serif}',
+    '.ass-bloco{margin-left:8cm;font-size:11pt;line-height:1.3;font-family:Arial,sans-serif;page-break-inside:avoid}',
     '.ass-dig{font-style:italic;color:#444;font-size:10pt;display:block}',
     '.ass-nome{font-weight:bold;text-transform:uppercase;font-size:11pt;display:block}',
     '.ass-cargo{font-weight:normal;font-size:10pt;color:#222;display:block}',
@@ -63,7 +63,7 @@ function getCSS() {
     '.ofc-rodape{margin-top:0.5cm;padding:6px 0 10px;font-family:Arial,sans-serif}',
     '.rod-info{text-align:center;font-size:8.5pt;color:#222;line-height:1.5}',
     '.rod-dpp{font-weight:bold;font-size:9pt;text-transform:uppercase;display:block;color:#111;letter-spacing:.03em}',
-    '.rod-un{font-weight:bold;color:#174b8a;display:block;font-size:8.5pt}',
+    '.rod-un{font-weight:bold;color:#111;display:block;font-size:8.5pt}',
     '.rod-cont{font-size:8pt;display:block;color:#333}',
     '.anexo-wrapper{font-family:Arial,sans-serif;page-break-before:always;break-before:page;padding-top:0.5cm}',
     '.anexo-tabela{width:100%;border-collapse:collapse}',
