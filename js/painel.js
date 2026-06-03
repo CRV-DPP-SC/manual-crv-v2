@@ -1588,6 +1588,8 @@ window.gerarPDFValidado = async function (id) {
 </head>
 <body>
 ${s.conteudo || ''}
+<!-- Comprovantes das Assinaturas — sempre em folha separada -->
+<div style="page-break-before:always;break-before:page;"></div>
 <table class="stamp-table">
   <tbody><tr><td>
     <div style="font-family:Arial,sans-serif;padding-top:0.4cm;">
