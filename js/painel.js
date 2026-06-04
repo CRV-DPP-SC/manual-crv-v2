@@ -424,17 +424,27 @@ function renderizarMenuUnidades() {
 
   if (perfilAtual !== 'crv') return;
 
-  /* CRV: árvore SR → Unidades com busca */
+  /* CRV: dropdown suspenso com árvore SR → Unidades e busca */
   const srs = [...new Set(UNIDADES.map(u => u.sr))].sort();
+
+  function _treeLabelAtual() {
+    if (!unidadeSelecionada) return '✦ CRV — Central de Regulação de Vagas';
+    if (unidadeSelecionada.tipo === 'sr') {
+      const info = SR_INFO[unidadeSelecionada.codigo] || {};
+      return `${unidadeSelecionada.codigo} — ${info.nome || unidadeSelecionada.codigo}`;
+    }
+    return unidadeSelecionada.nome || unidadeSelecionada.email || 'Unidade';
+  }
 
   function buildTree(filtro) {
     filtro = (filtro || '').toLowerCase().trim();
     let html = '';
     srs.forEach(srCod => {
-      const info = SR_INFO[srCod] || {};
+      const info  = SR_INFO[srCod] || {};
       const unids = UNIDADES.filter(u => u.sr === srCod &&
         (!filtro || u.nome.toLowerCase().includes(filtro)));
-      if (filtro && !unids.length && !srCod.toLowerCase().includes(filtro) &&
+      if (filtro && !unids.length &&
+          !srCod.toLowerCase().includes(filtro) &&
           !(info.nome || '').toLowerCase().includes(filtro)) return;
       const hasMatch = filtro && unids.length > 0;
       html += `<div class="p-tree-sr" onclick="_treeToggleSR('${srCod}',event)" id="ptsr-${srCod}">
@@ -452,27 +462,76 @@ function renderizarMenuUnidades() {
 
   wrap.innerHTML = `
     <div class="p-tree-wrap" id="p-tree-wrap">
-      <input class="p-tree-search" id="p-tree-search" placeholder="🔍 Buscar regional ou unidade…" oninput="_treeFiltrar(this.value)">
-      <div class="p-tree-panel" id="p-tree-panel">
-        <div class="p-tree-sr selecionado" onclick="trocarUnidade('__crv__')" style="border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px;">
-          ✦ CRV — Central de Regulação de Vagas
+      <!-- Botão gatilho do dropdown -->
+      <button class="p-tree-trigger" id="p-tree-trigger" onclick="_treeAbrirFechar(event)">
+        <span id="p-tree-label">${_treeLabelAtual()}</span>
+        <span class="p-tree-trigger-arrow" id="p-tree-trigger-arrow">▾</span>
+      </button>
+      <!-- Painel suspenso (fechado por padrão) -->
+      <div class="p-tree-panel" id="p-tree-panel" style="display:none;">
+        <input class="p-tree-search" id="p-tree-search"
+               placeholder="🔍 Buscar regional ou unidade…"
+               oninput="_treeFiltrar(this.value)"
+               onclick="event.stopPropagation()">
+        <div id="p-tree-body">
+          <div class="p-tree-sr selecionado"
+               onclick="_treeSelCRV()"
+               style="border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px;">
+            ✦ CRV — Central de Regulação de Vagas
+          </div>
+          ${buildTree('')}
         </div>
-        ${buildTree('')}
       </div>
     </div>`;
 
-  /* Marca a seleção atual */
   _treeMarcarSelecionado();
 
-  window._treeFiltrar = function(val) {
-    const panel = document.getElementById('p-tree-panel');
+  /* Abre/fecha o painel */
+  window._treeAbrirFechar = function(e) {
+    e.stopPropagation();
+    const panel  = document.getElementById('p-tree-panel');
+    const arrow  = document.getElementById('p-tree-trigger-arrow');
+    const search = document.getElementById('p-tree-search');
     if (!panel) return;
-    const first = panel.querySelector('.p-tree-sr.selecionado');
-    const firstHtml = first ? first.outerHTML : '';
-    panel.innerHTML = (firstHtml || '') + buildTree(val);
+    const aberto = panel.style.display !== 'none';
+    panel.style.display = aberto ? 'none' : 'block';
+    if (arrow) arrow.textContent = aberto ? '▾' : '▴';
+    if (!aberto && search) { search.value = ''; _treeFiltrar(''); search.focus(); }
+  };
+
+  /* Fecha o painel */
+  function _treeFechar() {
+    const panel = document.getElementById('p-tree-panel');
+    const arrow = document.getElementById('p-tree-trigger-arrow');
+    if (panel) panel.style.display = 'none';
+    if (arrow) arrow.textContent = '▾';
+  }
+
+  /* Atualiza o label do botão */
+  function _treeAtualizarLabel() {
+    const lbl = document.getElementById('p-tree-label');
+    if (lbl) lbl.textContent = _treeLabelAtual();
+  }
+
+  /* Selecionar CRV */
+  window._treeSelCRV = function() {
+    trocarUnidade('__crv__');
+    _treeMarcarSelecionado();
+    _treeAtualizarLabel();
+    _treeFechar();
+  };
+
+  /* Filtro de busca */
+  window._treeFiltrar = function(val) {
+    const body = document.getElementById('p-tree-body');
+    if (!body) return;
+    const crvItem = body.querySelector('.p-tree-sr.selecionado');
+    const crvHtml = crvItem ? crvItem.outerHTML : '';
+    body.innerHTML = (crvHtml || '') + buildTree(val);
     _treeMarcarSelecionado();
   };
 
+  /* Toggle de SR (expande/colapsa unidades) */
   window._treeToggleSR = function(srCod, e) {
     e.stopPropagation();
     const units = document.getElementById('ptunits-' + srCod);
@@ -481,15 +540,21 @@ function renderizarMenuUnidades() {
     const open = units.classList.contains('open');
     units.classList.toggle('open', !open);
     if (arr) arr.classList.toggle('open', !open);
-    /* Clicar na SR também seleciona ela */
-    trocarUnidade('__sr_' + srCod + '__');
-    _treeMarcarSelecionado();
   };
 
+  /* Selecionar unidade */
   window._treeSelUnit = function(email) {
     trocarUnidade(email);
     _treeMarcarSelecionado();
+    _treeAtualizarLabel();
+    _treeFechar();
   };
+
+  /* Fechar ao clicar fora */
+  document.addEventListener('click', function _closeDrop(e) {
+    const wrap2 = document.getElementById('p-tree-wrap');
+    if (wrap2 && !wrap2.contains(e.target)) _treeFechar();
+  });
 }
 
 function _treeMarcarSelecionado() {
