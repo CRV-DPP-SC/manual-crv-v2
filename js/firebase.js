@@ -65,6 +65,29 @@ function _mostrarTopbarVisitante() {
   area.innerHTML = `<button class="btn-topbar-login" onclick="window._abrirModalLogin()">Entrar</button>`;
 }
 
+function _iniciaisPerfil(email) {
+  const e = (email || '').toLowerCase();
+  // SR: sr01@pp.sc.gov.br → SR01
+  const srM = e.match(/^(sr\d+)@pp\.sc\.gov\.br$/);
+  if (srM) return srM[1].toUpperCase();
+  // DIR: pr01dir@ → PR01 | itapemadir@ → IT
+  const dirM = e.match(/^(.+?)dir@pp\.sc\.gov\.br$/);
+  if (dirM) {
+    const numM = dirM[1].match(/^([a-z]{2,3})(\d+)$/);
+    if (numM) return (numM[1] + numM[2]).toUpperCase();
+    return dirM[1].substring(0, 2).toUpperCase();
+  }
+  // CPEN: pr01cpen@ → PE01 | itapemacpen@ → PE
+  const cpenM = e.match(/^(.+?)cpen@pp\.sc\.gov\.br$/);
+  if (cpenM) {
+    const numM = cpenM[1].match(/^[a-z]+(\d+)$/);
+    if (numM) return 'PE' + numM[1];
+    return 'PE';
+  }
+  // fallback: 2 primeiros caracteres
+  return e.split('@')[0].substring(0, 2).toUpperCase();
+}
+
 function _mostrarTopbarUsuario(user, labelOverride) {
   const area = document.getElementById('topbar-user-area');
   if (!area) return;
@@ -72,7 +95,7 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const label   = labelOverride || perfil?.label || 'Servidor';
   const cor     = perfil?.cor   || '#64748b';
   const nome    = _nomeExibicao(user.email);
-  const iniciais = (user.email || 'U').substring(0, 2).toUpperCase();
+  const iniciais = _iniciaisPerfil(user.email || '');
   area.innerHTML = `
     <div class="topbar-user-info">
       <div class="topbar-user-avatar" style="background:${cor};">${iniciais}</div>

@@ -959,17 +959,19 @@ img { max-width: 100%; display: block; }
   gap: 7px;
 }
 .topbar-user-avatar {
-  width: 30px;
   height: 30px;
-  border-radius: 50%;
+  min-width: 30px;
+  padding: 0 6px;
+  border-radius: 15px;
   color: #fff;
-  font-size: .7rem;
-  font-weight: 700;
+  font-size: .64rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  letter-spacing: -.01em;
+  letter-spacing: .02em;
+  white-space: nowrap;
 }
 .topbar-user-nome {
   font-size: .78rem;
