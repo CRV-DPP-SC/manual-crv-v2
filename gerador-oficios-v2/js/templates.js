@@ -149,7 +149,7 @@ function gerarCorpo(s) {
     var cp  = s.sub === 'com_pad';
     var sit = s.sit ? fld(s.sit) : ph('situação concreta');
     var padTxt = cp ? [
-      'Informa-se que ' + fld(s.pad || ph('FOI/SERÁ INSTAURADO')) + ' o Procedimento Administrativo Disciplinar (PAD), nos termos da legislação vigente, em razão de conduta enquadrada no ' + fld((s.faltaCod || ph('Art.')) + ' — ' + (s.faltaDesc || ph('descrição da falta'))) + '.',
+      'Informa-se que ' + fld(s.pad || ph('FOI/SERÁ INSTAURADO')) + ' o Procedimento Administrativo Disciplinar (PAD), nos termos da legislação vigente, em razão de conduta <strong>supostamente</strong> enquadrada no ' + fld((s.faltaCod || ph('Art.')) + ' — ' + (s.faltaDesc || ph('descrição da falta'))) + ', cujos fatos serão devidamente apurados.',
       'A presente medida possui natureza administrativa e cautelar, sem caráter punitivo, sem prejuízo da regular apuração no âmbito do PAD.',
     ] : [
       (isMulti
