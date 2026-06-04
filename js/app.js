@@ -47,9 +47,22 @@ const NOMES_SECAO = {
 };
 
 function navegarPara(id) {
-  document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
+  document.querySelectorAll('.secao').forEach(s => {
+    s.classList.remove('ativa');
+    s.style.display = '';
+  });
   const alvo = document.getElementById(id);
-  if (alvo) { alvo.classList.add('ativa'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  if (alvo) {
+    alvo.classList.add('ativa');
+    alvo.style.display = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* Carrega o iframe do painel ao navegar para a seção */
+  if (id === 'painel-embed') {
+    const fr = document.getElementById('painel-embed-iframe');
+    if (fr && !fr.src.includes('painel')) fr.src = 'painel.html';
+  }
 
   document.querySelectorAll('.nav-item').forEach(a => {
     a.classList.remove('ativo');

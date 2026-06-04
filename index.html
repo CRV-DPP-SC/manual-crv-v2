@@ -67,7 +67,7 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Acesso</div>
-      <button class="nav-item nav-item-painel" onclick="abrirPainelUnidade()">
+      <button class="nav-item nav-item-painel" data-secao="painel-embed" onclick="navegarPara('painel-embed')">
         <span class="nav-icon">🏛️</span> Painel da Unidade
       </button>
       <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
@@ -561,6 +561,13 @@
     </section>
 
 
+    <!-- ══════════════════════════════════════════
+         PAINEL DA UNIDADE (embutido)
+    ══════════════════════════════════════════ -->
+    <section id="painel-embed" class="secao" style="padding:0;display:none;">
+      <iframe id="painel-embed-iframe" src="" style="width:100%;height:calc(100vh - 62px);border:none;display:block;"></iframe>
+    </section>
+
     <!-- ══ RODAPÉ ══ -->
     <footer class="rodape">
       <div class="rodape-inner">
@@ -577,13 +584,9 @@
         </div>
         <div class="rodape-col">
           <strong>Contato CRV</strong>
-          <span>
-            <a id="rodape-fone" href="#" onclick="abrirWhatsAppCRV(event)" style="color:inherit;text-decoration:none;" title="Clique para abrir WhatsApp">
-              📞 (48) 3665-7330 &nbsp;<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style="height:13px;vertical-align:middle;opacity:.8;">
-            </a>
-          </span>
+          <span><a id="rodape-fone" href="#" onclick="abrirWhatsAppCRV(event)" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px;" title="Clique para abrir WhatsApp">📞 (48) 3665-7330 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style="height:13px;opacity:.85;flex-shrink:0;"></a></span>
           <span><a href="mailto:crv@pp.sc.gov.br" style="color:inherit;text-decoration:none;">📧 crv@pp.sc.gov.br</a></span>
-          <span>🕐 Seg–Sex · 08h–18h</span>
+          <span>🕐 Plantão 24h · 7 dias</span>
         </div>
       </div>
     </footer>
@@ -842,10 +845,6 @@
 <div id="modal-guia" class="iframe-modal">
   <div class="iframe-topbar"><span>📄 Guia — Gerador de Ofícios</span><button onclick="fecharGuiaOficios()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
   <iframe id="guia-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
-</div>
-<div id="modal-painel" class="iframe-modal">
-  <div class="iframe-topbar"><span>🏛️ Painel da Unidade</span><button onclick="fecharPainelUnidade()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
-  <iframe id="painel-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
 </div>
 <div id="modal-caixinha" class="iframe-modal">
   <div class="iframe-topbar"><span>☕ Caixinha do Setor</span><button onclick="fecharCaixinha()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>

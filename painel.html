@@ -408,8 +408,8 @@
 </head>
 <body>
 
-<!-- TOPBAR -->
-<div class="p-topbar">
+<!-- TOPBAR — oculto quando dentro de iframe -->
+<div class="p-topbar" id="p-topbar-main">
   <img id="p-brasao" src="img/brasao.png" alt="Brasão" />
   <div class="p-topbar-sep"></div>
   <div class="p-topbar-titulo">
@@ -418,6 +418,15 @@
   </div>
   <a href="index.html" class="p-topbar-back">← Manual CRV</a>
 </div>
+<script>
+  /* Quando dentro de iframe, esconde topbar e remove padding-top */
+  if (window.self !== window.top) {
+    document.getElementById('p-topbar-main').style.display = 'none';
+    var _si = document.createElement('style');
+    _si.textContent = '#tela-painel { padding-top: 0 !important; } #tela-login-painel { min-height: 100vh; }';
+    document.head.appendChild(_si);
+  }
+</script>
 
 <!-- ERRO GLOBAL -->
 <div id="p-erro-global"></div>
