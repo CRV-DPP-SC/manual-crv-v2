@@ -5,7 +5,7 @@
 import { initializeApp }               from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
          updatePassword, reauthenticateWithCredential, EmailAuthProvider,
-         onAuthStateChanged, signOut }
+         sendPasswordResetEmail, onAuthStateChanged, signOut }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
@@ -732,21 +732,21 @@ function _fecharModal(id) { document.getElementById(id)?.classList.remove('abert
 function _htmlConteudoRestrito() {
   return `
   <div class="restrito-grid">
-    <div class="restrito-card" onclick="document.getElementById('modal-grupo-crv').classList.add('aberto')"
+    <div class="restrito-card" onclick="_abrirFerramentasCRVInline()"
       style="background:linear-gradient(135deg,#0d2b55,#1a2a4a);border:2px solid #3b82f6;">
       <span class="restrito-card-badge" style="background:#3b82f6;color:#fff;">SETOR</span>
       <div class="restrito-card-icon">📁</div>
       <div class="restrito-card-titulo">CRV</div>
       <div class="restrito-card-sub" style="color:#93c5fd;">Ferramentas internas do setor</div>
     </div>
-    <div class="restrito-card" onclick="document.getElementById('modal-grupo-jud').classList.add('aberto')"
+    <div class="restrito-card" onclick="_abrirGrupoInline('jud')"
       style="background:linear-gradient(135deg,#312e81,#4338ca);border:2px solid #818cf8;">
       <span class="restrito-card-badge" style="background:#818cf8;color:#fff;">JUDICIÁRIO</span>
       <div class="restrito-card-icon">⚖️</div>
       <div class="restrito-card-titulo">Sistemas — Judiciário</div>
       <div class="restrito-card-sub" style="color:#c7d2fe;">SEEU · EPROC 1º · EPROC 2º</div>
     </div>
-    <div class="restrito-card" onclick="document.getElementById('modal-grupo-estado').classList.add('aberto')"
+    <div class="restrito-card" onclick="_abrirGrupoInline('estado')"
       style="background:linear-gradient(135deg,#064e3b,#0f6e56);border:2px solid #34d399;">
       <span class="restrito-card-badge" style="background:#34d399;color:#064e3b;">ESTADO</span>
       <div class="restrito-card-icon">🏛️</div>
@@ -765,3 +765,96 @@ function _htmlConteudoRestrito() {
     <button onclick="fazerLogout()" style="height:38px;padding:0 18px;background:#fff;border:1.5px solid #dc2626;color:#dc2626;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;">Sair</button>
   </div>`;
 }
+
+function _btnVoltar() {
+  return `<button onclick="_voltarRestrito()" style="margin-bottom:18px;height:34px;padding:0 16px;background:none;border:1px solid var(--borda);color:var(--texto);border-radius:8px;font-size:.8rem;cursor:pointer;font-family:inherit;">← Voltar</button>`;
+}
+
+window._voltarRestrito = function() {
+  const pl = document.getElementById('restrito-placeholder');
+  if (pl) pl.innerHTML = _htmlConteudoRestrito();
+};
+
+window._abrirFerramentasCRVInline = function() {
+  const pl = document.getElementById('restrito-placeholder');
+  if (!pl) return;
+  pl.innerHTML = _btnVoltar() + `
+  <div class="grupo-grid">
+    <div class="grupo-item" onclick="abrirCalculadora()"><div class="grupo-item-icon">📊</div><div class="grupo-item-titulo">Calculadora de Gestão de Vagas</div><div class="grupo-item-sub">Déficit, excedente e taxa de ocupação</div></div>
+    <div class="grupo-item" onclick="window.open('gerador_despachos_crv.html','_blank')"><div class="grupo-item-icon">⚖️</div><div class="grupo-item-titulo">Gerador de Despachos</div><div class="grupo-item-sub">Deferir, Indeferir e Devolver — CRV</div></div>
+    <div class="grupo-item" onclick="window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')"><div class="grupo-item-icon">📋</div><div class="grupo-item-titulo">Trello CRV</div><div class="grupo-item-sub">Gestão de tarefas da equipe</div></div>
+    <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')"><div class="grupo-item-icon">📅</div><div class="grupo-item-titulo">Escala de Plantão</div><div class="grupo-item-sub">Acesso à escala da equipe</div></div>
+    <div class="grupo-item" onclick="abrirCaixinha()"><div class="grupo-item-icon">☕</div><div class="grupo-item-titulo">Caixinha do Setor</div><div class="grupo-item-sub">Controle de depósitos e prestação de contas</div></div>
+    <div class="grupo-item" onclick="window.open('formulario-diarias-sc.html','_blank')"><div class="grupo-item-icon">✈️</div><div class="grupo-item-titulo">Sistema de Diárias</div><div class="grupo-item-sub">MLR-41 e MLR-42</div></div>
+    <div class="grupo-item" onclick="abrirViagens()"><div class="grupo-item-icon">🗺️</div><div class="grupo-item-titulo">Controle de Viagens</div><div class="grupo-item-sub">Registro de saídas e itinerários</div></div>
+    <div class="grupo-item" onclick="abrirEditorUnidades()"><div class="grupo-item-icon">✏️</div><div class="grupo-item-titulo">Atualização — Unidades Prisionais</div><div class="grupo-item-sub">Editar diretores, e-mails e telefones</div></div>
+    <div class="grupo-item" onclick="_abrirResetSenhas()" style="border-color:#dc2626;"><div class="grupo-item-icon">🔑</div><div class="grupo-item-titulo">Redefinir Senhas</div><div class="grupo-item-sub">Marcar usuários para primeiro acesso</div></div>
+  </div>`;
+};
+
+window._abrirGrupoInline = function(tipo) {
+  const pl = document.getElementById('restrito-placeholder');
+  if (!pl) return;
+  const conteudos = {
+    jud: `<div class="grupo-grid">
+      <a class="grupo-item" href="https://seeu.pje.jus.br/seeu/" target="_blank"><div class="grupo-item-icon">⚖️</div><div class="grupo-item-titulo">SEEU</div><div class="grupo-item-sub">Sistema Eletrônico de Execução Unificado</div></a>
+      <a class="grupo-item" href="https://eproc1g.tjsc.jus.br/eproc/" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 1º Grau</div><div class="grupo-item-sub">Processo eletrônico 1ª instância</div></a>
+      <a class="grupo-item" href="https://eproc2g.tjsc.jus.br/eproc/externo_controlador.php?acao=principal" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 2º Grau</div><div class="grupo-item-sub">Processo eletrônico 2ª instância</div></a>
+    </div>`,
+    estado: `<div class="grupo-grid">
+      <a class="grupo-item" href="https://sigrhportal.sea.sc.gov.br/SIGRHNovoPortal/#/auth" target="_blank"><div class="grupo-item-icon">👤</div><div class="grupo-item-titulo">SIGRHPORTAL</div><div class="grupo-item-sub">Recursos Humanos SC</div></a>
+      <a class="grupo-item" href="https://www.sc.gov.br/sap/ipen/signin" target="_blank"><div class="grupo-item-icon">🔗</div><div class="grupo-item-titulo">i-PEN</div><div class="grupo-item-sub">Sistema prisional SC</div></a>
+      <a class="grupo-item" href="https://sgpe.sea.sc.gov.br" target="_blank"><div class="grupo-item-icon">📄</div><div class="grupo-item-titulo">SGPe</div><div class="grupo-item-sub">Gestão de Processos Eletrônicos</div></a>
+    </div>`,
+  };
+  pl.innerHTML = _btnVoltar() + (conteudos[tipo] || '');
+};
+
+/* ── Reset de senhas (apenas rodrigo.l.pastore@gmail.com) ── */
+window._abrirResetSenhas = async function() {
+  if (!usuarioAtual || usuarioAtual.email !== 'rodrigo.l.pastore@gmail.com') {
+    showToast && showToast('Acesso restrito ao administrador.'); return;
+  }
+  const pl = document.getElementById('restrito-placeholder');
+  if (!pl) return;
+  pl.innerHTML = _btnVoltar() + `
+    <div style="max-width:560px;padding:20px 0;">
+      <h3 style="margin-bottom:8px;color:var(--texto);">🔑 Redefinir Senhas</h3>
+      <p style="font-size:.85rem;color:var(--txt-3);margin-bottom:16px;line-height:1.6;">
+        Esta ação marca todos os usuários como <strong>"primeiro acesso"</strong>.<br>
+        Você deve redefinir as senhas para <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">12345sejuri</code> manualmente no
+        <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a> antes de acionar esta função.
+      </p>
+      <div id="reset-resultado" style="margin-bottom:12px;font-size:.83rem;"></div>
+      <button id="btn-reset-exec" onclick="_executarResetSenhas()"
+        style="padding:10px 24px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.88rem;font-family:inherit;">
+        ⚠ Marcar todos como primeiro acesso
+      </button>
+    </div>`;
+};
+
+window._executarResetSenhas = async function() {
+  const btn = document.getElementById('btn-reset-exec');
+  const res = document.getElementById('reset-resultado');
+  if (btn) { btn.disabled = true; btn.textContent = 'Processando…'; }
+  if (res) res.textContent = '';
+  try {
+    const { getDocs: _gd, collection: _c, writeBatch, doc: _d }
+      = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+    const db2 = getFirestore();
+    /* Reseta coleção 'usuarios' (CRV) */
+    const snapU = await getDocs(collection(db2, 'usuarios'));
+    const batch = writeBatch(db2);
+    let count = 0;
+    snapU.forEach(d => { batch.update(d.ref, { senhaConfigurada: false }); count++; });
+    /* Reseta coleção 'usuarios_cadastrados' (unidades) */
+    const snapC = await getDocs(collection(db2, 'usuarios_cadastrados'));
+    snapC.forEach(d => { if (d.data().status === 'aprovado') { batch.update(d.ref, { senhaConfigurada: false }); count++; } });
+    await batch.commit();
+    if (res) res.innerHTML = `<span style="color:#15803d;">✅ ${count} usuário(s) marcados para primeiro acesso.</span><br><span style="font-size:.78rem;color:var(--txt-3);">Redefina as senhas para <strong>12345sejuri</strong> no Firebase Console e comunique os usuários.</span>`;
+    if (btn) { btn.disabled = false; btn.textContent = '⚠ Marcar todos como primeiro acesso'; }
+  } catch(e) {
+    if (res) res.innerHTML = `<span style="color:#dc2626;">Erro: ${e.message}</span>`;
+    if (btn) { btn.disabled = false; btn.textContent = '⚠ Marcar todos como primeiro acesso'; }
+  }
+};
