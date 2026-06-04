@@ -211,7 +211,7 @@ window.abrirAreaRestrita = function () {
       _mostrarConteudoRestrito(usuarioAtual);
     } else {
       // Perfis não-CRV estão autenticados mas não acessam ferramentas internas
-      window.showToast && showToast('Acesso exclusivo da equipe CRV.');
+      window.showToast && showToast('⛔ ACESSO NÃO PERMITIDO.');
     }
   } else {
     _abrirModal('modal-login');

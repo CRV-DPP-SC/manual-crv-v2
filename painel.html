@@ -160,6 +160,19 @@
     .p-card-titulo { font-size: .9rem; font-weight: 600; color: var(--txt-1); margin-bottom: 3px; }
     .p-card-meta   { font-size: .75rem; color: var(--txt-3); }
 
+    /* Cards compactos (collapsible) */
+    .p-card-compact { margin-bottom: 6px; }
+    .p-card-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; cursor: pointer;
+      user-select: none;
+    }
+    .p-card-row:hover { background: var(--surface-2); }
+    .p-card-titulo-row { font-size: .84rem; font-weight: 600; color: var(--txt-1); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .p-card-meta-row   { font-size: .72rem; color: var(--txt-3); white-space: nowrap; flex-shrink: 0; }
+    .p-card-arrow      { font-size: .7rem; color: var(--txt-3); flex-shrink: 0; margin-left: 4px; }
+    .p-card-body       { border-top: 1px solid var(--border); padding: 12px 16px 4px; }
+
     /* Status badges */
     .p-status { font-size: .65rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
     .p-status-pendente  { background: var(--amarelo-light); color: var(--amarelo); }
@@ -420,10 +433,19 @@
 </div>
 <script>
   /* Quando dentro de iframe, esconde topbar e remove padding-top */
+  /* Aplica tema salvo */
+  (function() {
+    var t = localStorage.getItem('crv-tema');
+    if (t) document.documentElement.setAttribute('data-tema', t);
+  })();
+  /* Recebe mudança de tema do pai */
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.crvTema) document.documentElement.setAttribute('data-tema', e.data.crvTema);
+  });
   if (window.self !== window.top) {
     document.getElementById('p-topbar-main').style.display = 'none';
     var _si = document.createElement('style');
-    _si.textContent = '#tela-painel { padding-top: 0 !important; } #tela-login-painel { min-height: 100vh; }';
+    _si.textContent = '#tela-painel { padding-top: 0 !important; } #tela-login-painel { min-height: 100%; }';
     document.head.appendChild(_si);
   }
 </script>

@@ -47,14 +47,10 @@ const NOMES_SECAO = {
 };
 
 function navegarPara(id) {
-  document.querySelectorAll('.secao').forEach(s => {
-    s.classList.remove('ativa');
-    s.style.display = '';
-  });
+  document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
   const alvo = document.getElementById(id);
   if (alvo) {
     alvo.classList.add('ativa');
-    alvo.style.display = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -249,6 +245,11 @@ function toggleTema() {
   localStorage.setItem('crv-tema', novo);
   const btn = document.querySelector('.btn-tema');
   if (btn) btn.textContent = novo === 'escuro' ? '☀️' : '🌙';
+  /* Propaga tema para iframes embarcados */
+  ['painel-embed-iframe','gerador-iframe','guia-iframe'].forEach(fid => {
+    const fr = document.getElementById(fid);
+    try { if (fr?.contentWindow) fr.contentWindow.postMessage({ crvTema: novo }, '*'); } catch(_) {}
+  });
 }
 window.toggleTema = toggleTema;
 

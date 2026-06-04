@@ -875,68 +875,82 @@ function renderizarLista(el, lista, tipo) {
       : '';
 
     return `
-    <div class="p-card" id="pcard-${s.id}">
-      <div class="p-card-header">
+    <div class="p-card p-card-compact" id="pcard-${s.id}">
+      <div class="p-card-row" onclick="pCardToggle('${s.id}')">
         <input type="checkbox" class="p-card-check" data-ctx="sol" onchange="selSolToggle('${s.id}')" onclick="event.stopPropagation()" title="Selecionar">
-        <div class="p-card-header-inner">
-          <div>
-            <div class="p-card-titulo">${escHtml(s.titulo || 'Ofício s/ título')}</div>
-            <div class="p-card-meta">${escHtml(s.emailUnidadeOrigem || '—')} · ${data}</div>
-          </div>
-          <span class="p-status p-status-${statusGeral.classe}">${statusGeral.label}</span>
+        <span class="p-status p-status-${statusGeral.classe}" style="flex-shrink:0;">${statusGeral.label}</span>
+        <span class="p-card-titulo-row">${escHtml(s.titulo || 'Ofício s/ título')}</span>
+        <span class="p-card-meta-row">${escHtml(s.nomeUnidadeOrigem || s.emailUnidadeOrigem || '—')} · ${data}</span>
+        <span class="p-card-arrow" id="parrow-${s.id}">▶</span>
+      </div>
+      <div class="p-card-body" id="pcbody-${s.id}" style="display:none;">
+        ${s.presos && s.presos.length ? `
+        <div class="p-card-presos">
+          ${s.presos.map(p => `<span class="p-preso-tag">👤 ${escHtml(p.nome || '—')} · IPEN ${escHtml(p.ipen || '—')}</span>`).join('')}
+        </div>` : ''}
+        ${s.resumo ? `
+        <div style="margin:0 0 10px;padding:8px 12px;background:var(--surface-2);border-left:3px solid var(--azul-400);border-radius:0 6px 6px 0;font-size:.75rem;color:var(--txt-2);line-height:1.6;">
+          <span style="display:block;font-size:.65rem;font-weight:700;color:var(--azul-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Resumo Sintético</span>
+          ${escHtml(s.resumo)}
+        </div>` : ''}
+        <div class="p-assinantes">
+          ${(s.assinantes || []).map(a => `
+            <div class="p-assinante">
+              <span class="p-assinante-status">${
+                a.status === 'assinado'  ? '✅' :
+                a.status === 'negado'    ? '❌' :
+                a.status === 'cancelado' ? '🚫' : '⏳'
+              }</span>
+              <span class="p-assinante-nome">${escHtml(a.nome || a.email)}</span>
+              ${a.status === 'negado' && a.motivo ? `<span class="p-assinante-motivo">— ${escHtml(a.motivo)}</span>` : ''}
+              ${a.dataAcao ? `<span class="p-assinante-data">${new Date(a.dataAcao).toLocaleDateString('pt-BR')}</span>` : ''}
+            </div>`).join('')}
         </div>
-      </div>
-      ${s.presos && s.presos.length ? `
-      <div class="p-card-presos">
-        ${s.presos.map(p => `<span class="p-preso-tag">👤 ${escHtml(p.nome || '—')} · IPEN ${escHtml(p.ipen || '—')}</span>`).join('')}
-      </div>` : ''}
-      ${s.resumo ? `
-      <div style="margin:0 20px 10px;padding:8px 12px;background:var(--surface-2);border-left:3px solid var(--azul-400);border-radius:0 6px 6px 0;font-size:.75rem;color:var(--txt-2);line-height:1.6;">
-        <span style="display:block;font-size:.65rem;font-weight:700;color:var(--azul-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Resumo Sintético</span>
-        ${escHtml(s.resumo)}
-      </div>` : ''}
-      <div class="p-assinantes">
-        ${(s.assinantes || []).map(a => `
-          <div class="p-assinante">
-            <span class="p-assinante-status">${
-              a.status === 'assinado'  ? '✅' :
-              a.status === 'negado'    ? '❌' :
-              a.status === 'cancelado' ? '🚫' : '⏳'
-            }</span>
-            <span class="p-assinante-nome">${escHtml(a.nome || a.email)}</span>
-            ${a.status === 'negado' && a.motivo
-              ? `<span class="p-assinante-motivo">— ${escHtml(a.motivo)}</span>` : ''}
-            ${a.dataAcao
-              ? `<span class="p-assinante-data">${new Date(a.dataAcao).toLocaleDateString('pt-BR')}</span>` : ''}
-          </div>`).join('')}
-      </div>
-      ${cancelInfo ? `
-      <div class="p-cancel-info">
-        <strong>Cancelado por:</strong> ${escHtml(s.cancelamento.nome)} (${escHtml(s.cancelamento.perfil)})
-        &nbsp;·&nbsp; <strong>Em:</strong> ${cancelDt}<br>
-        <strong>Justificativa:</strong> ${escHtml(s.cancelamento.motivo)}
-      </div>` : ''}
-      <div class="p-card-acoes">
-        <button class="p-btn p-btn-outline" onclick="verDetalheOficio('${s.id}')">Ver documento</button>
-        <button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="gerarPDFValidado('${s.id}')">
-          ${statusGeral.classe === 'concluido' ? 'Baixar PDF validado' : 'Baixar PDF'}
-        </button>
-        <button class="p-btn p-btn-outline" onclick="verResumoOficio('${s.id}')">📄 Resumo IPEN</button>
-        ${podeFirmar ? `
-          <button class="p-btn p-btn-assinar" onclick="assinarOficio('${s.id}')">Assinar</button>
-          <button class="p-btn p-btn-negar"   onclick="abrirModalNegar('${s.id}')">Negar</button>
-        ` : ''}
-        ${podeCancelar(s) ? `
-          <button class="p-btn p-btn-cancelar" onclick="abrirModalCancelar('${s.id}')">Cancelar</button>
-        ` : ''}
-        ${perfilAtual === 'crv' ? `
-          <button class="p-btn p-btn-cancelar" style="background:#7f1d1d;border-color:#7f1d1d;color:#fff;" onclick="excluirOficio('${s.id}')">Excluir</button>
-        ` : ''}
+        ${cancelInfo ? `
+        <div class="p-cancel-info">
+          <strong>Cancelado por:</strong> ${escHtml(s.cancelamento.nome)} (${escHtml(s.cancelamento.perfil)})
+          &nbsp;·&nbsp; <strong>Em:</strong> ${cancelDt}<br>
+          <strong>Justificativa:</strong> ${escHtml(s.cancelamento.motivo)}
+        </div>` : ''}
+        <div class="p-card-acoes">
+          <button class="p-btn p-btn-outline" onclick="verDetalheOficio('${s.id}')">Ver documento</button>
+          <button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="gerarPDFValidado('${s.id}')">
+            ${statusGeral.classe === 'concluido' ? 'Baixar PDF validado' : 'Baixar PDF'}
+          </button>
+          <button class="p-btn p-btn-outline" onclick="verResumoOficio('${s.id}')">📄 Resumo IPEN</button>
+          ${podeFirmar ? `
+            <button class="p-btn p-btn-assinar" onclick="assinarOficio('${s.id}')">Assinar</button>
+            <button class="p-btn p-btn-negar"   onclick="abrirModalNegar('${s.id}')">Negar</button>
+          ` : ''}
+          ${podeCancelar(s) ? `
+            <button class="p-btn p-btn-cancelar" onclick="abrirModalCancelar('${s.id}')">Cancelar</button>
+          ` : ''}
+          ${perfilAtual === 'crv' ? `
+            <button class="p-btn p-btn-cancelar" style="background:#7f1d1d;border-color:#7f1d1d;color:#fff;" onclick="excluirOficio('${s.id}')">Excluir</button>
+          ` : ''}
+        </div>
       </div>
     </div>`;
   }).join('');
   _atualizarBarra();
 }
+
+window.pCardToggle = function(id) {
+  const body  = document.getElementById('pcbody-' + id);
+  const arrow = document.getElementById('parrow-' + id);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+};
+window.pAccToggle = function(id) {
+  const body  = document.getElementById('acbody-' + id);
+  const arrow = document.getElementById('aarrow-' + id);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+};
 
 function calcularStatusGeral(assinantes, statusDoc) {
   if (statusDoc === 'cancelado')                       return { label: 'Cancelado',    classe: 'cancelado' };
@@ -1639,8 +1653,7 @@ ${s.conteudo || ''}
       <div class="stamp-box">
         <div class="stamp-title">CENTRAL DE REGULAÇÃO DE VAGAS / DPP-SC — ${statusTxt}</div>
         <div class="stamp-meta">
-          Protocolo: ${escHtml(id)}<br>
-          Criado por: ${escHtml(s.nomeCriador || s.emailCriador || '—')} · ${escHtml(dataCriacao)}
+          Criado por: ${escHtml((s.nomeCriador || s.emailCriador || '—').toUpperCase())}${s.nomeUnidadeOrigem ? ' — ' + escHtml(s.nomeUnidadeOrigem.toUpperCase()) : ''} — ${escHtml(dataCriacao)}
           ${datas.length ? `<br>${todosSig ? 'Concluído em' : 'Última ação em'}: ${datas[0].toLocaleDateString('pt-BR')} às ${datas[0].toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
         </div>
       </div>
@@ -1735,21 +1748,28 @@ async function carregarAbaAcessos(el) {
         acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
       }
 
+      const cpfFmt = r.cpf ? r.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
+      const nascFmt = r.dataNascimento || '—';
       return `
-      <div class="p-card" id="acard-${r.id}">
-        <div class="p-card-header">
+      <div class="p-card p-card-compact" id="acard-${r.id}">
+        <div class="p-card-row" onclick="pAccToggle('${r.id}')">
           <input type="checkbox" class="p-card-check" data-ctx="acc" onchange="selAccToggle('${r.id}')" onclick="event.stopPropagation()" title="Selecionar">
-          <div class="p-card-header-inner">
-            <div>
-              <div class="p-card-titulo">${escHtml(r.nome || '—')}</div>
-              <div class="p-card-meta">${escHtml(r.email)} · ${escHtml(r.nomeUnidade || '—')} · Cadastro: ${dataCad}</div>
-              ${dataApr ? `<div class="p-card-meta">Ação por: ${escHtml(r.aprovadoPor || '—')} em ${dataApr}</div>` : ''}
-              ${r.motivoRecusa ? `<div class="p-card-meta" style="color:var(--vermelho);">Motivo: ${escHtml(r.motivoRecusa)}</div>` : ''}
-            </div>
-            <span class="p-status ${info.classe}">${info.label}</span>
-          </div>
+          <span class="p-status ${info.classe}" style="flex-shrink:0;">${info.label}</span>
+          <span class="p-card-titulo-row" style="cursor:pointer;">${escHtml(r.nome || '—')}</span>
+          <span class="p-card-meta-row">${escHtml(r.nomeUnidade || '—')} · ${dataCad}</span>
+          <span class="p-card-arrow" id="aarrow-${r.id}">▶</span>
         </div>
-        ${acoes.length ? `<div class="p-card-acoes">${acoes.join('')}</div>` : ''}
+        <div class="p-card-body" id="acbody-${r.id}" style="display:none;">
+          <div style="padding:10px 16px 6px;display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:.78rem;">
+            <div><span style="color:var(--txt-3);">E-mail:</span> ${escHtml(r.email || '—')}</div>
+            <div><span style="color:var(--txt-3);">CPF:</span> ${escHtml(cpfFmt)}</div>
+            <div><span style="color:var(--txt-3);">Nascimento:</span> ${escHtml(nascFmt)}</div>
+            <div><span style="color:var(--txt-3);">Unidade:</span> ${escHtml(r.nomeUnidade || r.emailUnidade || '—')}</div>
+            ${dataApr ? `<div><span style="color:var(--txt-3);">Ação por:</span> ${escHtml(r.aprovadoPor || '—')} em ${dataApr}</div>` : ''}
+            ${r.motivoRecusa ? `<div style="grid-column:1/-1;color:var(--vermelho);"><span style="color:var(--txt-3);">Motivo recusa:</span> ${escHtml(r.motivoRecusa)}</div>` : ''}
+          </div>
+          ${acoes.length ? `<div class="p-card-acoes">${acoes.join('')}</div>` : ''}
+        </div>
       </div>`;
     }).join('');
     _atualizarBarra();
