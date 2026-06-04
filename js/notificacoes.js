@@ -48,16 +48,17 @@ function _esc(s) {
 // ════════════════════════════════════════
 const CSS = `
   #ntf-btn {
-    position: fixed; bottom: 84px; right: 22px; z-index: 9001;
-    width: 46px; height: 46px; border-radius: 50%;
-    background: #1d4ed8; color: #fff; border: none; cursor: pointer;
-    box-shadow: 0 4px 18px rgba(29,78,216,.45);
+    position: relative;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,.12); color: #fff;
+    border: 1.5px solid rgba(255,255,255,.25);
+    cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.25rem; transition: background .2s, transform .15s;
-    outline: none;
+    font-size: 1rem; transition: background .2s, transform .15s;
+    outline: none; flex-shrink: 0;
   }
   #ntf-btn.ntf-oculto { display: none !important; }
-  #ntf-btn:hover { background: #1e40af; transform: scale(1.07); }
+  #ntf-btn:hover { background: rgba(255,255,255,.24); transform: scale(1.07); }
   #ntf-badge {
     position: absolute; top: -4px; right: -4px;
     background: #dc2626; color: #fff;
@@ -67,7 +68,7 @@ const CSS = `
     padding: 0 4px; border: 2px solid #fff; pointer-events: none;
   }
   #ntf-painel {
-    position: fixed; bottom: 138px; right: 22px; z-index: 8999;
+    position: fixed; top: 62px; right: 16px; z-index: 8999;
     width: min(92vw, 380px);
     background: #fff; border-radius: 14px;
     box-shadow: 0 8px 40px rgba(0,0,0,.18);
@@ -247,7 +248,7 @@ const CSS = `
 
   /* Toast */
   #ntf-toast {
-    position: fixed; bottom: 140px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
     background: #1e293b; color: #fff; padding: 10px 20px;
     border-radius: 10px; font-size: .84rem; font-weight: 600;
     z-index: 9600; opacity: 0; transition: opacity .25s;
@@ -265,12 +266,16 @@ function _injetarDOM() {
   style.textContent = CSS;
   document.head.appendChild(style);
 
+  /* Bell vai para o slot na topbar, se existir; senão, no body */
+  const _slot = document.getElementById('ntf-topbar-slot');
+  const _bellHtml = `<button id="ntf-btn" class="ntf-oculto" title="Assinaturas pendentes" onclick="_ntfToggle()">🔔<span id="ntf-badge" style="display:none;"></span></button>`;
+  if (_slot) {
+    _slot.insertAdjacentHTML('beforeend', _bellHtml);
+  } else {
+    document.body.insertAdjacentHTML('beforeend', _bellHtml);
+  }
+
   document.body.insertAdjacentHTML('beforeend', `
-    <!-- Widget Notificações CRV -->
-    <button id="ntf-btn" class="ntf-oculto" title="Assinaturas pendentes" onclick="_ntfToggle()">
-      🔔
-      <span id="ntf-badge" style="display:none;"></span>
-    </button>
 
     <div id="ntf-painel" role="dialog" aria-label="Assinaturas pendentes">
       <div class="ntf-head">
