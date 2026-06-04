@@ -9,11 +9,12 @@ function getCSS() {
     '@page{size:A4;margin:1.5cm 1.75cm 1.2cm 2.5cm}',
     '@media print{',
       'body{-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:0}',
+      'html,body{height:100%}',
       'header,footer,.ofc-no-print,.page-break-preview{display:none!important}',
       '.ofc-placeholder{display:none}',
       '#oficio{min-height:0!important;border:none!important;box-shadow:none!important}',
-      /* Tabela: ocupa a página */
-      '.ofc-table{width:100%}',
+      /* Tabela: ocupa 100% da altura da página para ancorar rodapé no final */
+      '.ofc-table{width:100%;height:100%}',
       '.ofc-hcell,.ofc-fcell,.ofc-bcell{border:none!important}',
       /* Cabeçalho e rodapé: padding via célula */
       '.ofc-hcell{padding:0.3cm 0 0.2cm 0}.ofc-cab img{height:36pt!important}',
@@ -77,6 +78,9 @@ function getCSS() {
     '.ofc-lista li{margin-bottom:2pt}',
     '.ofc-lista-wrap{margin:0;padding:0}',
     '.anexo-wrapper{font-family:Arial,sans-serif;page-break-before:always;break-before:page;padding-top:0.5cm}',
+    /* Tabela-envelope do anexo: nova página + repete cabeçalho/rodapé */
+    '.ofc-table-anexo{page-break-before:always;break-before:page;height:100%}',
+    '.anexo-inner{font-family:Arial,sans-serif;padding-top:0.3cm}',
     '.anexo-tabela{width:100%;border-collapse:collapse}',
     /* Células de dados no anexo — escopo específico para não afetar ofc-table */
     '.anexo-tabela th,.anexo-tabela td{padding:5pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif}',

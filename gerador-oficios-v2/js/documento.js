@@ -147,7 +147,17 @@ function montarOficio(s) {
     + '</div>';
 }
 
-/* ── Gera anexos (fora da table principal, com page-break-before) ── */
+/* ── Envolve o conteúdo do anexo em uma ofc-table com thead/tfoot
+   garantindo que cabeçalho e rodapé repitam na(s) página(s) do anexo ── */
+function _wrapAnexoNaTabela(s, innerHtml) {
+  return '<table class="ofc-table ofc-table-anexo">'
+    + '<thead><tr><td class="ofc-hcell">' + cab(s) + '</td></tr></thead>'
+    + '<tfoot><tr><td class="ofc-fcell">' + rod(s) + '</td></tr></tfoot>'
+    + '<tbody><tr><td class="ofc-bcell">' + innerHtml + '</td></tr></tbody>'
+    + '</table>';
+}
+
+/* ── Gera anexos envolvidos em tabela com cabeçalho e rodapé ── */
 function _gerarAnexos(s) {
   var isMulti = s.numero === 'P' && s.reed && s.reed.length > 0;
   if (!isMulti) return '';
@@ -156,17 +166,17 @@ function _gerarAnexos(s) {
   if (s.mod === 'permuta') {
     var tituloI = 'Relação de Reeducandos — ' + (s.ori ? s.ori.n : 'Unidade de Origem') + ' (Unidade de Origem)';
     html += '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
-          + gerarAnexoTabela(s.reed, 'I', tituloI, s.saudeOpcao, true);
+          + _wrapAnexoNaTabela(s, gerarAnexoTabela(s.reed, 'I', tituloI, s.saudeOpcao, true, true));
     if (s.permutaDes && s.permutaDes.length > 1) {
       var tituloII = 'Relação de Reeducandos — ' + (s.des ? s.des.n : 'Unidade de Destino') + ' (Em Contrapartida)';
       html += '<div class="page-break-preview ofc-no-print">— Nova página: Anexo II —</div>'
-            + gerarAnexoTabela(s.permutaDes, 'II', tituloII, null, true);
+            + _wrapAnexoNaTabela(s, gerarAnexoTabela(s.permutaDes, 'II', tituloII, null, true, true));
     }
   } else {
     var temRegime = s.reed.some(function(r) { return r.regime && r.regime.length > 0; });
     var titulo    = temRegime ? null : 'Relação de Custodiados';
     html += '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
-          + gerarAnexoTabela(s.reed, 'I', titulo, s.saudeOpcao, temRegime);
+          + _wrapAnexoNaTabela(s, gerarAnexoTabela(s.reed, 'I', titulo, s.saudeOpcao, temRegime, true));
   }
   return html;
 }

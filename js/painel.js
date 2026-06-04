@@ -1742,6 +1742,14 @@ window.gerarPDFValidado = async function (id) {
 
     const geradorBase = window.location.href.replace(/\/[^/]*(\?.*)?$/, '/') + 'gerador-oficios-v2/';
 
+    // Extrai thead e tfoot do conteúdo salvo para reutilizar na página de tramitação
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = s.conteudo || '';
+    const theadEl = tempDiv.querySelector('.ofc-table thead');
+    const tfootEl = tempDiv.querySelector('.ofc-table tfoot');
+    const theadHtml = theadEl ? theadEl.outerHTML : '<thead><tr><td class="ofc-hcell"></td></tr></thead>';
+    const tfootHtml = tfootEl ? tfootEl.outerHTML : '<tfoot><tr><td class="ofc-fcell"></td></tr></tfoot>';
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -1762,20 +1770,41 @@ window.gerarPDFValidado = async function (id) {
     .stamp-title { font-size: 8pt; font-weight: 700; color: ${sc}; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5pt; }
     .stamp-meta  { font-size: 7.5pt; color: #555; line-height: 1.6; }
     .stamp-ass-table { width: 100%; border-collapse: collapse; margin-top: 6pt; }
-    .stamp-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .stamp-table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; }
     .stamp-table thead td { padding: 0.35cm 1.5cm 0.2cm 1.5cm; vertical-align: top; }
     .stamp-table tbody td { padding: 0.3cm 1.5cm 0 1.5cm; vertical-align: top; }
     .stamp-table tfoot td { padding: 0.2cm 1.5cm 0.5cm 1.5cm; }
     @page { size: A4; margin: 1.5cm 1.75cm 1.2cm 2.5cm; }
-    @media print { body{margin:0;} #oficio{min-height:0!important;border:none!important;} .ofc-table{width:100%;} .ofc-hcell,.ofc-fcell,.ofc-bcell{border:none!important;} .ofc-hcell{padding:0.3cm 0 0.2cm 0;} .ofc-fcell{padding:0.15cm 0 0.2cm 0;} .ofc-bcell{padding:0.3cm 0 0 0;vertical-align:top;} .oficio-corpo{padding:0;} .ofc-cab img{height:36pt!important;} .lb{height:11pt!important;line-height:11pt!important;} .c1,.c2,.c3{font-size:8pt!important;} .c4{font-size:9pt!important;white-space:nowrap;} .ass-bloco{page-break-inside:avoid!important;break-inside:avoid!important;line-height:1.2!important;margin-left:8cm!important;} .ass-dig{font-size:9pt!important;} .ass-nome{font-size:10pt!important;white-space:nowrap;} .ass-cargo{font-size:8.5pt!important;} .ofc-dest-wrap{page-break-inside:avoid;break-inside:avoid;margin-top:8pt;padding-top:14pt;} .ofc-p{orphans:3;widows:3;margin-bottom:5pt;} }
+    @media print {
+      html, body { margin: 0; height: 100%; }
+      #oficio { min-height: 0 !important; border: none !important; }
+      .ofc-table, .stamp-table { width: 100%; height: 100%; }
+      .ofc-hcell, .ofc-fcell, .ofc-bcell { border: none !important; }
+      .ofc-hcell { padding: 0.3cm 0 0.2cm 0; }
+      .ofc-fcell { padding: 0.15cm 0 0.2cm 0; }
+      .ofc-bcell { padding: 0.3cm 0 0 0; vertical-align: top; }
+      .oficio-corpo { padding: 0; }
+      .ofc-cab img { height: 36pt !important; }
+      .lb { height: 11pt !important; line-height: 11pt !important; }
+      .c1, .c2, .c3 { font-size: 8pt !important; }
+      .c4 { font-size: 9pt !important; white-space: nowrap; }
+      .ass-bloco { page-break-inside: avoid !important; break-inside: avoid !important; line-height: 1.2 !important; margin-left: 8cm !important; }
+      .ass-dig { font-size: 9pt !important; }
+      .ass-nome { font-size: 10pt !important; white-space: nowrap; }
+      .ass-cargo { font-size: 8.5pt !important; }
+      .ofc-dest-wrap { page-break-inside: avoid; break-inside: avoid; margin-top: 8pt; padding-top: 14pt; }
+      .ofc-p { orphans: 3; widows: 3; margin-bottom: 5pt; }
+      .ofc-table-anexo { page-break-before: always; break-before: page; height: 100%; }
+    }
   </style>
 </head>
 <body>
 ${s.conteudo || ''}
 <!-- Comprovantes das Assinaturas — sempre em folha separada -->
-<div style="page-break-before:always;break-before:page;"></div>
-<table class="stamp-table">
-  <tbody><tr><td>
+<table class="stamp-table" style="page-break-before:always;break-before:page;">
+  ${theadHtml}
+  ${tfootHtml}
+  <tbody><tr><td class="ofc-bcell">
     <div style="font-family:Arial,sans-serif;padding-top:0.4cm;">
       <div class="stamp-box">
         <div class="stamp-title">CENTRAL DE REGULAÇÃO DE VAGAS / DPP-SC — ${statusTxt}</div>
