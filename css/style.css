@@ -317,6 +317,60 @@ img { max-width: 100%; display: block; }
 .nav-item-restrito.ativo { background: rgba(196,154,26,.15); border-left-color: var(--dourado); color: #f5d060; }
 .nav-item-restrito .nav-icon { opacity: 1; }
 
+/* ── Submenu CRV — escadinha ── */
+#sidebar-crv-sub {
+  padding-left: 12px;
+  border-left: 2px solid rgba(240,192,64,.25);
+  margin-left: 16px;
+  margin-bottom: 4px;
+}
+.nav-sub-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.75);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition);
+  margin-bottom: 2px;
+}
+.nav-sub-group:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-sub-arrow { font-size: .6rem; opacity: .6; transition: transform .2s; flex-shrink: 0; }
+.nav-sub-items {
+  display: none;
+  padding-left: 8px;
+  margin-bottom: 4px;
+}
+.nav-sub-items.open { display: block; }
+.nav-sub-item {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: .74rem;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background var(--transition);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 1px;
+}
+.nav-sub-item:hover { background: rgba(255,255,255,.1); color: #fff; }
+
 .sidebar-rodape {
   margin-top: auto;
   padding: 16px 20px 20px;

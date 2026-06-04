@@ -73,6 +73,52 @@
       <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
         <span class="nav-icon">🔒</span> CRV
       </button>
+
+      <!-- ── Submenu CRV (escadinha) — só para usuários CRV autenticados ── -->
+      <div id="sidebar-crv-sub" style="display:none;">
+
+        <!-- Grupo: Ferramentas CRV -->
+        <button class="nav-sub-group" onclick="_sidebarToggle('sub-crv-ferramentas',this)">
+          <span>📁 CRV — Ferramentas</span><span class="nav-sub-arrow">▶</span>
+        </button>
+        <div class="nav-sub-items" id="sub-crv-ferramentas">
+          <button class="nav-sub-item" onclick="_abrirFerramenta('calculadora-prisional.html','Calculadora de Gestão de Vagas')">📊 Calculadora</button>
+          <button class="nav-sub-item" onclick="_abrirFerramenta('gerador_despachos_crv.html','Gerador de Despachos')">⚖️ Gerador de Despachos</button>
+          <button class="nav-sub-item" onclick="window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')">📋 Trello CRV ↗</button>
+          <button class="nav-sub-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')">📅 Escala de Plantão ↗</button>
+          <button class="nav-sub-item" onclick="_abrirFerramenta('caixinha-controle.html','Caixinha do Setor')">☕ Caixinha do Setor</button>
+          <button class="nav-sub-item" onclick="_abrirFerramenta('formulario-diarias-sc.html','Sistema de Diárias')">✈️ Sistema de Diárias</button>
+          <button class="nav-sub-item" onclick="_abrirFerramenta('controle-viagens.html','Controle de Viagens')">🗺️ Controle de Viagens</button>
+          <button class="nav-sub-item" onclick="abrirEditorUnidades()">✏️ Atualizar Unidades</button>
+        </div>
+
+        <!-- Grupo: Judiciário -->
+        <button class="nav-sub-group" onclick="_sidebarToggle('sub-crv-jud',this)">
+          <span>⚖️ Sistemas — Judiciário</span><span class="nav-sub-arrow">▶</span>
+        </button>
+        <div class="nav-sub-items" id="sub-crv-jud">
+          <a class="nav-sub-item" href="https://seeu.pje.jus.br/seeu/" target="_blank">⚖️ SEEU ↗</a>
+          <a class="nav-sub-item" href="https://eproc1g.tjsc.jus.br/eproc/" target="_blank">🏛️ EPROC 1º Grau ↗</a>
+          <a class="nav-sub-item" href="https://eproc2g.tjsc.jus.br/eproc/externo_controlador.php?acao=principal" target="_blank">🏛️ EPROC 2º Grau ↗</a>
+        </div>
+
+        <!-- Grupo: Estado -->
+        <button class="nav-sub-group" onclick="_sidebarToggle('sub-crv-estado',this)">
+          <span>🏛️ Sistemas — Estado</span><span class="nav-sub-arrow">▶</span>
+        </button>
+        <div class="nav-sub-items" id="sub-crv-estado">
+          <a class="nav-sub-item" href="https://sigrhportal.sea.sc.gov.br/SIGRHNovoPortal/#/auth" target="_blank">👤 SIGRHPORTAL ↗</a>
+          <a class="nav-sub-item" href="https://www.sc.gov.br/sap/ipen/signin" target="_blank">🔗 iPEN ↗</a>
+          <a class="nav-sub-item" href="https://sgpe.sea.sc.gov.br" target="_blank">📄 SGPe ↗</a>
+        </div>
+
+        <!-- USM -->
+        <button class="nav-sub-group" style="color:#60a5fa;" onclick="abrirUSMControle()">
+          <span>🔐 USM — Controle</span>
+        </button>
+
+      </div>
+
       <button class="nav-item" id="sidebar-btn-senha" style="display:none;" onclick="_abrirModalSenha()">
         <span class="nav-icon">🔑</span> Alterar Senha
       </button>
@@ -565,6 +611,17 @@
 
 
     <!-- ══════════════════════════════════════════
+         FERRAMENTA CRV (iframe central)
+    ══════════════════════════════════════════ -->
+    <section id="crv-tool" class="secao" style="padding:0;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--azul);color:#fff;flex-shrink:0;">
+        <button onclick="navegarPara('restrito')" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.8rem;font-family:inherit;">← Voltar</button>
+        <span id="crv-tool-titulo" style="font-size:.9rem;font-weight:600;"></span>
+      </div>
+      <iframe id="crv-tool-iframe" src="" style="flex:1;border:none;width:100%;min-height:calc(100vh - 100px);"></iframe>
+    </section>
+
+    <!-- ══════════════════════════════════════════
          PAINEL DA UNIDADE (embutido)
     ══════════════════════════════════════════ -->
     <section id="painel-embed" class="secao" style="padding:0;">
@@ -773,37 +830,37 @@
       <button class="modal-fechar" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto')">✕</button>
     </div>
     <div class="grupo-grid">
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirCalculadora()">
+      <div class="grupo-item" onclick="_abrirFerramenta('calculadora-prisional.html','📊 Calculadora de Gestão de Vagas')">
         <div class="grupo-item-icon">📊</div>
         <div class="grupo-item-titulo">Calculadora de Gestão de Vagas</div>
         <div class="grupo-item-sub">Déficit, excedente e taxa de ocupação</div>
       </div>
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('gerador_despachos_crv.html','_blank')">
+      <div class="grupo-item" onclick="_abrirFerramenta('gerador_despachos_crv.html','⚖️ Gerador de Despachos')">
         <div class="grupo-item-icon">⚖️</div>
         <div class="grupo-item-titulo">Gerador de Despachos</div>
         <div class="grupo-item-sub">Deferir, Indeferir e Devolver — CRV</div>
       </div>
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')">
+      <div class="grupo-item" onclick="window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')">
         <div class="grupo-item-icon">📋</div>
-        <div class="grupo-item-titulo">Trello CRV</div>
+        <div class="grupo-item-titulo">Trello CRV ↗</div>
         <div class="grupo-item-sub">Gestão de tarefas da equipe</div>
       </div>
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('https://sparkle-spark-spark.lovable.app','_blank')">
+      <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')">
         <div class="grupo-item-icon">📅</div>
-        <div class="grupo-item-titulo">Escala de Plantão</div>
+        <div class="grupo-item-titulo">Escala de Plantão ↗</div>
         <div class="grupo-item-sub">Acesso à escala da equipe</div>
       </div>
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirCaixinha()">
+      <div class="grupo-item" onclick="_abrirFerramenta('caixinha-controle.html','☕ Caixinha do Setor')">
         <div class="grupo-item-icon">☕</div>
         <div class="grupo-item-titulo">Caixinha do Setor</div>
         <div class="grupo-item-sub">Controle de depósitos e prestação de contas</div>
       </div>
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');window.open('formulario-diarias-sc.html','_blank')">
+      <div class="grupo-item" onclick="_abrirFerramenta('formulario-diarias-sc.html','✈️ Sistema de Diárias')">
         <div class="grupo-item-icon">✈️</div>
         <div class="grupo-item-titulo">Sistema de Diárias</div>
         <div class="grupo-item-sub">MLR-41 e MLR-42</div>
       </div>
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-crv').classList.remove('aberto');abrirViagens()">
+      <div class="grupo-item" onclick="_abrirFerramenta('controle-viagens.html','🗺️ Controle de Viagens')">
         <div class="grupo-item-icon">🗺️</div>
         <div class="grupo-item-titulo">Controle de Viagens</div>
         <div class="grupo-item-sub">Registro de saídas e itinerários</div>

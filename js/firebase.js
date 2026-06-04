@@ -66,6 +66,7 @@ function _mostrarTopbarVisitante() {
   area.innerHTML = `<button class="btn-topbar-login" onclick="window._abrirModalLogin()">Entrar</button>`;
   const btnS = document.getElementById('sidebar-btn-senha');
   if (btnS) btnS.style.display = 'none';
+  _mostrarSubMenuCRV(false);
 }
 
 function _iniciaisPerfil(email) {
@@ -101,6 +102,8 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const iniciais = _iniciaisPerfil(user.email || '');
   const btnSenha = document.getElementById('sidebar-btn-senha');
   if (btnSenha) btnSenha.style.display = '';
+  /* Submenu CRV apenas para perfil CRV */
+  _mostrarSubMenuCRV(perfil?.tipo === 'crv');
 
   area.innerHTML = `
     <div class="topbar-user-info" style="position:relative;">
@@ -737,21 +740,21 @@ function _fecharModal(id) { document.getElementById(id)?.classList.remove('abert
 function _htmlConteudoRestrito() {
   return `
   <div class="restrito-grid">
-    <div class="restrito-card" onclick="_abrirFerramentasCRVInline()"
+    <div class="restrito-card" onclick="document.getElementById('modal-grupo-crv').classList.add('aberto')"
       style="background:linear-gradient(135deg,#0d2b55,#1a2a4a);border:2px solid #3b82f6;">
       <span class="restrito-card-badge" style="background:#3b82f6;color:#fff;">SETOR</span>
       <div class="restrito-card-icon">📁</div>
       <div class="restrito-card-titulo">CRV</div>
       <div class="restrito-card-sub" style="color:#93c5fd;">Ferramentas internas do setor</div>
     </div>
-    <div class="restrito-card" onclick="_abrirGrupoInline('jud')"
+    <div class="restrito-card" onclick="document.getElementById('modal-grupo-jud').classList.add('aberto')"
       style="background:linear-gradient(135deg,#312e81,#4338ca);border:2px solid #818cf8;">
       <span class="restrito-card-badge" style="background:#818cf8;color:#fff;">JUDICIÁRIO</span>
       <div class="restrito-card-icon">⚖️</div>
       <div class="restrito-card-titulo">Sistemas — Judiciário</div>
       <div class="restrito-card-sub" style="color:#c7d2fe;">SEEU · EPROC 1º · EPROC 2º</div>
     </div>
-    <div class="restrito-card" onclick="_abrirGrupoInline('estado')"
+    <div class="restrito-card" onclick="document.getElementById('modal-grupo-estado').classList.add('aberto')"
       style="background:linear-gradient(135deg,#064e3b,#0f6e56);border:2px solid #34d399;">
       <span class="restrito-card-badge" style="background:#34d399;color:#064e3b;">ESTADO</span>
       <div class="restrito-card-icon">🏛️</div>
@@ -771,49 +774,37 @@ function _htmlConteudoRestrito() {
   </div>`;
 }
 
-function _btnVoltar() {
-  return `<button onclick="_voltarRestrito()" style="margin-bottom:18px;height:34px;padding:0 16px;background:none;border:1px solid var(--borda);color:var(--texto);border-radius:8px;font-size:.8rem;cursor:pointer;font-family:inherit;">← Voltar</button>`;
+/* ── Abre ferramenta interna no centro da página ── */
+window._abrirFerramenta = function(url, titulo) {
+  /* Fecha todos os modais de grupo */
+  ['modal-grupo-crv','modal-grupo-jud','modal-grupo-estado'].forEach(function(id) {
+    document.getElementById(id)?.classList.remove('aberto');
+  });
+  const iframe = document.getElementById('crv-tool-iframe');
+  const tituloEl = document.getElementById('crv-tool-titulo');
+  if (iframe) {
+    iframe.src = ''; /* reset para recarregar mesmo URL */
+    setTimeout(function() { iframe.src = url; }, 30);
+  }
+  if (tituloEl) tituloEl.textContent = titulo || '';
+  window.navegarPara && navegarPara('crv-tool');
+};
+
+/* ── Toggle dos grupos do submenu lateral ── */
+window._sidebarToggle = function(subId, btn) {
+  const sub = document.getElementById(subId);
+  if (!sub) return;
+  const open = sub.classList.contains('open');
+  sub.classList.toggle('open', !open);
+  const arrow = btn ? btn.querySelector('.nav-sub-arrow') : null;
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+};
+
+/* ── Mostra/oculta submenu CRV no sidebar ── */
+function _mostrarSubMenuCRV(show) {
+  const sub = document.getElementById('sidebar-crv-sub');
+  if (sub) sub.style.display = show ? 'block' : 'none';
 }
-
-window._voltarRestrito = function() {
-  const pl = document.getElementById('restrito-placeholder');
-  if (pl) pl.innerHTML = _htmlConteudoRestrito();
-};
-
-window._abrirFerramentasCRVInline = function() {
-  const pl = document.getElementById('restrito-placeholder');
-  if (!pl) return;
-  pl.innerHTML = _btnVoltar() + `
-  <div class="grupo-grid">
-    <div class="grupo-item" onclick="abrirCalculadora()"><div class="grupo-item-icon">📊</div><div class="grupo-item-titulo">Calculadora de Gestão de Vagas</div><div class="grupo-item-sub">Déficit, excedente e taxa de ocupação</div></div>
-    <div class="grupo-item" onclick="window.open('gerador_despachos_crv.html','_blank')"><div class="grupo-item-icon">⚖️</div><div class="grupo-item-titulo">Gerador de Despachos</div><div class="grupo-item-sub">Deferir, Indeferir e Devolver — CRV</div></div>
-    <div class="grupo-item" onclick="window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')"><div class="grupo-item-icon">📋</div><div class="grupo-item-titulo">Trello CRV</div><div class="grupo-item-sub">Gestão de tarefas da equipe</div></div>
-    <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')"><div class="grupo-item-icon">📅</div><div class="grupo-item-titulo">Escala de Plantão</div><div class="grupo-item-sub">Acesso à escala da equipe</div></div>
-    <div class="grupo-item" onclick="abrirCaixinha()"><div class="grupo-item-icon">☕</div><div class="grupo-item-titulo">Caixinha do Setor</div><div class="grupo-item-sub">Controle de depósitos e prestação de contas</div></div>
-    <div class="grupo-item" onclick="window.open('formulario-diarias-sc.html','_blank')"><div class="grupo-item-icon">✈️</div><div class="grupo-item-titulo">Sistema de Diárias</div><div class="grupo-item-sub">MLR-41 e MLR-42</div></div>
-    <div class="grupo-item" onclick="abrirViagens()"><div class="grupo-item-icon">🗺️</div><div class="grupo-item-titulo">Controle de Viagens</div><div class="grupo-item-sub">Registro de saídas e itinerários</div></div>
-    <div class="grupo-item" onclick="abrirEditorUnidades()"><div class="grupo-item-icon">✏️</div><div class="grupo-item-titulo">Atualização — Unidades Prisionais</div><div class="grupo-item-sub">Editar diretores, e-mails e telefones</div></div>
-    <div class="grupo-item" onclick="_abrirResetSenhas()" style="border-color:#dc2626;"><div class="grupo-item-icon">🔑</div><div class="grupo-item-titulo">Redefinir Senhas</div><div class="grupo-item-sub">Marcar usuários para primeiro acesso</div></div>
-  </div>`;
-};
-
-window._abrirGrupoInline = function(tipo) {
-  const pl = document.getElementById('restrito-placeholder');
-  if (!pl) return;
-  const conteudos = {
-    jud: `<div class="grupo-grid">
-      <a class="grupo-item" href="https://seeu.pje.jus.br/seeu/" target="_blank"><div class="grupo-item-icon">⚖️</div><div class="grupo-item-titulo">SEEU</div><div class="grupo-item-sub">Sistema Eletrônico de Execução Unificado</div></a>
-      <a class="grupo-item" href="https://eproc1g.tjsc.jus.br/eproc/" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 1º Grau</div><div class="grupo-item-sub">Processo eletrônico 1ª instância</div></a>
-      <a class="grupo-item" href="https://eproc2g.tjsc.jus.br/eproc/externo_controlador.php?acao=principal" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 2º Grau</div><div class="grupo-item-sub">Processo eletrônico 2ª instância</div></a>
-    </div>`,
-    estado: `<div class="grupo-grid">
-      <a class="grupo-item" href="https://sigrhportal.sea.sc.gov.br/SIGRHNovoPortal/#/auth" target="_blank"><div class="grupo-item-icon">👤</div><div class="grupo-item-titulo">SIGRHPORTAL</div><div class="grupo-item-sub">Recursos Humanos SC</div></a>
-      <a class="grupo-item" href="https://www.sc.gov.br/sap/ipen/signin" target="_blank"><div class="grupo-item-icon">🔗</div><div class="grupo-item-titulo">i-PEN</div><div class="grupo-item-sub">Sistema prisional SC</div></a>
-      <a class="grupo-item" href="https://sgpe.sea.sc.gov.br" target="_blank"><div class="grupo-item-icon">📄</div><div class="grupo-item-titulo">SGPe</div><div class="grupo-item-sub">Gestão de Processos Eletrônicos</div></a>
-    </div>`,
-  };
-  pl.innerHTML = _btnVoltar() + (conteudos[tipo] || '');
-};
 
 /* ── Reset de senhas (apenas rodrigo.l.pastore@gmail.com) ── */
 window._abrirResetSenhas = async function() {
