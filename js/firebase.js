@@ -508,6 +508,27 @@ window.abrirViagens = function () {
 };
 window.fecharViagens = function () { document.getElementById('modal-viagens')?.classList.remove('aberto'); };
 
+window.abrirGeradorOficios = function () {
+  const f = document.getElementById('gerador-iframe');
+  if (f && !f.src.includes('gerador-oficios')) f.src = 'gerador-oficios-v2/index.html';
+  document.getElementById('modal-gerador')?.classList.add('aberto');
+};
+window.fecharGeradorOficios = function () { document.getElementById('modal-gerador')?.classList.remove('aberto'); };
+
+window.abrirGuiaOficios = function () {
+  const f = document.getElementById('guia-iframe');
+  if (f && !f.src.includes('guia')) f.src = 'guia_crv_dpp.html';
+  document.getElementById('modal-guia')?.classList.add('aberto');
+};
+window.fecharGuiaOficios = function () { document.getElementById('modal-guia')?.classList.remove('aberto'); };
+
+window.abrirPainelUnidade = function () {
+  const f = document.getElementById('painel-iframe');
+  if (f && !f.src.includes('painel')) f.src = 'painel.html';
+  document.getElementById('modal-painel')?.classList.add('aberto');
+};
+window.fecharPainelUnidade = function () { document.getElementById('modal-painel')?.classList.remove('aberto'); };
+
 // ══════════════════════════════════════════════
 // EDITOR DE UNIDADES (admin)
 // ══════════════════════════════════════════════

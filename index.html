@@ -48,12 +48,12 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Ferramentas</div>
-      <a class="nav-item" href="gerador-oficios-v2/index.html" target="_blank">
-        <span class="nav-icon">⚙️</span> Gerador de Ofícios ↗
-      </a>
-      <a class="nav-item" href="guia_crv_dpp.html" target="_blank">
-        <span class="nav-icon">📄</span> Guia — Gerador de Ofícios ↗
-      </a>
+      <button class="nav-item" onclick="abrirGeradorOficios()">
+        <span class="nav-icon">⚙️</span> Gerador de Ofícios
+      </button>
+      <button class="nav-item" onclick="abrirGuiaOficios()">
+        <span class="nav-icon">📄</span> Guia — Gerador de Ofícios
+      </button>
       <a class="nav-item" href="https://ppsc.com.br" target="_blank" rel="noopener">
         <span class="nav-icon">🌐</span> Portal de Transferências ↗
       </a>
@@ -66,9 +66,9 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Acesso</div>
-      <a class="nav-item nav-item-painel" href="painel.html" target="_blank">
-        <span class="nav-icon">🏛️</span> Painel da Unidade ↗
-      </a>
+      <button class="nav-item nav-item-painel" onclick="abrirPainelUnidade()">
+        <span class="nav-icon">🏛️</span> Painel da Unidade
+      </button>
       <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
         <span class="nav-icon">🔒</span> CRV
       </button>
@@ -830,6 +830,18 @@
 </div>
 
 <!-- ══ IFRAME MODALS ══ -->
+<div id="modal-gerador" class="iframe-modal">
+  <div class="iframe-topbar"><span>⚙️ Gerador de Ofícios</span><button onclick="fecharGeradorOficios()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="gerador-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
+<div id="modal-guia" class="iframe-modal">
+  <div class="iframe-topbar"><span>📄 Guia — Gerador de Ofícios</span><button onclick="fecharGuiaOficios()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="guia-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
+<div id="modal-painel" class="iframe-modal">
+  <div class="iframe-topbar"><span>🏛️ Painel da Unidade</span><button onclick="fecharPainelUnidade()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
+  <iframe id="painel-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
+</div>
 <div id="modal-caixinha" class="iframe-modal">
   <div class="iframe-topbar"><span>☕ Caixinha do Setor</span><button onclick="fecharCaixinha()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
   <iframe id="caixinha-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
