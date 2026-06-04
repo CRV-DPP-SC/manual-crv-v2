@@ -236,7 +236,7 @@
    ════════════════════════════════════════════ */
 @page {
   size: A4;
-  margin: 1.3cm 1.75cm 1cm 2.5cm;
+  margin: 2cm 1.75cm 1.3cm 2.5cm;
 }
 
 @media print {
@@ -281,9 +281,9 @@
     margin-top: 0;
   }
 
-  /* Corpo: padding para não sobrepor cab e rod fixos */
+  /* Corpo: padding mínimo (header/footer cabem nas margens @page) */
   .oficio-corpo {
-    padding: 1.6cm 0 0.7cm 0;
+    padding: 0.2cm 0 1.0cm 0;
   }
 
   /* Espaços em branco na impressão */

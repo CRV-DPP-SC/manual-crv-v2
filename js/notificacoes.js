@@ -405,9 +405,13 @@ function _atualizarUI() {
   if (!btn) return;
 
   const n = _pendentes.length;
-  btn.classList.remove('ntf-oculto');   /* garante visível independente de inline style */
+  btn.classList.remove('ntf-oculto');
   badge.textContent   = n > 0 ? (n > 9 ? '9+' : String(n)) : '';
   badge.style.display = n > 0 ? 'flex' : 'none';
+
+  /* Contador na aba do navegador */
+  const baseTitle = document.title.replace(/^\(\d+\)\s*/, '');
+  document.title  = n > 0 ? '(' + String(n).padStart(2, '0') + ') ' + baseTitle : baseTitle;
 
   /* Se o painel já está aberto, re-renderiza */
   const painel = document.getElementById('ntf-painel');

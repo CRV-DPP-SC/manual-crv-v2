@@ -76,11 +76,22 @@ function _renderizarCJForm() {
       + '<label class="mcj-label">Juízo</label>'
       + juizHtml
     + '</div>'
+    + '<div class="mcj-secao">'
+      + '<label class="mcj-label">Gênero do(a) Juiz(a)</label>'
+      + '<div class="mcj-row2" style="gap:8px;">'
+        + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="mcjGenJuiz" id="mcjGenM" value="M" checked onchange="_mcjAtualizarSau()"> Masculino</label>'
+        + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="mcjGenJuiz" id="mcjGenF" value="F" onchange="_mcjAtualizarSau()"> Feminino</label>'
+      + '</div>'
+    + '</div>'
     + '<div class="mcj-row2">'
       + '<div><label class="mcj-label">Saudação</label>'
-        + '<select class="mcj-input" id="mcjSau"><option value="Senhor(a) Juiz(a),">Senhor(a) Juiz(a),</option><option value="Excelentíssimo(a) Senhor(a) Juiz(a),">Excelentíssimo(a)...</option></select></div>'
+        + '<select class="mcj-input" id="mcjSau"><option value="Senhor Juiz,">Senhor Juiz,</option><option value="Excelentíssimo Senhor Juiz,">Excelentíssimo...</option></select></div>'
       + '<div><label class="mcj-label">Fechamento</label>'
         + '<select class="mcj-input" id="mcjDesp"><option value="Respeitosamente,">Respeitosamente,</option><option value="Atenciosamente,">Atenciosamente,</option></select></div>'
+    + '</div>'
+    + '<div class="mcj-secao">'
+      + '<label class="mcj-label">Nº do processo (opcional)</label>'
+      + '<input class="mcj-input" id="mcjNumProcesso" placeholder="Ex.: 0001234-00.2026.8.24.0050">'
     + '</div>'
     + '<div class="mcj-secao">'
       + '<label class="mcj-label">Nº do ofício (opcional)</label>'
@@ -134,12 +145,27 @@ function _togglePresoCJ(i) {
   }
 }
 
+function _mcjAtualizarSau() {
+  var gen = document.querySelector('input[name="mcjGenJuiz"]:checked');
+  var f = gen && gen.value === 'F';
+  var sel = document.getElementById('mcjSau');
+  if (!sel) return;
+  var val = sel.value;
+  sel.innerHTML = f
+    ? '<option value="Senhora Juíza,">Senhora Juíza,</option><option value="Excelentíssima Senhora Juíza,">Excelentíssima...</option>'
+    : '<option value="Senhor Juiz,">Senhor Juiz,</option><option value="Excelentíssimo Senhor Juiz,">Excelentíssimo...</option>';
+  /* tenta preservar seleção equivalente */
+  if (val.startsWith('Excelent')) sel.selectedIndex = 1;
+}
+
 function gerarOficiosCJ() {
-  var dataTrans = (document.getElementById('mcjDataTrans').value || '').trim();
-  var motivo    = (document.getElementById('mcjMotivo').value    || '').trim();
-  var numOficio = (document.getElementById('mcjNumOficio').value || '').trim();
-  var sau       = document.getElementById('mcjSau').value;
-  var desp      = document.getElementById('mcjDesp').value;
+  var dataTrans  = (document.getElementById('mcjDataTrans').value  || '').trim();
+  var motivo     = (document.getElementById('mcjMotivo').value     || '').trim();
+  var numOficio  = (document.getElementById('mcjNumOficio').value  || '').trim();
+  var numProc    = (document.getElementById('mcjNumProcesso').value|| '').trim();
+  var sau        = document.getElementById('mcjSau').value;
+  var desp       = document.getElementById('mcjDesp').value;
+  var genJuiz    = (document.querySelector('input[name="mcjGenJuiz"]:checked') || {}).value || 'M';
 
   if (!dataTrans) { _toast('Informe a data da transferência!'); return; }
 
@@ -184,13 +210,15 @@ function gerarOficiosCJ() {
       juiz:      grp.juiz,
       vara:      grp.vara,
       cidJuizo:  grp.cid,
-      dataTrans: dataTrans,
-      motivo:    motivo,
-      numOficio: numOficio + (listaGrupos.length > 1 ? ' (' + (gi + 1) + '/' + listaGrupos.length + ')' : ''),
-      sau:       sau,
-      desp:      desp,
-      ori:       o,
-      des:       Estado.get('des'),
+      dataTrans:  dataTrans,
+      motivo:     motivo,
+      numOficio:  numOficio + (listaGrupos.length > 1 ? ' (' + (gi + 1) + '/' + listaGrupos.length + ')' : ''),
+      numProc:    numProc,
+      sau:        sau,
+      desp:       desp,
+      genJuiz:    genJuiz,
+      ori:        o,
+      des:        Estado.get('des'),
     });
   });
 
@@ -221,23 +249,68 @@ function _montarOficioCJ(cfg) {
   var destCidade = o ? o.c + '/SC' : '';
   var nomeDestinoCJ = cfg.des ? cfg.des.n : (Estado.get('des') ? Estado.get('des').n : '');
   var motivo = cfg.motivo ? '<strong>' + _esc(cfg.motivo) + '</strong>' : ph('motivo da transferência');
+  var fem = cfg.genJuiz === 'F';
 
-  var p1 = 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(nomeDestinoCJ) + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
+  /* Processo no texto (individual) ou na tabela (múltiplos — tratado em gerarAnexoTabela) */
+  var procTexto = cfg.numProc
+    ? (cfg.presos.length === 1 ? ', autos do Processo nº <strong>' + _esc(cfg.numProc) + '</strong>' : '')
+    : '';
+
+  var p1 = 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(nomeDestinoCJ) + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>' + procTexto + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
   var p2 = 'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motivo + '.';
-  var p3 = 'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.';
 
-  var destHtml = dJuizo({nomejuiz: cfg.juiz, vara: cfg.vara, cidJuizo: cfg.cidJuizo});
-  var assHTML  = o ? ass(o.dir, o.cg, o.n, true) : '';
+  /* Destinatário com gênero definido */
+  var destHtml = '<div class="ofc-dest-wrap"><div class="ofc-dest">'
+    + '<div class="dest-t">' + (fem ? 'À Senhora' : 'Ao Senhor') + '</div>'
+    + '<div class="dest-n">' + (fem ? 'Dra. ' : 'Dr. ') + _esc((cfg.juiz || '').toUpperCase()) + '</div>'
+    + '<div class="dest-l">' + (fem ? 'Juíza de Direito' : 'Juiz de Direito') + '</div>'
+    + (cfg.vara     ? '<div class="dest-l">' + _esc(cfg.vara)     + '</div>' : '')
+    + (cfg.cidJuizo ? '<div class="dest-l">' + _esc(cfg.cidJuizo) + '</div>' : '')
+    + '</div></div>';
+
+  var assHTML = o ? ass(o.dir, o.cg, o.n, true) : '';
+
+  /* Processo no anexo (múltiplos presos): adiciona coluna extra */
+  if (cfg.presos.length > 1 && cfg.numProc) {
+    anexoHTML = anexoHTML.replace(
+      '<div class="dest-l">', '' // não afeta — apenas marcador
+    );
+    /* Redefine o anexo com coluna de processo */
+    var presosComProc = cfg.presos.map(function(pr) {
+      return {nome: pr.nome, ipen: pr.ipen, processo: cfg.numProc};
+    });
+    var td = 'padding:5pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif;';
+    var th = 'padding:6pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif;';
+    var linhas = presosComProc.map(function(pr, i) {
+      var bg = i % 2 === 0 ? '#f5f8ff' : '#ffffff';
+      return '<tr style="background:' + bg + '">'
+        + '<td style="' + td + 'text-align:center;">' + (i+1) + '</td>'
+        + '<td style="' + td + 'font-weight:bold;">' + _esc(pr.nome.toUpperCase()) + '</td>'
+        + '<td style="' + td + 'text-align:center;">' + _esc(pr.ipen) + '</td>'
+        + '<td style="' + td + '">' + _esc(pr.processo) + '</td>'
+        + '</tr>';
+    }).join('');
+    anexoHTML = '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
+      + '<div class="anexo-wrapper" style="font-family:Arial,sans-serif;">'
+      + '<div style="padding:8pt 0 10pt 0;text-align:center;">'
+      + '<div style="font-size:12pt;font-weight:bold;text-transform:uppercase;letter-spacing:1pt;">ANEXO I</div>'
+      + '<div style="font-size:10pt;margin-top:4pt;">Relação de Custodiados</div></div>'
+      + '<table class="anexo-tabela"><thead><tr style="background:#0d2b55;color:#fff;">'
+      + '<th style="' + th + 'text-align:center;">#</th>'
+      + '<th style="' + th + 'text-align:left;">Nome</th>'
+      + '<th style="' + th + 'text-align:center;">IPEN</th>'
+      + '<th style="' + th + '">Nº do Processo</th>'
+      + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+  }
 
   return cab(sMini) + lb(1)
     + '<div class="oficio-corpo">'
     + ndHTML + lb(4)
     + '<div class="ofc-sau">' + _esc(cfg.sau) + '</div>' + lb(4)
     + p(p1) + lb(1)
-    + p(p2) + lb(1)
-    + p(p3) + lb(4)
+    + p(p2) + lb(4)
     + '<div class="ofc-desp">' + _esc(cfg.desp) + '</div>' + lb(5)
-    + assHTML
+    + assHTML + lb(4)
     + destHtml
     + '</div>'
     + rod(sMini)
