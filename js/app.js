@@ -216,6 +216,18 @@ function showToast(msg) {
 window.showToast = showToast;
 
 // ── MODO ESCURO / CLARO ──
+window.abrirWhatsAppCRV = function(e) {
+  if (e) e.preventDefault();
+  /* Só para usuários logados */
+  if (!window.usuarioAtual) {
+    window._abrirModalLogin && window._abrirModalLogin();
+    return;
+  }
+  if (confirm('Deseja iniciar uma conversa no WhatsApp com a CRV?\n📞 (48) 3665-7330')) {
+    window.open('https://wa.me/554836657330', '_blank');
+  }
+};
+
 function toggleTema() {
   const html = document.documentElement;
   const atual = html.getAttribute('data-tema') || 'claro';

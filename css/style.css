@@ -191,7 +191,7 @@ img { max-width: 100%; display: block; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.topbar-hero-titulo span { color: var(--azul-300); }
+.topbar-hero-titulo span { color: #fff; }
 .topbar-hero-sub {
   font-size: .68rem;
   color: rgba(255,255,255,.38);
