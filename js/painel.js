@@ -432,11 +432,11 @@ function renderizarMenuUnidades() {
   const srs = [...new Set(UNIDADES.map(u => u.sr))].sort();
 
   function _treeLabelAtual() {
-    if (!unidadeSelecionada) return '✦ CRV — Central de Regulação de Vagas';
-    if (unidadeSelecionada.tipo === 'sr') {
-      const info = SR_INFO[unidadeSelecionada.codigo] || {};
-      return `${unidadeSelecionada.codigo} — ${info.nome || unidadeSelecionada.codigo}`;
+    if (srSelecionada) {
+      const info = SR_INFO[srSelecionada] || {};
+      return `${srSelecionada} — ${info.nome || srSelecionada}`;
     }
+    if (!unidadeSelecionada) return '✦ CRV — Central de Regulação de Vagas';
     return unidadeSelecionada.nome || unidadeSelecionada.email || 'Unidade';
   }
 
@@ -451,9 +451,9 @@ function renderizarMenuUnidades() {
           !srCod.toLowerCase().includes(filtro) &&
           !(info.nome || '').toLowerCase().includes(filtro)) return;
       const hasMatch = filtro && unids.length > 0;
-      html += `<div class="p-tree-sr" onclick="_treeToggleSR('${srCod}',event)" id="ptsr-${srCod}">
-        <span class="p-tree-sr-arrow${hasMatch ? ' open' : ''}" id="ptarr-${srCod}">▶</span>
-        <span>${srCod} — ${escHtml(info.nome || srCod)}</span>
+      html += `<div class="p-tree-sr" id="ptsr-${srCod}">
+        <span class="p-tree-sr-arrow${hasMatch ? ' open' : ''}" id="ptarr-${srCod}" onclick="_treeToggleSR('${srCod}',event)" title="Expandir/recolher">▶</span>
+        <span style="flex:1;cursor:pointer;" onclick="_treeSelSR('${srCod}')">${srCod} — ${escHtml(info.nome || srCod)}</span>
       </div>
       <div class="p-tree-units${hasMatch ? ' open' : ''}" id="ptunits-${srCod}">
         ${(filtro ? unids : UNIDADES.filter(u => u.sr === srCod)).map(u =>
@@ -517,6 +517,14 @@ function renderizarMenuUnidades() {
     if (lbl) lbl.textContent = _treeLabelAtual();
   }
 
+  /* Selecionar Regional (SR) */
+  window._treeSelSR = function(srCod) {
+    trocarUnidade('__sr_' + srCod + '__');
+    _treeMarcarSelecionado();
+    _treeAtualizarLabel();
+    _treeFechar();
+  };
+
   /* Selecionar CRV */
   window._treeSelCRV = function() {
     trocarUnidade('__crv__');
@@ -566,10 +574,10 @@ function _treeMarcarSelecionado() {
     el.classList.toggle('selecionado', el.dataset.email === (unidadeSelecionada?.email || ''));
   });
   document.querySelectorAll('.p-tree-sr').forEach(el => el.classList.remove('selecionado'));
-  if (!unidadeSelecionada) {
-    const crv = document.querySelector('.p-tree-sr.selecionado') ||
-                document.querySelector('.p-tree-panel > .p-tree-sr');
-    if (crv) crv.classList.add('selecionado');
+  if (srSelecionada) {
+    document.getElementById('ptsr-' + srSelecionada)?.classList.add('selecionado');
+  } else if (!unidadeSelecionada) {
+    document.querySelector('#p-tree-body > .p-tree-sr')?.classList.add('selecionado');
   }
 }
 

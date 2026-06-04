@@ -644,43 +644,69 @@ window.abrirEditorUnidades = async function () {
     grupos[u.sr].push({ u, idx });
   });
 
-  const inputStyle = 'width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;';
+  const inputStyle = 'width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;box-sizing:border-box;';
   const labelStyle = 'font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;';
 
   lista.innerHTML = Object.keys(srLabels).filter(sr => grupos[sr]).map(sr => {
-    const items = grupos[sr];
+    const items  = grupos[sr];
+    const srInfo = window.SR_INFO?.[sr] || {};
     return `
-    <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-      <summary style="cursor:pointer;padding:10px 14px;background:#f1f5f9;font-weight:700;font-size:.83rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+    <details style="margin-bottom:10px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;" open>
+      <summary style="cursor:pointer;padding:10px 14px;background:#e2e8f0;font-weight:700;font-size:.83rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
         <span>🏛️ ${srLabels[sr]}</span>
-        <span style="font-size:.72rem;font-weight:400;color:#6b7280;">${items.length} unidade(s)</span>
+        <span style="font-size:.72rem;font-weight:400;color:#64748b;">${items.length} unidade(s)</span>
       </summary>
-      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
-        ${items.map(({ u, idx }) => `
-        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;">
-          <div style="font-weight:600;color:#1a2a4a;font-size:.82rem;margin-bottom:8px;">${u.nome}</div>
+      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#f8fafc;">
+
+        <!-- Campos da Superintendência -->
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;">
+          <div style="font-weight:700;color:#1e40af;font-size:.78rem;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Superintendência Regional</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div><label style="${labelStyle}">Diretor(a)</label>
-              <input data-idx="${idx}" data-campo="diretor" value="${u.diretor||''}" style="${inputStyle}" /></div>
-            <div><label style="${labelStyle}">E-mail</label>
-              <input data-idx="${idx}" data-campo="email" value="${u.email||''}" style="${inputStyle}" /></div>
-            <div><label style="${labelStyle}">Telefone</label>
-              <input data-idx="${idx}" data-campo="tel" value="${u.tel||''}" style="${inputStyle}" /></div>
-            <div><label style="${labelStyle}">Cidade</label>
-              <input data-idx="${idx}" data-campo="cidade" value="${u.cidade||''}" style="${inputStyle}" /></div>
-            <div style="grid-column:1/-1;"><label style="${labelStyle}">Endereço</label>
-              <input data-idx="${idx}" data-campo="end" value="${u.end||''}" style="${inputStyle}" /></div>
+            <div style="grid-column:1/-1;"><label style="${labelStyle}">Superintendente</label>
+              <input data-sr="${sr}" data-campo-sr="superintendente" value="${srInfo.superintendente||''}" style="${inputStyle}" /></div>
+            <div><label style="${labelStyle}">Telefone SR</label>
+              <input data-sr="${sr}" data-campo-sr="tel" value="${srInfo.tel||''}" style="${inputStyle}" /></div>
+            <div><label style="${labelStyle}">E-mail SR</label>
+              <input data-sr="${sr}" data-campo-sr="email" value="${srInfo.email||''}" style="${inputStyle}" /></div>
           </div>
-        </div>`).join('')}
+        </div>
+
+        <!-- Unidades (cada uma colapsável) -->
+        ${items.map(({ u, idx }) => `
+        <details style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+          <summary style="cursor:pointer;padding:8px 12px;background:#f1f5f9;font-weight:600;font-size:.82rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+            <span>${u.nome}</span>
+            <span style="font-size:.72rem;font-weight:400;color:#94a3b8;">${u.cidade}</span>
+          </summary>
+          <div style="padding:10px 12px;background:#fff;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div><label style="${labelStyle}">Diretor(a)</label>
+                <input data-idx="${idx}" data-campo="diretor" value="${u.diretor||''}" style="${inputStyle}" /></div>
+              <div><label style="${labelStyle}">E-mail</label>
+                <input data-idx="${idx}" data-campo="email" value="${u.email||''}" style="${inputStyle}" /></div>
+              <div><label style="${labelStyle}">Telefone</label>
+                <input data-idx="${idx}" data-campo="tel" value="${u.tel||''}" style="${inputStyle}" /></div>
+              <div><label style="${labelStyle}">Cidade</label>
+                <input data-idx="${idx}" data-campo="cidade" value="${u.cidade||''}" style="${inputStyle}" /></div>
+              <div style="grid-column:1/-1;"><label style="${labelStyle}">Endereço</label>
+                <input data-idx="${idx}" data-campo="end" value="${u.end||''}" style="${inputStyle}" /></div>
+            </div>
+          </div>
+        </details>`).join('')}
+
       </div>
     </details>`;
   }).join('');
 };
 
 window.salvarEdicaoUnidades = function () {
-  document.querySelectorAll('#editor-unidades-lista input').forEach(input => {
+  document.querySelectorAll('#editor-unidades-lista input[data-idx]').forEach(input => {
     const idx = parseInt(input.dataset.idx), campo = input.dataset.campo;
     if (window.UNIDADES?.[idx]) window.UNIDADES[idx][campo] = input.value;
+  });
+  document.querySelectorAll('#editor-unidades-lista input[data-sr]').forEach(input => {
+    const sr = input.dataset.sr, campo = input.dataset.campoSr;
+    if (window.SR_INFO?.[sr]) window.SR_INFO[sr][campo] = input.value;
   });
   if (typeof renderizarUnidades === 'function') renderizarUnidades();
   _downloadJSON({ sr: window.SR_INFO, unidades: window.UNIDADES }, 'unidades.json');
