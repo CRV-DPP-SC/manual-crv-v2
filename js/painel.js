@@ -407,51 +407,101 @@ function renderizarMenuUnidades() {
   const wrap = document.getElementById('p-seletor-unidade-wrap');
   if (!wrap) return;
 
-  const sel = document.createElement('select');
-  sel.className = 'p-select-unidade';
-  sel.id = 'p-select-unidade';
-  sel.addEventListener('change', e => trocarUnidade(e.target.value));
-
-  if (perfilAtual === 'crv') {
-    adicionarOpcao(sel, '__crv__', '✦ CRV — Central de Regulação de Vagas');
-    adicionarOpcao(sel, '', '─────────────────────────────', true);
-
-    const srs = [...new Set(UNIDADES.map(u => u.sr))].sort();
-    srs.forEach(srCod => {
-      const info = SR_INFO[srCod] || {};
-      /* Opção para entrar no painel da SR */
-      adicionarOpcao(sel, `__sr_${srCod}__`, `⊞ ${srCod} — ${info.nome || srCod}`);
-      /* Unidades da SR */
-      const grp  = document.createElement('optgroup');
-      grp.label  = `${srCod} — Unidades`;
-      UNIDADES
-        .filter(u => u.sr === srCod)
-        .forEach(u => {
-          const o = document.createElement('option');
-          o.value = u.email;
-          o.textContent = u.nome;
-          grp.appendChild(o);
-        });
-      sel.appendChild(grp);
-    });
-
-  } else if (perfilAtual === 'super') {
+  if (perfilAtual === 'super') {
+    /* Superintendente: mantém select simples com suas unidades */
+    const sel = document.createElement('select');
+    sel.className = 'p-select-unidade';
+    sel.id = 'p-select-unidade';
+    sel.addEventListener('change', e => trocarUnidade(e.target.value));
     const info = SR_INFO[escopoAtual.codigo] || {};
     adicionarOpcao(sel, '__sr__', `✦ ${escopoAtual.codigo} — ${info.nome || escopoAtual.codigo}`);
     adicionarOpcao(sel, '', '─────────────────────────────', true);
-
-    UNIDADES
-      .filter(u => u.sr === escopoAtual.codigo)
-      .forEach(u => {
-        const o = document.createElement('option');
-        o.value = u.email;
-        o.textContent = u.nome;
-        sel.appendChild(o);
-      });
+    UNIDADES.filter(u => u.sr === escopoAtual.codigo).forEach(u => {
+      const o = document.createElement('option'); o.value = u.email; o.textContent = u.nome; sel.appendChild(o);
+    });
+    wrap.innerHTML = ''; wrap.appendChild(sel); return;
   }
 
-  wrap.innerHTML = '';
-  wrap.appendChild(sel);
+  if (perfilAtual !== 'crv') return;
+
+  /* CRV: árvore SR → Unidades com busca */
+  const srs = [...new Set(UNIDADES.map(u => u.sr))].sort();
+
+  function buildTree(filtro) {
+    filtro = (filtro || '').toLowerCase().trim();
+    let html = '';
+    srs.forEach(srCod => {
+      const info = SR_INFO[srCod] || {};
+      const unids = UNIDADES.filter(u => u.sr === srCod &&
+        (!filtro || u.nome.toLowerCase().includes(filtro)));
+      if (filtro && !unids.length && !srCod.toLowerCase().includes(filtro) &&
+          !(info.nome || '').toLowerCase().includes(filtro)) return;
+      const hasMatch = filtro && unids.length > 0;
+      html += `<div class="p-tree-sr" onclick="_treeToggleSR('${srCod}',event)" id="ptsr-${srCod}">
+        <span class="p-tree-sr-arrow${hasMatch ? ' open' : ''}" id="ptarr-${srCod}">▶</span>
+        <span>${srCod} — ${escHtml(info.nome || srCod)}</span>
+      </div>
+      <div class="p-tree-units${hasMatch ? ' open' : ''}" id="ptunits-${srCod}">
+        ${(filtro ? unids : UNIDADES.filter(u => u.sr === srCod)).map(u =>
+          `<div class="p-tree-unit" onclick="_treeSelUnit('${escHtml(u.email)}')" data-email="${escHtml(u.email)}">${escHtml(u.nome)}</div>`
+        ).join('')}
+      </div>`;
+    });
+    return html;
+  }
+
+  wrap.innerHTML = `
+    <div class="p-tree-wrap" id="p-tree-wrap">
+      <input class="p-tree-search" id="p-tree-search" placeholder="🔍 Buscar regional ou unidade…" oninput="_treeFiltrar(this.value)">
+      <div class="p-tree-panel" id="p-tree-panel">
+        <div class="p-tree-sr selecionado" onclick="trocarUnidade('__crv__')" style="border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px;">
+          ✦ CRV — Central de Regulação de Vagas
+        </div>
+        ${buildTree('')}
+      </div>
+    </div>`;
+
+  /* Marca a seleção atual */
+  _treeMarcarSelecionado();
+
+  window._treeFiltrar = function(val) {
+    const panel = document.getElementById('p-tree-panel');
+    if (!panel) return;
+    const first = panel.querySelector('.p-tree-sr.selecionado');
+    const firstHtml = first ? first.outerHTML : '';
+    panel.innerHTML = (firstHtml || '') + buildTree(val);
+    _treeMarcarSelecionado();
+  };
+
+  window._treeToggleSR = function(srCod, e) {
+    e.stopPropagation();
+    const units = document.getElementById('ptunits-' + srCod);
+    const arr   = document.getElementById('ptarr-'   + srCod);
+    if (!units) return;
+    const open = units.classList.contains('open');
+    units.classList.toggle('open', !open);
+    if (arr) arr.classList.toggle('open', !open);
+    /* Clicar na SR também seleciona ela */
+    trocarUnidade('__sr_' + srCod + '__');
+    _treeMarcarSelecionado();
+  };
+
+  window._treeSelUnit = function(email) {
+    trocarUnidade(email);
+    _treeMarcarSelecionado();
+  };
+}
+
+function _treeMarcarSelecionado() {
+  document.querySelectorAll('.p-tree-unit').forEach(el => {
+    el.classList.toggle('selecionado', el.dataset.email === (unidadeSelecionada?.email || ''));
+  });
+  document.querySelectorAll('.p-tree-sr').forEach(el => el.classList.remove('selecionado'));
+  if (!unidadeSelecionada) {
+    const crv = document.querySelector('.p-tree-sr.selecionado') ||
+                document.querySelector('.p-tree-panel > .p-tree-sr');
+    if (crv) crv.classList.add('selecionado');
+  }
 }
 
 function adicionarOpcao(select, value, text, disabled = false) {
@@ -1639,8 +1689,8 @@ window.gerarPDFValidado = async function (id) {
     .stamp-table thead td { padding: 0.35cm 1.5cm 0.2cm 1.5cm; vertical-align: top; }
     .stamp-table tbody td { padding: 0.3cm 1.5cm 0 1.5cm; vertical-align: top; }
     .stamp-table tfoot td { padding: 0.2cm 1.5cm 0.5cm 1.5cm; }
-    @page { size: A4; margin: 0.3cm 2cm 0.3cm 3cm; }
-    @media print { body { margin: 0; } }
+    @page { size: A4; margin: 2cm 1.75cm 1.3cm 2.5cm; }
+    @media print { body { margin: 0; } .ofc-cab { position:fixed;top:0;left:0;right:0;padding:0.2cm 1.75cm 0.15cm 2.5cm;background:#fff;z-index:100; } .ofc-cab img{height:36pt!important;} .ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.1cm 1.75cm 0.2cm 2.5cm;background:#fff;z-index:100;} .oficio-corpo{padding:0.2cm 0 1.0cm 0;} .lb{height:11pt!important;line-height:11pt!important;} }
   </style>
 </head>
 <body>

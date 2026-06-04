@@ -101,6 +101,39 @@
     .p-select-unidade optgroup { background: #0f2240; color: #fff; }
     @media(max-width:600px){ .p-select-unidade { max-width: 100%; } }
 
+    /* ── Seletor árvore SR/Unidades ── */
+    .p-tree-wrap { margin-top: 10px; max-width: 340px; width: 100%; position: relative; }
+    .p-tree-search {
+      width: 100%; box-sizing: border-box;
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22);
+      border-radius: 8px; color: #fff; font-family: inherit; font-size: .8rem;
+      padding: 7px 12px; outline: none; margin-bottom: 6px;
+    }
+    .p-tree-search::placeholder { color: rgba(255,255,255,.45); }
+    .p-tree-panel {
+      background: #0d2240; border: 1px solid rgba(255,255,255,.15);
+      border-radius: 8px; max-height: 52vh; overflow-y: auto;
+      padding: 4px 0;
+    }
+    .p-tree-sr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; cursor: pointer; font-size: .8rem; font-weight: 700;
+      color: rgba(255,255,255,.9); user-select: none;
+      transition: background .15s;
+    }
+    .p-tree-sr:hover { background: rgba(255,255,255,.1); }
+    .p-tree-sr.selecionado { background: rgba(255,255,255,.18); }
+    .p-tree-sr-arrow { font-size: .6rem; opacity: .7; transition: transform .2s; }
+    .p-tree-sr-arrow.open { transform: rotate(90deg); }
+    .p-tree-units { display: none; padding-left: 8px; }
+    .p-tree-units.open { display: block; }
+    .p-tree-unit {
+      padding: 6px 12px 6px 24px; cursor: pointer; font-size: .78rem;
+      color: rgba(255,255,255,.75); transition: background .15s; border-radius: 4px;
+    }
+    .p-tree-unit:hover { background: rgba(255,255,255,.1); color: #fff; }
+    .p-tree-unit.selecionado { background: rgba(255,255,255,.2); color: #fff; font-weight: 600; }
+
     /* ── BANNER MODO LEITURA ── */
     .p-banner-leitura {
       display: none;
