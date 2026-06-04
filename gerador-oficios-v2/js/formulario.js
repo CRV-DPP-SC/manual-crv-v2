@@ -85,7 +85,7 @@ var FormularioCtrl = (function() {
     var sub = '';
     if (s.sub) {
       var subs = {com_pad:'Com PAD — falta grave', sem_pad:'Sem PAD — risco à integridade',
-        pontual:'Transferência', regime:'Alteração de Regime', coletiva:'Transferência Coletiva',
+        pontual:'Transferência', regime:'Alteração de Regime',
         saida:'Saída', entrada:'Entrada'};
       sub = subs[s.sub] ? '<span class="header-sub">' + subs[s.sub] + '</span>' : '';
     }
@@ -104,7 +104,7 @@ var FormularioCtrl = (function() {
     if (!['emergencial','adequacao','comunicacao'].includes(mod)) return '';
     var opts = [];
     if (mod === 'emergencial') opts = [['com_pad','📋 Com PAD — falta grave'],['sem_pad','⚠ Sem PAD — risco à integridade']];
-    if (mod === 'adequacao')   opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime'],['coletiva','👥 Transferência Coletiva']];
+    if (mod === 'adequacao')   opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime']];
     if (mod === 'comunicacao') opts = [['saida','🚀 Saída — preso saiu desta unidade'],['entrada','🏠 Entrada — preso chegou nesta unidade']];
 
     var chips = opts.map(function(o) {
@@ -117,8 +117,8 @@ var FormularioCtrl = (function() {
   /* ── Seção: Reeducando(s) ── */
   function _secaoReeducando(s) {
     var mod = s.mod;
-    var comRegime  = ['emergencial','mandado','adequacao','permuta'].includes(mod) && s.sub !== 'coletiva';
-    var semRegime  = ['pernoite','prisaocivil','comunicacao','resumo_ipen'].includes(mod) || s.sub === 'coletiva';
+    var comRegime  = ['emergencial','mandado','adequacao','permuta'].includes(mod);
+    var semRegime  = ['pernoite','prisaocivil','comunicacao','resumo_ipen'].includes(mod);
     var isPlural   = s.numero === 'P';
 
     var generoChips = '<div class="chip-group">'
@@ -136,7 +136,7 @@ var FormularioCtrl = (function() {
       /* Singular */
       camposHtml += _campo('nome', 'Nome completo', 'text', s.nome, 'Ex.: João da Silva Santos', true);
       camposHtml += _campo('ipen', 'IPEN', 'text', s.ipen, 'Ex.: 123456', true);
-      if (!semRegime && s.sub !== 'coletiva') {
+      if (!semRegime) {
         camposHtml += _secaoSitPenal(s, null);
       }
     } else {

@@ -201,31 +201,14 @@ function gerarCorpo(s) {
   /* ── ADEQUAÇÃO ── */
   else if (s.mod === 'adequacao') {
     var tm = {
-      coletiva: 'equalização da lotação entre as unidades do sistema prisional',
-      pontual:  'adequação da capacidade de ocupação',
-      regime:   'adequação decorrente de alteração de regime de cumprimento de pena',
+      pontual: 'adequação da capacidade de ocupação',
+      regime:  'adequação decorrente de alteração de regime de cumprimento de pena',
     };
-    var motAdec = s.motTransf ? fld(s.motTransf) : ph('motivo da transferência');
+    var motAdec  = s.motTransf    ? fld(s.motTransf)    : ph('motivo da transferência');
     var critAdec = s.motIndicacao ? fld(s.motIndicacao) : ph('critério de escolha');
     var fundamento = tm[s.sub] || 'adequação da capacidade de ocupação';
 
-    if (s.sub === 'coletiva' && isMulti) {
-      ps = [
-        'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência coletiva dos(as) reeducandos(as) relacionados(as) no Anexo I deste ofício, custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento na ' + fundamento + '.',
-        'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
-        'A transferência justifica-se pela ' + motAdec + '.',
-        'O critério utilizado para a escolha dos(as) reeducandos(as) para a presente transferência foi: ' + critAdec + '.',
-        textoBPI(s, ' de cada reeducando'),
-        s.saudeOpcao === 'formulario'
-          ? 'Formulário de Saúde em anexo.'
-          : s.saudeOpcao === 'sem_profissional'
-          ? 'Esta Unidade Prisional não dispõe, em sua estrutura funcional administrativa, de profissional apto a realizar avaliação de saúde, razão pela qual deixa-se de atestar a (in)salubridade das pessoas em questão.'
-          : 'As informações de saúde de cada reeducando(a), incluindo comorbidades e medicamentos de uso contínuo, constam do Anexo I deste ofício.',
-        'Efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
-        TXT_CONTATOS_ANUEM,
-        TXT_DESFECHO_PLURAL,
-      ];
-    } else if (isMulti) {
+    if (isMulti) {
       ps = [
         'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento na ' + fundamento + '.',
         'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
@@ -248,7 +231,7 @@ function gerarCorpo(s) {
         TXT_DESFECHO_SINGULAR,
       ];
     }
-    if (s.sub !== 'coletiva') ps = _injetarSaude(s, ps, isMulti, false);
+    ps = _injetarSaude(s, ps, isMulti, false);
   }
 
   /* ── PERMUTA ── */
@@ -368,8 +351,7 @@ function _injetarSaude(s, ps, isMulti, isPermuta) {
     if (psSp.length > 0) ps.push.apply(ps, psSp);
     return ps;
   }
-  /* Larga escala: saúde já está inline */
-  if (s.mod === 'adequacao' && s.sub === 'coletiva') return ps;
+  /* Adequação sempre injeta saúde via _injetarSaude */
   /* Multi sem saúde individual: sem injeção */
   if (isMulti && s.saudeOpcao !== 'formulario' && s.saudeOpcao !== 'sem_profissional') return ps;
 
