@@ -1,25 +1,27 @@
 /* ============================================================
    EXPORTAÇÃO — Copiar, .doc, PDF
-   Abordagem V1: div flexbox + position:fixed para cab/rod em print.
+   Abordagem V2: table-based (thead/tfoot repetem nativamente).
    ============================================================ */
 
 function getCSS() {
   return [
-    /* @page: margens ajustadas */
-    '@page{size:A4;margin:2cm 1.75cm 1.3cm 2.5cm}',
+    /* @page: margens normais de documento */
+    '@page{size:A4;margin:1.5cm 1.75cm 1.2cm 2.5cm}',
     '@media print{',
       'body{-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:0}',
       'header,footer,.ofc-no-print,.page-break-preview{display:none!important}',
       '.ofc-placeholder{display:none}',
-      '#oficio{padding:0;min-height:0;border:none!important;box-shadow:none!important}',
-      /* Cabeçalho fixo no topo de CADA página */
-      '.ofc-cab{position:fixed;top:0;left:0;right:0;padding:0.2cm 1.75cm 0.15cm 2.5cm;background:#fff;z-index:100}',
-      '.ofc-cab img{height:36pt!important}',
-      /* Rodapé fixo no fundo de CADA página */
-      '.ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.1cm 1.75cm 0.2cm 2.5cm;background:#fff;z-index:100;margin-top:0}',
-      /* Corpo: padding para não sobrepor os elementos fixos */
-      '.oficio-corpo{padding:1.6cm 0 1.0cm 0}',
-      /* Espaços em branco em print */
+      '#oficio{min-height:0!important;border:none!important;box-shadow:none!important}',
+      /* Tabela: ocupa a página */
+      '.ofc-table{width:100%}',
+      '.ofc-hcell,.ofc-fcell,.ofc-bcell{border:none!important}',
+      /* Cabeçalho e rodapé: padding via célula */
+      '.ofc-hcell{padding:0.3cm 0 0.2cm 0}.ofc-cab img{height:36pt!important}',
+      '.ofc-fcell{padding:0.15cm 0 0.2cm 0}',
+      /* Corpo: padding superior leve */
+      '.ofc-bcell{padding:0.3cm 0 0 0;vertical-align:top}',
+      '.oficio-corpo{padding:0}',
+      /* Espaços em branco */
       '.lb{height:11pt!important;line-height:11pt!important}',
       /* Assinaturas */
       '.ass-bloco{page-break-inside:avoid!important;break-inside:avoid!important;line-height:1.2!important;margin-left:8cm!important}',
@@ -31,15 +33,22 @@ function getCSS() {
       '.ofc-p{orphans:3;widows:3;margin-bottom:5pt}.ofc-sau{margin-bottom:5pt}',
       '.c1,.c2,.c3{font-size:8pt!important}.c4{font-size:9pt!important;white-space:nowrap}',
     '}',
-    /* Estilos gerais (screen + export .doc) */
+    /* ── Estilos gerais (screen + .doc) ── */
     'body{font-family:Arial,sans-serif;font-size:11pt;line-height:1.0;color:#111;margin:0;padding:0}',
-    '#oficio{background:#fff;max-width:21cm;margin:0 auto;display:flex;flex-direction:column;min-height:0;padding:1cm 1.5cm 0 1.5cm}',
-    '.oficio-corpo{flex:1;display:flex;flex-direction:column}',
+    '#oficio{background:#fff;max-width:21cm;margin:0 auto;min-height:0}',
+    /* Tabela */
+    '.ofc-table{width:100%;border-collapse:collapse;table-layout:fixed}',
+    '.ofc-hcell{padding:0.5cm 1.5cm 0.3cm 1.5cm;border:none;vertical-align:top}',
+    '.ofc-fcell{padding:0.2cm 1.5cm 0.3cm 1.5cm;border:none;vertical-align:top}',
+    '.ofc-bcell{padding:0 1.5cm;border:none;vertical-align:top}',
+    /* Cabeçalho */
     '.ofc-cab{display:flex;align-items:center;gap:10px;padding-bottom:6px}',
     '.ofc-cab img{height:42pt;flex-shrink:0}',
     '.ofc-cab-txt{flex:1;text-align:left;line-height:1.3;padding-left:6px}',
     '.c1,.c2,.c3{font-size:10pt;font-weight:normal;text-transform:uppercase;display:block;color:#111}',
     '.c4{font-size:10pt;font-weight:bold;text-transform:uppercase;display:block;margin-top:1px;color:#111}',
+    /* Corpo */
+    '.oficio-corpo{display:block;padding:0}',
     '.ofc-numdata{display:flex;justify-content:space-between;align-items:baseline;font-size:11pt;line-height:1.0}',
     '.ofc-data-only{text-align:right;font-size:11pt;line-height:1.0}',
     '.lb{display:block;height:11pt;line-height:11pt}',
@@ -57,18 +66,21 @@ function getCSS() {
     '.dest-t{font-weight:normal;display:block;margin:0;padding:0}',
     '.dest-n{font-weight:bold;text-transform:uppercase;display:block;margin:0;padding:0}',
     '.dest-l{font-weight:normal;display:block;margin:0;padding:0}',
-    '.ofc-lista{margin:3pt 0 3pt 1.5cm;padding:0;list-style:disc;font-size:11pt;line-height:1.0;font-family:Arial,sans-serif}',
-    '.ofc-lista li{margin-bottom:2pt}',
-    '.ofc-lista-wrap{margin:0;padding:0}',
-    '.ofc-rodape{margin-top:0.5cm;padding:6px 0 10px;font-family:Arial,sans-serif}',
+    /* Rodapé */
+    '.ofc-rodape{font-family:Arial,sans-serif;margin:0;padding:0}',
     '.rod-info{text-align:center;font-size:8.5pt;color:#222;line-height:1.5}',
     '.rod-dpp{font-weight:bold;font-size:9pt;text-transform:uppercase;display:block;color:#111;letter-spacing:.03em}',
     '.rod-un{font-weight:bold;color:#111;display:block;font-size:8.5pt}',
     '.rod-cont{font-size:8pt;display:block;color:#333}',
+    /* Listas e Anexo */
+    '.ofc-lista{margin:3pt 0 3pt 1.5cm;padding:0;list-style:disc;font-size:11pt;line-height:1.0;font-family:Arial,sans-serif}',
+    '.ofc-lista li{margin-bottom:2pt}',
+    '.ofc-lista-wrap{margin:0;padding:0}',
     '.anexo-wrapper{font-family:Arial,sans-serif;page-break-before:always;break-before:page;padding-top:0.5cm}',
     '.anexo-tabela{width:100%;border-collapse:collapse}',
-    'th,td{padding:5pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif}',
-    'th{background:#0d2b55;color:#fff;font-size:9.5pt}',
+    /* Células de dados no anexo — escopo específico para não afetar ofc-table */
+    '.anexo-tabela th,.anexo-tabela td{padding:5pt 7pt;border:0.5pt solid #aab;font-size:9.5pt;font-family:Arial,sans-serif}',
+    '.anexo-tabela th{background:#0d2b55;color:#fff;font-size:9.5pt}',
   ].join('');
 }
 

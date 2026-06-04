@@ -303,17 +303,21 @@ function _montarOficioCJ(cfg) {
       + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
   }
 
-  return cab(sMini) + lb(1)
-    + '<div class="oficio-corpo">'
-    + ndHTML + lb(4)
-    + '<div class="ofc-sau">' + _esc(cfg.sau) + '</div>' + lb(4)
-    + p(p1) + lb(1)
-    + p(p2) + lb(4)
-    + '<div class="ofc-desp">' + _esc(cfg.desp) + '</div>' + lb(5)
-    + assHTML + lb(4)
-    + destHtml
-    + '</div>'
-    + rod(sMini)
+  return '<table class="ofc-table">'
+    + '<thead><tr><td class="ofc-hcell">' + cab(sMini) + '</td></tr></thead>'
+    + '<tfoot><tr><td class="ofc-fcell">' + rod(sMini) + '</td></tr></tfoot>'
+    + '<tbody><tr><td class="ofc-bcell">'
+      + '<div class="oficio-corpo">'
+      + ndHTML + lb(4)
+      + '<div class="ofc-sau">' + _esc(cfg.sau) + '</div>' + lb(4)
+      + p(p1) + lb(1)
+      + p(p2) + lb(4)
+      + '<div class="ofc-desp">' + _esc(cfg.desp) + '</div>' + lb(5)
+      + assHTML + lb(4)
+      + destHtml
+      + '</div>'
+    + '</td></tr></tbody>'
+    + '</table>'
     + anexoHTML;
 }
 

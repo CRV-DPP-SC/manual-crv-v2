@@ -1,6 +1,6 @@
 /* ============================================================
    DOCUMENTO — estrutura HTML do ofício em papel
-   Abordagem V1: div flexbox + position:fixed para cab/rod em print.
+   Abordagem V2: table-based com thead/tfoot repetindo em cada página.
    Funções puras: recebem estado (s) e retornam HTML.
    ============================================================ */
 
@@ -106,10 +106,9 @@ function rod(s) {
 }
 
 /* ── Monta o HTML completo do ofício ──
-   Abordagem V1: div flexbox simples.
-   Em @media print, .ofc-cab e .ofc-rodape são position:fixed
-   e aparecem automaticamente em TODAS as páginas impressas.
-   @page com margin:2.8cm top e 2.5cm bottom acomoda os elementos fixos.
+   Abordagem V2: table-based (thead/tfoot).
+   O browser repete cabeçalho e rodapé nativamente em cada página impressa.
+   Zero dependência de position:fixed ou padding-top hacks.
    ── */
 function montarOficio(s) {
   if (!s || !s.mod) return '';
@@ -122,29 +121,33 @@ function montarOficio(s) {
       + '</div>';
   }
 
-  var corpo = gerarCorpo(s);
-  var ec    = s.mod === 'comunicacao';
+  var corpo  = gerarCorpo(s);
+  var ec     = s.mod === 'comunicacao';
   var anexos = _gerarAnexos(s);
 
   return '<div id="oficio">'
-    + cab(s) + lb(1)
-    + '<div class="oficio-corpo">'
-    + numData(s) + lb(4)
-    + '<div class="ofc-sau">' + (s.sau || ph('Saudação')) + '</div>' + lb(4)
-    + corpo + lb(4)
-    + '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>' + lb(5)
-    + blocoAss(s)
-    + (ec ? dJuizo(s) : dCRV())
-    + '</div>'
-    + rod(s)
+    + '<table class="ofc-table">'
+      /* ── Cabeçalho — repete em cada página ── */
+      + '<thead><tr><td class="ofc-hcell">' + cab(s) + '</td></tr></thead>'
+      /* ── Rodapé — repete em cada página ── */
+      + '<tfoot><tr><td class="ofc-fcell">' + rod(s) + '</td></tr></tfoot>'
+      /* ── Corpo ── */
+      + '<tbody><tr><td class="ofc-bcell">'
+        + '<div class="oficio-corpo">'
+        + numData(s) + lb(4)
+        + '<div class="ofc-sau">' + (s.sau || ph('Saudação')) + '</div>' + lb(4)
+        + corpo + lb(4)
+        + '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>' + lb(5)
+        + blocoAss(s) + lb(4)
+        + (ec ? dJuizo(s) : dCRV())
+        + '</div>'
+      + '</td></tr></tbody>'
+    + '</table>'
     + anexos
     + '</div>';
 }
 
-/* ── Gera anexos (APÓS rodapé, com page-break-before em cada um) ──
-   Com position:fixed no cab/rod em print, o cabeçalho e rodapé
-   aparecem automaticamente em todas as páginas incluindo as de anexo.
-   ── */
+/* ── Gera anexos (fora da table principal, com page-break-before) ── */
 function _gerarAnexos(s) {
   var isMulti = s.numero === 'P' && s.reed && s.reed.length > 0;
   if (!isMulti) return '';

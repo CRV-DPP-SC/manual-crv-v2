@@ -1689,8 +1689,8 @@ window.gerarPDFValidado = async function (id) {
     .stamp-table thead td { padding: 0.35cm 1.5cm 0.2cm 1.5cm; vertical-align: top; }
     .stamp-table tbody td { padding: 0.3cm 1.5cm 0 1.5cm; vertical-align: top; }
     .stamp-table tfoot td { padding: 0.2cm 1.5cm 0.5cm 1.5cm; }
-    @page { size: A4; margin: 2cm 1.75cm 1.3cm 2.5cm; }
-    @media print { body { margin: 0; } .ofc-cab { position:fixed;top:0;left:0;right:0;padding:0.2cm 1.75cm 0.15cm 2.5cm;background:#fff;z-index:100; } .ofc-cab img{height:36pt!important;} .ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.1cm 1.75cm 0.2cm 2.5cm;background:#fff;z-index:100;} .oficio-corpo{padding:1.6cm 0 1.0cm 0;} .lb{height:11pt!important;line-height:11pt!important;} }
+    @page { size: A4; margin: 1.5cm 1.75cm 1.2cm 2.5cm; }
+    @media print { body{margin:0;} #oficio{min-height:0!important;border:none!important;} .ofc-table{width:100%;} .ofc-hcell,.ofc-fcell,.ofc-bcell{border:none!important;} .ofc-hcell{padding:0.3cm 0 0.2cm 0;} .ofc-fcell{padding:0.15cm 0 0.2cm 0;} .ofc-bcell{padding:0.3cm 0 0 0;vertical-align:top;} .oficio-corpo{padding:0;} .ofc-cab img{height:36pt!important;} .lb{height:11pt!important;line-height:11pt!important;} .c1,.c2,.c3{font-size:8pt!important;} .c4{font-size:9pt!important;white-space:nowrap;} .ass-bloco{page-break-inside:avoid!important;break-inside:avoid!important;line-height:1.2!important;margin-left:8cm!important;} .ass-dig{font-size:9pt!important;} .ass-nome{font-size:10pt!important;white-space:nowrap;} .ass-cargo{font-size:8.5pt!important;} .ofc-dest-wrap{page-break-inside:avoid;break-inside:avoid;margin-top:8pt;padding-top:14pt;} .ofc-p{orphans:3;widows:3;margin-bottom:5pt;} }
   </style>
 </head>
 <body>

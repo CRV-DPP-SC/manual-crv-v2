@@ -1,6 +1,6 @@
 /* ============================================================
    OFICIO.CSS — estilos do documento em papel
-   Abordagem V1: div flexbox + position:fixed para cab/rod em print.
+   Abordagem V2: table-based (thead/tfoot repetem nativamente).
    ============================================================ */
 
 /* ── Placeholder para campos não preenchidos ── */
@@ -19,17 +19,36 @@
   color: #111;
   max-width: 21cm;
   margin: 0 auto;
-  padding: 1cm 1.5cm 0 1.5cm;
-  display: flex;
-  flex-direction: column;
+  padding: 0;
   min-height: 27cm;
 }
 
-/* ── Corpo do ofício — cresce para preencher o espaço ── */
+/* ── Tabela principal — ocupa toda a largura ── */
+.ofc-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* Células da tabela sem borda nem padding extra */
+.ofc-hcell,
+.ofc-fcell,
+.ofc-bcell {
+  padding: 0;
+  border: none;
+}
+
+.ofc-hcell { padding: 0.5cm 1.5cm 0.3cm 1.5cm; }
+.ofc-fcell { padding: 0.2cm 1.5cm 0.3cm 1.5cm; }
+.ofc-bcell {
+  padding: 0 1.5cm;
+  vertical-align: top;
+}
+
+/* ── Corpo do ofício ── */
 .oficio-corpo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: block;
+  padding-top: 0;
   padding-bottom: 0;
 }
 
@@ -231,12 +250,12 @@
 }
 
 /* ════════════════════════════════════════════
-   IMPRESSÃO / PDF
-   @page com margens que acomodam cab e rod fixos
+   IMPRESSÃO / PDF — Abordagem V2 (table-based)
+   Margens normais de documento — sem hacks de padding
    ════════════════════════════════════════════ */
 @page {
   size: A4;
-  margin: 2cm 1.75cm 1.3cm 2.5cm;
+  margin: 1.5cm 1.75cm 1.2cm 2.5cm;
 }
 
 @media print {
@@ -253,57 +272,60 @@
 
   .ofc-placeholder { display: none; }
 
-  /* Ofício: sem padding (as margens @page cuidam disso) */
+  /* Ofício: sem sombra/borda */
   #oficio {
-    padding: 0;
-    min-height: 0;
+    min-height: 0 !important;
     border: none !important;
     box-shadow: none !important;
   }
 
-  /* Cabeçalho fixo no TOPO de cada página */
-  .ofc-cab {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    padding: 0.2cm 1.75cm 0.15cm 2.5cm;
-    background: #fff;
-    z-index: 100;
+  /* Tabela: ocupa a página inteira */
+  .ofc-table {
+    width: 100%;
+  }
+
+  /* Células: sem borda */
+  .ofc-hcell, .ofc-fcell, .ofc-bcell { border: none !important; }
+
+  /* Cabeçalho: padding adequado */
+  .ofc-hcell {
+    padding: 0.3cm 0 0.2cm 0;
   }
   .ofc-cab img { height: 36pt !important; }
 
-  /* Rodapé fixo no FUNDO de cada página */
-  .ofc-rodape {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    padding: 0.1cm 1.75cm 0.2cm 2.5cm;
-    background: #fff;
-    z-index: 100;
-    margin-top: 0;
+  /* Rodapé: padding adequado */
+  .ofc-fcell {
+    padding: 0.15cm 0 0.2cm 0;
   }
 
-  /* Corpo: padding top compensa header fixo na área de conteúdo */
-  .oficio-corpo {
-    padding: 1.6cm 0 1.0cm 0;
+  /* Corpo: apenas padding inferior (rodapé cuida do fundo) */
+  .ofc-bcell {
+    padding: 0.3cm 0 0 0;
+    vertical-align: top;
   }
+
+  /* Corpo do ofício: sem padding extra */
+  .oficio-corpo { padding: 0; }
 
   /* Espaços em branco na impressão */
   .lb { height: 11pt !important; line-height: 11pt !important; }
 
-  /* Assinaturas e destinatário: não cortar entre páginas */
+  /* Assinaturas: não cortar entre páginas */
   .ass-bloco {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     line-height: 1.2 !important;
     margin-left: 8cm !important;
   }
-  .ass-dig  { font-size: 9pt !important; }
-  .ass-nome { font-size: 10pt !important; white-space: nowrap; }
+  .ass-dig   { font-size: 9pt !important; }
+  .ass-nome  { font-size: 10pt !important; white-space: nowrap; }
   .ass-cargo { font-size: 8.5pt !important; line-height: 1.25 !important; }
 
+  /* Destinatário: não cortar entre páginas */
   .ofc-dest-wrap {
     page-break-inside: avoid;
     break-inside: avoid;
-    margin-top: 8pt;  /* em print não usa margin-top:auto */
+    margin-top: 8pt;
     padding-top: 14pt;
     margin-bottom: 0.5cm;
   }
@@ -314,10 +336,10 @@
   }
 
   /* Parágrafos: órfãos e viúvas */
-  .ofc-p { orphans: 3; widows: 3; margin-bottom: 5pt; }
+  .ofc-p  { orphans: 3; widows: 3; margin-bottom: 5pt; }
   .ofc-sau { margin-bottom: 5pt; }
 
-  /* Cabeçalho: fonte compacta */
+  /* Cabeçalho: fontes compactas */
   .c1, .c2, .c3 { font-size: 8pt !important; }
   .c4 { font-size: 9pt !important; white-space: nowrap; }
 }
