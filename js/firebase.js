@@ -106,33 +106,14 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
 
   area.innerHTML = `
-    <div class="topbar-user-info" style="position:relative;">
-      <div class="topbar-user-avatar" style="background:${cor};cursor:pointer;" title="Opções do usuário" onclick="_toggleUserMenu(event)">${iniciais}</div>
+    <div class="topbar-user-info">
+      <div class="topbar-user-avatar" style="background:${cor};">${iniciais}</div>
       <span class="topbar-user-nome">${nome}</span>
       <span class="topbar-user-badge">${label}</span>
-      <div id="user-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:180px;z-index:9100;overflow:hidden;">
-        <div style="padding:10px 14px 8px;border-bottom:1px solid #f1f5f9;">
-          <div style="font-size:.75rem;font-weight:700;color:#0f172a;">${nome}</div>
-          <div style="font-size:.65rem;color:#94a3b8;margin-top:1px;">${label}</div>
-        </div>
-        <button onclick="_abrirModalSenha()" style="width:100%;padding:10px 14px;background:none;border:none;text-align:left;font-size:.8rem;color:#334155;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;">🔑 Alterar senha</button>
-        <button onclick="fazerLogout()" style="width:100%;padding:10px 14px;background:none;border:none;text-align:left;font-size:.8rem;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;border-top:1px solid #f1f5f9;">↩ Sair</button>
-      </div>
+      <button onclick="fazerLogout()" style="margin-left:6px;padding:4px 12px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Sair</button>
     </div>`;
 }
 
-/* ── Menu do avatar ── */
-window._toggleUserMenu = function(e) {
-  e.stopPropagation();
-  const m = document.getElementById('user-menu');
-  if (!m) return;
-  const aberto = m.style.display !== 'none';
-  m.style.display = aberto ? 'none' : 'block';
-  if (!aberto) {
-    const fechar = () => { m.style.display = 'none'; document.removeEventListener('click', fechar); };
-    setTimeout(() => document.addEventListener('click', fechar), 0);
-  }
-};
 
 /* ── Modal alterar senha ── */
 window._abrirModalSenha = function() {
@@ -655,22 +636,45 @@ window.abrirEditorUnidades = async function () {
     SR05:'SR05 — Serrana',              SR06:'SR06 — Oeste',
     SR07:'SR07 — Médio Vale do Itajaí', SR08:'SR08 — Planalto Norte',
   };
-  lista.innerHTML = unidades.map((u, idx) => `
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
-      <div style="font-weight:700;color:#1a2a4a;font-size:.85rem;margin-bottom:8px;">${srLabels[u.sr]||u.sr} — ${u.nome}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div><label style="font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;">Diretor(a)</label>
-          <input data-idx="${idx}" data-campo="diretor" value="${u.diretor||''}" style="width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;" /></div>
-        <div><label style="font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;">E-mail</label>
-          <input data-idx="${idx}" data-campo="email" value="${u.email||''}" style="width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;" /></div>
-        <div><label style="font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;">Telefone</label>
-          <input data-idx="${idx}" data-campo="tel" value="${u.tel||''}" style="width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;" /></div>
-        <div><label style="font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;">Cidade</label>
-          <input data-idx="${idx}" data-campo="cidade" value="${u.cidade||''}" style="width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;" /></div>
-        <div style="grid-column:1/-1;"><label style="font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;">Endereço</label>
-          <input data-idx="${idx}" data-campo="end" value="${u.end||''}" style="width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;" /></div>
+
+  /* Agrupa por SR mantendo o índice global para salvarEdicaoUnidades */
+  const grupos = {};
+  unidades.forEach((u, idx) => {
+    if (!grupos[u.sr]) grupos[u.sr] = [];
+    grupos[u.sr].push({ u, idx });
+  });
+
+  const inputStyle = 'width:100%;padding:5px 8px;border:1.5px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit;';
+  const labelStyle = 'font-size:.7rem;font-weight:600;color:#6b7280;display:block;margin-bottom:2px;';
+
+  lista.innerHTML = Object.keys(srLabels).filter(sr => grupos[sr]).map(sr => {
+    const items = grupos[sr];
+    return `
+    <details style="margin-bottom:10px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <summary style="cursor:pointer;padding:10px 14px;background:#f1f5f9;font-weight:700;font-size:.83rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+        <span>🏛️ ${srLabels[sr]}</span>
+        <span style="font-size:.72rem;font-weight:400;color:#6b7280;">${items.length} unidade(s)</span>
+      </summary>
+      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+        ${items.map(({ u, idx }) => `
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;">
+          <div style="font-weight:600;color:#1a2a4a;font-size:.82rem;margin-bottom:8px;">${u.nome}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div><label style="${labelStyle}">Diretor(a)</label>
+              <input data-idx="${idx}" data-campo="diretor" value="${u.diretor||''}" style="${inputStyle}" /></div>
+            <div><label style="${labelStyle}">E-mail</label>
+              <input data-idx="${idx}" data-campo="email" value="${u.email||''}" style="${inputStyle}" /></div>
+            <div><label style="${labelStyle}">Telefone</label>
+              <input data-idx="${idx}" data-campo="tel" value="${u.tel||''}" style="${inputStyle}" /></div>
+            <div><label style="${labelStyle}">Cidade</label>
+              <input data-idx="${idx}" data-campo="cidade" value="${u.cidade||''}" style="${inputStyle}" /></div>
+            <div style="grid-column:1/-1;"><label style="${labelStyle}">Endereço</label>
+              <input data-idx="${idx}" data-campo="end" value="${u.end||''}" style="${inputStyle}" /></div>
+          </div>
+        </div>`).join('')}
       </div>
-    </div>`).join('');
+    </details>`;
+  }).join('');
 };
 
 window.salvarEdicaoUnidades = function () {

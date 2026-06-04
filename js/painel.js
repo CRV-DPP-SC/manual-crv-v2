@@ -138,10 +138,14 @@ function unidadesVisiveis() {
   return [];
 }
 
+// ── Inicia o carregamento dos dados o mais cedo possível ──
+const dadosPromise = carregarDados();
+
 // ══════════════════════════════════════════════
 // AUTH
 // ══════════════════════════════════════════════
 onAuthStateChanged(auth, async (user) => {
+  await dadosPromise;
   if (user) {
     usuarioAtual = user;
     const resolvido = await resolverPerfil(user);
@@ -1999,7 +2003,7 @@ function mostrarErro(msg) {
 }
 
 // ── INIT ──
-await carregarDados();
+// (dados já carregados via dadosPromise antes do onAuthStateChanged)
 
 // ══════════════════════════════════════════════
 // API EXPORTADA — usada pelo Gerador de Ofícios V2
