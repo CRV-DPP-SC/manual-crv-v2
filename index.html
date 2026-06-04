@@ -594,6 +594,41 @@
 </div>
 
 
+<!-- ══ MODAL ALTERAR SENHA ══ -->
+<div id="modal-senha" class="modal-overlay" onclick="if(event.target===this)_fecharModalSenha()" style="display:none;">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-header">
+      <div><h3>🔑 Alterar Senha</h3><p>Informe sua senha atual e a nova senha</p></div>
+      <button class="modal-fechar" onclick="_fecharModalSenha()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Senha atual</label>
+        <div class="form-input-wrap">
+          <input id="senha-atual" type="password" class="form-input" placeholder="••••••••" />
+          <button class="form-input-eye" onclick="toggleSenhaVis('senha-atual')">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nova senha</label>
+        <div class="form-input-wrap">
+          <input id="senha-nova" type="password" class="form-input" placeholder="Mínimo 8 caracteres" />
+          <button class="form-input-eye" onclick="toggleSenhaVis('senha-nova')">👁</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar nova senha</label>
+        <div class="form-input-wrap">
+          <input id="senha-confirmar" type="password" class="form-input" placeholder="Repita a nova senha" />
+          <button class="form-input-eye" onclick="toggleSenhaVis('senha-confirmar')">👁</button>
+        </div>
+      </div>
+      <div id="senha-erro" class="form-erro"></div>
+      <button id="btn-alterar-senha" class="btn-primario" onclick="confirmarAlteracaoSenha()">Salvar nova senha</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL LOGIN ══ -->
 <div id="modal-login" class="modal-overlay" onclick="if(event.target===this)fecharModalLogin()">
   <div class="modal-box">

@@ -4,7 +4,8 @@
 // ================================================
 import { initializeApp }               from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-         updatePassword, onAuthStateChanged, signOut }
+         updatePassword, reauthenticateWithCredential, EmailAuthProvider,
+         onAuthStateChanged, signOut }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
@@ -97,13 +98,84 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const nome    = _nomeExibicao(user.email);
   const iniciais = _iniciaisPerfil(user.email || '');
   area.innerHTML = `
-    <div class="topbar-user-info">
-      <div class="topbar-user-avatar" style="background:${cor};">${iniciais}</div>
+    <div class="topbar-user-info" style="position:relative;">
+      <div class="topbar-user-avatar" style="background:${cor};cursor:pointer;" title="Opções do usuário" onclick="_toggleUserMenu(event)">${iniciais}</div>
       <span class="topbar-user-nome">${nome}</span>
       <span class="topbar-user-badge">${label}</span>
-    </div>
-    <button class="btn-topbar-logout" onclick="fazerLogout()" title="Sair">✕</button>`;
+      <div id="user-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:180px;z-index:9100;overflow:hidden;">
+        <div style="padding:10px 14px 8px;border-bottom:1px solid #f1f5f9;">
+          <div style="font-size:.75rem;font-weight:700;color:#0f172a;">${nome}</div>
+          <div style="font-size:.65rem;color:#94a3b8;margin-top:1px;">${label}</div>
+        </div>
+        <button onclick="_abrirModalSenha()" style="width:100%;padding:10px 14px;background:none;border:none;text-align:left;font-size:.8rem;color:#334155;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;">🔑 Alterar senha</button>
+        <button onclick="fazerLogout()" style="width:100%;padding:10px 14px;background:none;border:none;text-align:left;font-size:.8rem;color:#dc2626;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;border-top:1px solid #f1f5f9;">↩ Sair</button>
+      </div>
+    </div>`;
 }
+
+/* ── Menu do avatar ── */
+window._toggleUserMenu = function(e) {
+  e.stopPropagation();
+  const m = document.getElementById('user-menu');
+  if (!m) return;
+  const aberto = m.style.display !== 'none';
+  m.style.display = aberto ? 'none' : 'block';
+  if (!aberto) {
+    const fechar = () => { m.style.display = 'none'; document.removeEventListener('click', fechar); };
+    setTimeout(() => document.addEventListener('click', fechar), 0);
+  }
+};
+
+/* ── Modal alterar senha ── */
+window._abrirModalSenha = function() {
+  const m = document.getElementById('user-menu');
+  if (m) m.style.display = 'none';
+  ['senha-atual','senha-nova','senha-confirmar'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const err = document.getElementById('senha-erro'); if (err) err.textContent = '';
+  const btn = document.getElementById('btn-alterar-senha');
+  if (btn) { btn.disabled = false; btn.textContent = 'Salvar nova senha'; }
+  const modal = document.getElementById('modal-senha');
+  if (modal) { modal.style.display = 'flex'; setTimeout(() => document.getElementById('senha-atual')?.focus(), 80); }
+};
+
+window._fecharModalSenha = function() {
+  const modal = document.getElementById('modal-senha');
+  if (modal) modal.style.display = 'none';
+};
+
+window.confirmarAlteracaoSenha = async function() {
+  const atual     = (document.getElementById('senha-atual')?.value    || '').trim();
+  const nova      = (document.getElementById('senha-nova')?.value     || '').trim();
+  const confirmar = (document.getElementById('senha-confirmar')?.value || '').trim();
+  const err = document.getElementById('senha-erro');
+  const btn = document.getElementById('btn-alterar-senha');
+  const _erro = msg => { if (err) err.textContent = msg; };
+
+  if (!atual)          return _erro('Informe a senha atual.');
+  if (nova.length < 8) return _erro('A nova senha deve ter pelo menos 8 caracteres.');
+  if (nova !== confirmar) return _erro('As senhas não coincidem.');
+  if (!usuarioAtual)   return _erro('Sessão expirada. Faça login novamente.');
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+  try {
+    const cred = EmailAuthProvider.credential(usuarioAtual.email, atual);
+    await reauthenticateWithCredential(usuarioAtual, cred);
+    await updatePassword(usuarioAtual, nova);
+    _fecharModalSenha();
+    showToast('✅ Senha alterada com sucesso!');
+  } catch(e) {
+    const msgs = {
+      'auth/wrong-password':      'Senha atual incorreta.',
+      'auth/invalid-credential':  'Senha atual incorreta.',
+      'auth/too-many-requests':   'Muitas tentativas. Aguarde alguns minutos.',
+      'auth/weak-password':       'Nova senha muito fraca. Use pelo menos 8 caracteres.',
+    };
+    _erro(msgs[e.code] || 'Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar nova senha'; }
+  }
+};
 
 window._abrirModalLogin = function () {
   _abrirModal('modal-login');
