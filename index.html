@@ -73,6 +73,9 @@
       <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
         <span class="nav-icon">🔒</span> CRV
       </button>
+      <button class="nav-item" id="sidebar-btn-senha" style="display:none;" onclick="_abrirModalSenha()">
+        <span class="nav-icon">🔑</span> Alterar Senha
+      </button>
     </div>
     <div class="sidebar-rodape">
       <p>Res. Conj. Interinst. nº 1/2026<br>TJSC + SEJURI · DJ nº 4.661<br>04/02/2026 · DPP / SEJURI / SC</p>
@@ -564,7 +567,7 @@
     <!-- ══════════════════════════════════════════
          PAINEL DA UNIDADE (embutido)
     ══════════════════════════════════════════ -->
-    <section id="painel-embed" class="secao" style="padding:0;display:none;">
+    <section id="painel-embed" class="secao" style="padding:0;">
       <iframe id="painel-embed-iframe" src="" style="width:100%;height:calc(100vh - 62px);border:none;display:block;"></iframe>
     </section>
 

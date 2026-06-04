@@ -281,9 +281,9 @@
     margin-top: 0;
   }
 
-  /* Corpo: padding mínimo (header/footer cabem nas margens @page) */
+  /* Corpo: padding top compensa header fixo na área de conteúdo */
   .oficio-corpo {
-    padding: 0.2cm 0 1.0cm 0;
+    padding: 1.6cm 0 1.0cm 0;
   }
 
   /* Espaços em branco na impressão */

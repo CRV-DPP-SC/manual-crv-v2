@@ -64,6 +64,8 @@ function _mostrarTopbarVisitante() {
   const area = document.getElementById('topbar-user-area');
   if (!area) return;
   area.innerHTML = `<button class="btn-topbar-login" onclick="window._abrirModalLogin()">Entrar</button>`;
+  const btnS = document.getElementById('sidebar-btn-senha');
+  if (btnS) btnS.style.display = 'none';
 }
 
 function _iniciaisPerfil(email) {
@@ -97,6 +99,9 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const cor     = perfil?.cor   || '#64748b';
   const nome    = _nomeExibicao(user.email);
   const iniciais = _iniciaisPerfil(user.email || '');
+  const btnSenha = document.getElementById('sidebar-btn-senha');
+  if (btnSenha) btnSenha.style.display = '';
+
   area.innerHTML = `
     <div class="topbar-user-info" style="position:relative;">
       <div class="topbar-user-avatar" style="background:${cor};cursor:pointer;" title="Opções do usuário" onclick="_toggleUserMenu(event)">${iniciais}</div>

@@ -1690,7 +1690,7 @@ window.gerarPDFValidado = async function (id) {
     .stamp-table tbody td { padding: 0.3cm 1.5cm 0 1.5cm; vertical-align: top; }
     .stamp-table tfoot td { padding: 0.2cm 1.5cm 0.5cm 1.5cm; }
     @page { size: A4; margin: 2cm 1.75cm 1.3cm 2.5cm; }
-    @media print { body { margin: 0; } .ofc-cab { position:fixed;top:0;left:0;right:0;padding:0.2cm 1.75cm 0.15cm 2.5cm;background:#fff;z-index:100; } .ofc-cab img{height:36pt!important;} .ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.1cm 1.75cm 0.2cm 2.5cm;background:#fff;z-index:100;} .oficio-corpo{padding:0.2cm 0 1.0cm 0;} .lb{height:11pt!important;line-height:11pt!important;} }
+    @media print { body { margin: 0; } .ofc-cab { position:fixed;top:0;left:0;right:0;padding:0.2cm 1.75cm 0.15cm 2.5cm;background:#fff;z-index:100; } .ofc-cab img{height:36pt!important;} .ofc-rodape{position:fixed;bottom:0;left:0;right:0;padding:0.1cm 1.75cm 0.2cm 2.5cm;background:#fff;z-index:100;} .oficio-corpo{padding:1.6cm 0 1.0cm 0;} .lb{height:11pt!important;line-height:11pt!important;} }
   </style>
 </head>
 <body>
