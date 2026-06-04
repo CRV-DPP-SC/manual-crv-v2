@@ -4,1586 +4,2511 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diárias SC — SEJURI/DPP</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, onSnapshot, serverTimestamp, orderBy }
+  import { getFirestore, collection, getDocs, orderBy, query }
     from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
-    authDomain: "crv-dpp-sc.firebaseapp.com",
-    projectId: "crv-dpp-sc",
-    storageBucket: "crv-dpp-sc.firebasestorage.app",
-    messagingSenderId: "707080008192",
-    appId: "1:707080008192:web:64f44c65629c0fc5941ee5"
+  const cfg = {
+    apiKey:"AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
+    authDomain:"crv-dpp-sc.firebaseapp.com",
+    projectId:"crv-dpp-sc",
+    storageBucket:"crv-dpp-sc.firebasestorage.app",
+    messagingSenderId:"707080008192",
+    appId:"1:707080008192:web:64f44c65629c0fc5941ee5"
   };
+  const app = getApps().length ? getApps()[0] : initializeApp(cfg);
+  const db  = getFirestore(app);
 
-  // Reutiliza app já inicializado se existir (evita conflito)
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getFirestore(app);
-
-  // Monitora sessão — mostra aviso se não estiver logado
-  onAuthStateChanged(auth, user => {
-    const aviso = document.getElementById('aviso-login');
-    if (!user && aviso) aviso.style.display = 'block';
-    // Inicia escuta dos servidores independente do login
-    // (funciona porque as regras permitem leitura com write:true/read:true
-    //  ou quando o usuário está autenticado via sessão compartilhada)
-    if (typeof window._iniciarEscutaServidores === 'function')
-      window._iniciarEscutaServidores();
-  });
-
-  // ── DIÁRIAS ──────────────────────────────────────────────────
-  window._saveToFirebase = async function(dados) {
+  window._syncServidoresFirebase = async function() {
     try {
-      const docRef = await addDoc(collection(db, "diarias"), {
-        ...dados, criadoEm: serverTimestamp()
-      });
-      return { ok: true, id: docRef.id };
-    } catch(e) { return { ok: false, erro: e.message }; }
-  };
-
-  window._consultarDiariasDoMes = async function(matricula) {
-    try {
-      const agora = new Date();
-      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-      const fimMes   = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59);
-      const q = query(
-        collection(db, "diarias"),
-        where("srv.matricula", "==", matricula),
-        where("tipo", "==", "requerimento")
-      );
+      const q    = query(collection(db,"servidores"), orderBy("nome"));
       const snap = await getDocs(q);
-      let total = 0;
-      snap.forEach(d => {
-        const ts = d.data().criadoEm?.toDate?.();
-        if (ts && ts >= inicioMes && ts <= fimMes)
-          total += parseFloat(d.data().totalDiarias || 0);
-      });
-      return { ok: true, total };
-    } catch(e) { return { ok: false, erro: e.message }; }
-  };
-
-  // ── SERVIDORES — CRUD ────────────────────────────────────────
-  window._iniciarEscutaServidores = function() {
-    const q = query(collection(db, "servidores"), orderBy("nome"));
-    onSnapshot(q, snap => {
       const lista = [];
       snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
-      window._servidoresCache = lista;
-      if (typeof window._onServidoresAtualizado === 'function')
-        window._onServidoresAtualizado(lista);
-    }, err => console.error("Erro ao escutar servidores:", err));
-  };
-
-  window._salvarServidor = async function(dados, id = null) {
-    try {
-      if (id) {
-        await updateDoc(doc(db, "servidores", id), dados);
-        return { ok: true, id };
-      } else {
-        const ref = await addDoc(collection(db, "servidores"),
-          { ...dados, criadoEm: serverTimestamp() });
-        return { ok: true, id: ref.id };
-      }
-    } catch(e) { return { ok: false, erro: e.message }; }
-  };
-
-  window._excluirServidor = async function(id) {
-    try {
-      await deleteDoc(doc(db, "servidores", id));
-      return { ok: true };
-    } catch(e) { return { ok: false, erro: e.message }; }
+      if (!lista.length) return { ok:false, msg:'Nenhum servidor encontrado no Firebase.' };
+      localStorage.setItem('diarias_v2_servidores', JSON.stringify(lista));
+      return { ok:true, total: lista.length };
+    } catch(e) {
+      return { ok:false, msg: e.message };
+    }
   };
 </script>
 
 <style>
+/* ── RESET + TOKENS ──────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --verde:#0F6E56;--verde-claro:#E1F5EE;--verde-medio:#1D9E75;--verde-escuro:#085041;
-  --texto:#1a1a1a;--texto-sec:#555;--borda:#d0d0cc;--fundo:#f7f6f2;--branco:#fff;
-  --acento:#BA7517;--acento-claro:#FAEEDA;--erro:#A32D2D;--erro-claro:#FCEBEB;
-  --aviso:#854F0B;--aviso-claro:#FAEEDA;
-  --sucesso:#3B6D11;--sucesso-claro:#EAF3DE;
-  --raio:10px;--raio-lg:16px;--fonte:'Sora',sans-serif;--mono:'IBM Plex Mono',monospace;
+  /* Paleta azul — idêntica ao Gerador de Despachos */
+  --pri:#0d2b55;--pri2:#174b8a;--pri3:#2563b0;
+  --pri-bg:#eff6ff;--pri-bd:#93c5fd;
+  --cinza:#f1f5f9;--borda:#cbd5e1;--branco:#fff;
+  --texto:#0f172a;--texto2:#475569;
+  --acento:#92400e;--acento-bg:#fffbeb;--acento-bd:#fcd34d;
+  --erro:#991b1b;--erro-bg:#fef2f2;--erro-bd:#fca5a5;
+  --ok:#166534;--ok-bg:#f0fdf4;--ok-bd:#86efac;
+  --r:10px;--rlg:14px;
+  --fonte:'Sora',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --sombra:0 1px 4px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
 }
-body{font-family:var(--fonte);background:var(--fundo);color:var(--texto);min-height:100vh;}
+html,body{height:100%;font-family:var(--fonte);background:var(--cinza);color:var(--texto);font-size:14px;}
 
-header{background:var(--verde-escuro);padding:1.25rem 2rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.25);}
-.brasao{width:48px;height:48px;background:rgba(255,255,255,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
-header h1{font-size:1rem;font-weight:600;color:#fff;line-height:1.3;}
-header p{font-size:0.72rem;color:rgba(255,255,255,0.65);margin-top:2px;font-family:var(--mono);letter-spacing:0.04em;}
-.header-badge{margin-left:auto;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:0.7rem;font-family:var(--mono);padding:4px 10px;border-radius:20px;white-space:nowrap;}
-
-.abas{background:var(--branco);border-bottom:1px solid var(--borda);display:flex;padding:0 2rem;gap:0;overflow-x:auto;}
-.aba-btn{padding:0.9rem 1.5rem;font-family:var(--fonte);font-size:0.82rem;font-weight:500;color:var(--texto-sec);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;}
-.aba-btn:hover{color:var(--verde);}
-.aba-btn.ativa{color:var(--verde);border-bottom-color:var(--verde-medio);}
-.aba-tag{display:inline-block;background:var(--verde-claro);color:var(--verde-escuro);font-size:0.65rem;font-family:var(--mono);padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;}
-
-.container{max-width:880px;margin:0 auto;padding:2rem 1.5rem 4rem;}
-.painel{display:none;}
-.painel.ativo{display:block;animation:fadeIn 0.25s ease;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-
-.secao{background:var(--branco);border:1px solid var(--borda);border-radius:var(--raio-lg);padding:1.5rem;margin-bottom:1.25rem;}
-.secao-titulo{font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:1px solid var(--verde-claro);display:flex;align-items:center;gap:8px;}
-.secao-titulo::before{content:'';width:3px;height:14px;background:var(--verde-medio);border-radius:2px;display:inline-block;}
-
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
-.campo{display:flex;flex-direction:column;gap:5px;}
-label{font-size:0.72rem;font-weight:500;color:var(--texto-sec);letter-spacing:0.02em;}
-label .obrig{color:var(--acento);}
-
-input[type="text"],input[type="email"],input[type="date"],input[type="time"],input[type="number"],select,textarea{
-  font-family:var(--fonte);font-size:0.85rem;color:var(--texto);background:var(--fundo);
-  border:1px solid var(--borda);border-radius:var(--raio);padding:0.55rem 0.75rem;
-  transition:border-color 0.2s,background 0.2s;width:100%;
+/* ── HEADER ──────────────────────────────────────────────────── */
+.topo{
+  background:linear-gradient(135deg,var(--pri),var(--pri2));
+  color:#fff;padding:0 24px;
+  display:flex;align-items:center;gap:14px;
+  height:56px;position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);
+  flex-shrink:0;
 }
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde-medio);background:var(--branco);box-shadow:0 0 0 3px rgba(29,158,117,0.12);}
-textarea{resize:vertical;min-height:80px;}
+.topo-brasao{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.topo-info h1{font-size:.88rem;font-weight:700;line-height:1.2;}
+.topo-info p{font-size:.65rem;opacity:.65;font-family:var(--mono);margin-top:1px;}
+.topo-badge{
+  margin-left:auto;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);
+  color:#fff;font-size:.64rem;font-family:var(--mono);
+  padding:3px 10px;border-radius:20px;white-space:nowrap;
+}
+.topo-badge.teste{background:#B45309;border-color:#D97706;}
 
-/* Card do servidor */
-.servidor-card{background:var(--verde-claro);border:1px solid #9FE1CB;border-radius:var(--raio-lg);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none;}
-.servidor-card.visivel{display:block;animation:fadeIn 0.2s ease;}
-.servidor-nome{font-size:1.1rem;font-weight:600;color:var(--verde-escuro);margin-bottom:0.5rem;}
-.servidor-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:0.5rem 1.5rem;}
-.servidor-info-item{display:flex;flex-direction:column;gap:1px;}
-.srv-label{font-size:0.67rem;color:var(--verde);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;}
-.srv-val{font-size:0.82rem;color:var(--verde-escuro);font-weight:500;}
+/* ── ABAS PRINCIPAIS ─────────────────────────────────────────── */
+.abas-principais{
+  background:var(--branco);
+  border-bottom:1px solid var(--borda);
+  display:flex;padding:0 24px;gap:0;
+  flex-shrink:0;
+}
+.aba-main{
+  padding:.7rem 1.25rem;
+  font-family:var(--fonte);font-size:.8rem;font-weight:500;
+  color:var(--texto2);border:none;background:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .18s;
+  white-space:nowrap;
+}
+.aba-main:hover{color:var(--pri2);}
+.aba-main.ativa{color:var(--pri2);border-bottom-color:var(--pri3);}
 
-/* Badge contador diárias */
-.badge-diarias{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;font-family:var(--mono);margin-top:0.6rem;}
-.badge-ok{background:var(--sucesso-claro);color:var(--sucesso);border:1px solid #C0DD97;}
-.badge-aviso{background:#FAEEDA;color:#633806;border:1px solid #FAC775;}
-.badge-erro{background:var(--erro-claro);color:var(--erro);border:1px solid #F7C1C1;}
+/* ── CONTEÚDO PRINCIPAL ──────────────────────────────────────── */
+#app{flex:1;display:flex;flex-direction:column;min-height:0;}
+
+/* ── VIEW: LISTA DE VIAGENS ──────────────────────────────────── */
+#view-lista{padding:24px;max-width:960px;margin:0 auto;width:100%;}
+
+.lista-header{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;margin-bottom:20px;
+}
+.lista-titulo{font-size:1rem;font-weight:700;color:var(--pri);}
+.lista-sub{font-size:.75rem;color:var(--texto2);margin-top:2px;}
+
+/* Filtros */
+.filtros{
+  display:flex;gap:8px;flex-wrap:wrap;
+  background:var(--branco);border:1px solid var(--borda);
+  border-radius:var(--r);padding:10px 14px;
+  margin-bottom:16px;align-items:center;
+}
+.filtros label{font-size:.72rem;color:var(--texto2);font-family:var(--mono);font-weight:500;}
+.filtro-sel{
+  font-family:var(--fonte);font-size:.78rem;
+  border:1px solid var(--borda);border-radius:6px;
+  padding:4px 8px;background:var(--cinza);color:var(--texto);cursor:pointer;
+}
+.filtro-sep{width:1px;height:20px;background:var(--borda);margin:0 4px;}
+.pills-status{display:flex;gap:6px;flex-wrap:wrap;}
+.pill-status{
+  padding:3px 12px;border-radius:20px;font-size:.72rem;font-weight:600;
+  border:1.5px solid var(--borda);background:var(--cinza);color:var(--texto2);
+  cursor:pointer;transition:all .15s;font-family:var(--mono);
+}
+.pill-status.ativa{background:var(--pri-bg);border-color:var(--pri-bd);color:var(--pri);}
+
+/* Cards de viagem */
+.viagens-grid{display:flex;flex-direction:column;gap:10px;}
+.viagem-card{
+  background:var(--branco);border:1px solid var(--borda);
+  border-radius:var(--rlg);padding:16px 18px;
+  display:flex;align-items:center;gap:16px;
+  transition:box-shadow .18s,border-color .18s;
+  cursor:pointer;
+}
+.viagem-card:hover{box-shadow:var(--sombra);border-color:var(--pri-bd);}
+.viagem-card-avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--pri-bg);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.85rem;color:var(--pri);
+  flex-shrink:0;
+}
+.viagem-card-info{flex:1;min-width:0;}
+.viagem-card-nome{font-weight:600;font-size:.88rem;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.viagem-card-det{font-size:.75rem;color:var(--texto2);margin-top:3px;}
+.viagem-card-val{
+  font-family:var(--mono);font-size:.82rem;font-weight:600;
+  color:var(--pri);text-align:right;flex-shrink:0;
+}
+.viagem-card-val small{display:block;font-size:.68rem;color:var(--texto2);font-weight:400;}
+.viagem-card-acoes{display:flex;gap:6px;flex-shrink:0;}
+
+/* Badges de status */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 10px;border-radius:20px;
+  font-size:.65rem;font-weight:700;font-family:var(--mono);
+  white-space:nowrap;
+}
+.badge-rascunho{background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;}
+.badge-requerido{background:var(--acento-bg);color:var(--acento);border:1px solid var(--acento-bd);}
+.badge-prestado{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-bd);}
+.badge-cancelado{background:var(--erro-bg);color:var(--erro);border:1px solid var(--erro-bd);}
+
+/* Vazio */
+.lista-vazia{
+  text-align:center;padding:48px 24px;
+  color:var(--texto2);
+}
+.lista-vazia .icon{font-size:2.5rem;margin-bottom:12px;}
+.lista-vazia p{font-size:.85rem;}
+
+/* ── VIEW: FORMULÁRIO (DOIS PAINÉIS) ─────────────────────────── */
+#view-form{
+  display:none;
+  flex:1;
+  overflow:hidden;
+}
+#view-form.ativo{
+  display:grid;
+  grid-template-columns:400px 1fr;
+  height:calc(100vh - 56px - 41px);
+}
+
+/* Barra de contexto */
+.form-topbar{
+  grid-column:1/-1;
+  background:var(--branco);border-bottom:1px solid var(--borda);
+  padding:10px 20px;display:flex;align-items:center;gap:12px;
+  flex-wrap:wrap;
+}
+.form-topbar-titulo{font-size:.88rem;font-weight:600;color:var(--pri);}
+.form-topbar-srv{font-size:.78rem;color:var(--texto2);}
+.form-topbar-acoes{margin-left:auto;display:flex;gap:8px;}
+
+/* Painel esquerdo — formulário */
+.fp{
+  background:var(--branco);
+  border-right:1px solid var(--borda);
+  overflow-y:auto;
+  padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+
+/* Seções do formulário */
+.sec{
+  border:1.5px solid var(--borda);border-radius:var(--r);
+  overflow:hidden;flex-shrink:0;
+}
+.sec.bloqueada{opacity:.45;pointer-events:none;}
+.sec-head{
+  background:var(--cinza);padding:8px 13px;
+  font-size:.68rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--pri);
+  border-bottom:1px solid var(--borda);
+  display:flex;align-items:center;gap:8px;
+  cursor:pointer;user-select:none;
+}
+.sec-num{
+  width:18px;height:18px;background:var(--pri);color:#fff;
+  border-radius:50%;font-size:.62rem;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;flex-shrink:0;
+}
+.sec-chevron{margin-left:auto;font-size:.7rem;transition:transform .2s;}
+.sec.fechada .sec-chevron{transform:rotate(-90deg);}
+.sec.fechada .sec-body{display:none;}
+.sec-body{padding:12px;display:flex;flex-direction:column;gap:8px;}
+
+/* Campos */
+.campo{display:flex;flex-direction:column;gap:4px;}
+.campo label{font-size:.7rem;font-weight:600;color:var(--texto2);letter-spacing:.02em;}
+.campo label .obrig{color:var(--acento);}
+.inp,.sel,.ta{
+  font-family:var(--fonte);font-size:.82rem;color:var(--texto);
+  background:var(--cinza);border:1.5px solid var(--borda);
+  border-radius:8px;padding:7px 10px;width:100%;
+  transition:border-color .18s,background .18s;
+}
+.inp:focus,.sel:focus,.ta:focus{
+  outline:none;border-color:var(--pri3);
+  background:var(--branco);box-shadow:0 0 0 3px rgba(29,158,117,.1);
+}
+.ta{resize:vertical;min-height:80px;line-height:1.6;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+/* Card servidor */
+.srv-card{
+  background:var(--pri-bg);border:1px solid var(--pri-bd);
+  border-radius:var(--r);padding:12px 14px;
+  display:none;
+}
+.srv-card.vis{display:block;}
+.srv-nome{font-size:.92rem;font-weight:700;color:var(--pri);margin-bottom:6px;}
+.srv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:4px 16px;}
+.srv-item .srv-label{font-size:.63rem;color:var(--pri2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;}
+.srv-item .srv-val{font-size:.78rem;color:var(--pri);font-weight:500;}
+
+/* Badge diárias */
+.badge-mes{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;
+  font-size:.72rem;font-weight:600;font-family:var(--mono);
+  margin-top:8px;
+}
+.badge-mes.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-bd);}
+.badge-mes.aviso{background:var(--acento-bg);color:var(--acento);border:1px solid var(--acento-bd);}
+.badge-mes.erro{background:var(--erro-bg);color:var(--erro);border:1px solid var(--erro-bd);}
+
+/* Radio pills */
+.radio-group{display:flex;flex-direction:column;gap:5px;}
+.radio-group.h{flex-direction:row;flex-wrap:wrap;}
+.ri{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 11px;border:1.5px solid var(--borda);
+  border-radius:8px;cursor:pointer;
+  transition:all .13s;user-select:none;background:var(--branco);
+  font-size:.82rem;
+}
+.ri:hover{border-color:var(--pri3);background:var(--pri-bg);}
+.ri.sel{border-color:var(--pri3);background:var(--pri-bg);font-weight:500;}
+.rd{
+  width:14px;height:14px;border:2px solid var(--borda);border-radius:50%;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:border-color .13s;
+}
+.ri.sel .rd{border-color:var(--pri3);}
+.rdi{width:6px;height:6px;border-radius:50%;background:var(--pri3);display:none;}
+.ri.sel .rdi{display:block;}
 
 /* Tabela deslocamentos */
 .tabela-wrap{overflow-x:auto;}
-table.desloc{width:100%;border-collapse:collapse;font-size:0.8rem;min-width:700px;}
-table.desloc th{background:var(--fundo);color:var(--texto-sec);font-size:0.65rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;padding:0.5rem 0.5rem;border-bottom:1px solid var(--borda);text-align:left;white-space:nowrap;}
-table.desloc td{padding:0.35rem 0.4rem;border-bottom:1px solid #eee;vertical-align:middle;}
+table.desloc{width:100%;border-collapse:collapse;font-size:.76rem;min-width:560px;}
+table.desloc th{
+  background:var(--cinza);color:var(--texto2);
+  font-size:.62rem;font-family:var(--mono);text-transform:uppercase;
+  letter-spacing:.05em;font-weight:700;
+  padding:5px 6px;border-bottom:1px solid var(--borda);text-align:left;
+}
+table.desloc td{padding:3px 4px;border-bottom:1px solid #eee;vertical-align:middle;}
 table.desloc tr:last-child td{border-bottom:none;}
-table.desloc input,table.desloc select{padding:0.3rem 0.45rem;font-size:0.79rem;border-radius:6px;}
+table.desloc input,table.desloc select{
+  padding:4px 6px;font-size:.76rem;border-radius:6px;
+  border:1.5px solid var(--borda);background:var(--cinza);
+  font-family:var(--fonte);width:100%;
+}
+table.desloc input:focus,table.desloc select:focus{
+  outline:none;border-color:var(--pri3);background:var(--branco);
+}
+.btn-rem{
+  background:var(--erro-bg);border:1px solid var(--erro-bd);
+  color:var(--erro);border-radius:5px;padding:2px 6px;
+  font-size:.68rem;cursor:pointer;font-family:var(--fonte);
+}
 
-.btn-add-linha,.btn-rem-linha{font-family:var(--fonte);font-size:0.75rem;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid;cursor:pointer;transition:all 0.15s;}
-.btn-add-linha{background:var(--verde-claro);border-color:#9FE1CB;color:var(--verde-escuro);margin-top:0.75rem;}
-.btn-add-linha:hover{background:#9FE1CB;}
-.btn-rem-linha{background:var(--erro-claro);border-color:#F7C1C1;color:var(--erro);font-size:0.7rem;padding:0.25rem 0.5rem;}
+/* Painel de cálculo */
+.calc-box{
+  background:var(--ok-bg);border:1px solid var(--ok-bd);
+  border-radius:var(--r);padding:12px;
+}
+.calc-titulo{
+  font-size:.65rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--ok);font-family:var(--mono);
+  margin-bottom:8px;
+}
+.calc-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.calc-card{
+  background:var(--branco);border:1px solid var(--borda);
+  border-radius:8px;padding:8px;text-align:center;
+}
+.calc-card.dest{border-color:var(--pri3);background:var(--pri-bg);}
+.calc-card .cc-label{font-size:.6rem;color:var(--texto2);font-family:var(--mono);text-transform:uppercase;margin-bottom:3px;}
+.calc-card .cc-val{font-size:1rem;font-weight:700;color:var(--pri);font-family:var(--mono);}
+.calc-detalhe{font-size:.72rem;color:var(--ok);line-height:1.6;}
 
-/* Painel de cálculo automático */
-.calc-auto{background:#f0faf6;border:1px solid #9FE1CB;border-radius:var(--raio-lg);padding:1.25rem;margin-top:1rem;}
-.calc-auto-titulo{font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;display:flex;align-items:center;gap:6px;}
-.calc-auto-titulo::before{content:'⚡';font-size:0.85rem;}
+/* ── PAINEL DIREITO — DOCUMENTO ──────────────────────────────── */
+.dp{
+  background:#e8eaed;
+  overflow-y:auto;
+  padding:16px;
+  display:flex;flex-direction:column;gap:12px;
+}
 
-.resumo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.75rem;margin-bottom:1rem;}
-.resumo-card{background:var(--branco);border:1px solid var(--borda);border-radius:var(--raio);padding:0.75rem 1rem;text-align:center;}
-.resumo-card .rc-label{font-size:0.65rem;color:var(--texto-sec);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
-.resumo-card .rc-val{font-size:1.15rem;font-weight:600;color:var(--verde-escuro);font-family:var(--mono);}
-.resumo-card .rc-sub{font-size:0.7rem;color:var(--texto-sec);margin-top:2px;}
-.resumo-card.destaque{border-color:var(--verde-medio);background:var(--verde-claro);}
-.resumo-card.destaque .rc-val{color:var(--verde);}
+/* Barra de ações do documento */
+.doc-acoes{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  background:var(--branco);border:1px solid var(--borda);
+  border-radius:var(--r);padding:10px 14px;
+  position:sticky;top:0;z-index:10;
+}
+.doc-toggle{
+  display:flex;gap:0;border:1.5px solid var(--borda);border-radius:8px;overflow:hidden;
+  margin-right:4px;
+}
+.doc-toggle button{
+  padding:5px 12px;font-size:.76rem;font-weight:600;
+  border:none;background:var(--cinza);color:var(--texto2);
+  cursor:pointer;font-family:var(--mono);transition:all .15s;
+}
+.doc-toggle button.ativo{background:var(--pri);color:#fff;}
+.doc-acoes-sep{width:1px;height:22px;background:var(--borda);}
+.doc-status{margin-left:auto;}
 
-.detalhe-linha{display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid #e8f5ee;font-size:0.8rem;}
-.detalhe-linha:last-child{border-bottom:none;}
-.detalhe-linha .dl-tag{font-family:var(--mono);font-size:0.7rem;padding:2px 8px;border-radius:4px;font-weight:600;}
-.tag-inteira{background:#C0DD97;color:var(--sucesso);}
-.tag-meia{background:#FAEEDA;color:var(--acento);}
-.tag-pernoite{background:#B5D4F4;color:#0C447C;}
-.tag-sem{background:#F7C1C1;color:var(--erro);}
+/* Card do documento */
+.doc-card{
+  background:var(--branco);border-radius:var(--rlg);
+  box-shadow:0 2px 12px rgba(0,0,0,.1);
+  overflow:hidden;
+}
+.doc-card-head{
+  padding:12px 16px;border-bottom:1px solid var(--borda);
+  display:flex;align-items:center;gap:10px;
+}
+.doc-card-subtit{font-size:.75rem;color:var(--texto2);font-weight:500;}
 
-.prazo-box{background:var(--acento-claro);border:1px solid #FAC775;border-radius:var(--raio);padding:0.6rem 1rem;font-size:0.78rem;color:#633806;margin-top:0.75rem;display:none;}
-.prazo-box.visivel{display:block;}
+/* Preview do documento (simulação A4) */
+.doc-preview{
+  padding:20px 24px;
+  font-size:7.5pt;
+  font-family:'Times New Roman',serif;
+  color:#000;
+  line-height:1.4;
+  min-height:400px;
+}
+.doc-preview.vazio{
+  font-family:var(--fonte);font-size:.82rem;color:var(--texto2);
+  display:flex;align-items:center;justify-content:center;
+  min-height:300px;text-align:center;
+}
 
-/* Checkboxes */
-.checkboxes{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.25rem;}
-.check-pill{display:flex;align-items:center;gap:5px;background:var(--fundo);border:1px solid var(--borda);border-radius:20px;padding:4px 12px;font-size:0.75rem;cursor:pointer;transition:all 0.15s;user-select:none;}
-.check-pill:has(input:checked){background:var(--verde-claro);border-color:#9FE1CB;color:var(--verde-escuro);font-weight:500;}
-.check-pill input[type="checkbox"]{width:13px;height:13px;accent-color:var(--verde);cursor:pointer;}
+/* Elementos internos do documento */
+.doc-cabecalho{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:6px;border-bottom:1.5px solid #000;}
+.doc-cab-sc{width:30px;height:30px;border-radius:50%;background:#aaa;display:flex;align-items:center;justify-content:center;font-size:8pt;font-weight:700;color:#fff;}
+.doc-cab-titulo{font-size:10pt;font-weight:700;text-align:right;}
+.doc-section{margin-bottom:6px;}
+.doc-sec-title{background:#e0e0e0;padding:3px 6px;font-weight:700;font-size:7pt;margin-bottom:0;text-transform:uppercase;}
+.doc-sec-sub{background:#efefef;padding:2px 6px;font-size:6.5pt;font-weight:700;text-align:center;text-transform:uppercase;border-bottom:1px solid #ccc;}
+.doc-row{display:flex;border:1px solid #999;border-top:none;}
+.doc-row:first-of-type{border-top:1px solid #999;}
+.doc-cell{border-right:1px solid #999;padding:3px 5px;flex:1;}
+.doc-cell:last-child{border-right:none;}
+.doc-cell .dc-label{font-size:5.5pt;font-weight:700;color:#333;text-transform:uppercase;display:block;margin-bottom:1px;}
+.doc-cell .dc-val{font-size:7.5pt;}
+.doc-table{width:100%;border-collapse:collapse;margin-top:0;}
+.doc-table th{background:#eee;font-size:5.5pt;padding:3px 4px;border:1px solid #999;text-transform:uppercase;text-align:left;}
+.doc-table td{font-size:7pt;padding:3px 4px;border:1px solid #999;}
+.doc-nota{font-size:.65rem;color:var(--texto2);font-style:italic;padding:8px 16px 12px;border-top:1px solid var(--borda);}
 
-/* Botões */
-.acoes{display:flex;gap:1rem;margin-top:2rem;flex-wrap:wrap;}
-.btn-primario,.btn-sec{font-family:var(--fonte);font-size:0.85rem;font-weight:500;padding:0.75rem 1.5rem;border-radius:var(--raio);cursor:pointer;border:none;transition:all 0.2s;display:flex;align-items:center;gap:8px;}
-.btn-primario{background:var(--verde);color:#fff;}
-.btn-primario:hover{background:var(--verde-escuro);transform:translateY(-1px);}
-.btn-primario:disabled{background:#aaa;cursor:not-allowed;transform:none;}
+/* ── VIEW: SERVIDORES ────────────────────────────────────────── */
+#view-servidores{display:none;padding:24px;max-width:960px;margin:0 auto;width:100%;}
+#view-servidores.ativo{display:block;}
+
+.srv-lista{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+.srv-list-card{
+  background:var(--branco);border:1px solid var(--borda);
+  border-radius:var(--rlg);padding:14px 16px;
+  display:flex;align-items:center;gap:14px;
+}
+.srv-list-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--pri-bg);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.8rem;color:var(--pri);flex-shrink:0;
+}
+.srv-list-info{flex:1;min-width:0;}
+.srv-list-nome{font-weight:600;font-size:.86rem;}
+.srv-list-det{font-size:.73rem;color:var(--texto2);margin-top:2px;}
+.srv-list-acoes{display:flex;gap:6px;flex-shrink:0;}
+
+/* ── MODAL ───────────────────────────────────────────────────── */
+.modal-bg{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.55);z-index:9000;
+  align-items:center;justify-content:center;padding:16px;
+}
+.modal-bg.vis{display:flex;}
+.modal{
+  background:var(--branco);border-radius:var(--rlg);
+  width:100%;max-width:600px;max-height:90vh;
+  overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);
+}
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--borda);
+  position:sticky;top:0;background:var(--branco);z-index:1;
+}
+.modal-head h3{font-size:.92rem;font-weight:700;color:var(--pri);}
+.modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--texto2);}
+.modal-body{padding:18px;display:flex;flex-direction:column;gap:10px;}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--borda);display:flex;gap:8px;justify-content:flex-end;}
+.modal-sec-titulo{
+  font-size:.65rem;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--pri2);
+  font-family:var(--mono);margin-top:4px;padding-bottom:4px;
+  border-bottom:1px solid var(--pri-bg);
+}
+.modal-erro{
+  background:var(--erro-bg);border:1px solid var(--erro-bd);
+  border-radius:var(--r);padding:8px 12px;
+  font-size:.78rem;color:var(--erro);display:none;
+}
+
+/* ── BOTÕES ──────────────────────────────────────────────────── */
+.btn{
+  font-family:var(--fonte);font-size:.8rem;font-weight:600;
+  padding:7px 16px;border-radius:8px;cursor:pointer;border:none;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:all .18s;white-space:nowrap;
+}
+.btn-pri{background:var(--pri2);color:#fff;}
+.btn-pri:hover{background:var(--pri);transform:translateY(-1px);}
+.btn-pri:disabled{background:#aaa;cursor:not-allowed;transform:none;}
 .btn-sec{background:var(--branco);color:var(--texto);border:1px solid var(--borda);}
-.btn-sec:hover{background:var(--fundo);}
+.btn-sec:hover{background:var(--cinza);}
+.btn-danger{background:var(--erro-bg);color:var(--erro);border:1px solid var(--erro-bd);}
+.btn-danger:hover{background:#fca5a5;color:#7f1d1d;}
+.btn-sm{padding:4px 10px;font-size:.72rem;}
+.btn-add{
+  background:var(--pri-bg);border:1px solid var(--pri-bd);
+  color:var(--pri);font-size:.75rem;border-radius:6px;
+  padding:5px 12px;cursor:pointer;font-family:var(--fonte);
+  font-weight:600;margin-top:6px;transition:all .15s;
+}
+.btn-add:hover{background:var(--pri-bd);}
 
-/* Alertas */
-.alerta{border-radius:var(--raio);padding:0.75rem 1rem;font-size:0.78rem;margin-bottom:1rem;line-height:1.5;}
-.alerta-info{background:var(--acento-claro);border:1px solid #FAC775;color:#633806;}
-.alerta-erro{background:var(--erro-claro);border:1px solid #F7C1C1;color:var(--erro);}
-.alerta-ok{background:var(--sucesso-claro);border:1px solid #C0DD97;color:var(--sucesso);}
+/* ── ALERTA ──────────────────────────────────────────────────── */
+.alerta{border-radius:var(--r);padding:9px 13px;font-size:.78rem;line-height:1.6;}
+.alerta-info{background:var(--acento-bg);border:1px solid var(--acento-bd);color:var(--acento);}
+.alerta-ok{background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok);}
+.alerta-erro{background:var(--erro-bg);border:1px solid var(--erro-bd);color:var(--erro);}
 
-/* Toast */
-#toast{position:fixed;bottom:2rem;right:2rem;background:var(--verde-escuro);color:#fff;padding:0.75rem 1.25rem;border-radius:var(--raio);font-size:0.82rem;font-weight:500;opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:9999;max-width:340px;pointer-events:none;}
+/* ── TOAST ───────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--pri);color:#fff;
+  padding:10px 18px;border-radius:var(--r);
+  font-size:.8rem;font-weight:500;
+  opacity:0;transform:translateY(8px);
+  transition:all .3s;z-index:9999;
+  max-width:320px;pointer-events:none;
+}
 #toast.show{opacity:1;transform:translateY(0);}
 #toast.erro{background:var(--erro);}
 #toast.aviso{background:var(--acento);}
 
-/* Resultado */
-.resultado-box{background:var(--sucesso-claro);border:1px solid #C0DD97;border-radius:var(--raio-lg);padding:1.25rem;margin-top:1.5rem;display:none;}
-.resultado-box.visivel{display:block;animation:fadeIn 0.3s ease;}
-.resultado-box h3{font-size:0.85rem;color:var(--sucesso);margin-bottom:0.5rem;}
-.doc-id{font-family:var(--mono);font-size:0.78rem;color:var(--sucesso);background:#C0DD97;display:inline-block;padding:3px 10px;border-radius:6px;margin-top:4px;}
+/* ── SCROLLBAR ───────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#c1c8d0;border-radius:3px;}
 
-@media(max-width:640px){
-  .grid-2,.grid-3{grid-template-columns:1fr;}
-  header{padding:1rem;}
-  .container{padding:1rem;}
+/* ── MOBILE ──────────────────────────────────────────────────── */
+@media(max-width:740px){
+  #view-form.ativo{grid-template-columns:1fr;height:auto;}
+  .dp{display:none;}
+  .dp.mob-vis{display:flex;}
+  .fp{height:auto;}
+  .calc-resumo{grid-template-columns:1fr 1fr;}
+  .btn-mob-prev{display:flex;}
 }
-</style>
-<script>(function(){var t=localStorage.getItem('crv-tema');if(t)document.documentElement.setAttribute('data-tema',t);})();window.addEventListener('message',function(e){if(e.data&&e.data.crvTema)document.documentElement.setAttribute('data-tema',e.data.crvTema);});</script>
-<style>[data-tema="escuro"] body{filter:invert(1) hue-rotate(180deg);background:#111 !important;}[data-tema="escuro"] img,[data-tema="escuro"] canvas{filter:invert(1) hue-rotate(180deg);}</style>
-</head>
-<body>
+@media(min-width:741px){.btn-mob-prev{display:none!important;}}
 
-<header>
-  <div class="brasao">🏛️</div>
-  <div>
-    <h1>Sistema de Diárias — Estado de Santa Catarina</h1>
+/* ── ANIMAÇÕES ───────────────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .22s ease;}
+</style>
+</head>
+<body style="display:flex;flex-direction:column;min-height:100vh;">
+
+<!-- ══ HEADER ══════════════════════════════════════════════════ -->
+<header class="topo">
+  <div class="topo-brasao">🏛️</div>
+  <div class="topo-info">
+    <h1>Sistema de Diárias — SC</h1>
     <p>SEJURI · Departamento de Polícia Penal · DPP</p>
   </div>
-  <span class="header-badge">MLR-41 / MLR-42 · Dec. 650/2020</span>
+  <span class="topo-badge">MLR-41 / MLR-42 · Dec. 650/2020</span>
 </header>
 
-<div class="abas">
-  <button class="aba-btn ativa" onclick="trocarAba('requerimento',this)">Requerimento <span class="aba-tag">MLR-41</span></button>
-  <button class="aba-btn" onclick="trocarAba('relatorio',this)">Relatório de Viagem <span class="aba-tag">MLR-42</span></button>
-  <button class="aba-btn" onclick="trocarAba('servidores',this)">Servidores Cadastrados</button>
-  <button class="aba-btn" onclick="trocarAba('regras',this)">Regras de Diárias</button>
-</div>
+<!-- ══ ABAS PRINCIPAIS ══════════════════════════════════════════ -->
+<nav class="abas-principais">
+  <button class="aba-main ativa" id="aba-viagens" onclick="APP.setTab('viagens')">Viagens</button>
+  <button class="aba-main" id="aba-servidores" onclick="APP.setTab('servidores')">Servidores Cadastrados</button>
+</nav>
 
-<div class="container">
+<!-- ══ APP ══════════════════════════════════════════════════════ -->
+<div id="app" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
 
-<!-- Aviso de sessão -->
-<div id="aviso-login" style="display:none;background:var(--erro-claro);border:1px solid #F7C1C1;border-radius:var(--raio);padding:0.85rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:var(--erro);">
-  ⚠️ <strong>Sessão não detectada.</strong> Acesse este sistema pelo botão <strong>Sistema de Diárias</strong> na <a href="https://crv-dpp-sc.github.io/manual/#restrito" style="color:var(--erro);font-weight:600;">Área Restrita</a> do site principal — é necessário estar logado para carregar os servidores.
-</div>
-
-<!-- ════════ ABA 1 — REQUERIMENTO MLR-41 ════════ -->
-<div id="painel-requerimento" class="painel ativo">
-
-  <div class="alerta alerta-info">
-    💡 Preencha os <strong>horários de saída e chegada</strong> de cada deslocamento — o sistema calcula as diárias automaticamente conforme o Decreto nº 1.662/2022.
-  </div>
-
-  <div class="alerta" style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--raio);padding:0.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-    <span style="font-size:0.82rem;color:#166534;">🔄 <strong>Sincronização automática:</strong> ao trocar para a aba <strong>MLR-42</strong>, os campos idênticos serão preenchidos automaticamente. Você também pode sincronizar manualmente.</span>
-    <button class="btn-sec" style="white-space:nowrap;font-size:0.8rem;padding:0.35rem 0.9rem;" onclick="sincronizarForms('r','rl');trocarAba('relatorio',document.querySelectorAll('.aba-btn')[1])">➜ Sincronizar com MLR-42</button>
-  </div>
-
-  <!-- SERVIDOR -->
-  <div class="secao">
-    <div class="secao-titulo">Servidor</div>
-    <div class="campo">
-      <label>Selecionar servidor <span class="obrig">*</span></label>
-      <select id="r-servidor" onchange="preencherServidor('r')">
-        <option value="">— Selecione o servidor —</option>
-      </select>
+  <!-- ── LISTA DE VIAGENS ────────────────────────────────────── -->
+  <div id="view-lista">
+    <div class="lista-header">
+      <div>
+        <div class="lista-titulo">📋 Viagens</div>
+        <div class="lista-sub" id="lista-contagem">Carregando...</div>
+      </div>
+      <button class="btn btn-pri" onclick="APP.novaViagem()">+ Nova Viagem</button>
     </div>
-  </div>
 
-  <div class="servidor-card" id="r-card-servidor">
-    <div class="servidor-nome" id="r-srv-nome"></div>
-    <div class="servidor-info-grid">
-      <div class="servidor-info-item"><span class="srv-label">CPF</span><span class="srv-val" id="r-srv-cpf"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Matrícula</span><span class="srv-val" id="r-srv-mat"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Cargo</span><span class="srv-val" id="r-srv-cargo"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Lotação</span><span class="srv-val" id="r-srv-lot"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Banco</span><span class="srv-val" id="r-srv-banco"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Agência / Conta</span><span class="srv-val" id="r-srv-conta"></span></div>
-    </div>
-    <div id="r-badge-diarias"></div>
-  </div>
-
-  <!-- DADOS FUNCIONAIS -->
-  <div class="secao">
-    <div class="secao-titulo">Dados Funcionais</div>
-    <div class="grid-2">
-      <div class="campo"><label>Órgão / Entidade</label><input type="text" id="r-orgao" list="lista-orgaos-r" value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"><datalist id="lista-orgaos-r"><option value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"></datalist></div>
-      <div class="campo"><label>Sigla do Local de Trabalho</label><input type="text" id="r-sigla" value="DPP"></div>
-      <div class="campo"><label>Nome Social (se diferente)</label><input type="text" id="r-nome-social" placeholder="Deixe em branco se igual ao nome civil"></div>
-      <div class="campo"><label>Município do Local de Trabalho</label><select id="r-municipio"></select></div>
-      <div class="campo"><label>E-mail</label><input type="email" id="r-email" placeholder="servidor@sc.gov.br"></div>
-      <div class="campo"><label>Celular</label><input type="text" id="r-celular" placeholder="(47) 99999-9999"></div>
-      <div class="campo"><label>Competência (uso exclusivo SES)</label><input type="text" id="r-competencia" placeholder="Ex.: MÉDICO"></div>
-      <div class="campo"><label>Local e Data</label><input type="text" id="r-local-data" placeholder="FLORIANÓPOLIS, 10/04/2026"></div>
-    </div>
-    <div style="margin-top:1rem;">
-      <label style="display:block;margin-bottom:0.4rem;">Código/Nível do Cargo (para não efetivos)</label>
-      <div class="checkboxes" id="r-codigos-cargo">
-        <label class="check-pill"><input type="checkbox" value="DGS-1"> DGS-1</label>
-        <label class="check-pill"><input type="checkbox" value="DGS-2"> DGS-2</label>
-        <label class="check-pill"><input type="checkbox" value="DGS-3"> DGS-3</label>
-        <label class="check-pill"><input type="checkbox" value="FTG-1"> FTG-1</label>
-        <label class="check-pill"><input type="checkbox" value="FTG-2"> FTG-2</label>
-        <label class="check-pill"><input type="checkbox" value="FTG-3"> FTG-3</label>
-        <label class="check-pill"><input type="checkbox" value="FG-1"> FG-1</label>
-        <label class="check-pill"><input type="checkbox" value="FG-2"> FG-2</label>
-        <label class="check-pill"><input type="checkbox" value="FG-3"> FG-3</label>
-        <label class="check-pill"><input type="checkbox" value="DGI-1"> DGI-1 (Codificado)</label>
-        <label class="check-pill"><input type="checkbox" value="ADM-SUP-3"> ADM. SUPERIOR-3</label>
-        <label class="check-pill"><input type="checkbox" value="ADM-SUP-8"> ADM. SUPERIOR-8</label>
+    <!-- Filtros -->
+    <div class="filtros">
+      <label>Período:</label>
+      <select class="filtro-sel" id="filtro-ano" onchange="APP.renderLista()"></select>
+      <select class="filtro-sel" id="filtro-mes" onchange="APP.renderLista()"></select>
+      <div class="filtro-sep"></div>
+      <label>Status:</label>
+      <div class="pills-status" id="pills-status">
+        <span class="pill-status ativa" data-v="todos" onclick="APP.setFiltroStatus('todos',this)">Todos</span>
+        <span class="pill-status" data-v="rascunho" onclick="APP.setFiltroStatus('rascunho',this)">Rascunho</span>
       </div>
     </div>
+
+    <!-- Lista -->
+    <div class="viagens-grid" id="viagens-grid"></div>
   </div>
 
-  <!-- DESLOCAMENTOS -->
-  <div class="secao">
-    <div class="secao-titulo">Deslocamentos</div>
-    <div class="tabela-wrap">
-      <table class="desloc">
-        <thead><tr>
-          <th>Data</th><th>Origem</th><th>Destino</th>
-          <th>Saída</th><th>Chegada</th><th>Transporte</th><th></th>
-        </tr></thead>
-        <tbody id="r-linhas-desloc"></tbody>
-      </table>
-    </div>
-    <button class="btn-add-linha" onclick="adicionarLinha('r')">+ Adicionar deslocamento</button>
+  <!-- ── FORMULÁRIO (DOIS PAINÉIS) ───────────────────────────── -->
+  <div id="view-form">
 
-    <!-- PAINEL DE CÁLCULO AUTOMÁTICO -->
-    <div class="calc-auto" id="r-calc-auto" style="display:none;">
-      <div class="calc-auto-titulo">Cálculo Automático — Decreto nº 1.662/2022</div>
-      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
-        <label>Grupo do Cargo (Anexo Único Dec. 650/2020)</label>
-        <select id="r-grupo-cargo" onchange="recalcular('r')">
-          <option value="1">1º Grupo</option>
-          <option value="2">2º Grupo</option>
-          <option value="3">3º Grupo</option>
-        </select>
+    <!-- Topbar do formulário -->
+    <div class="form-topbar" style="grid-column:1/-1;">
+      <button class="btn btn-sec btn-sm" onclick="APP.voltarLista()">← Voltar</button>
+      <div>
+        <div class="form-topbar-titulo" id="form-titulo">Nova Viagem</div>
+        <div class="form-topbar-srv" id="form-subtitulo"></div>
       </div>
-      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
-        <label>Tipo de deslocamento</label>
-        <select id="r-tipo-desloc" onchange="recalcular('r')">
-          <option value="estado">Dentro do Estado</option>
-          <option value="fora">Fora do Estado</option>
-        </select>
-      </div>
-      <div class="resumo-grid" id="r-resumo-grid"></div>
-      <div id="r-detalhe-linhas"></div>
-      <div class="prazo-box" id="r-prazo-box"></div>
-    </div>
-  </div>
-
-  <!-- OBJETIVO -->
-  <div class="secao">
-    <div class="secao-titulo">Objetivo(s) da Viagem</div>
-    <div class="campo"><label>Descrição do objetivo <span class="obrig">*</span></label>
-    <textarea id="r-objetivo" rows="4" placeholder="Descreva o objetivo da viagem..."></textarea></div>
-  </div>
-
-  <div class="acoes">
-    <button class="btn-primario" id="r-btn-salvar" onclick="salvarEGerarPDF('requerimento')">⬇ Salvar + Gerar PDF (MLR-41)</button>
-    <button class="btn-sec" onclick="limpar('r')">Limpar</button>
-  </div>
-
-  <div class="resultado-box" id="r-resultado">
-    <h3>✓ Requerimento salvo com sucesso!</h3>
-    <p style="font-size:0.8rem;color:var(--sucesso);margin-top:4px;">ID Firebase:</p>
-    <span class="doc-id" id="r-doc-id"></span>
-    <p style="font-size:0.78rem;color:var(--sucesso);margin-top:8px;">PDF MLR-41 gerado — download iniciado automaticamente.</p>
-  </div>
-</div>
-
-<!-- ════════ ABA 2 — RELATÓRIO MLR-42 ════════ -->
-<div id="painel-relatorio" class="painel">
-  <div class="alerta alerta-info">💡 Preencha o relatório após a realização da viagem. Os horários aqui devem refletir o que realmente ocorreu.</div>
-
-  <div class="alerta" style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--raio);padding:0.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-    <span style="font-size:0.82rem;color:#166534;">🔄 <strong>Sincronização automática:</strong> ao trocar para a aba <strong>MLR-41</strong>, os campos idênticos serão preenchidos automaticamente. Você também pode sincronizar manualmente.</span>
-    <button class="btn-sec" style="white-space:nowrap;font-size:0.8rem;padding:0.35rem 0.9rem;" onclick="sincronizarForms('rl','r');trocarAba('requerimento',document.querySelectorAll('.aba-btn')[0])">➜ Sincronizar com MLR-41</button>
-  </div>
-
-  <div class="secao">
-    <div class="secao-titulo">Servidor</div>
-    <div class="campo"><label>Selecionar servidor <span class="obrig">*</span></label>
-    <select id="rl-servidor" onchange="preencherServidor('rl')"><option value="">— Selecione o servidor —</option></select></div>
-  </div>
-
-  <div class="servidor-card" id="rl-card-servidor">
-    <div class="servidor-nome" id="rl-srv-nome"></div>
-    <div class="servidor-info-grid">
-      <div class="servidor-info-item"><span class="srv-label">CPF</span><span class="srv-val" id="rl-srv-cpf"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Matrícula</span><span class="srv-val" id="rl-srv-mat"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Cargo</span><span class="srv-val" id="rl-srv-cargo"></span></div>
-      <div class="servidor-info-item"><span class="srv-label">Lotação</span><span class="srv-val" id="rl-srv-lot"></span></div>
-    </div>
-  </div>
-
-  <div class="secao">
-    <div class="secao-titulo">Dados Funcionais</div>
-    <div class="grid-2">
-      <div class="campo"><label>Órgão / Entidade</label><input type="text" id="rl-orgao" list="lista-orgaos" value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"><datalist id="lista-orgaos"><option value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL"></datalist></div>
-      <div class="campo"><label>Sigla</label><input type="text" id="rl-sigla" value="DPP"></div>
-      <div class="campo"><label>Nome Social (se diferente)</label><input type="text" id="rl-nome-social" placeholder="Deixe em branco se igual ao nome civil"></div>
-      <div class="campo"><label>Município do Local de Trabalho</label><select id="rl-municipio"></select></div>
-      <div class="campo"><label>E-mail</label><input type="email" id="rl-email" placeholder="servidor@sc.gov.br"></div>
-      <div class="campo"><label>Celular</label><input type="text" id="rl-celular" placeholder="(47) 99999-9999"></div>
-      <div class="campo"><label>Data da Assinatura</label><input type="text" id="rl-data-ass" placeholder="10/04/2026"></div>
-    </div>
-    <div style="margin-top:1rem;">
-      <label style="display:block;margin-bottom:0.4rem;">Código/Nível do Cargo (para não efetivos)</label>
-      <div class="checkboxes" id="rl-codigos-cargo">
-        <label class="check-pill"><input type="checkbox" value="DGS-1"> DGS-1</label>
-        <label class="check-pill"><input type="checkbox" value="DGS-2"> DGS-2</label>
-        <label class="check-pill"><input type="checkbox" value="DGS-3"> DGS-3</label>
-        <label class="check-pill"><input type="checkbox" value="FTG-1"> FTG-1</label>
-        <label class="check-pill"><input type="checkbox" value="FTG-2"> FTG-2</label>
-        <label class="check-pill"><input type="checkbox" value="FTG-3"> FTG-3</label>
-        <label class="check-pill"><input type="checkbox" value="FG-1"> FG-1</label>
-        <label class="check-pill"><input type="checkbox" value="FG-2"> FG-2</label>
-        <label class="check-pill"><input type="checkbox" value="FG-3"> FG-3</label>
-        <label class="check-pill"><input type="checkbox" value="DGI-1"> DGI-1 (Codificado)</label>
-        <label class="check-pill"><input type="checkbox" value="ADM-SUP-3"> ADM. SUPERIOR-3</label>
-        <label class="check-pill"><input type="checkbox" value="ADM-SUP-8"> ADM. SUPERIOR-8</label>
+      <div class="form-topbar-acoes">
+        <button class="btn btn-sec btn-sm btn-mob-prev" onclick="APP.toggleMobPreview()">📄 Ver Documento</button>
+        <button class="btn btn-pri btn-sm" id="btn-salvar-rascunho" onclick="APP.salvarRascunho()">💾 Salvar</button>
+        <span id="indicador-salvo" style="font-size:.72rem;color:var(--texto2);font-family:var(--mono);display:none;"></span>
+        <button class="btn btn-sec btn-sm" onclick="APP.limparForm()">↩ Limpar</button>
       </div>
     </div>
-  </div>
 
-  <div class="secao">
-    <div class="secao-titulo">Deslocamentos Realizados</div>
-    <div class="tabela-wrap">
-      <table class="desloc"><thead><tr>
-        <th>Data</th><th>Origem</th><th>Destino</th>
-        <th>Saída</th><th>Chegada</th><th>Transporte</th><th></th>
-      </tr></thead><tbody id="rl-linhas-desloc"></tbody></table>
-    </div>
-    <button class="btn-add-linha" onclick="adicionarLinha('rl')">+ Adicionar deslocamento</button>
+    <!-- Painel Formulário -->
+    <div class="fp" id="painel-form">
 
-    <div class="calc-auto" id="rl-calc-auto" style="display:none;">
-      <div class="calc-auto-titulo">Diárias Recebidas — Cálculo Automático</div>
-      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
-        <label>Grupo do Cargo</label>
-        <select id="rl-grupo-cargo" onchange="recalcular('rl')">
-          <option value="1">1º Grupo</option>
-          <option value="2">2º Grupo</option>
-          <option value="3">3º Grupo</option>
-        </select>
-      </div>
-      <div class="campo" style="margin-bottom:0.75rem;max-width:220px;">
-        <label>Tipo de deslocamento</label>
-        <select id="rl-tipo-desloc" onchange="recalcular('rl')">
-          <option value="estado">Dentro do Estado</option>
-          <option value="fora">Fora do Estado</option>
-        </select>
-      </div>
-      <div class="resumo-grid" id="rl-resumo-grid"></div>
-      <div id="rl-detalhe-linhas"></div>
-      <div class="prazo-box visivel" id="rl-prazo-box" style="display:block!important;"></div>
-    </div>
-  </div>
-
-  <div class="secao">
-    <div class="secao-titulo">Resultado da Viagem</div>
-    <div class="campo"><label>Descreva se os objetivos foram alcançados <span class="obrig">*</span></label>
-    <textarea id="rl-resultado-texto" rows="5" placeholder="Descreva o resultado em consonância com os objetivos propostos..."></textarea></div>
-  </div>
-
-  <div class="acoes">
-    <button class="btn-primario" onclick="salvarEGerarPDF('relatorio')">⬇ Salvar + Gerar PDF (MLR-42)</button>
-    <button class="btn-sec" onclick="limpar('rl')">Limpar</button>
-  </div>
-  <div class="resultado-box" id="rl-resultado-box">
-    <h3>✓ Relatório salvo com sucesso!</h3>
-    <p style="font-size:0.8rem;color:var(--sucesso);margin-top:4px;">ID Firebase:</p>
-    <span class="doc-id" id="rl-doc-id"></span>
-    <p style="font-size:0.78rem;color:var(--sucesso);margin-top:8px;">PDF MLR-42 gerado — download iniciado automaticamente.</p>
-  </div>
-</div>
-
-<!-- ════════ ABA 3 — SERVIDORES ════════ -->
-<div id="painel-servidores" class="painel">
-
-  <!-- Cabeçalho -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
-    <div>
-      <div style="font-size:1rem;font-weight:600;color:var(--verde-escuro);">👥 Servidores Cadastrados</div>
-      <div style="font-size:0.78rem;color:var(--texto-sec);margin-top:3px;">Dados carregados do Firebase em tempo real</div>
-    </div>
-    <button class="btn-primario" onclick="abrirModalServidor(null)" style="gap:6px;">
-      + Novo Servidor
-    </button>
-  </div>
-
-  <!-- Loading -->
-  <div id="serv-loading" style="text-align:center;padding:3rem;color:var(--texto-sec);font-size:0.85rem;">
-    ⏳ Carregando servidores...
-  </div>
-
-  <!-- Lista -->
-  <div id="lista-servidores" style="display:grid;gap:1rem;"></div>
-
-  <!-- Vazio -->
-  <div id="serv-vazio" style="display:none;text-align:center;padding:3rem;">
-    <div style="font-size:2.5rem;margin-bottom:0.75rem;">👤</div>
-    <div style="font-weight:600;color:var(--texto-sec);margin-bottom:0.5rem;">Nenhum servidor cadastrado</div>
-    <div style="font-size:0.82rem;color:var(--texto-sec);">Clique em "Novo Servidor" para começar.</div>
-  </div>
-</div>
-
-<!-- ════ MODAL SERVIDOR ════ -->
-<div id="modal-servidor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
-  <div style="background:#fff;border-radius:var(--raio-lg);width:100%;max-width:680px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
-
-    <!-- Header modal -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--borda);position:sticky;top:0;background:#fff;z-index:1;">
-      <div style="font-size:1rem;font-weight:600;color:var(--verde-escuro);" id="modal-srv-titulo">Novo Servidor</div>
-      <button onclick="fecharModalServidor()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--texto-sec);line-height:1;">×</button>
-    </div>
-
-    <div style="padding:1.5rem;">
-      <input type="hidden" id="srv-id">
-
-      <!-- DADOS PESSOAIS -->
-      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--verde-claro);">Dados Pessoais</div>
-      <div class="grid-2" style="margin-bottom:1rem;">
-        <div class="campo" style="grid-column:span 2;">
-          <label>Nome Civil completo <span class="obrig">*</span></label>
-          <input type="text" id="srv-nome" placeholder="NOME COMPLETO DO SERVIDOR" oninput="this.value=this.value.toUpperCase()">
+      <!-- §1 Servidor -->
+      <div class="sec" id="sec-srv">
+        <div class="sec-head" onclick="APP.toggleSec('sec-srv')">
+          <div class="sec-num">1</div>Servidor
+          <span class="sec-chevron">▾</span>
         </div>
+        <div class="sec-body">
+          <div class="campo">
+            <label>Selecionar servidor <span class="obrig">*</span></label>
+            <select class="sel" id="f-servidor" onchange="APP.onServidorChange()">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <div class="srv-card" id="srv-card">
+            <div class="srv-nome" id="srv-nome-display"></div>
+            <div class="srv-grid" id="srv-grid-display"></div>
+            <div id="badge-mes-display"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- §2 Dados Funcionais -->
+      <div class="sec bloqueada" id="sec-func">
+        <div class="sec-head" onclick="APP.toggleSec('sec-func')">
+          <div class="sec-num">2</div>Dados Funcionais
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="sec-body">
+          <div class="grid2">
+            <div class="campo">
+              <label>Órgão / Entidade</label>
+              <input class="inp" id="f-orgao" type="text" value="SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL" oninput="APP.renderDoc()">
+            </div>
+            <div class="campo">
+              <label>Sigla</label>
+              <input class="inp" id="f-sigla" type="text" value="DPP" oninput="APP.renderDoc()">
+            </div>
+            <div class="campo">
+              <label>Nome Social <span style="color:var(--texto2);font-weight:400;">(se diferente)</span></label>
+              <input class="inp" id="f-nome-social" type="text" placeholder="Deixe em branco se igual ao nome civil" oninput="APP.renderDoc()">
+            </div>
+            <div class="campo">
+              <label>Município do Local de Trabalho</label>
+              <select class="sel" id="f-municipio" onchange="APP.renderDoc()"></select>
+            </div>
+            <div class="campo">
+              <label>E-mail</label>
+              <input class="inp" id="f-email" type="email" placeholder="servidor@sc.gov.br" oninput="APP.renderDoc()">
+            </div>
+            <div class="campo">
+              <label>Celular</label>
+              <input class="inp" id="f-celular" type="text" placeholder="(47) 99999-9999" oninput="APP.renderDoc()">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Código / Nível do Cargo <span style="color:var(--texto2);font-weight:400;">(somente para não efetivos)</span></label>
+            <div class="radio-group h" id="f-codigos-cargo" style="margin-top:4px;"></div>
+          </div>
+          <div class="grid2">
+            <div class="campo">
+              <label>Grupo do Cargo <span style="color:var(--texto2);font-weight:400;">(Anexo I, Dec. 650/2020)</span></label>
+              <select class="sel" id="f-grupo" onchange="APP.recalcular()">
+                <option value="1">1º Grupo</option>
+                <option value="2">2º Grupo</option>
+                <option value="3">3º Grupo</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Tipo de Deslocamento</label>
+              <select class="sel" id="f-tipo-desloc" onchange="APP.recalcular()">
+                <option value="estado">Dentro do Estado</option>
+                <option value="fora">Fora do Estado</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- §3 Deslocamentos -->
+      <div class="sec bloqueada" id="sec-desloc">
+        <div class="sec-head" onclick="APP.toggleSec('sec-desloc')">
+          <div class="sec-num">3</div>Deslocamentos
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="sec-body">
+          <div class="alerta alerta-info" style="font-size:.74rem;padding:7px 11px;">
+            💡 Informe saída e chegada de cada trecho. O cálculo usa o período total da missão (1ª saída → última chegada).
+          </div>
+          <div class="tabela-wrap">
+            <table class="desloc">
+              <thead><tr>
+                <th>Data</th><th>Origem</th><th>Destino</th>
+                <th>Saída</th><th>Chegada</th><th>Transporte</th><th></th>
+              </tr></thead>
+              <tbody id="linhas-desloc"></tbody>
+            </table>
+          </div>
+          <button class="btn-add" onclick="APP.addLinha()">+ Adicionar trecho</button>
+        </div>
+      </div>
+
+      <!-- §4 Cálculo (automático) -->
+      <div class="sec bloqueada" id="sec-calc">
+        <div class="sec-head" onclick="APP.toggleSec('sec-calc')">
+          <div class="sec-num">4</div>Cálculo Automático
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="sec-body">
+          <div id="calc-conteudo">
+            <div style="font-size:.78rem;color:var(--texto2);">Preencha os deslocamentos para calcular.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- §5 Objetivo (MLR-41) -->
+      <div class="sec bloqueada" id="sec-obj">
+        <div class="sec-head" onclick="APP.toggleSec('sec-obj')">
+          <div class="sec-num">5</div>Objetivo da Viagem <span style="font-family:var(--mono);font-size:.6rem;margin-left:6px;opacity:.6;">MLR-41</span>
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="sec-body">
+          <div class="campo">
+            <label>Descrição do objetivo <span class="obrig">*</span></label>
+            <textarea class="ta" id="f-objetivo" rows="4" placeholder="Descreva o objetivo da viagem..." oninput="APP.renderDoc()"></textarea>
+          </div>
+          <div class="campo">
+            <label>Local e Data</label>
+            <input class="inp" id="f-local-data" type="text" placeholder="FLORIANÓPOLIS, 04/06/2026" oninput="APP.renderDoc()">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn btn-pri" id="btn-gerar-41" onclick="APP.gerarMLR41()">⬇ Gerar MLR-41 (PDF)</button>
+          </div>
+          <div id="res-41" style="display:none;" class="alerta alerta-ok" style="margin-top:6px;"></div>
+        </div>
+      </div>
+
+      <!-- §6 Resultado (MLR-42) -->
+      <div class="sec bloqueada" id="sec-res">
+        <div class="sec-head" onclick="APP.toggleSec('sec-res')">
+          <div class="sec-num">6</div>Resultado da Viagem <span style="font-family:var(--mono);font-size:.6rem;margin-left:6px;opacity:.6;">MLR-42</span>
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="sec-body">
+          <div class="alerta alerta-info" id="aviso-prazo" style="font-size:.74rem;padding:7px 11px;display:none;"></div>
+          <div class="campo">
+            <label>Resultado em consonância com os objetivos propostos <span class="obrig">*</span></label>
+            <textarea class="ta" id="f-resultado" rows="5" placeholder="Descreva se os objetivos foram alcançados, justificando..." oninput="APP.renderDoc()"></textarea>
+          </div>
+          <div class="campo">
+            <label>Data da Assinatura</label>
+            <input class="inp" id="f-data-ass" type="text" placeholder="04/06/2026" oninput="APP.renderDoc()">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn btn-pri" id="btn-gerar-42" onclick="APP.gerarMLR42()">⬇ Gerar MLR-42 (PDF)</button>
+          </div>
+          <div id="res-42" style="display:none;" class="alerta alerta-ok"></div>
+        </div>
+      </div>
+
+    </div><!-- /fp -->
+
+    <!-- Painel Documento -->
+    <div class="dp" id="painel-doc">
+
+      <div class="doc-acoes">
+        <div class="doc-toggle">
+          <button id="toggle-41" class="ativo" onclick="APP.setDocAtivo('41')">MLR-41</button>
+          <button id="toggle-42" onclick="APP.setDocAtivo('42')">MLR-42</button>
+        </div>
+        <div class="doc-acoes-sep"></div>
+        <button class="btn btn-sec btn-sm" onclick="APP.copiarDocumento()">📋 Copiar</button>
+        <div class="doc-status" id="doc-status-badge"></div>
+      </div>
+
+      <div class="doc-card fade-in">
+        <div class="doc-card-head">
+          <div id="doc-badge-tipo" class="badge badge-rascunho">MLR-41</div>
+          <div class="doc-card-subtit" id="doc-subtit">Preencha o formulário ao lado para visualizar o documento</div>
+        </div>
+        <div class="doc-preview vazio" id="doc-preview">
+          <div>
+            <div style="font-size:2rem;margin-bottom:8px;">📄</div>
+            <div>Selecione um servidor e preencha<br>os campos para visualizar o documento.</div>
+          </div>
+        </div>
+        <div class="doc-nota" id="doc-nota" style="display:none;"></div>
+      </div>
+
+    </div><!-- /dp -->
+
+  </div><!-- /view-form -->
+
+  <!-- ── SERVIDORES ───────────────────────────────────────────── -->
+  <div id="view-servidores">
+    <div class="lista-header">
+      <div>
+        <div class="lista-titulo">👥 Servidores Cadastrados</div>
+        <div class="lista-sub">Dados armazenados localmente (versão de teste)</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sec" id="btn-sync-firebase" onclick="APP.syncFirebase()">🔄 Sincronizar Firebase</button>
+        <button class="btn btn-pri" onclick="APP.abrirModalServidor(null)">+ Novo Servidor</button>
+      </div>
+    </div>
+    <div class="srv-lista" id="srv-lista-grid"></div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══ MODAL SERVIDOR ═══════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-srv">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-srv-titulo">Novo Servidor</h3>
+      <button class="modal-close" onclick="APP.fecharModalServidor()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="srv-edit-id">
+      <div class="modal-sec-titulo">Dados Pessoais</div>
+      <div class="campo" style="grid-column:span 2;">
+        <label>Nome Civil completo <span class="obrig">*</span></label>
+        <input class="inp" id="srv-nome" type="text" placeholder="NOME COMPLETO" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="grid2">
         <div class="campo">
           <label>CPF <span class="obrig">*</span></label>
-          <input type="text" id="srv-cpf" placeholder="000.000.000-00" maxlength="14" oninput="mascaraCPF(this)">
+          <input class="inp" id="srv-cpf" type="text" placeholder="000.000.000-00" maxlength="14" oninput="APP.mascaraCPF(this)">
         </div>
         <div class="campo">
           <label>Matrícula (DV e Vínculo) <span class="obrig">*</span></label>
-          <input type="text" id="srv-matricula" placeholder="0000000-0-00">
+          <input class="inp" id="srv-matricula" type="text" placeholder="0000000-0-00">
         </div>
       </div>
-
-      <!-- DADOS FUNCIONAIS -->
-      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--verde-claro);">Dados Funcionais</div>
-      <div class="grid-2" style="margin-bottom:1rem;">
-        <div class="campo" style="grid-column:span 2;">
-          <label>Cargo/Emprego <span class="obrig">*</span></label>
-          <input type="text" id="srv-cargo" placeholder="CARGO DO SERVIDOR" oninput="this.value=this.value.toUpperCase()">
-        </div>
+      <div class="modal-sec-titulo">Dados Funcionais</div>
+      <div class="campo">
+        <label>Cargo/Emprego <span class="obrig">*</span></label>
+        <input class="inp" id="srv-cargo" type="text" placeholder="CARGO DO SERVIDOR" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="grid2">
         <div class="campo">
           <label>Lotação</label>
-          <input type="text" id="srv-lotacao" value="DEPARTAMENTO DE POLICIA PENAL" oninput="this.value=this.value.toUpperCase()">
+          <input class="inp" id="srv-lotacao" type="text" value="DEPARTAMENTO DE POLICIA PENAL" oninput="this.value=this.value.toUpperCase()">
         </div>
         <div class="campo">
           <label>Município</label>
-          <select id="srv-municipio"></select>
+          <select class="sel" id="srv-municipio"></select>
         </div>
         <div class="campo">
           <label>E-mail</label>
-          <input type="email" id="srv-email" placeholder="servidor@sc.gov.br">
+          <input class="inp" id="srv-email" type="email" placeholder="servidor@sc.gov.br">
         </div>
         <div class="campo">
           <label>Celular</label>
-          <input type="text" id="srv-celular" placeholder="(47) 99999-9999">
+          <input class="inp" id="srv-cel" type="text" placeholder="(47) 99999-9999">
         </div>
         <div class="campo">
           <label>Telefone</label>
-          <input type="text" id="srv-telefone" placeholder="(47) 3333-3333">
+          <input class="inp" id="srv-tel" type="text" placeholder="(47) 3333-3333">
         </div>
       </div>
-
-      <!-- DADOS BANCÁRIOS -->
-      <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--verde);font-family:var(--mono);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--verde-claro);">Dados Bancários</div>
-      <div class="grid-3" style="margin-bottom:1.5rem;">
+      <div class="modal-sec-titulo">Dados Bancários</div>
+      <div class="grid2">
         <div class="campo">
           <label>Banco</label>
-          <input type="text" id="srv-banco" placeholder="BANCO DO BRASIL" oninput="this.value=this.value.toUpperCase()">
+          <input class="inp" id="srv-banco" type="text" placeholder="BANCO DO BRASIL" oninput="this.value=this.value.toUpperCase()">
         </div>
         <div class="campo">
           <label>Agência</label>
-          <input type="text" id="srv-agencia" placeholder="0000-0">
+          <input class="inp" id="srv-agencia" type="text" placeholder="0000-0">
         </div>
         <div class="campo">
           <label>Conta</label>
-          <input type="text" id="srv-conta" placeholder="000000-0">
+          <input class="inp" id="srv-conta" type="text" placeholder="000000-0">
         </div>
       </div>
-
-      <!-- Erro -->
-      <div id="modal-srv-erro" style="display:none;background:var(--erro-claro);border:1px solid #F7C1C1;border-radius:var(--raio);padding:0.7rem 1rem;font-size:0.8rem;color:var(--erro);margin-bottom:1rem;"></div>
-
-      <!-- Botões -->
-      <div style="display:flex;gap:1rem;justify-content:flex-end;">
-        <button class="btn-sec" onclick="fecharModalServidor()">Cancelar</button>
-        <button class="btn-primario" id="modal-srv-btn" onclick="salvarServidor()">✓ Salvar Servidor</button>
-      </div>
+      <div class="modal-erro" id="modal-srv-erro"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-sec" onclick="APP.fecharModalServidor()">Cancelar</button>
+      <button class="btn btn-pri" id="modal-srv-btn" onclick="APP.salvarServidor()">✓ Salvar</button>
     </div>
   </div>
 </div>
 
-<!-- ════════ ABA 4 — REGRAS ════════ -->
-<div id="painel-regras" class="painel">
-  <div class="secao">
-    <div class="secao-titulo">Regras de Diárias — Decreto nº 1.662/2022</div>
-    <div style="display:grid;gap:1rem;">
-      <div style="background:#f0faf6;border:1px solid #9FE1CB;border-radius:var(--raio);padding:1rem;">
-        <div style="font-weight:600;font-size:0.85rem;color:var(--verde-escuro);margin-bottom:0.5rem;">⏱ Período de deslocamento</div>
-        <div style="font-size:0.82rem;line-height:1.7;color:var(--texto);">
-          <strong>≥ 12 horas</strong> → Diária inteira (R$ 110,00)<br>
-          <strong>Entre 4h e 12h (exclusive)</strong> → Meia diária (R$ 55,00)<br>
-          <strong>≤ 4 horas</strong> → Sem direito a diária<br>
-          <strong>Com pernoite (meia-noite às 6h)</strong> → R$ 220,00 (grupos 1, 2 e 3 dentro do Estado)
-        </div>
-      </div>
-      <div style="background:#FAEEDA;border:1px solid #FAC775;border-radius:var(--raio);padding:1rem;">
-        <div style="font-weight:600;font-size:0.85rem;color:#633806;margin-bottom:0.5rem;">📅 Limite mensal</div>
-        <div style="font-size:0.82rem;line-height:1.7;color:#633806;">
-          Máximo de <strong>10 diárias por mês</strong> por servidor (Art. 16, Dec. 650/2020).<br>
-          Exceções dispensadas de prévia autorização da SEA: cursos, operações policiais, operações de escolta SAP, comissões de sindicância/PAD, comitivas do Governador/Vice-Governador.
-        </div>
-      </div>
-      <div style="background:#E6F1FB;border:1px solid #B5D4F4;border-radius:var(--raio);padding:1rem;">
-        <div style="font-weight:600;font-size:0.85rem;color:#0C447C;margin-bottom:0.5rem;">📋 Prestação de contas</div>
-        <div style="font-size:0.82rem;line-height:1.7;color:#0C447C;">
-          O servidor deve prestar contas em até <strong>5 dias úteis após o retorno</strong> (Art. 11, Dec. 650/2020), mediante formulário MLR-42 + documentos comprobatórios de deslocamento e estada.
-        </div>
-      </div>
-      <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:var(--raio);padding:1rem;">
-        <div style="font-weight:600;font-size:0.85rem;color:var(--texto);margin-bottom:0.5rem;">🚫 Quando não cabe diária</div>
-        <div style="font-size:0.82rem;line-height:1.7;color:var(--texto);">
-          • Entre municípios limítrofes sem necessidade de pernoite (Dec. 1.394/2021)<br>
-          • Quando despesas forem custeadas por instituição pública ou empresa privada<br>
-          • Quando o Estado fornecer 3 refeições + acomodação
-        </div>
-      </div>
+<!-- ══ MODAL CONFIRMAÇÃO ════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-confirm">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 id="confirm-titulo">Confirmar</h3>
+      <button class="modal-close" onclick="APP.fecharConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg" style="font-size:.85rem;line-height:1.6;"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-sec" onclick="APP.fecharConfirm()">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-btn" onclick="">Confirmar</button>
     </div>
   </div>
 </div>
 
-</div><!-- /container -->
+<!-- ══ TOAST ════════════════════════════════════════════════════ -->
 <div id="toast"></div>
 
+<!-- JS será inserido nas próximas partes -->
 <script>
-// ══════════════════════════════════════════════════
-// CIDADES DE SANTA CATARINA
-// ══════════════════════════════════════════════════
-const CIDADES_SC = [
-  "FLORIANÓPOLIS","JOINVILLE","BLUMENAU","SÃO JOSÉ","CHAPECÓ","CRICIÚMA","ITAJAÍ","LAGES",
-  "JARAGUÁ DO SUL","PALHOÇA","BALNEÁRIO CAMBORIÚ","BRUSQUE","TUBARÃO","SÃO BENTO DO SUL",
-  "CAÇADOR","CONCÓRDIA","NAVEGANTES","IÇARA","GASPAR","ARARANGUÁ","MAFRA","INDAIAL",
-  "CAMBORIÚ","RIO DO SUL","TIJUCAS","BIGUAÇU","GUARAMIRIM","LAGUNA","IMBITUBA","XANXERÊ",
-  "CANOINHAS","VIDEIRA","FRAIBURGO","ITAPEMA","PORTO BELO","PENHA","BOMBINHAS","PIÇARRAS",
-  "ARMAÇÃO DOS BÚZIOS","GOVERNADOR CELSO RAMOS","ANTÔNIO CARLOS","ANGELINA","ANITÁPOLIS",
-  "SÃO PEDRO DE ALCÂNTARA","SANTO AMARO DA IMPERATRIZ","PAULO LOPES","GAROPABA","IMBITUBA",
-  "IMARUÍ","JAGUARUNA","SANGÃO","TREZE DE MAIO","GRAVATAL","PEDRAS GRANDES","ORLEANS",
-  "SÃO LUDGERO","BRAÇO DO NORTE","GRÃO PARÁ","RIO FORTUNA","SANTA ROSA DE LIMA","ARMAZÉM",
-  "SÃO MARTINHO","IMARUÍ","FLORIANO PEIXOTO","LAURO MÜLLER","TREVISO","SIDERÓPOLIS","NOVA VENEZA",
-  "FORQUILHINHA","MARACAJÁ","ERMO","TURVO","JACINTO MACHADO","SÃO JOÃO DO SUL","PRAIA GRANDE",
-  "PASSO DE TORRES","BALNEÁRIO GAIVOTA","SOMBRIO","SANTA ROSA DO SUL","MELEIRO","MORRO GRANDE",
-  "TIMBÉ DO SUL","ROMELÂNDIA","PALMA SOLA","ANCHIETA","GUARACIABA","CORONEL FREITAS","NOVA ERECHIM",
-  "CUNHATAÍ","CAIBI","PALMITOS","RIQUEZA","SÃO LOURENÇO DO OESTE","QUILOMBO","ABELARDO LUZ",
-  "VARGEÃO","GALVÃO","IPUAÇU","LAJEADO GRANDE","BOM JESUS","ENTRE RIOS","FAXINAL DOS GUEDES",
-  "PONTE SERRADA","PASSOS MAIA","NOVO HORIZONTE","ÁGUA DOCE","IOMERÊ","TANGARÁ","PINHEIRO PRETO",
-  "CAPINZAL","OURO","LACERDÓPOLIS","JOAÇABA","HERVAL D'OESTE","LUZERNA","TREZE TÍLIAS","ERVAL VELHO",
-  "VARGEM BONITA","MONTE CARLO","BRUNÓPOLIS","CAMPOS NOVOS","ZORTÉA","CELSO RAMOS","ABDON BATISTA",
-  "ANITA GARIBALDI","CERRO NEGRO","CAMPO BELO DO SUL","CAPÃO ALTO","CORREIA PINTO","PALMEIRA",
-  "PONTE ALTA","PONTE ALTA DO NORTE","SANTA CECÍLIA","CURITIBANOS","FREI ROGÉRIO","PONTE ALTA",
-  "LEBON RÉGIS","TIMBÓ GRANDE","PORTO UNIÃO","IRINEÓPOLIS","MAJOR VIEIRA","TRÊS BARRAS","PAPANDUVA",
-  "MONTE CASTELO","ITAIÓPOLIS","MAFRA","RIO NEGRINHO","SÃO FRANCISCO DO SUL","ARAQUARI","BARRA VELHA",
-  "CORUPÁ","MASSARANDUBA","SCHROEDER","BENEDITO NOVO","DOUTOR PEDRINHO","RODEIO","ASCURRA","APIÚNA",
-  "PRESIDENTE GETÚLIO","IBIRAMA","VITOR MEIRELES","JOSÉ BOITEUX","WITMARSUN","AURORA","AGRONÔMICA",
-  "TROMBUDO CENTRAL","LAURENTINO","SALETE","TAIÓ","MIRIM DOCE","PETROLÂNDIA","VIDAL RAMOS",
-  "IMBUIA","ITUPORANGA","ALFREDO WAGNER","LEOBERTO LEAL","NOVA TRENTO","CANELINHA","SÃO JOÃO BATISTA",
-  "MAJOR GERCINO","BOTUVERÁ","GUABIRUBA","POMERODE","TIMBÓ","RIO DOS CEDROS","LUÍS ALVES",
-  "MASSARANDUBA","ITAPOÁ","GARUVA","JOINVILLE","CAMPO ALEGRE","RIO NEGRINHO","SÃO BENTO DO SUL",
-  "BALNEÁRIO BARRA DO SUL","BRAÇO DO TROMBUDO","POUSO REDONDO","TAIÓ","WITMARSUM"
+// ═══════════════════════════════════════════════════════════════
+// PARTE 2 — DADOS, LOCALSTORAGE, SERVIDORES, NAVEGAÇÃO
+// ═══════════════════════════════════════════════════════════════
+
+// ── CIDADES DE SC ───────────────────────────────────────────────
+const CIDADES = ["FLORIANÓPOLIS","JOINVILLE","BLUMENAU","SÃO JOSÉ","CHAPECÓ",
+"CRICIÚMA","ITAJAÍ","LAGES","JARAGUÁ DO SUL","PALHOÇA","BALNEÁRIO CAMBORIÚ",
+"BRUSQUE","TUBARÃO","SÃO BENTO DO SUL","CAÇADOR","CONCÓRDIA","NAVEGANTES",
+"IÇARA","GASPAR","ARARANGUÁ","MAFRA","INDAIAL","CAMBORIÚ","RIO DO SUL",
+"TIJUCAS","BIGUAÇU","GUARAMIRIM","LAGUNA","IMBITUBA","XANXERÊ","CANOINHAS",
+"VIDEIRA","FRAIBURGO","ITAPEMA","PORTO BELO","PENHA","BOMBINHAS","PIÇARRAS",
+"GOVERNADOR CELSO RAMOS","ANTÔNIO CARLOS","SANTO AMARO DA IMPERATRIZ",
+"PAULO LOPES","GAROPABA","IMARUÍ","JAGUARUNA","SANGÃO","TREZE DE MAIO",
+"GRAVATAL","PEDRAS GRANDES","ORLEANS","SÃO LUDGERO","BRAÇO DO NORTE",
+"GRÃO PARÁ","RIO FORTUNA","SANTA ROSA DE LIMA","ARMAZÉM","SÃO MARTINHO",
+"LAURO MÜLLER","TREVISO","SIDERÓPOLIS","NOVA VENEZA","FORQUILHINHA",
+"MARACAJÁ","ERMO","TURVO","JACINTO MACHADO","SÃO JOÃO DO SUL","PRAIA GRANDE",
+"PASSO DE TORRES","BALNEÁRIO GAIVOTA","SOMBRIO","SANTA ROSA DO SUL",
+"MELEIRO","MORRO GRANDE","TIMBÉ DO SUL","ROMELÂNDIA","PALMA SOLA",
+"ANCHIETA","GUARACIABA","CORONEL FREITAS","NOVA ERECHIM","PALMITOS",
+"SÃO LOURENÇO DO OESTE","QUILOMBO","ABELARDO LUZ","VARGEÃO","GALVÃO",
+"IPUAÇU","ÁGUA DOCE","TANGARÁ","CAPINZAL","JOAÇABA","HERVAL D'OESTE",
+"LUZERNA","TREZE TÍLIAS","CAMPOS NOVOS","CURITIBANOS","LEBON RÉGIS",
+"PORTO UNIÃO","IRINEÓPOLIS","TRÊS BARRAS","PAPANDUVA","MONTE CASTELO",
+"ITAIÓPOLIS","RIO NEGRINHO","SÃO FRANCISCO DO SUL","ARAQUARI","BARRA VELHA",
+"CORUPÁ","MASSARANDUBA","SCHROEDER","BENEDITO NOVO","RODEIO","ASCURRA",
+"APIÚNA","PRESIDENTE GETÚLIO","IBIRAMA","AURORA","AGRONÔMICA","TAIÓ",
+"LAURENTINO","SALETE","MIRIM DOCE","PETROLÂNDIA","VIDAL RAMOS","IMBUIA",
+"ITUPORANGA","ALFREDO WAGNER","LEOBERTO LEAL","NOVA TRENTO","CANELINHA",
+"SÃO JOÃO BATISTA","MAJOR GERCINO","BOTUVERÁ","GUABIRUBA","POMERODE",
+"TIMBÓ","RIO DOS CEDROS","LUÍS ALVES","ITAPOÁ","GARUVA",
+"CAMPO ALEGRE","BALNEÁRIO BARRA DO SUL","POUSO REDONDO","WITMARSUM"
 ].filter((v,i,a)=>a.indexOf(v)===i).sort();
+const CIDADES_LISTA = ["FLORIANÓPOLIS",...CIDADES.filter(c=>c!=="FLORIANÓPOLIS")];
 
-// Garante Florianópolis no topo
-const CIDADES_SC_ORDENADAS = ["FLORIANÓPOLIS", ...CIDADES_SC.filter(c => c !== "FLORIANÓPOLIS")];
+const CODIGOS_CARGO = [
+  "DGS-1","DGS-2","DGS-3","FTG-1","FTG-2","FTG-3",
+  "FG-1","FG-2","FG-3","DGI-1","ADM-SUP-3","ADM-SUP-8"
+];
+const TRANSPORTES = ["Veículo Oficial","Veículo Próprio","Ônibus","Avião","Outros"];
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+               "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-function popularSelectMunicipio(id, valorSelecionado = "FLORIANÓPOLIS") {
+// ── SERVIDORES MOCK (pré-carregados para teste) ─────────────────
+const SERVIDORES_MOCK = [
+  { id:"s1", nome:"JOÃO CARLOS SILVA", cpf:"123.456.789-00",
+    matricula:"1234567-0-01", cargo:"AGENTE PENITENCIÁRIO",
+    lotacao:"DEPARTAMENTO DE POLICIA PENAL",
+    municipio:"FLORIANÓPOLIS", email:"joao.silva@sc.gov.br",
+    celular:"(48) 99999-1111", telefone:"", banco:"BANCO DO BRASIL",
+    agencia:"0001-1", conta:"123456-0" },
+  { id:"s2", nome:"MARIA APARECIDA SANTOS", cpf:"987.654.321-00",
+    matricula:"7654321-0-01", cargo:"TÉCNICA EM SEGURANÇA PÚBLICA",
+    lotacao:"DEPARTAMENTO DE POLICIA PENAL",
+    municipio:"JOINVILLE", email:"maria.santos@sc.gov.br",
+    celular:"(47) 98888-2222", telefone:"(47) 3333-4444",
+    banco:"CAIXA ECONÔMICA FEDERAL", agencia:"0123-4", conta:"654321-1" },
+  { id:"s3", nome:"PEDRO HENRIQUE OLIVEIRA", cpf:"456.789.123-00",
+    matricula:"4567891-0-01", cargo:"DIRETOR DE UNIDADE PRISIONAL",
+    lotacao:"DEPARTAMENTO DE POLICIA PENAL",
+    municipio:"BLUMENAU", email:"pedro.oliveira@sc.gov.br",
+    celular:"(47) 97777-3333", telefone:"", banco:"BANCO DO BRASIL",
+    agencia:"0002-2", conta:"789012-3" }
+];
+
+// ── STORAGE ─────────────────────────────────────────────────────
+const DB = {
+  _key_srv: 'diarias_v2_servidores',
+  _key_viag: 'diarias_v2_viagens',
+
+  getServidores() {
+    try { return JSON.parse(localStorage.getItem(this._key_srv)) || null; }
+    catch(e) { return null; }
+  },
+  setServidores(lista) {
+    localStorage.setItem(this._key_srv, JSON.stringify(lista));
+  },
+  getViagens() {
+    try { return JSON.parse(localStorage.getItem(this._key_viag)) || []; }
+    catch(e) { return []; }
+  },
+  setViagens(lista) {
+    localStorage.setItem(this._key_viag, JSON.stringify(lista));
+  },
+  initServidores() {
+    // Carrega mock apenas na primeira vez
+    if (!this.getServidores()) this.setServidores(SERVIDORES_MOCK);
+  }
+};
+
+// ── ESTADO GLOBAL ────────────────────────────────────────────────
+const STATE = {
+  tab: 'viagens',           // 'viagens' | 'servidores'
+  view: 'lista',            // 'lista' | 'form'
+  filtroAno: new Date().getFullYear(),
+  filtroMes: new Date().getMonth(),  // 0–11
+  filtroStatus: 'todos',
+  viagemAtual: null,        // objeto viagem sendo editado
+  docAtivo: '41',           // '41' | '42'
+  calcResult: null,         // resultado do cálculo atual
+  mobPreview: false,
+};
+
+// ── UTILITÁRIOS ──────────────────────────────────────────────────
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+function fmtR(v) {
+  return 'R$ ' + (v||0).toFixed(2).replace('.',',');
+}
+function fmtData(isoDate) {
+  if (!isoDate) return '';
+  const [a,m,d] = isoDate.split('-');
+  return d+'/'+m+'/'+a;
+}
+function hoje() {
+  return new Date().toLocaleDateString('pt-BR');
+}
+function iniciais(nome) {
+  if (!nome) return '?';
+  const p = nome.trim().split(' ');
+  return (p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase();
+}
+function badgeHTML(status) {
+  const map = {
+    rascunho: ['badge-rascunho','Rascunho'],
+    requerido: ['badge-requerido','Requerido'],
+    prestado:  ['badge-prestado','Prestado'],
+    cancelado: ['badge-cancelado','Cancelado'],
+  };
+  const [cls,txt] = map[status] || ['badge-rascunho','—'];
+  return `<span class="badge ${cls}">${txt}</span>`;
+}
+
+function toast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = (tipo==='ok'?'✓ ':tipo==='erro'?'✕ ':'⚠ ')+msg;
+  t.className = 'show'+(tipo!=='ok'?' '+tipo:'');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(()=>{ t.className=''; }, 3800);
+}
+
+// ── POPULAR SELECTS ──────────────────────────────────────────────
+function popularSelectCidade(id, val='FLORIANÓPOLIS') {
   const sel = document.getElementById(id);
   if (!sel) return;
-  sel.innerHTML = CIDADES_SC_ORDENADAS.map(c =>
-    `<option value="${c}"${c === valorSelecionado ? ' selected' : ''}>${c}</option>`
+  sel.innerHTML = CIDADES_LISTA.map(c=>
+    `<option value="${c}"${c===val?' selected':''}>${c}</option>`
   ).join('');
 }
 
-// ══════════════════════════════════════════════════
-// SERVIDORES — dinâmico via Firebase
-// ══════════════════════════════════════════════════
-window._servidoresCache = []; // preenchido pelo onSnapshot
-
-// Callback chamado sempre que os servidores são atualizados
-window._onServidoresAtualizado = function(lista) {
-  popularSelectsServidores(lista);
-  renderizarListaServidores(lista);
-};
-
-function popularSelectsServidores(lista) {
-  ['r-servidor','rl-servidor'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const val = sel.value;
-    sel.innerHTML = '<option value="">— Selecione o servidor —</option>';
-    lista.forEach(s => {
-      const o = document.createElement('option');
-      o.value = s.id;
-      o.textContent = s.nome;
-      sel.appendChild(o);
-    });
-    if (val) sel.value = val; // mantém seleção se já havia
+function popularSelectsServidores() {
+  const lista = DB.getServidores() || [];
+  const sel = document.getElementById('f-servidor');
+  if (!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— Selecione —</option>';
+  lista.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.nome;
+    sel.appendChild(o);
   });
+  if (val) sel.value = val;
 }
 
-function renderizarListaServidores(lista) {
-  const loading = document.getElementById('serv-loading');
-  const vazio   = document.getElementById('serv-vazio');
-  const grid    = document.getElementById('lista-servidores');
-  if (loading) loading.style.display = 'none';
-  if (!lista.length) {
-    if (vazio) vazio.style.display = 'block';
-    grid.innerHTML = '';
-    return;
-  }
-  if (vazio) vazio.style.display = 'none';
-  grid.innerHTML = lista.map((s, i) => `
-    <div class="secao" style="position:relative;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.75rem;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div style="width:38px;height:38px;border-radius:50%;background:var(--verde-claro);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.85rem;color:var(--verde-escuro);flex-shrink:0;">${i+1}</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;color:var(--texto);">${s.nome}</div>
-            <div style="font-size:0.75rem;color:var(--texto-sec);font-family:var(--mono);">${s.cargo||'—'}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-shrink:0;">
-          <button onclick="abrirModalServidor('${s.id}')"
-            style="font-family:var(--fonte);font-size:0.75rem;padding:5px 12px;border-radius:6px;border:1px solid var(--borda);background:var(--fundo);cursor:pointer;color:var(--texto);">
-            ✏️ Editar
-          </button>
-          <button onclick="confirmarExclusao('${s.id}','${s.nome.replace(/'/g,"\\\'")}')"
-            style="font-family:var(--fonte);font-size:0.75rem;padding:5px 12px;border-radius:6px;border:1px solid #F7C1C1;background:var(--erro-claro);cursor:pointer;color:var(--erro);">
-            🗑 Excluir
-          </button>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:0.4rem 1.5rem;font-size:0.78rem;">
-        <div><span style="color:var(--texto-sec);">CPF:</span> ${s.cpf||'—'}</div>
-        <div><span style="color:var(--texto-sec);">Matrícula:</span> ${s.matricula||'—'}</div>
-        <div><span style="color:var(--texto-sec);">Município:</span> ${s.municipio||'—'}</div>
-        <div><span style="color:var(--texto-sec);">Celular:</span> ${s.celular||'—'}</div>
-        <div><span style="color:var(--texto-sec);">E-mail:</span> ${s.email||'—'}</div>
-        <div><span style="color:var(--texto-sec);">Banco:</span> ${s.banco||'—'} — Ag: ${s.agencia||'—'} / Cta: ${s.conta||'—'}</div>
-      </div>
+function popularCodigos() {
+  const cont = document.getElementById('f-codigos-cargo');
+  if (!cont) return;
+  cont.innerHTML = CODIGOS_CARGO.map(c=>`
+    <div class="ri" data-v="${c}" onclick="APP.selCodigo(this,'${c}')">
+      <div class="rd"><div class="rdi"></div></div>
+      <span>${c}</span>
     </div>`).join('');
 }
 
-// ── Modal servidor ────────────────────────────────
-function abrirModalServidor(id) {
-  const modal = document.getElementById('modal-servidor');
-  const titulo = document.getElementById('modal-srv-titulo');
-  const erro   = document.getElementById('modal-srv-erro');
-  erro.style.display = 'none';
+// ── APP — CONTROLADOR PRINCIPAL ──────────────────────────────────
+const APP = {
 
-  // Popula select de município no modal
-  popularSelectMunicipio('srv-municipio', 'FLORIANÓPOLIS');
+  // ── INICIALIZAÇÃO ─────────────────────────────────────────────
+  init() {
+    DB.initServidores();
+    popularSelectCidade('f-municipio');
+    popularSelectCidade('srv-municipio');
+    popularCodigos();
+    this._initFiltros();
+    this.setTab('viagens');
 
-  if (id) {
-    const s = window._servidoresCache.find(x => x.id === id);
-    if (!s) return;
-    titulo.textContent = '✏️ Editar Servidor';
-    document.getElementById('srv-id').value        = id;
-    document.getElementById('srv-nome').value      = s.nome      || '';
-    document.getElementById('srv-cpf').value       = s.cpf       || '';
-    document.getElementById('srv-matricula').value = s.matricula || '';
-    document.getElementById('srv-cargo').value     = s.cargo     || '';
-    document.getElementById('srv-lotacao').value   = s.lotacao   || 'DEPARTAMENTO DE POLICIA PENAL';
-    document.getElementById('srv-email').value     = s.email     || '';
-    document.getElementById('srv-celular').value   = s.celular   || '';
-    document.getElementById('srv-telefone').value  = s.telefone  || '';
-    document.getElementById('srv-banco').value     = s.banco     || '';
-    document.getElementById('srv-agencia').value   = s.agencia   || '';
-    document.getElementById('srv-conta').value     = s.conta     || '';
-    popularSelectMunicipio('srv-municipio', s.municipio || 'FLORIANÓPOLIS');
-  } else {
-    titulo.textContent = '+ Novo Servidor';
-    document.getElementById('srv-id').value = '';
-    ['srv-nome','srv-cpf','srv-matricula','srv-cargo','srv-email',
-     'srv-celular','srv-telefone','srv-banco','srv-agencia','srv-conta'].forEach(f => {
-      document.getElementById(f).value = '';
-    });
-    document.getElementById('srv-lotacao').value = 'DEPARTAMENTO DE POLICIA PENAL';
-  }
+    // Data padrão
+    document.getElementById('f-local-data').value = 'FLORIANÓPOLIS, '+hoje();
+    document.getElementById('f-data-ass').value = hoje();
 
-  modal.style.display = 'flex';
-  document.getElementById('srv-nome').focus();
-}
+    // Linha inicial na tabela de deslocamentos
+    this.addLinha();
+  },
 
-function fecharModalServidor() {
-  document.getElementById('modal-servidor').style.display = 'none';
-}
+  // ── FILTROS DE LISTA ──────────────────────────────────────────
+  _initFiltros() {
+    const anoSel = document.getElementById('filtro-ano');
+    const mesSel = document.getElementById('filtro-mes');
+    const anoAtual = new Date().getFullYear();
+    anoSel.innerHTML = [anoAtual+1,anoAtual,anoAtual-1,anoAtual-2].map(a=>
+      `<option value="${a}"${a===STATE.filtroAno?' selected':''}>${a}</option>`
+    ).join('');
+    mesSel.innerHTML = MESES.map((m,i)=>
+      `<option value="${i}"${i===STATE.filtroMes?' selected':''}>${m}</option>`
+    ).join('');
+  },
 
-async function salvarServidor() {
-  const id    = document.getElementById('srv-id').value;
-  const nome  = document.getElementById('srv-nome').value.trim();
-  const cpf   = document.getElementById('srv-cpf').value.trim();
-  const mat   = document.getElementById('srv-matricula').value.trim();
-  const cargo = document.getElementById('srv-cargo').value.trim();
-  const erro  = document.getElementById('modal-srv-erro');
+  setFiltroStatus(v, el) {
+    STATE.filtroStatus = v;
+    document.querySelectorAll('.pill-status').forEach(p=>p.classList.remove('ativa'));
+    el.classList.add('ativa');
+    this.renderLista();
+  },
 
-  if (!nome || !cpf || !mat || !cargo) {
-    erro.textContent = 'Preencha os campos obrigatórios: Nome, CPF, Matrícula e Cargo.';
-    erro.style.display = 'block';
-    return;
-  }
+  // ── ABAS ──────────────────────────────────────────────────────
+  setTab(tab) {
+    STATE.tab = tab;
+    document.getElementById('aba-viagens').classList.toggle('ativa', tab==='viagens');
+    document.getElementById('aba-servidores').classList.toggle('ativa', tab==='servidores');
 
-  const btn = document.getElementById('modal-srv-btn');
-  btn.disabled = true;
-  btn.textContent = 'Salvando...';
+    const vLista = document.getElementById('view-lista');
+    const vForm  = document.getElementById('view-form');
+    const vSrv   = document.getElementById('view-servidores');
 
-  const dados = {
-    nome,
-    cpf,
-    matricula : mat,
-    cargo,
-    lotacao   : document.getElementById('srv-lotacao').value.trim(),
-    municipio : document.getElementById('srv-municipio').value,
-    email     : document.getElementById('srv-email').value.trim(),
-    celular   : document.getElementById('srv-celular').value.trim(),
-    telefone  : document.getElementById('srv-telefone').value.trim(),
-    banco     : document.getElementById('srv-banco').value.trim(),
-    agencia   : document.getElementById('srv-agencia').value.trim(),
-    conta     : document.getElementById('srv-conta').value.trim(),
-  };
-
-  const res = await window._salvarServidor(dados, id || null);
-  btn.disabled = false;
-  btn.textContent = '✓ Salvar Servidor';
-
-  if (res.ok) {
-    fecharModalServidor();
-    toast('Servidor salvo com sucesso!');
-  } else {
-    erro.textContent = 'Erro ao salvar: ' + res.erro;
-    erro.style.display = 'block';
-  }
-}
-
-async function confirmarExclusao(id, nome) {
-  if (!confirm(`Excluir o servidor "${nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
-  const res = await window._excluirServidor(id);
-  if (res.ok) toast('Servidor excluído.');
-  else toast('Erro ao excluir: ' + res.erro, 'erro');
-}
-
-// Máscara CPF
-function mascaraCPF(input) {
-  let v = input.value.replace(/\D/g,'').substring(0,11);
-  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
-  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
-  else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
-  input.value = v;
-}
-
-const TRANSPORTES = ['Veículo Oficial','Veículo Próprio','Ônibus','Avião'];
-const fmtR = v => 'R$ ' + v.toFixed(2).replace('.',',');
-
-
-
-// ══════════════════════════════════════════════════
-// CÁLCULO DE DIÁRIAS — lógica central (Dec. 1.662/2022)
-//
-// Regra: calcula o PERÍODO TOTAL DA MISSÃO —
-// da primeira saída de Florianópolis até a última chegada.
-// A cada 24h completas = 1 pernoite (R$ 220,00).
-// O restante (< 24h) segue: ≥12h = integral (R$110),
-// 4–12h = meia (R$55), ≤4h = sem direito.
-// ══════════════════════════════════════════════════
-
-function toMin(hhmm) {
-  if (!hhmm) return null;
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-}
-
-// Converte data "YYYY-MM-DD" + hora "HH:MM" em minutos absolutos
-function toMinAbs(data, hora) {
-  if (!data || !hora) return null;
-  const [ano, mes, dia] = data.split('-').map(Number);
-  const [h, m] = hora.split(':').map(Number);
-  // Minutos desde 01/01/2020 (referência arbitrária)
-  const ref = new Date(2020, 0, 1);
-  const dt  = new Date(ano, mes - 1, dia, h, m);
-  return Math.round((dt - ref) / 60000);
-}
-
-// Calcula o resultado dado o total de minutos da missão
-function calcularMissao(totalMin, tipoViagem) {
-  const H24 = 24 * 60;
-  const pernoites  = Math.floor(totalMin / H24);
-  const restMin    = totalMin % H24;
-  const restHoras  = restMin / 60;
-
-  let qtdExtra = 0, valorExtra = 0, labelExtra = '';
-  if (restHoras > 12) {
-    qtdExtra = 1; valorExtra = 110; labelExtra = 'diária inteira';
-  } else if (restHoras > 4) {
-    qtdExtra = 0.5; valorExtra = 55; labelExtra = 'meia diária';
-  }
-
-  const valorPernoite = 220;
-  const totalValor = pernoites * valorPernoite + valorExtra;
-  const totalQtd   = pernoites + qtdExtra;
-
-  return { pernoites, qtdExtra, valorExtra, labelExtra, totalValor, totalQtd, totalMin, restMin };
-}
-
-// ══════════════════════════════════════════════════
-// RECALCULAR — lê linhas da tabela e atualiza painel
-// ══════════════════════════════════════════════════
-function recalcular(p) {
-  const linhas     = coletarDeslocamentos(p);
-  const grupo      = document.getElementById(p + '-grupo-cargo').value;
-  const tipoViagem = document.getElementById(p + '-tipo-desloc').value;
-  const calcDiv    = document.getElementById(p + '-calc-auto');
-  const resumoGrid = document.getElementById(p + '-resumo-grid');
-  const detalheDiv = document.getElementById(p + '-detalhe-linhas');
-  const prazoBox   = document.getElementById(p + '-prazo-box');
-
-  const validas = linhas.filter(l => l.data && l.saida && l.chegada);
-  if (validas.length === 0) { calcDiv.style.display = 'none'; return; }
-  calcDiv.style.display = 'block';
-
-  // Ordena por data+hora de saída
-  validas.sort((a, b) => {
-    const ma = toMinAbs(a.data, a.saida), mb = toMinAbs(b.data, b.saida);
-    return (ma || 0) - (mb || 0);
-  });
-
-  // Período total: primeira saída → última chegada
-  const primSaida   = validas[0];
-  const ultChegada  = validas[validas.length - 1];
-  const minInicio   = toMinAbs(primSaida.data, primSaida.saida);
-  const minFim      = toMinAbs(ultChegada.data, ultChegada.chegada);
-
-  if (minInicio === null || minFim === null) {
-    calcDiv.style.display = 'none'; return;
-  }
-
-  const totalMin = minFim - minInicio;
-  if (totalMin <= 0) { calcDiv.style.display = 'none'; return; }
-
-  const missao = calcularMissao(totalMin, tipoViagem);
-
-  // Para contador e PDF
-  const qtInteiras  = missao.qtdExtra === 1 ? 1 : 0;
-  const qtMetades   = missao.qtdExtra === 0.5 ? 1 : 0;
-  const qtPernoites = missao.pernoites;
-  const totalQtd    = missao.totalQtd;
-  const totalValor  = missao.totalValor;
-
-  // Última data para prazo de prestação de contas
-  const ultimaData = ultChegada.data;
-
-  // Monta descrição do período
-  const hTot = Math.floor(totalMin / 60), mTot = totalMin % 60;
-  const duracaoStr = `${hTot}h${mTot > 0 ? mTot + 'min' : ''}`;
-
-  const hRest = Math.floor(missao.restMin / 60), mRest = missao.restMin % 60;
-  const restStr = missao.restMin > 0 ? `${hRest}h${mRest > 0 ? mRest + 'min' : ''}` : '0h';
-
-  // Detalhe da missão
-  let detalhesHTML = `
-    <div class="detalhe-linha" style="flex-direction:column;align-items:flex-start;gap:0.5rem;">
-      <div>
-        <strong style="font-size:0.85rem;">📍 Período total da missão: ${duracaoStr}</strong>
-        <div style="font-size:0.75rem;color:var(--texto-sec);margin-top:3px;">
-          Saída: ${primSaida.data} às ${primSaida.saida} · Retorno: ${ultChegada.data} às ${ultChegada.chegada}
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.25rem;">`;
-
-  if (missao.pernoites > 0) {
-    detalhesHTML += `<span class="dl-tag tag-pernoite">${missao.pernoites} pernoite${missao.pernoites > 1 ? 's' : ''} × R$ 220,00 = ${fmtR(missao.pernoites * 220)}</span>`;
-  }
-  if (missao.qtdExtra > 0) {
-    const tagClass = missao.qtdExtra === 1 ? 'tag-inteira' : 'tag-meia';
-    detalhesHTML += `<span class="dl-tag ${tagClass}">Restam ${restStr} → ${missao.labelExtra} = ${fmtR(missao.valorExtra)}</span>`;
-  }
-  if (missao.pernoites === 0 && missao.qtdExtra === 0) {
-    detalhesHTML += `<span class="dl-tag tag-sem">Até 4h — sem direito a diária</span>`;
-  }
-
-  detalhesHTML += `</div>`;
-
-  // Lista dos trechos
-  detalhesHTML += `<div style="font-size:0.72rem;color:var(--texto-sec);margin-top:0.25rem;line-height:1.6;">
-    ${validas.map(d => `${d.data} · ${d.origem} → ${d.destino} (${d.saida}–${d.chegada}) · ${d.transporte}`).join('<br>')}
-  </div></div>`;
-
-  // Resumo
-  resumoGrid.innerHTML = `
-    <div class="resumo-card"><div class="rc-label">Duração total</div><div class="rc-val">${duracaoStr}</div><div class="rc-sub">${validas.length} trecho(s)</div></div>
-    <div class="resumo-card"><div class="rc-label">Pernoites</div><div class="rc-val">${missao.pernoites}</div><div class="rc-sub">× R$ 220,00</div></div>
-    <div class="resumo-card"><div class="rc-label">${missao.labelExtra || 'Sem adicional'}</div><div class="rc-val">${missao.qtdExtra > 0 ? fmtR(missao.valorExtra) : '—'}</div><div class="rc-sub">${restStr} restantes</div></div>
-    <div class="resumo-card destaque"><div class="rc-label">Total a Pagar</div><div class="rc-val">${fmtR(totalValor)}</div><div class="rc-sub">${totalQtd} diária(s)</div></div>`;
-
-  detalheDiv.innerHTML = detalhesHTML;
-
-  // Prazo prestação de contas (MLR-42)
-  if (ultimaData && p === 'rl') {
-    const dtRetorno = new Date(ultimaData + 'T12:00:00');
-    let diasUteis = 0, dt = new Date(dtRetorno);
-    while (diasUteis < 5) { dt.setDate(dt.getDate() + 1); if (dt.getDay() !== 0 && dt.getDay() !== 6) diasUteis++; }
-    prazoBox.innerHTML = `📋 <strong>Prazo para prestação de contas:</strong> até ${dt.toLocaleDateString('pt-BR')} (5 dias úteis após o retorno — Art. 11, Dec. 650/2020)`;
-    prazoBox.style.display = 'block';
-  }
-
-  // Guarda resultado global para salvar/PDF
-  window[p + '_calc'] = { totalQtd, totalValor, qtInteiras, qtMetades, qtPernoites, grupo, tipoViagem };
-}
-
-
-// ══════════════════════════════════════════════════
-// CONTADOR DIÁRIAS DO MÊS
-// ══════════════════════════════════════════════════
-async function verificarContadorMes(matricula, prefixo) {
-  const badgeEl = document.getElementById(prefixo + '-badge-diarias');
-  if (!badgeEl) return;
-  badgeEl.innerHTML = '<span class="badge-diarias badge-ok" style="opacity:0.5">Consultando Firebase...</span>';
-
-  if (typeof window._consultarDiariasDoMes !== 'function') {
-    badgeEl.innerHTML = '<span class="badge-diarias badge-aviso">⚠ Firebase não configurado — limite mensal não verificado</span>';
-    return;
-  }
-
-  const res = await window._consultarDiariasDoMes(matricula);
-  if (!res.ok) {
-    badgeEl.innerHTML = `<span class="badge-diarias badge-aviso">⚠ Não foi possível consultar o Firebase</span>`;
-    return;
-  }
-
-  const usadas = parseFloat(res.total) || 0;
-  const restantes = 10 - usadas;
-  const mes = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-
-  if (usadas >= 10) {
-    badgeEl.innerHTML = `<span class="badge-diarias badge-erro">🚫 LIMITE ATINGIDO — ${usadas}/10 diárias em ${mes}. Necessário autorização da SEA.</span>`;
-    if (prefixo === 'r') document.getElementById('r-btn-salvar').disabled = true;
-  } else if (usadas >= 8) {
-    badgeEl.innerHTML = `<span class="badge-diarias badge-aviso">⚠ Atenção — ${usadas}/10 diárias em ${mes}. Restam ${restantes}.</span>`;
-  } else {
-    badgeEl.innerHTML = `<span class="badge-diarias badge-ok">✓ ${usadas}/10 diárias em ${mes}. Restam ${restantes}.</span>`;
-  }
-}
-
-// ══════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════
-function inicializar() {
-  popularSelectMunicipio('r-municipio', 'FLORIANÓPOLIS');
-  popularSelectMunicipio('rl-municipio', 'FLORIANÓPOLIS');
-  adicionarLinha('r');
-  adicionarLinha('rl');
-
-  // Data de hoje formatada
-  const hoje = new Date();
-  const hojeStr = hoje.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
-  const cidadeData = 'FLORIANÓPOLIS, ' + hojeStr;
-  document.getElementById('r-local-data').value = cidadeData;
-  document.getElementById('rl-data-ass').value  = hojeStr;
-
-  // Fechar modal ao clicar fora
-  document.getElementById('modal-servidor').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal-servidor')) fecharModalServidor();
-  });
-
-  // _iniciarEscutaServidores é chamado pelo onAuthStateChanged no bloco Firebase
-  // Mas como fallback, tenta também após 2s caso a auth já esteja resolvida
-  setTimeout(() => {
-    if (typeof window._iniciarEscutaServidores === 'function' &&
-        (!window._servidoresCache || window._servidoresCache.length === 0)) {
-      window._iniciarEscutaServidores();
+    vSrv.classList.remove('ativo');
+    if (tab==='servidores') {
+      vLista.style.display='none'; vForm.classList.remove('ativo');
+      vSrv.style.display='block'; vSrv.classList.add('ativo');
+      this.renderServidores();
+    } else {
+      vSrv.style.display='none';
+      if (STATE.view==='form') {
+        vLista.style.display='none'; vForm.classList.add('ativo');
+      } else {
+        vLista.style.display='block'; vForm.classList.remove('ativo');
+        this.renderLista();
+      }
     }
-  }, 2000);
-}
+  },
 
-// ══════════════════════════════════════════════════
-// SINCRONIZAÇÃO BIDIRECIONAL MLR-41 ↔ MLR-42
-// Campos idênticos: servidor, orgao, sigla, nome-social,
-//                   municipio, email, celular, codigos-cargo, deslocamentos
-// ══════════════════════════════════════════════════
-function sincronizarForms(origem, destino) {
-  // 1. Servidor
-  const sidOrig = document.getElementById(origem + '-servidor').value;
-  const sidDest = document.getElementById(destino + '-servidor');
-  if (sidOrig && sidDest.value !== sidOrig) {
-    sidDest.value = sidOrig;
-    preencherServidor(destino);
-  }
+  // ── LISTA DE VIAGENS ──────────────────────────────────────────
+  voltarLista() {
+    STATE.view='lista'; STATE.viagemAtual=null;
+    this.setTab('viagens');
+  },
 
-  // 2. Campos de texto simples (mapeamento origem → destino)
-  const mapa = {
-    'orgao': 'orgao',
-    'sigla': 'sigla',
-    'nome-social': 'nome-social',
-    'email': 'email',
-    'celular': 'celular',
-  };
-  Object.entries(mapa).forEach(([campoOrig, campoDest]) => {
-    const elOrig = document.getElementById(origem + '-' + campoOrig);
-    const elDest = document.getElementById(destino + '-' + campoDest);
-    if (elOrig && elDest && elOrig.value) elDest.value = elOrig.value;
-  });
+  renderLista() {
+    const ano = parseInt(document.getElementById('filtro-ano').value);
+    const mes = parseInt(document.getElementById('filtro-mes').value);
+    const statusFiltro = STATE.filtroStatus;
+    let lista = DB.getViagens();
 
-  // 3. Município (select)
-  const munOrig = document.getElementById(origem + '-municipio')?.value;
-  if (munOrig) popularSelectMunicipio(destino + '-municipio', munOrig);
-
-  // 4. Códigos de cargo (checkboxes)
-  const checkedOrig = Array.from(
-    document.querySelectorAll('#' + origem + '-codigos-cargo input:checked')
-  ).map(c => c.value);
-  document.querySelectorAll('#' + destino + '-codigos-cargo input').forEach(c => {
-    c.checked = checkedOrig.includes(c.value);
-  });
-
-  // 5. Deslocamentos — sincronizar linhas existentes da tabela
-  const tbodyOrig = document.getElementById(origem + '-linhas-desloc');
-  const tbodyDest = document.getElementById(destino + '-linhas-desloc');
-  const linhasOrig = Array.from(tbodyOrig.querySelectorAll('tr'));
-  const linhasDest = Array.from(tbodyDest.querySelectorAll('tr'));
-
-  // Garante que o destino tenha o mesmo número de linhas
-  while (tbodyDest.querySelectorAll('tr').length < linhasOrig.length) adicionarLinha(destino);
-  while (tbodyDest.querySelectorAll('tr').length > linhasOrig.length) {
-    const ultima = tbodyDest.querySelector('tr:last-child');
-    if (ultima) ultima.remove();
-  }
-
-  // Copia os valores célula a célula
-  Array.from(tbodyOrig.querySelectorAll('tr')).forEach((trOrig, i) => {
-    const trDest = tbodyDest.querySelectorAll('tr')[i];
-    if (!trDest) return;
-    const cellsOrig = trOrig.querySelectorAll('td');
-    const cellsDest = trDest.querySelectorAll('td');
-    [0,1,2,3,4,5].forEach(ci => {
-      const inputOrig  = cellsOrig[ci]?.querySelector('input,select');
-      const inputDest  = cellsDest[ci]?.querySelector('input,select');
-      if (inputOrig && inputDest) inputDest.value = inputOrig.value;
+    // Filtra por período
+    lista = lista.filter(v=>{
+      const d = new Date(v.criadoEm || Date.now());
+      return d.getFullYear()===ano && d.getMonth()===mes;
     });
-  });
-  recalcular(destino);
+    // Filtra por status
+    if (statusFiltro!=='todos') lista = lista.filter(v=>v.status===statusFiltro);
 
-  toast('✔ Dados sincronizados com ' + (origem === 'r' ? 'MLR-41' : 'MLR-42'), 'ok');
-}
+    const grid = document.getElementById('viagens-grid');
+    const cnt  = document.getElementById('lista-contagem');
+    cnt.textContent = lista.length + ' viagem(ns) encontrada(s) em '
+      +MESES[mes]+'/'+ano;
 
-function trocarAba(id, btn) {
-  // Detecta qual aba estava ativa antes de trocar
-  const abaAtiva = document.querySelector('.painel.ativo');
-  const idAtiva  = abaAtiva ? abaAtiva.id.replace('painel-', '') : null;
+    if (!lista.length) {
+      grid.innerHTML = `
+        <div class="lista-vazia">
+          <div class="icon">📋</div>
+          <p>Nenhuma viagem encontrada para o período selecionado.</p>
+          <button class="btn btn-pri" style="margin:16px auto 0;display:flex;" onclick="APP.novaViagem()">+ Nova Viagem</button>
+        </div>`;
+      return;
+    }
 
-  document.querySelectorAll('.painel').forEach(p => p.classList.remove('ativo'));
-  document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
-  document.getElementById('painel-' + id).classList.add('ativo');
-  btn.classList.add('ativa');
+    grid.innerHTML = lista.slice().reverse().map(v=>{
+      const destinos = (v.comum?.deslocamentos||[]).map(d=>d.destino).filter(Boolean);
+      const dest1 = [...new Set(destinos)].slice(0,2).join(', ') || '—';
+      const datas = (v.comum?.deslocamentos||[]).map(d=>d.data).filter(Boolean).sort();
+      const periodo = datas.length ? fmtData(datas[0])+(datas.length>1?' a '+fmtData(datas[datas.length-1]):'') : '—';
+      const calc = v.requerimento?.calc || {};
+      const total = calc.totalValor||0;
+      const qtd   = calc.totalQtd||0;
+      const srv   = v.servidor?.nome || '—';
+      return `
+        <div class="viagem-card" onclick="APP.abrirViagem('${v.id}')">
+          <div class="viagem-card-avatar">${iniciais(srv)}</div>
+          <div class="viagem-card-info">
+            <div class="viagem-card-nome">${srv}</div>
+            <div class="viagem-card-det">${dest1} · ${periodo}</div>
+            <div style="margin-top:5px;">${badgeHTML(v.status)}</div>
+          </div>
+          <div class="viagem-card-val">
+            ${total?fmtR(total):'—'}
+            <small>${qtd?qtd+' diária(s)':''}</small>
+          </div>
+          <div class="viagem-card-acoes" onclick="event.stopPropagation()">
+            ${this._acoesCard(v)}
+          </div>
+        </div>`;
+    }).join('');
+  },
 
-  // Sincroniza automaticamente ao trocar entre requerimento e relatorio
-  if (idAtiva === 'requerimento' && id === 'relatorio') {
-    sincronizarForms('r', 'rl');
-  } else if (idAtiva === 'relatorio' && id === 'requerimento') {
-    sincronizarForms('rl', 'r');
-  }
-}
+  _acoesCard(v) {
+    const btns = [];
+    if (v.status!=='cancelado') {
+      btns.push(`<button class="btn btn-sec btn-sm" onclick="APP.abrirViagem('${v.id}')">Editar</button>`);
+    }
+    if (v.status==='rascunho'||v.status==='cancelado') {
+      btns.push(`<button class="btn btn-danger btn-sm" onclick="APP.confirmarExcluir('${v.id}','${(v.servidor?.nome||'').replace(/'/g,"\\'")}')">Excluir</button>`);
+    }
+    if (v.status==='requerido'||v.status==='prestado') {
+      btns.push(`<button class="btn btn-danger btn-sm" onclick="APP.cancelarViagem('${v.id}')">Cancelar</button>`);
+    }
+    if (v.status==='cancelado') {
+      btns.push(`<button class="btn btn-sec btn-sm" onclick="APP.reativarViagem('${v.id}')">Reativar</button>`);
+    }
+    return btns.join('');
+  },
 
-function preencherServidor(p) {
-  const id   = document.getElementById(p + '-servidor').value;
-  const card = document.getElementById(p + '-card-servidor');
-  if (!id) { card.classList.remove('visivel'); return; }
-  const s = window._servidoresCache.find(x => x.id === id);
-  if (!s) { card.classList.remove('visivel'); return; }
-  card.classList.add('visivel');
-  document.getElementById(p + '-srv-nome').textContent  = s.nome;
-  document.getElementById(p + '-srv-cpf').textContent   = s.cpf;
-  document.getElementById(p + '-srv-mat').textContent   = s.matricula;
-  document.getElementById(p + '-srv-cargo').textContent = s.cargo;
-  document.getElementById(p + '-srv-lot').textContent   = s.lotacao;
-  if (p === 'r') {
-    document.getElementById('r-srv-banco').textContent = s.banco || '—';
-    document.getElementById('r-srv-conta').textContent = (s.agencia || '—') + ' / ' + (s.conta || '—');
-    if (s.municipio) popularSelectMunicipio('r-municipio', s.municipio.toUpperCase());
-    if (s.celular)   document.getElementById('r-celular').value = s.celular;
-    if (s.email)     document.getElementById('r-email').value   = s.email;
-    document.getElementById('r-btn-salvar').disabled = false;
-    verificarContadorMes(s.matricula, 'r');
-  } else {
-    if (s.municipio) popularSelectMunicipio('rl-municipio', s.municipio.toUpperCase());
-    if (s.celular)   document.getElementById('rl-celular').value = s.celular;
-    if (s.email)     document.getElementById('rl-email').value   = s.email;
-  }
-}
+  // ── AÇÕES DE VIAGEM ───────────────────────────────────────────
+  novaViagem() {
+    STATE.viagemAtual = {
+      id: uid(), status:'rascunho',
+      criadoEm: new Date().toISOString(),
+      servidor: null, comum:{}, requerimento:{}, prestacao:{}
+    };
+    this._abrirForm();
+  },
 
-// ══════════════════════════════════════════════════
-// LINHAS DE DESLOCAMENTO
-// ══════════════════════════════════════════════════
-function adicionarLinha(p) {
-  const tbody = document.getElementById(p + '-linhas-desloc');
-  const tr = document.createElement('tr');
-  const opts = CIDADES_SC_ORDENADAS.map(c => `<option value="${c}">${c}</option>`).join('');
-  tr.innerHTML = `
-    <td><input type="date" style="width:128px;" oninput="recalcular('${p}')"></td>
-    <td><select style="width:140px;" onchange="recalcular('${p}')">${opts}</select></td>
-    <td><select style="width:140px;" onchange="recalcular('${p}')">${opts}</select></td>
-    <td><input type="time" style="width:82px;" oninput="recalcular('${p}')"></td>
-    <td><input type="time" style="width:82px;" oninput="recalcular('${p}')"></td>
-    <td><select style="width:128px;" onchange="recalcular('${p}')">${TRANSPORTES.map(t=>`<option>${t}</option>`).join('')}</select></td>
-    <td><button class="btn-rem-linha" onclick="this.closest('tr').remove();recalcular('${p}')">✕</button></td>`;
-  tbody.appendChild(tr);
-}
+  abrirViagem(id) {
+    const v = DB.getViagens().find(x=>x.id===id);
+    if (!v) return;
+    STATE.viagemAtual = JSON.parse(JSON.stringify(v)); // cópia profunda
+    this._abrirForm();
+    this._preencherForm(v);
+  },
 
-function coletarDeslocamentos(p) {
-  return Array.from(document.querySelectorAll('#' + p + '-linhas-desloc tr')).map(tr => {
-    const cells = tr.querySelectorAll('td');
-    const data       = cells[0]?.querySelector('input')?.value  || '';
-    const origem     = cells[1]?.querySelector('select')?.value || '';
-    const destino    = cells[2]?.querySelector('select')?.value || '';
-    const saida      = cells[3]?.querySelector('input')?.value  || '';
-    const chegada    = cells[4]?.querySelector('input')?.value  || '';
-    const transporte = cells[5]?.querySelector('select')?.value || '';
-    return { data, origem, destino, saida, chegada, transporte };
-  }).filter(d => d.origem || d.destino || d.data);
-}
+  _abrirForm() {
+    STATE.view='form';
+    document.getElementById('view-lista').style.display='none';
+    document.getElementById('view-form').classList.add('ativo');
+    document.getElementById('view-servidores').style.display='none';
+    popularSelectsServidores();
+    this._atualizarTopbar();
+    this.renderDoc();
+  },
 
-// ══════════════════════════════════════════════════
-// TOAST
-// ══════════════════════════════════════════════════
-function toast(msg, tipo = 'ok') {
-  const t = document.getElementById('toast');
-  t.textContent = (tipo === 'ok' ? '✓ ' : tipo === 'aviso' ? '⚠ ' : '✕ ') + msg;
-  t.className = 'show' + (tipo !== 'ok' ? ' ' + tipo : '');
-  setTimeout(() => { t.className = ''; }, 4000);
-}
+  _atualizarTopbar() {
+    const v = STATE.viagemAtual;
+    document.getElementById('form-titulo').textContent =
+      v?.servidor?.nome ? 'Viagem — '+v.servidor.nome : 'Nova Viagem';
+    document.getElementById('form-subtitulo').textContent =
+      v ? badgeHTML(v.status) : '';
+    document.getElementById('doc-status-badge').innerHTML =
+      v ? badgeHTML(v.status) : '';
+  },
 
-// ══════════════════════════════════════════════════
-// LIMPAR
-// ══════════════════════════════════════════════════
-function limpar(p) {
-  document.getElementById(p + '-servidor').value = '';
-  document.getElementById(p + '-card-servidor').classList.remove('visivel');
-  document.getElementById(p + '-linhas-desloc').innerHTML = '';
-  document.getElementById(p + '-calc-auto').style.display = 'none';
-  adicionarLinha(p);
-  document.querySelectorAll('#' + p + '-codigos-cargo input').forEach(c => c.checked = false);
-  popularSelectMunicipio(p + '-municipio', 'FLORIANÓPOLIS');
-  const campos = p === 'r'
-    ? ['r-objetivo','r-nome-social','r-local-data','r-email','r-celular','r-competencia']
-    : ['rl-resultado-texto','rl-nome-social','rl-email','rl-celular','rl-data-ass'];
-  campos.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
-  const boxId = p === 'r' ? 'r-resultado' : 'rl-resultado-box';
-  document.getElementById(boxId).classList.remove('visivel');
-  if (p === 'r') {
-    document.getElementById('r-btn-salvar').disabled = false;
-    document.getElementById('r-badge-diarias').innerHTML = '';
-  }
-  window[p + '_calc'] = null;
-}
+  _preencherForm(v) {
+    // Servidor
+    if (v.servidor?.id) {
+      document.getElementById('f-servidor').value = v.servidor.id;
+      this.onServidorChange(true);
+    }
+    // Dados comuns
+    const c = v.comum || {};
+    if (c.orgao)    document.getElementById('f-orgao').value    = c.orgao;
+    if (c.sigla)    document.getElementById('f-sigla').value    = c.sigla;
+    if (c.nomeSocial) document.getElementById('f-nome-social').value = c.nomeSocial;
+    if (c.municipio) popularSelectCidade('f-municipio', c.municipio);
+    if (c.email)    document.getElementById('f-email').value    = c.email;
+    if (c.celular)  document.getElementById('f-celular').value  = c.celular;
+    if (c.grupoCargo) document.getElementById('f-grupo').value  = c.grupoCargo;
+    if (c.tipoDesloc) document.getElementById('f-tipo-desloc').value = c.tipoDesloc;
+    if (c.codigosCargo) this._selecionarCodigo(c.codigosCargo);
 
-// ══════════════════════════════════════════════════
-// EXTENSO
-// ══════════════════════════════════════════════════
-function numeroParaExtenso(n) {
-  const un=['','UM','DOIS','TRÊS','QUATRO','CINCO','SEIS','SETE','OITO','NOVE','DEZ','ONZE','DOZE','TREZE','QUATORZE','QUINZE','DEZESSEIS','DEZESSETE','DEZOITO','DEZENOVE'];
+    // Deslocamentos
+    const tbody = document.getElementById('linhas-desloc');
+    tbody.innerHTML='';
+    (c.deslocamentos||[]).forEach(d=>this.addLinha(d));
+    if (!tbody.children.length) this.addLinha();
+
+    // Objetivo / Resultado
+    if (v.requerimento?.objetivo)  document.getElementById('f-objetivo').value = v.requerimento.objetivo;
+    if (v.requerimento?.localData) document.getElementById('f-local-data').value = v.requerimento.localData;
+    if (v.prestacao?.resultado)    document.getElementById('f-resultado').value = v.prestacao.resultado;
+    if (v.prestacao?.dataAss)      document.getElementById('f-data-ass').value = v.prestacao.dataAss;
+
+    this.recalcular();
+    this._liberarSecoes();
+  },
+
+  _liberarSecoes() {
+    const temSrv = !!document.getElementById('f-servidor').value;
+    ['sec-func','sec-desloc','sec-calc','sec-obj'].forEach(id=>{
+      document.getElementById(id)?.classList.toggle('bloqueada',!temSrv);
+    });
+    const temMLR41 = STATE.viagemAtual?.status==='requerido'||STATE.viagemAtual?.status==='prestado';
+    document.getElementById('sec-res')?.classList.toggle('bloqueada',!temMLR41);
+    if (temMLR41) this._mostrarPrazo();
+  },
+
+  _mostrarPrazo() {
+    const deslocs = this._coletarDeslocamentos();
+    if (!deslocs.length) return;
+    const datas = deslocs.map(d=>d.data).filter(Boolean).sort();
+    if (!datas.length) return;
+    const ultData = datas[datas.length-1];
+    const prazo = this._calcPrazoContas(ultData);
+    const aviso = document.getElementById('aviso-prazo');
+    if (aviso && prazo) {
+      aviso.innerHTML = `📋 <strong>Prazo para prestação de contas:</strong> até <strong>${prazo}</strong> (5 dias úteis após o retorno — Art. 11, Dec. 650/2020).`;
+      aviso.style.display='block';
+    }
+  },
+
+  _calcPrazoContas(isoDate) {
+    if (!isoDate) return null;
+    const [a,m,d] = isoDate.split('-').map(Number);
+    let dt = new Date(a,m-1,d);
+    let uteis=0;
+    while(uteis<5){ dt.setDate(dt.getDate()+1); if(dt.getDay()!==0&&dt.getDay()!==6) uteis++; }
+    return dt.toLocaleDateString('pt-BR');
+  },
+
+  cancelarViagem(id) {
+    this._confirm('Cancelar viagem',
+      'Tem certeza que deseja cancelar esta viagem? O registro será mantido como cancelado.',
+      ()=>{
+        const lista = DB.getViagens().map(v=> v.id===id?{...v,status:'cancelado'}:v);
+        DB.setViagens(lista);
+        if (STATE.viagemAtual?.id===id) STATE.viagemAtual.status='cancelado';
+        this._atualizarTopbar();
+        this.renderLista();
+        toast('Viagem cancelada.');
+      });
+  },
+
+  reativarViagem(id) {
+    const lista = DB.getViagens().map(v=> v.id===id?{...v,status:'rascunho'}:v);
+    DB.setViagens(lista);
+    toast('Viagem reativada como rascunho.');
+    this.renderLista();
+  },
+
+  confirmarExcluir(id, nome) {
+    this._confirm('Excluir viagem',
+      `Excluir a viagem de "${nome}"?\n\nEssa ação não pode ser desfeita.`,
+      ()=>{
+        const lista = DB.getViagens().filter(v=>v.id!==id);
+        DB.setViagens(lista);
+        toast('Viagem excluída.');
+        if (STATE.view==='form') this.voltarLista();
+        else this.renderLista();
+      });
+  },
+
+  // ── SERVIDOR ──────────────────────────────────────────────────
+  onServidorChange(silent=false) {
+    const id = document.getElementById('f-servidor').value;
+    const card = document.getElementById('srv-card');
+    if (!id) { card.classList.remove('vis'); this._liberarSecoes(); this.renderDoc(); return; }
+    const s = (DB.getServidores()||[]).find(x=>x.id===id);
+    if (!s) return;
+
+    // Atualiza viagem atual
+    if (STATE.viagemAtual) STATE.viagemAtual.servidor = s;
+
+    // Exibe card
+    card.classList.add('vis');
+    document.getElementById('srv-nome-display').textContent = s.nome;
+    document.getElementById('srv-grid-display').innerHTML = [
+      ['CPF',s.cpf],['Matrícula',s.matricula],['Cargo',s.cargo],
+      ['Lotação',s.lotacao],['Banco',s.banco||'—'],
+      ['Agência/Conta',(s.agencia||'—')+' / '+(s.conta||'—')]
+    ].map(([l,v])=>`<div class="srv-item"><span class="srv-label">${l}</span><span class="srv-val">${v}</span></div>`).join('');
+
+    // Autopreenchimento
+    if (s.municipio) popularSelectCidade('f-municipio', s.municipio);
+    if (s.email)   document.getElementById('f-email').value   = s.email;
+    if (s.celular) document.getElementById('f-celular').value = s.celular;
+
+    // Contador mensal
+    this._badgeMes(s.matricula);
+    this._liberarSecoes();
+    if (!silent) this.renderDoc();
+  },
+
+  _badgeMes(matricula) {
+    const viagens = DB.getViagens();
+    const agora = new Date();
+    const total = viagens.filter(v=>{
+      const d = new Date(v.criadoEm||0);
+      return v.servidor?.matricula===matricula
+        && v.status!=='cancelado'
+        && d.getFullYear()===agora.getFullYear()
+        && d.getMonth()===agora.getMonth();
+    }).reduce((sum,v)=>sum+(v.requerimento?.calc?.totalQtd||0),0);
+
+    const mes = MESES[agora.getMonth()]+'/'+agora.getFullYear();
+    const rest = 10-total;
+    let cls='ok', txt=`✓ ${total}/10 diárias em ${mes}. Restam ${rest}.`;
+    if (total>=10){ cls='erro'; txt=`🚫 LIMITE ATINGIDO — ${total}/10 em ${mes}. Necessário autorização da SEA.`; }
+    else if (total>=8){ cls='aviso'; txt=`⚠ Atenção — ${total}/10 em ${mes}. Restam ${rest}.`; }
+
+    document.getElementById('badge-mes-display').innerHTML =
+      `<span class="badge-mes ${cls}">${txt}</span>`;
+  },
+
+  // ── SEÇÕES COLAPSÁVEIS ─────────────────────────────────────────
+  toggleSec(id) {
+    document.getElementById(id)?.classList.toggle('fechada');
+  },
+
+  // ── CÓDIGO DE CARGO ───────────────────────────────────────────
+  selCodigo(el, val) {
+    // Apenas um código por vez
+    document.querySelectorAll('#f-codigos-cargo .ri').forEach(r=>r.classList.remove('sel'));
+    el.classList.toggle('sel');
+    this.renderDoc();
+  },
+  _selecionarCodigo(arr) {
+    if (!arr||!arr.length) return;
+    document.querySelectorAll('#f-codigos-cargo .ri').forEach(r=>{
+      r.classList.toggle('sel', arr.includes(r.dataset.v));
+    });
+  },
+  _codigosSelec() {
+    return Array.from(document.querySelectorAll('#f-codigos-cargo .ri.sel')).map(r=>r.dataset.v);
+  },
+
+  // ── LINHAS DE DESLOCAMENTO ────────────────────────────────────
+  addLinha(dados={}) {
+    const tbody = document.getElementById('linhas-desloc');
+    const tr = document.createElement('tr');
+    const opts = CIDADES_LISTA.map(c=>`<option value="${c}"${c===(dados.origem||'FLORIANÓPOLIS')?' selected':''}>${c}</option>`).join('');
+    const opts2= CIDADES_LISTA.map(c=>`<option value="${c}"${c===(dados.destino||'FLORIANÓPOLIS')?' selected':''}>${c}</option>`).join('');
+    const transp = TRANSPORTES.map(t=>`<option${t===(dados.transporte||'Veículo Oficial')?' selected':''}>${t}</option>`).join('');
+    tr.innerHTML=`
+      <td><input type="date" value="${dados.data||''}" oninput="APP.recalcular()"></td>
+      <td><select onchange="APP.recalcular()">${opts}</select></td>
+      <td><select onchange="APP.recalcular()">${opts2}</select></td>
+      <td><input type="time" value="${dados.saida||''}" oninput="APP.recalcular()"></td>
+      <td><input type="time" value="${dados.chegada||''}" oninput="APP.recalcular()"></td>
+      <td><select onchange="APP.recalcular()">${transp}</select></td>
+      <td><button class="btn-rem" onclick="this.closest('tr').remove();APP.recalcular()">✕</button></td>`;
+    tbody.appendChild(tr);
+  },
+
+  _coletarDeslocamentos() {
+    return Array.from(document.querySelectorAll('#linhas-desloc tr')).map(tr=>{
+      const c = tr.querySelectorAll('td');
+      return {
+        data:      c[0]?.querySelector('input')?.value||'',
+        origem:    c[1]?.querySelector('select')?.value||'',
+        destino:   c[2]?.querySelector('select')?.value||'',
+        saida:     c[3]?.querySelector('input')?.value||'',
+        chegada:   c[4]?.querySelector('input')?.value||'',
+        transporte:c[5]?.querySelector('select')?.value||'',
+      };
+    }).filter(d=>d.data||d.saida||d.chegada);
+  },
+
+  // ── LIMPAR FORMULÁRIO ─────────────────────────────────────────
+  limparForm() {
+    if (STATE.viagemAtual?.id) {
+      // Mantém o objeto viagem mas limpa os campos
+    }
+    document.getElementById('f-servidor').value='';
+    document.getElementById('srv-card').classList.remove('vis');
+    document.getElementById('linhas-desloc').innerHTML='';
+    this.addLinha();
+    ['f-nome-social','f-email','f-celular','f-objetivo','f-resultado'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    document.getElementById('f-orgao').value='SEJURI - SECRETARIA DE ESTADO DE JUSTIÇA E REINTEGRAÇÃO SOCIAL';
+    document.getElementById('f-sigla').value='DPP';
+    document.getElementById('f-local-data').value='FLORIANÓPOLIS, '+hoje();
+    document.getElementById('f-data-ass').value=hoje();
+    document.getElementById('calc-conteudo').innerHTML='<div style="font-size:.78rem;color:var(--texto2);">Preencha os deslocamentos para calcular.</div>';
+    document.getElementById('aviso-prazo').style.display='none';
+    document.querySelectorAll('#f-codigos-cargo .ri').forEach(r=>r.classList.remove('sel'));
+    STATE.calcResult=null;
+    this._liberarSecoes();
+    this.renderDoc();
+  },
+
+  // ── AUTO-SAVE AO SAIR DO FORMULÁRIO ──────────────────────────
+  voltarLista() {
+    if (STATE.alteracoesPendentes && STATE.viagemAtual) {
+      const srvId = document.getElementById('f-servidor').value;
+      if (srvId) {
+        const statusAtual = STATE.viagemAtual.status || 'rascunho';
+        this._salvarViagem(statusAtual);
+        toast('Alterações salvas automaticamente.');
+      }
+    }
+    STATE.view = 'lista';
+    STATE.viagemAtual = null;
+    STATE.alteracoesPendentes = false;
+    document.getElementById('view-lista').style.display = 'block';
+    document.getElementById('view-form').classList.remove('ativo');
+    document.getElementById('view-servidores').style.display = 'none';
+    this.renderLista();
+  },
+
+  // ── ALTERNÂNCIA DOCUMENTO (41/42) ─────────────────────────────
+  setDocAtivo(v) {
+    STATE.docAtivo=v;
+    document.getElementById('toggle-41').classList.toggle('ativo',v==='41');
+    document.getElementById('toggle-42').classList.toggle('ativo',v==='42');
+    document.getElementById('doc-badge-tipo').textContent='MLR-'+v;
+    this.renderDoc();
+  },
+
+  toggleMobPreview() {
+    STATE.mobPreview=!STATE.mobPreview;
+    document.getElementById('painel-doc').classList.toggle('mob-vis',STATE.mobPreview);
+  },
+
+  // ── COPIAR DOCUMENTO ─────────────────────────────────────────
+  copiarDocumento() {
+    const el = document.getElementById('doc-preview');
+    if (!el||el.classList.contains('vazio')) { toast('Nenhum documento para copiar.','aviso'); return; }
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    toast('Conteúdo copiado para a área de transferência.');
+  },
+
+  // ── CONFIRMAÇÃO ───────────────────────────────────────────────
+  _confirm(titulo, msg, fn) {
+    document.getElementById('confirm-titulo').textContent=titulo;
+    document.getElementById('confirm-msg').textContent=msg;
+    const btn=document.getElementById('confirm-btn');
+    btn.onclick=()=>{ this.fecharConfirm(); fn(); };
+    document.getElementById('modal-confirm').classList.add('vis');
+  },
+  fecharConfirm() {
+    document.getElementById('modal-confirm').classList.remove('vis');
+  },
+
+  // ── CRUD SERVIDORES ───────────────────────────────────────────
+  renderServidores() {
+    const lista = DB.getServidores()||[];
+    const grid  = document.getElementById('srv-lista-grid');
+    if (!lista.length) {
+      grid.innerHTML='<div class="lista-vazia"><div class="icon">👤</div><p>Nenhum servidor cadastrado.</p></div>';
+      return;
+    }
+    grid.innerHTML = lista.map((s,i)=>`
+      <div class="srv-list-card">
+        <div class="srv-list-avatar">${iniciais(s.nome)}</div>
+        <div class="srv-list-info">
+          <div class="srv-list-nome">${s.nome}</div>
+          <div class="srv-list-det">${s.cargo||'—'} · ${s.municipio||'—'} · Mat.: ${s.matricula||'—'}</div>
+          <div style="font-size:.72rem;color:var(--texto2);margin-top:2px;">${s.email||''} ${s.celular?'· '+s.celular:''}</div>
+        </div>
+        <div class="srv-list-acoes">
+          <button class="btn btn-sec btn-sm" onclick="APP.abrirModalServidor('${s.id}')">✏ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="APP.excluirServidor('${s.id}','${s.nome.replace(/'/g,"\\'")}')">🗑</button>
+        </div>
+      </div>`).join('');
+  },
+
+  abrirModalServidor(id) {
+    const modal = document.getElementById('modal-srv');
+    const erro  = document.getElementById('modal-srv-erro');
+    erro.style.display='none';
+    popularSelectCidade('srv-municipio');
+    if (id) {
+      const s=(DB.getServidores()||[]).find(x=>x.id===id);
+      if(!s) return;
+      document.getElementById('modal-srv-titulo').textContent='✏ Editar Servidor';
+      document.getElementById('srv-edit-id').value=id;
+      document.getElementById('srv-nome').value=s.nome||'';
+      document.getElementById('srv-cpf').value=s.cpf||'';
+      document.getElementById('srv-matricula').value=s.matricula||'';
+      document.getElementById('srv-cargo').value=s.cargo||'';
+      document.getElementById('srv-lotacao').value=s.lotacao||'DEPARTAMENTO DE POLICIA PENAL';
+      document.getElementById('srv-email').value=s.email||'';
+      document.getElementById('srv-cel').value=s.celular||'';
+      document.getElementById('srv-tel').value=s.telefone||'';
+      document.getElementById('srv-banco').value=s.banco||'';
+      document.getElementById('srv-agencia').value=s.agencia||'';
+      document.getElementById('srv-conta').value=s.conta||'';
+      popularSelectCidade('srv-municipio',s.municipio||'FLORIANÓPOLIS');
+    } else {
+      document.getElementById('modal-srv-titulo').textContent='+ Novo Servidor';
+      document.getElementById('srv-edit-id').value='';
+      ['srv-nome','srv-cpf','srv-matricula','srv-cargo','srv-email',
+       'srv-cel','srv-tel','srv-banco','srv-agencia','srv-conta'].forEach(f=>{
+        const el=document.getElementById(f); if(el) el.value='';
+      });
+      document.getElementById('srv-lotacao').value='DEPARTAMENTO DE POLICIA PENAL';
+    }
+    modal.classList.add('vis');
+    document.getElementById('srv-nome').focus();
+  },
+
+  fecharModalServidor() {
+    document.getElementById('modal-srv').classList.remove('vis');
+  },
+
+  salvarServidor() {
+    const id    = document.getElementById('srv-edit-id').value;
+    const nome  = document.getElementById('srv-nome').value.trim();
+    const cpf   = document.getElementById('srv-cpf').value.trim();
+    const mat   = document.getElementById('srv-matricula').value.trim();
+    const cargo = document.getElementById('srv-cargo').value.trim();
+    const erro  = document.getElementById('modal-srv-erro');
+
+    if (!nome||!cpf||!mat||!cargo) {
+      erro.textContent='Preencha os campos obrigatórios: Nome, CPF, Matrícula e Cargo.';
+      erro.style.display='block'; return;
+    }
+    const dados = {
+      nome, cpf, matricula:mat, cargo,
+      lotacao:  document.getElementById('srv-lotacao').value.trim(),
+      municipio:document.getElementById('srv-municipio').value,
+      email:    document.getElementById('srv-email').value.trim(),
+      celular:  document.getElementById('srv-cel').value.trim(),
+      telefone: document.getElementById('srv-tel').value.trim(),
+      banco:    document.getElementById('srv-banco').value.trim(),
+      agencia:  document.getElementById('srv-agencia').value.trim(),
+      conta:    document.getElementById('srv-conta').value.trim(),
+    };
+
+    const btn=document.getElementById('modal-srv-btn');
+    btn.disabled=true; btn.textContent='Salvando...';
+    let lista = DB.getServidores()||[];
+    if (id) {
+      lista = lista.map(s=>s.id===id?{...s,...dados}:s);
+    } else {
+      lista.push({id:uid(),...dados});
+    }
+    DB.setServidores(lista);
+    btn.disabled=false; btn.textContent='✓ Salvar';
+    this.fecharModalServidor();
+    this.renderServidores();
+    popularSelectsServidores();
+    toast('Servidor salvo com sucesso!');
+  },
+
+  excluirServidor(id, nome) {
+    this._confirm('Excluir servidor',
+      `Excluir o servidor "${nome}"? Esta ação não pode ser desfeita.`,
+      ()=>{
+        const lista=(DB.getServidores()||[]).filter(s=>s.id!==id);
+        DB.setServidores(lista);
+        this.renderServidores();
+        toast('Servidor excluído.');
+      });
+  },
+
+  // ── SALVAR RASCUNHO ───────────────────────────────────────────
+  salvarRascunho() {
+    const srvId = document.getElementById('f-servidor').value;
+    if (!srvId) { toast('Selecione um servidor antes de salvar.', 'aviso'); return; }
+    if (!STATE.viagemAtual) return;
+
+    const statusAtual = STATE.viagemAtual.status || 'rascunho';
+    this._salvarViagem(statusAtual);
+    this._marcarSalvo();
+    toast('Viagem salva.');
+  },
+
+  _marcarSalvo() {
+    STATE.alteracoesPendentes = false;
+    const ind = document.getElementById('indicador-salvo');
+    if (!ind) return;
+    ind.textContent = '✓ Salvo às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    ind.style.display = 'inline';
+    ind.style.color = 'var(--ok)';
+  },
+
+  _marcarAlterado() {
+    if (!STATE.viagemAtual) return;
+    STATE.alteracoesPendentes = true;
+    const ind = document.getElementById('indicador-salvo');
+    if (!ind) return;
+    ind.textContent = '● Alterações não salvas';
+    ind.style.display = 'inline';
+    ind.style.color = 'var(--acento)';
+  },
+
+  // ── SINCRONIZAÇÃO FIREBASE ────────────────────────────────────
+  async syncFirebase() {
+    const btn = document.getElementById('btn-sync-firebase');
+    btn.disabled = true;
+    btn.textContent = '⏳ Sincronizando...';
+
+    if (typeof window._syncServidoresFirebase !== 'function') {
+      toast('Firebase ainda não carregou. Aguarde alguns segundos e tente novamente.', 'aviso');
+      btn.disabled = false; btn.textContent = '🔄 Sincronizar Firebase';
+      return;
+    }
+
+    const res = await window._syncServidoresFirebase();
+    btn.disabled = false; btn.textContent = '🔄 Sincronizar Firebase';
+
+    if (res.ok) {
+      toast(`✓ ${res.total} servidor(es) importado(s) do Firebase.`);
+      this.renderServidores();
+      popularSelectsServidores();
+    } else {
+      toast('Erro ao sincronizar: ' + res.msg, 'erro');
+    }
+  },
+
+  mascaraCPF(input) {
+    let v=input.value.replace(/\D/g,'').substring(0,11);
+    if(v.length>9) v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+    else if(v.length>6) v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
+    else if(v.length>3) v=v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
+    input.value=v;
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // PARTE 3 — CÁLCULO + VISUALIZADOR EM TEMPO REAL
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── CÁLCULO DE DIÁRIAS (Dec. 1.662/2022) ─────────────────────
+  _toMinAbs(data, hora) {
+    if (!data||!hora) return null;
+    const [a,m,d] = data.split('-').map(Number);
+    const [h,mi]  = hora.split(':').map(Number);
+    return (new Date(a,m-1,d,h,mi) - new Date(2020,0,1)) / 60000;
+  },
+
+  _calcularMissao(totalMin) {
+    const H24 = 1440;
+    const pernoites = Math.floor(totalMin / H24);
+    const restMin   = totalMin % H24;
+    const restH     = restMin / 60;
+    let qtdExtra=0, valorExtra=0, labelExtra='';
+    if      (restH > 12) { qtdExtra=1;   valorExtra=110; labelExtra='Diária inteira'; }
+    else if (restH > 4)  { qtdExtra=0.5; valorExtra=55;  labelExtra='Meia diária';    }
+    return {
+      pernoites, qtdExtra, valorExtra, labelExtra,
+      totalValor: pernoites*220 + valorExtra,
+      totalQtd:   pernoites + qtdExtra,
+      totalMin, restMin,
+      qtInteiras:  qtdExtra===1   ? 1 : 0,
+      qtMetades:   qtdExtra===0.5 ? 1 : 0,
+      qtPernoites: pernoites,
+    };
+  },
+
+  recalcular() {
+    const deslocs = this._coletarDeslocamentos();
+    const validas = deslocs.filter(d=>d.data&&d.saida&&d.chegada);
+    const box     = document.getElementById('calc-conteudo');
+
+    if (!validas.length) {
+      box.innerHTML='<div style="font-size:.78rem;color:var(--texto2);">Preencha data, saída e chegada para calcular.</div>';
+      STATE.calcResult=null;
+      this.renderDoc(); return;
+    }
+
+    validas.sort((a,b)=>(this._toMinAbs(a.data,a.saida)||0)-(this._toMinAbs(b.data,b.saida)||0));
+    const prim = validas[0];
+    const ult  = validas[validas.length-1];
+    const minI = this._toMinAbs(prim.data, prim.saida);
+    const minF = this._toMinAbs(ult.data,  ult.chegada);
+
+    if (minI===null||minF===null||minF<=minI) {
+      box.innerHTML='<div class="alerta alerta-erro" style="font-size:.75rem;">Verifique as datas e horários — chegada deve ser posterior à saída.</div>';
+      STATE.calcResult=null; this.renderDoc(); return;
+    }
+
+    const r = this._calcularMissao(minF-minI);
+    STATE.calcResult = {
+      ...r,
+      grupo:     document.getElementById('f-grupo')?.value||'1',
+      tipoDesloc:document.getElementById('f-tipo-desloc')?.value||'estado',
+      primSaida: prim, ultChegada: ult,
+    };
+
+    const hTot = Math.floor(r.totalMin/60), mTot=r.totalMin%60;
+    const hRest= Math.floor(r.restMin/60),  mRest=r.restMin%60;
+    const durStr  = `${hTot}h${mTot?mTot+'min':''}`;
+    const restStr = r.restMin>0?`${hRest}h${mRest?mRest+'min':''}`:'-';
+
+    let tagExtra='';
+    if (r.pernoites>0)
+      tagExtra+=`<span style="background:#B5D4F4;color:#0C447C;padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:700;">${r.pernoites} pernoite(s) × R$ 220,00 = ${fmtR(r.pernoites*220)}</span> `;
+    if (r.qtdExtra>0) {
+      const bg=r.qtdExtra===1?'#C0DD97':'#FAEEDA', fc=r.qtdExtra===1?'#166534':'#92400e';
+      tagExtra+=`<span style="background:${bg};color:${fc};padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:700;">Restam ${restStr} → ${r.labelExtra} = ${fmtR(r.valorExtra)}</span>`;
+    }
+    if (!r.pernoites&&!r.qtdExtra)
+      tagExtra='<span style="background:#FEF2F2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:.68rem;font-weight:700;">≤ 4h — sem direito a diária</span>';
+
+    box.innerHTML=`
+      <div class="calc-box">
+        <div class="calc-titulo">⚡ Decreto nº 1.662/2022</div>
+        <div class="calc-resumo">
+          <div class="calc-card"><div class="cc-label">Duração total</div><div class="cc-val">${durStr}</div></div>
+          <div class="calc-card"><div class="cc-label">Pernoites</div><div class="cc-val">${r.pernoites}</div></div>
+          <div class="calc-card"><div class="cc-label">Adicional</div><div class="cc-val">${r.qtdExtra>0?fmtR(r.valorExtra):'—'}</div></div>
+          <div class="calc-card dest"><div class="cc-label">Total</div><div class="cc-val">${fmtR(r.totalValor)}</div></div>
+        </div>
+        <div class="calc-detalhe">
+          <strong>Período:</strong> ${fmtData(prim.data)} ${prim.saida} → ${fmtData(ult.data)} ${ult.chegada}<br>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">${tagExtra}</div>
+        </div>
+      </div>`;
+
+    // Prazo de prestação de contas
+    this._mostrarPrazo();
+    this.renderDoc();
+  },
+
+  // ── COLETAR DADOS DO FORMULÁRIO ───────────────────────────────
+  _dadosFormulario() {
+    const srvId = document.getElementById('f-servidor').value;
+    const srv   = srvId ? (DB.getServidores()||[]).find(x=>x.id===srvId)||{} : {};
+    return {
+      srv,
+      orgao:       document.getElementById('f-orgao')?.value||'',
+      sigla:       document.getElementById('f-sigla')?.value||'',
+      nomeSocial:  document.getElementById('f-nome-social')?.value||'',
+      municipio:   document.getElementById('f-municipio')?.value||'',
+      email:       document.getElementById('f-email')?.value||'',
+      celular:     document.getElementById('f-celular')?.value||'',
+      codigosCargo:this._codigosSelec(),
+      grupoCargo:  document.getElementById('f-grupo')?.value||'1',
+      tipoDesloc:  document.getElementById('f-tipo-desloc')?.value||'estado',
+      deslocamentos:this._coletarDeslocamentos(),
+      objetivo:    document.getElementById('f-objetivo')?.value||'',
+      localData:   document.getElementById('f-local-data')?.value||'',
+      resultado:   document.getElementById('f-resultado')?.value||'',
+      dataAss:     document.getElementById('f-data-ass')?.value||'',
+      calc:        STATE.calcResult||{},
+    };
+  },
+
+  // ── SALVAR VIAGEM NO STORAGE ──────────────────────────────────
+  _salvarViagem(novoStatus) {
+    if (!STATE.viagemAtual) return;
+    const d = this._dadosFormulario();
+    const v = STATE.viagemAtual;
+
+    v.servidor = d.srv;
+    v.comum = {
+      orgao:d.orgao, sigla:d.sigla, nomeSocial:d.nomeSocial,
+      municipio:d.municipio, email:d.email, celular:d.celular,
+      codigosCargo:d.codigosCargo, grupoCargo:d.grupoCargo,
+      tipoDesloc:d.tipoDesloc, deslocamentos:d.deslocamentos,
+    };
+    v.requerimento = {
+      objetivo:d.objetivo, localData:d.localData,
+      calc:d.calc, salvoEm:new Date().toISOString(),
+    };
+    v.prestacao = {
+      resultado:d.resultado, dataAss:d.dataAss,
+      calc:d.calc, salvoEm:new Date().toISOString(),
+    };
+    if (novoStatus) v.status = novoStatus;
+    v.atualizadoEm = new Date().toISOString();
+
+    const lista = DB.getViagens();
+    const idx   = lista.findIndex(x=>x.id===v.id);
+    if (idx>=0) lista[idx]=v; else lista.push(v);
+    DB.setViagens(lista);
+    STATE.viagemAtual = v;
+    this._atualizarTopbar();
+  },
+
+  // ── VISUALIZADOR EM TEMPO REAL ────────────────────────────────
+  renderDoc() {
+    const d   = this._dadosFormulario();
+    const doc = document.getElementById('doc-preview');
+    const sub = document.getElementById('doc-subtit');
+    const nota= document.getElementById('doc-nota');
+    const tipo= STATE.docAtivo; // '41' | '42'
+
+    if (!d.srv?.nome) {
+      doc.className='doc-preview vazio';
+      doc.innerHTML='<div><div style="font-size:2rem;margin-bottom:8px;">📄</div><div>Selecione um servidor e preencha<br>os campos para visualizar o documento.</div></div>';
+      sub.textContent='Preencha o formulário ao lado'; nota.style.display='none'; return;
+    }
+
+    doc.className='doc-preview';
+    sub.textContent = tipo==='41'
+      ? 'Requerimento de Diárias — '+d.srv.nome
+      : 'Relatório de Viagem — '+d.srv.nome;
+
+    const codAll=['DGS-1','DGS-2','DGS-3','FTG-1','FTG-2','FTG-3','FG-1','FG-2','FG-3'];
+    const marcaCod = c => `(${(d.codigosCargo||[]).includes(c)?'X':' '}) ${c}`;
+
+    // ── Cabeçalho comum ──
+    const titulo = tipo==='41'?'REQUERIMENTO DE DIÁRIAS':'RELATÓRIO DE VIAGEM';
+    const cab=`
+      <div class="doc-cabecalho">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="doc-cab-sc">SC</div>
+          <div style="font-size:8pt;font-weight:700;line-height:1.3;">ESTADO DE SANTA CATARINA</div>
+        </div>
+        <div class="doc-cab-titulo">${titulo}</div>
+      </div>`;
+
+    // ── Bloco órgão ──
+    const orgBloco=`
+      <div style="display:flex;border:1px solid #999;">
+        <div style="flex:3;border-right:1px solid #999;padding:2px 4px;">
+          <span style="font-size:5.5pt;font-weight:700;display:block;">DESCRIÇÃO DO ÓRGÃO/ENTIDADE:</span>
+          <span style="font-size:7pt;">${d.orgao}</span>
+        </div>
+        <div style="flex:1;padding:2px 4px;">
+          <span style="font-size:5.5pt;font-weight:700;display:block;">LOCAL DE TRABALHO (SIGLA):</span>
+          <span style="font-size:7pt;">${d.sigla}</span>
+        </div>
+      </div>`;
+
+    // ── Bloco servidor ──
+    const srvBloco=`
+      <div class="doc-section">
+        <div class="doc-sec-title">SERVIDOR</div>
+        <div class="doc-sec-sub">DADOS CADASTRAIS E FUNCIONAIS</div>
+        <div style="display:flex;border:1px solid #999;border-top:none;">
+          <div style="flex:1;border-right:1px solid #999;padding:3px 5px;">
+            <span class="dc-label" style="font-size:5.5pt;font-weight:700;display:block;">CPF:</span>
+            <span style="font-size:7.5pt;">${d.srv.cpf||''}</span>
+          </div>
+          <div style="flex:1;padding:3px 5px;">
+            <span class="dc-label" style="font-size:5.5pt;font-weight:700;display:block;">MATRÍCULA (DV E VÍNCULO):</span>
+            <span style="font-size:7.5pt;">${d.srv.matricula||''}</span>
+          </div>
+        </div>
+        <div style="border:1px solid #999;border-top:none;padding:3px 5px;">
+          <span style="font-size:5.5pt;font-weight:700;display:block;">NOME SOCIAL:</span>
+          <span style="font-size:7.5pt;">${d.nomeSocial||d.srv.nome}</span>
+        </div>
+        <div style="border:1px solid #999;border-top:none;padding:3px 5px;">
+          <span style="font-size:5.5pt;font-weight:700;display:block;">NOME CIVIL:</span>
+          <span style="font-size:7.5pt;">${d.srv.nome}</span>
+        </div>
+        <div style="display:flex;border:1px solid #999;border-top:none;">
+          <div style="flex:3;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">LOCAL DE TRABALHO (LOTAÇÃO):</span>
+            <span style="font-size:7pt;">${d.srv.lotacao||''}</span>
+          </div>
+          <div style="flex:2;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">MUNICÍPIO DO LOCAL DE TRABALHO:</span>
+            <span style="font-size:7pt;">${d.municipio||d.srv.municipio||''}</span>
+          </div>
+        </div>
+        <div style="display:flex;border:1px solid #999;border-top:none;">
+          <div style="flex:3;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">CARGO/EMPREGO:</span>
+            <span style="font-size:7pt;">${d.srv.cargo||''}</span>
+          </div>
+          <div style="flex:2;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">COMPETÊNCIA: (1)</span>
+            <span style="font-size:7pt;"></span>
+          </div>
+        </div>
+        <div style="display:flex;border:1px solid #999;border-top:none;">
+          <div style="flex:3;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">CÓDIGO/NÍVEL DO CARGO/FUNÇÃO OCUPADA (2)</span>
+            <div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;font-size:5.5pt;">
+              ${codAll.map(marcaCod).join(' ')}
+              &nbsp;&nbsp;(${(d.codigosCargo||[]).includes('DGI-1')?'X':' '}) DGI-1 (CODIFICADO)
+              &nbsp;&nbsp;( ) OUTRO. QUAL? ___
+            </div>
+          </div>
+          <div style="flex:1;padding:3px 5px;font-size:5.5pt;">
+            (${(d.codigosCargo||[]).includes('ADM-SUP-3')?'X':' '}) ADM. SUPERIOR-3<br>
+            (${(d.codigosCargo||[]).includes('ADM-SUP-8')?'X':' '}) ADM. SUPERIOR-8
+          </div>
+        </div>
+        <div style="display:flex;border:1px solid #999;border-top:none;">
+          <div style="flex:2;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">E-MAIL:</span>
+            <span style="font-size:7pt;">${d.email}</span>
+          </div>
+          <div style="flex:1;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">TELEFONE:</span>
+            <span style="font-size:7pt;">${d.srv.telefone||''}</span>
+          </div>
+          <div style="flex:1;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">CELULAR:</span>
+            <span style="font-size:7pt;">${d.celular}</span>
+          </div>
+        </div>
+      </div>`;
+
+    // ── Bloco deslocamentos ──
+    const deslFiltrados = d.deslocamentos.filter(dl=>dl.data||dl.origem||dl.destino);
+    const deslRows = Array.from({length:10},(_, i)=>{
+      const dl=deslFiltrados[i]||{};
+      return `<tr>
+        <td>${dl.data?fmtData(dl.data):''}</td>
+        <td>${(dl.origem||'').toUpperCase()}</td>
+        <td>${(dl.destino||'').toUpperCase()}</td>
+        <td>${dl.saida||''}</td>
+        <td>${dl.chegada||''}</td>
+        <td>${dl.transporte||''}</td>
+      </tr>`;
+    }).join('');
+    const deslBloco=`
+      <div class="doc-section">
+        <div class="doc-sec-title">DESLOCAMENTOS</div>
+        <table class="doc-table">
+          <thead><tr>
+            <th>DIA/MÊS</th><th>DE (ORIGEM)</th><th>PARA (DESTINO)</th>
+            <th>SAÍDA</th><th>CHEGADA</th><th>MEIO DE TRANSPORTE</th>
+          </tr></thead>
+          <tbody>${deslRows}</tbody>
+        </table>
+      </div>`;
+
+    // ── Montar documento ──
+    if (tipo==='41') {
+      // Dados bancários
+      const bancBloco=`
+        <div class="doc-section">
+          <div class="doc-sec-sub">DADOS BANCÁRIOS</div>
+          <div style="display:flex;border:1px solid #999;border-top:none;">
+            <div style="flex:2;border-right:1px solid #999;padding:3px 5px;">
+              <span style="font-size:5.5pt;font-weight:700;display:block;">BANCO:</span>
+              <span style="font-size:7pt;">${d.srv.banco||''}</span>
+            </div>
+            <div style="flex:1;border-right:1px solid #999;padding:3px 5px;">
+              <span style="font-size:5.5pt;font-weight:700;display:block;">AGÊNCIA:</span>
+              <span style="font-size:7pt;">${d.srv.agencia||''}</span>
+            </div>
+            <div style="flex:1;padding:3px 5px;">
+              <span style="font-size:5.5pt;font-weight:700;display:block;">NÚMERO DA CONTA:</span>
+              <span style="font-size:7pt;">${d.srv.conta||''}</span>
+            </div>
+          </div>
+        </div>`;
+
+      const objBloco=`
+        <div class="doc-section">
+          <div class="doc-sec-title">OBJETIVO(S) DA VIAGEM</div>
+          <div style="border:1px solid #999;border-top:none;padding:4px 6px;min-height:40px;font-size:7.5pt;line-height:1.5;white-space:pre-wrap;">${d.objetivo}</div>
+        </div>`;
+
+      const assBloco=`
+        <div style="border:1px solid #999;padding:3px 6px;font-size:5.5pt;margin-top:4px;">
+          *Declaro, para os devidos fins e efeitos, que não me enquadro em qualquer das situações impeditivas para o recebimento de diária(s).
+        </div>
+        <div style="display:flex;border:1px solid #999;border-top:none;">
+          <div style="flex:1;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">LOCAL E DATA:</span>
+            <span style="font-size:7pt;">${d.localData}</span>
+          </div>
+          <div style="flex:2;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">ASSINATURA DO SERVIDOR (1) *Em processo digital, assinatura eletrônica obrigatória pelo SGPE</span>
+          </div>
+        </div>`;
+
+      doc.innerHTML = cab+orgBloco+srvBloco+bancBloco+deslBloco+objBloco+assBloco;
+
+    } else {
+      // MLR-42
+      const c = d.calc||{};
+      const qE=c.qtInteiras||0, qP=c.qtPernoites||0, qM=c.qtMetades||0;
+      const totVal=c.totalValor||0;
+
+      const resBloco=`
+        <div class="doc-section">
+          <div class="doc-sec-title">RESULTADO DA VIAGEM, EM CONSONÂNCIA COM O(S) OBJETIVO(S) (3)</div>
+          <div style="border:1px solid #999;border-top:none;padding:4px 6px;min-height:50px;font-size:7.5pt;line-height:1.5;white-space:pre-wrap;">${d.resultado}</div>
+        </div>`;
+
+      const calcBloco=`
+        <div class="doc-section">
+          <div class="doc-sec-sub">DIÁRIAS RECEBIDAS</div>
+          <table class="doc-table">
+            <thead><tr>
+              <th>DESLOCAMENTO</th><th>QUANTIDADE</th><th>VALOR UNITÁRIO</th><th>TOTAL</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>NO ESTADO (sem pernoite)</td><td>${qE}</td><td>${fmtR(110)}</td><td>${fmtR(qE*110)}</td></tr>
+              <tr><td>PERNOITE</td><td>${qP}</td><td>${fmtR(220)}</td><td>${fmtR(qP*220)}</td></tr>
+              <tr><td>MEIA DIÁRIA (4h–12h)</td><td>${qM}</td><td>${fmtR(55)}</td><td>${fmtR(qM*55)}</td></tr>
+            </tbody>
+          </table>
+          <div style="display:flex;border:1px solid #999;border-top:none;">
+            <div style="flex:1;border-right:1px solid #999;padding:4px 6px;">
+              <span style="font-weight:700;font-size:7.5pt;">TOTAL GERAL: ${fmtR(totVal)}</span>
+            </div>
+            <div style="flex:2;padding:4px 6px;font-size:5.5pt;">
+              <span style="font-weight:700;">POR EXTENSO:</span> ${_numeroParaExtenso(totVal)}
+            </div>
+          </div>
+        </div>`;
+
+      const assBloco42=`
+        <div style="display:flex;border:1px solid #999;margin-top:4px;">
+          <div style="flex:1;border-right:1px solid #999;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">DATA:</span>
+            <span style="font-size:7pt;">${d.dataAss}</span>
+          </div>
+          <div style="flex:3;padding:3px 5px;">
+            <span style="font-size:5.5pt;font-weight:700;display:block;">ASSINATURA DO SERVIDOR *Em processo digital, assinatura eletrônica obrigatória pelo SGPE</span>
+          </div>
+        </div>`;
+
+      doc.innerHTML = cab+orgBloco+srvBloco+deslBloco+resBloco+calcBloco+assBloco42;
+    }
+
+    nota.textContent='Visualização aproximada. O PDF oficial é gerado pelo botão abaixo.';
+    nota.style.display='block';
+
+    // Marca alterações pendentes sempre que o doc é re-renderizado
+    this._marcarAlterado();
+  },
+
+  // ── GERAR PDFs (Parte 4) ──────────────────────────────────────
+  gerarMLR41() { toast('PDF MLR-41 — implementado na Parte 4.','aviso'); },
+  gerarMLR42() { toast('PDF MLR-42 — implementado na Parte 4.','aviso'); },
+
+};
+
+// ═══════════════════════════════════════════════════════════════
+// PARTE 4 — EXTENSO + GERAÇÃO DE PDF (MLR-41 / MLR-42)
+// ═══════════════════════════════════════════════════════════════
+
+function _numeroParaExtenso(n) {
+  const un=['','UM','DOIS','TRÊS','QUATRO','CINCO','SEIS','SETE','OITO','NOVE',
+            'DEZ','ONZE','DOZE','TREZE','QUATORZE','QUINZE','DEZESSEIS',
+            'DEZESSETE','DEZOITO','DEZENOVE'];
   const dz=['','','VINTE','TRINTA','QUARENTA','CINQUENTA','SESSENTA','SETENTA','OITENTA','NOVENTA'];
-  const ct=['','CENTO','DUZENTOS','TREZENTOS','QUATROCENTOS','QUINHENTOS','SEISCENTOS','SETECENTOS','OITOCENTOS','NOVECENTOS'];
-  if (n === 0) return 'ZERO REAIS';
-  const int = Math.floor(n), centavos = Math.round((n - int) * 100);
-  const porCem = v => v===100?'CEM':v>100?ct[Math.floor(v/100)]+(v%100?' E '+(v%100<20?un[v%100]:dz[Math.floor(v%100/10)]+(v%10?' E '+un[v%10]:'')):''):(v<20?un[v]:dz[Math.floor(v/10)]+(v%10?' E '+un[v%10]:''));
-  return porCem(int) + ' REAL' + (int !== 1 ? 'IS' : '') + (centavos ? ' E ' + porCem(centavos) + ' CENTAVO' + (centavos !== 1 ? 'S' : '') : '');
+  const ct=['','CENTO','DUZENTOS','TREZENTOS','QUATROCENTOS','QUINHENTOS',
+            'SEISCENTOS','SETECENTOS','OITOCENTOS','NOVECENTOS'];
+  if (!n||n===0) return 'ZERO REAIS';
+  const inteiro = Math.floor(n);
+  const cents   = Math.round((n-inteiro)*100);
+  const p100 = v => v===100?'CEM':v>100
+    ? ct[Math.floor(v/100)]+(v%100?' E '+(v%100<20?un[v%100]:dz[Math.floor(v%100/10)]+(v%10?' E '+un[v%10]:'')):'')
+    : (v<20?un[v]:dz[Math.floor(v/10)]+(v%10?' E '+un[v%10]:''));
+  return p100(inteiro)+' REAL'+(inteiro!==1?'IS':'')
+    +(cents?' E '+p100(cents)+' CENTAVO'+(cents!==1?'S':''):'');
 }
 
-// ══════════════════════════════════════════════════
-// GERAÇÃO PDF MLR-41
-// ══════════════════════════════════════════════════
-function gerarPDF_MLR41(d) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+// ── HELPERS PDF ──────────────────────────────────────────────────
+function _pdfSetup() {
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const pW=210, mL=12, mR=12, mT=10, cW=186;
-  let y = mT;
 
-  const rct=(x,yy,w,h,fill)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.25);if(fill){doc.setFillColor(...fill);doc.rect(x,yy,w,h,'FD');}else doc.rect(x,yy,w,h);};
-  const t=(str,x,yy,sz,bold,align)=>{doc.setFontSize(sz||8);doc.setFont('helvetica',bold?'bold':'normal');const s=String(str||'');if(align==='center')doc.text(s,x,yy,{align:'center'});else if(align==='right')doc.text(s,x,yy,{align:'right'});else doc.text(s,x,yy);};
-  const tw=(str,x,yy,maxW,sz)=>{doc.setFontSize(sz||7.5);doc.setFont('helvetica','normal');const lines=doc.splitTextToSize(String(str||''),maxW);doc.text(lines,x,yy);return lines.length;};
-  const ln=(x1,y1,x2,y2)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.2);doc.line(x1,y1,x2,y2);};
+  const rct=(x,y,w,h,fill)=>{
+    doc.setDrawColor(100,100,100);doc.setLineWidth(0.25);
+    if(fill){doc.setFillColor(...fill);doc.rect(x,y,w,h,'FD');}
+    else doc.rect(x,y,w,h);
+  };
+  const t=(str,x,y,sz,bold,align)=>{
+    doc.setFontSize(sz||8);doc.setFont('helvetica',bold?'bold':'normal');
+    const s=String(str||'');
+    if(align==='center') doc.text(s,x,y,{align:'center'});
+    else if(align==='right') doc.text(s,x,y,{align:'right'});
+    else doc.text(s,x,y);
+  };
+  const tw=(str,x,y,maxW,sz)=>{
+    doc.setFontSize(sz||7.5);doc.setFont('helvetica','normal');
+    const lines=doc.splitTextToSize(String(str||''),maxW);
+    doc.text(lines,x,y);return lines.length;
+  };
+  const ln=(x1,y1,x2,y2)=>{
+    doc.setDrawColor(100,100,100);doc.setLineWidth(0.2);
+    doc.line(x1,y1,x2,y2);
+  };
+  return {doc,pW,mL,mR,mT,cW,rct,t,tw,ln};
+}
 
-  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
-  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('REQUERIMENTO DE DIÁRIAS',pW-mR,y+5,12,true,'right');y+=17;
+function _pdfCabecalho({doc,pW,mL,cW,rct,t},y,titulo) {
+  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');
+  t('SC',mL+8,y+8,7,true,'center');
+  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);
+  t(titulo,pW-12,y+5,12,true,'right');
+  return y+17;
+}
 
+function _pdfOrgao({mL,cW,rct,t},y,orgao,sigla) {
   rct(mL,y,cW*0.72,8);rct(mL+cW*0.72,y,cW*0.28,8);
-  t('DESCRIÇÃO DO ÓRGÃO/ENTIDADE:',mL+1,y+3.5,5.5,true);t('LOCAL DE TRABALHO (SIGLA):',mL+cW*0.72+1,y+3.5,5.5,true);
-  t(d.orgao,mL+1,y+7,7);t(d.sigla,mL+cW*0.72+1,y+7,7);y+=9;
+  t('DESCRIÇÃO DO ÓRGÃO/ENTIDADE:',mL+1,y+3.5,5.5,true);
+  t('LOCAL DE TRABALHO (SIGLA):',mL+cW*0.72+1,y+3.5,5.5,true);
+  t(orgao,mL+1,y+7,7);t(sigla,mL+cW*0.72+1,y+7,7);
+  return y+9;
+}
 
+function _pdfServidor({mL,cW,pW,rct,t,tw},y,d) {
+  const {srv,nomeSocial,municipio,email,celular,codigosCargo} = d;
   rct(mL,y,cW,6,[225,225,225]);t('SERVIDOR',mL+2,y+4.5,8,true);y+=6;
   rct(mL,y,cW,5,[240,240,240]);t('DADOS CADASTRAIS E FUNCIONAIS',pW/2,y+3.8,8,true,'center');y+=5;
 
   rct(mL,y,cW*0.45,10);rct(mL+cW*0.45,y,cW*0.55,10);
   t('CPF:',mL+1,y+3.5,5.5,true);t('MATRÍCULA (DV E VÍNCULO):',mL+cW*0.45+1,y+3.5,5.5,true);
-  t(d.srv.cpf,mL+1,y+8.5,8);t(d.srv.matricula,mL+cW*0.45+1,y+8.5,8);y+=10;
+  t(srv.cpf||'',mL+1,y+8.5,8);t(srv.matricula||'',mL+cW*0.45+1,y+8.5,8);y+=10;
 
-  rct(mL,y,cW,10);t('NOME SOCIAL:',mL+1,y+3.5,5.5,true);t(d.nomeSocial||d.srv.nome,mL+1,y+8.5,8);y+=10;
-  rct(mL,y,cW,10);t('NOME CIVIL:',mL+1,y+3.5,5.5,true);t(d.srv.nome,mL+1,y+8.5,8);y+=10;
+  rct(mL,y,cW,10);t('NOME SOCIAL:',mL+1,y+3.5,5.5,true);
+  t(nomeSocial||srv.nome||'',mL+1,y+8.5,8);y+=10;
+  rct(mL,y,cW,10);t('NOME CIVIL:',mL+1,y+3.5,5.5,true);
+  t(srv.nome||'',mL+1,y+8.5,8);y+=10;
 
   rct(mL,y,cW*0.55,10);rct(mL+cW*0.55,y,cW*0.45,10);
-  t('LOCAL DE TRABALHO (LOTAÇÃO):',mL+1,y+3.5,5.5,true);t('MUNICÍPIO DO LOCAL DE TRABALHO:',mL+cW*0.55+1,y+3.5,5.5,true);
-  t(d.srv.lotacao,mL+1,y+8.5,7.5);t(d.municipio||d.srv.municipio,mL+cW*0.55+1,y+8.5,7.5);y+=10;
+  t('LOCAL DE TRABALHO (LOTAÇÃO):',mL+1,y+3.5,5.5,true);
+  t('MUNICÍPIO DO LOCAL DE TRABALHO:',mL+cW*0.55+1,y+3.5,5.5,true);
+  t(srv.lotacao||'',mL+1,y+8.5,7.5);
+  t(municipio||srv.municipio||'',mL+cW*0.55+1,y+8.5,7.5);y+=10;
 
   rct(mL,y,cW*0.65,10);rct(mL+cW*0.65,y,cW*0.35,10);
-  t('CARGO/EMPREGO:',mL+1,y+3.5,5.5,true);t('COMPETÊNCIA: (1)',mL+cW*0.65+1,y+3.5,5.5,true);
-  tw(d.srv.cargo,mL+1,y+8.5,cW*0.63,7.5);t(d.competencia||'',mL+cW*0.65+1,y+8.5,7.5);y+=10;
+  t('CARGO/EMPREGO:',mL+1,y+3.5,5.5,true);
+  t('COMPETÊNCIA: (1)',mL+cW*0.65+1,y+3.5,5.5,true);
+  tw(srv.cargo||'',mL+1,y+8.5,cW*0.63,7.5);y+=10;
 
+  const codAll=['DGS-1','DGS-2','DGS-3','FTG-1','FTG-2','FTG-3','FG-1','FG-2','FG-3'];
   rct(mL,y,cW*0.72,17);rct(mL+cW*0.72,y,cW*0.28,17);
   t('CÓDIGO/NÍVEL DO CARGO/FUNÇÃO OCUPADA (2)',mL+1,y+3.5,5.5,true);
-  const codAll=['DGS-1','DGS-2','DGS-3','FTG-1','FTG-2','FTG-3','FG-1','FG-2','FG-3'];
-  let cx=mL+1;codAll.forEach(c=>{t('('+( (d.codigosCargo||[]).includes(c)?'X':' ')+') '+c,cx,y+9,5.5);cx+=21;});
-  t('( ) DGI-1 (CODIFICADO)',mL+1,y+14,5.5);t('( ) OUTRO. QUAL? __',mL+50,y+14,5.5);
-  t('( ) ADM. SUPERIOR-3 (AGENTE POLÍTICO)',mL+cW*0.72+1,y+8,5.5);
-  t('( ) ADM. SUPERIOR-8 (NÃO CODIFICADO)',mL+cW*0.72+1,y+14,5.5);y+=18;
+  let cx=mL+1;
+  codAll.forEach(c=>{
+    t('('+(codigosCargo?.includes(c)?'X':' ')+') '+c,cx,y+9,5.5);cx+=21;
+  });
+  t('('+(codigosCargo?.includes('DGI-1')?'X':' ')+') DGI-1 (CODIFICADO)',mL+1,y+14,5.5);
+  t('( ) OUTRO. QUAL? __',mL+50,y+14,5.5);
+  t('('+(codigosCargo?.includes('ADM-SUP-3')?'X':' ')+') ADM. SUPERIOR-3',mL+cW*0.72+1,y+8,5.5);
+  t('('+(codigosCargo?.includes('ADM-SUP-8')?'X':' ')+') ADM. SUPERIOR-8',mL+cW*0.72+1,y+14,5.5);
+  y+=18;
 
   rct(mL,y,cW*0.5,8);rct(mL+cW*0.5,y,cW*0.25,8);rct(mL+cW*0.75,y,cW*0.25,8);
-  t('E-MAIL:',mL+1,y+3,5.5,true);t('TELEFONE:',mL+cW*0.5+1,y+3,5.5,true);t('CELULAR:',mL+cW*0.75+1,y+3,5.5,true);
-  t(d.email||'',mL+1,y+7,7);t(d.srv.telefone||'',mL+cW*0.5+1,y+7,7);t(d.celular||d.srv.celular||'',mL+cW*0.75+1,y+7,7);y+=9;
+  t('E-MAIL:',mL+1,y+3,5.5,true);t('TELEFONE:',mL+cW*0.5+1,y+3,5.5,true);
+  t('CELULAR:',mL+cW*0.75+1,y+3,5.5,true);
+  t(email||'',mL+1,y+7,7);
+  t(srv.telefone||'',mL+cW*0.5+1,y+7,7);
+  t(celular||srv.celular||'',mL+cW*0.75+1,y+7,7);
+  return y+9;
+}
 
+function _pdfDeslocamentos({mL,cW,pW,rct,t,ln},y,deslocs) {
+  rct(mL,y,cW,5,[240,240,240]);t('DESLOCAMENTOS',pW/2,y+3.8,8,true,'center');y+=5;
+  const cols=[mL,mL+23,mL+62,mL+101,mL+120,mL+139];
+  const labs=['DIA/MÊS','DE (ORIGEM)','PARA (DESTINO)','SAÍDA','CHEGADA','MEIO DE TRANSPORTE'];
+  rct(mL,y,cW,8,[238,238,238]);
+  cols.forEach((x,i)=>t(labs[i],x+1,y+5,5,true));y+=8;
+  const rows=[];for(let i=0;i<10;i++) rows.push(deslocs[i]||{});
+  rows.forEach(dl=>{
+    rct(mL,y,cW,7);cols.forEach(x=>ln(x,y,x,y+7));
+    t(dl.data?fmtData(dl.data):'',cols[0]+1,y+5,7);
+    t((dl.origem||'').toUpperCase(),cols[1]+1,y+5,7);
+    t((dl.destino||'').toUpperCase(),cols[2]+1,y+5,7);
+    t(dl.saida||'',cols[3]+1,y+5,7);
+    t(dl.chegada||'',cols[4]+1,y+5,7);
+    t(dl.transporte||'',cols[5]+1,y+5,7);
+    y+=7;
+  });
+  return y;
+}
+
+// ── MLR-41 ───────────────────────────────────────────────────────
+function _gerarPDF41(d) {
+  const h = _pdfSetup();
+  const {doc,pW,mL,mR,mT,cW,rct,t,tw,ln} = h;
+  let y = mT;
+
+  y = _pdfCabecalho(h, y, 'REQUERIMENTO DE DIÁRIAS');
+  y = _pdfOrgao(h, y, d.orgao, d.sigla);
+  y = _pdfServidor(h, y, d);
+
+  // Bancários
   rct(mL,y,cW,5,[240,240,240]);t('DADOS BANCÁRIOS',pW/2,y+3.8,8,true,'center');y+=5;
   rct(mL,y,cW*0.4,10);rct(mL+cW*0.4,y,cW*0.3,10);rct(mL+cW*0.7,y,cW*0.3,10);
-  t('BANCO:',mL+1,y+3.5,5.5,true);t('AGÊNCIA:',mL+cW*0.4+1,y+3.5,5.5,true);t('NÚMERO DA CONTA:',mL+cW*0.7+1,y+3.5,5.5,true);
-  t(d.srv.banco||'',mL+1,y+8.5,8);t(d.srv.agencia||'',mL+cW*0.4+1,y+8.5,8);t(d.srv.conta||'',mL+cW*0.7+1,y+8.5,8);y+=11;
+  t('BANCO:',mL+1,y+3.5,5.5,true);t('AGÊNCIA:',mL+cW*0.4+1,y+3.5,5.5,true);
+  t('NÚMERO DA CONTA:',mL+cW*0.7+1,y+3.5,5.5,true);
+  t(d.srv.banco||'',mL+1,y+8.5,8);
+  t(d.srv.agencia||'',mL+cW*0.4+1,y+8.5,8);
+  t(d.srv.conta||'',mL+cW*0.7+1,y+8.5,8);y+=11;
 
-  rct(mL,y,cW,5,[240,240,240]);t('DESLOCAMENTOS',pW/2,y+3.8,8,true,'center');y+=5;
-  const cX=[mL,mL+23,mL+62,mL+101,mL+120,mL+139];
-  const cLab=['DIA/MÊS','DE (ORIGEM)','PARA (DESTINO)','SAÍDA','CHEGADA','MEIO DE TRANSPORTE'];
-  rct(mL,y,cW,8,[238,238,238]);cX.forEach((x,i)=>t(cLab[i],x+1,y+5,5,true));y+=8;
-  const dls=[];for(let i=0;i<10;i++)dls.push(d.deslocamentos[i]||{data:'',origem:'',destino:'',saida:'',chegada:'',transporte:''});
-  dls.forEach(dl=>{rct(mL,y,cW,7);cX.forEach(x=>ln(x,y,x,y+7));t(dl.data,cX[0]+1,y+5,7);t((dl.origem||'').toUpperCase(),cX[1]+1,y+5,7);t((dl.destino||'').toUpperCase(),cX[2]+1,y+5,7);t(dl.saida||'',cX[3]+1,y+5,7);t(dl.chegada||'',cX[4]+1,y+5,7);t(dl.transporte||'',cX[5]+1,y+5,7);y+=7;});
+  y = _pdfDeslocamentos(h, y, d.deslocamentos);
 
+  // Objetivo
   rct(mL,y,cW,5,[240,240,240]);t('OBJETIVO(S) DA VIAGEM',pW/2,y+3.8,8,true,'center');y+=5;
-  rct(mL,y,cW,22);tw(d.objetivo,mL+2,y+5,cW-4,8);y+=24;
+  rct(mL,y,cW,22);tw(d.objetivo||'',mL+2,y+5,cW-4,8);y+=24;
 
-  rct(mL,y,cW,5);t('*Declaro, para os devidos fins e efeitos, que não me enquadro em qualquer das situações impeditivas para o recebimento de diária(s).',mL+2,y+3.5,5.5);y+=5;
+  // Declaração e assinatura
+  rct(mL,y,cW,5);
+  t('*Declaro, para os devidos fins e efeitos, que não me enquadro em qualquer das situações impeditivas para o recebimento de diária(s).',mL+2,y+3.5,5.5);
+  y+=5;
   rct(mL,y,cW*0.35,8);rct(mL+cW*0.35,y,cW*0.65,8);
-  t('LOCAL E DATA:',mL+1,y+3.5,5.5,true);t('ASSINATURA DO SERVIDOR (1)  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.35+2,y+3.5,5.5);
+  t('LOCAL E DATA:',mL+1,y+3.5,5.5,true);
+  t('ASSINATURA DO SERVIDOR (1)  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.35+2,y+3.5,5.5);
   t(d.localData||'',mL+1,y+7,7);y+=10;
 
-  // PÁGINA 2
+  // ── Página 2 — Autorizações + Cálculo ──
   doc.addPage();y=mT;
-  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
-  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('REQUERIMENTO DE DIÁRIAS',pW-mR,y+5,12,true,'right');y+=17;
+  y = _pdfCabecalho(h, y, 'REQUERIMENTO DE DIÁRIAS');
 
-  const secAssin=(titulo,cargo)=>{rct(mL,y,cW,5,[225,225,225]);t(titulo,mL+1,y+3.8,6,true);y+=5;rct(mL,y,cW,5);t('( ) AUTORIZO    ( ) NÃO AUTORIZO',pW/2,y+3.8,8,false,'center');y+=5;rct(mL,y,cW*0.15,10);rct(mL+cW*0.15,y,cW*0.85,10);t('DATA:',mL+1,y+6,6,true);t('ASSINATURA '+cargo+'  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.15+2,y+6,5.5);y+=13;};
-  secAssin('CHEFIA IMEDIATA DO SERVIDOR REQUERENTE','DA CHEFIA IMEDIATA');
-  secAssin('DIRETOR OU EQUIVALENTE DA ÁREA DE LOTAÇÃO (EXERCÍCIO) DO SERVIDOR REQUERENTE','DO DIRETOR/EQUIVALENTE');
-  secAssin('ORDENADOR DE DESPESA OU AGENTE DELEGADO (DIRETOR OU EQUIVALENTE DA ÁREA FINANCEIRA/FUNDO)','DO ORDENADOR DE DESPESA');
+  const secAss=(titulo,cargo)=>{
+    rct(mL,y,cW,5,[225,225,225]);t(titulo,mL+1,y+3.8,6,true);y+=5;
+    rct(mL,y,cW,5);t('( ) AUTORIZO    ( ) NÃO AUTORIZO',pW/2,y+3.8,8,false,'center');y+=5;
+    rct(mL,y,cW*0.15,10);rct(mL+cW*0.15,y,cW*0.85,10);
+    t('DATA:',mL+1,y+6,6,true);
+    t('ASSINATURA '+cargo+'  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.15+2,y+6,5.5);
+    y+=13;
+  };
+  secAss('CHEFIA IMEDIATA DO SERVIDOR REQUERENTE','DA CHEFIA IMEDIATA');
+  secAss('DIRETOR OU EQUIVALENTE DA ÁREA DE LOTAÇÃO (EXERCÍCIO) DO SERVIDOR REQUERENTE','DO DIRETOR/EQUIVALENTE');
+  secAss('ORDENADOR DE DESPESA OU AGENTE DELEGADO (DIRETOR OU EQUIVALENTE DA ÁREA FINANCEIRA/FUNDO)','DO ORDENADOR DE DESPESA');
 
   // Tabela diárias calculadas
-  const calc = d.calc || {};
-  const qE = calc.qtInteiras || 0;
-  const qP = calc.qtPernoites || 0;
-  const qM = calc.qtMetades || 0;
-  const totVal = calc.totalValor || 0;
+  const c=d.calc||{};
+  const g=c.grupoCargo||c.grupo||'1';
+  const qE=c.qtInteiras||0,qP=c.qtPernoites||0,qM=c.qtMetades||0,totVal=c.totalValor||0;
 
-  rct(mL,y,cW,5,[225,225,225]);t('SERVIDOR RESPONSÁVEL PELO CÁLCULO E PAGAMENTO/ADIANTAMENTO DE DIÁRIAS',mL+1,y+3.8,6,true);y+=5;
+  rct(mL,y,cW,5,[225,225,225]);
+  t('SERVIDOR RESPONSÁVEL PELO CÁLCULO E PAGAMENTO/ADIANTAMENTO DE DIÁRIAS',mL+1,y+3.8,6,true);y+=5;
   rct(mL,y,cW,5,[240,240,240]);t('DIÁRIAS A PAGAR',pW/2,y+3.8,8,true,'center');y+=5;
-  rct(mL,y,cW*0.1,8,[238,238,238]);rct(mL+cW*0.1,y,cW*0.35,8,[238,238,238]);rct(mL+cW*0.45,y,cW*0.15,8,[238,238,238]);rct(mL+cW*0.6,y,cW*0.2,8,[238,238,238]);rct(mL+cW*0.8,y,cW*0.2,8,[238,238,238]);
-  t('GRUPO (4)',mL+1,y+5,5,true);t('DESLOCAMENTO',mL+cW*0.1+2,y+5,5,true);t('QUANTIDADE',mL+cW*0.45+2,y+5,5,true);t('DIÁRIA VALOR',mL+cW*0.6+2,y+5,5,true);t('TOTAL, POR TIPO',mL+cW*0.8+2,y+5,5,true);y+=8;
-
-  const g = calc.grupo||'1';
-  const valorPer = 220, valorInt = 110, valorMeia = 55;
-  [
-    ['NO ESTADO (sem pernoite)', qE, valorInt, qE*valorInt],
-    ['PERNOITE', qP, valorPer, qP*valorPer],
-    ['MEIA DIÁRIA (4h–12h)', qM, valorMeia, qM*valorMeia],
-  ].forEach(([lbl,q,v,tv],i)=>{
-    rct(mL,y,cW*0.1,8);rct(mL+cW*0.1,y,cW*0.35,8);rct(mL+cW*0.45,y,cW*0.15,8);rct(mL+cW*0.6,y,cW*0.2,8);rct(mL+cW*0.8,y,cW*0.2,8);
-    if(i===0){t('('+( g==='1'?'X':' ')+') 1º',mL+1,y+4,5.5);t('('+( g==='2'?'X':' ')+') 2º',mL+1,y+7.5,5.5);}
-    else if(i===2){t('('+( g==='3'?'X':' ')+') 3º',mL+1,y+5.5,5.5);}
-    t(lbl,mL+cW*0.1+2,y+5.5,7);t(String(q),mL+cW*0.45+2,y+5.5,7);t(fmtR(v),mL+cW*0.6+2,y+5.5,7);t(fmtR(tv),mL+cW*0.8+2,y+5.5,7);y+=8;
+  [['GRUPO (4)','DESLOCAMENTO','QUANTIDADE','DIÁRIA VALOR','TOTAL, POR TIPO'],
+  ].forEach(labs=>{
+    rct(mL,y,cW*0.1,8,[238,238,238]);rct(mL+cW*0.1,y,cW*0.35,8,[238,238,238]);
+    rct(mL+cW*0.45,y,cW*0.15,8,[238,238,238]);rct(mL+cW*0.6,y,cW*0.2,8,[238,238,238]);
+    rct(mL+cW*0.8,y,cW*0.2,8,[238,238,238]);
+    labs.forEach((l,i)=>{
+      const xs=[mL+1,mL+cW*0.1+2,mL+cW*0.45+2,mL+cW*0.6+2,mL+cW*0.8+2];
+      t(l,xs[i],y+5,5,true);
+    });y+=8;
   });
-  rct(mL,y,cW,8);t('TOTAL',mL+cW*0.45+2,y+5.5,8,true);t(fmtR(totVal),mL+cW*0.8+2,y+5.5,8,true);y+=10;
-  rct(mL,y,cW*0.2,10);rct(mL+cW*0.2,y,cW*0.8,10);t('DATA:',mL+1,y+4,6,true);t(d.localData||'',mL+1,y+8.5,7);t('ASSINATURA DO RESPONSÁVEL PELO PAGTO/ADIANT. DE DIÁRIAS  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);y+=13;
+  [['NO ESTADO (sem pernoite)',qE,110,qE*110],
+   ['PERNOITE',qP,220,qP*220],
+   ['MEIA DIÁRIA (4h–12h)',qM,55,qM*55],
+  ].forEach(([lbl,q,v,tv],i)=>{
+    rct(mL,y,cW*0.1,8);rct(mL+cW*0.1,y,cW*0.35,8);
+    rct(mL+cW*0.45,y,cW*0.15,8);rct(mL+cW*0.6,y,cW*0.2,8);rct(mL+cW*0.8,y,cW*0.2,8);
+    if(i===0){t('('+(g==='1'?'X':' ')+') 1º',mL+1,y+4,5.5);t('('+(g==='2'?'X':' ')+') 2º',mL+1,y+7.5,5.5);}
+    else if(i===2){t('('+(g==='3'?'X':' ')+') 3º',mL+1,y+5.5,5.5);}
+    t(lbl,mL+cW*0.1+2,y+5.5,7);t(String(q),mL+cW*0.45+2,y+5.5,7);
+    t(fmtR(v),mL+cW*0.6+2,y+5.5,7);t(fmtR(tv),mL+cW*0.8+2,y+5.5,7);y+=8;
+  });
+  rct(mL,y,cW,8);
+  t('TOTAL',mL+cW*0.45+2,y+5.5,8,true);t(fmtR(totVal),mL+cW*0.8+2,y+5.5,8,true);y+=10;
+  rct(mL,y,cW*0.2,10);rct(mL+cW*0.2,y,cW*0.8,10);
+  t('DATA:',mL+1,y+4,6,true);t(d.localData||'',mL+1,y+8.5,7);
+  t('ASSINATURA DO RESPONSÁVEL PELO PAGTO/ADIANT. DE DIÁRIAS  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);
+  y+=13;
 
+  // Notas explicativas
   rct(mL,y,cW,5,[225,225,225]);t('NOTAS EXPLICATIVAS',mL+1,y+3.8,7,true);y+=5;
-  const notas=['(1) CAMPO DE USO EXCLUSIVO DE SERVIDOR EFETIVO DA SECRETARIA DE ESTADO DA SAÚDE (SES).','(2) CAMPO OBRIGATÓRIO A SER PREENCHIDO POR SERVIDOR QUE NÃO OCUPA CARGO EFETIVO.','(3) NO CASO DE USO DE PASSAGENS É OBRIGATÓRIA A DEVOLUÇÃO DOS RESPECTIVOS BILHETES.','(4) O GRUPO DO CARGO CONSTA NO ANEXO I DO DECRETO Nº 650/2020 (atualizado pelo Dec. 652/2024).','Valores: ≥12h = R$ 110,00 | ≥12h c/ pernoite = R$ 220,00 | 4h–12h = R$ 55,00 (Dec. 1.662/2022).','ANEXAR: DOCUMENTOS QUE COMPROVEM E/OU RATIFIQUEM O OBJETIVO DA VIAGEM.'];
-  const totalH=notas.reduce((acc,n)=>{const l=doc.splitTextToSize(n,cW-4);return acc+l.length*5+2;},6);
-  rct(mL,y,cW,totalH);notas.forEach(n=>{tw(n,mL+2,y+4,cW-4,5.5);const l=doc.splitTextToSize(n,cW-4);y+=l.length*5+2;});
+  const notas=[
+    '(1) CAMPO DE USO EXCLUSIVO DE SERVIDOR EFETIVO DA SECRETARIA DE ESTADO DA SAÚDE (SES).',
+    '(2) CAMPO OBRIGATÓRIO A SER PREENCHIDO POR SERVIDOR QUE NÃO OCUPA CARGO EFETIVO.',
+    '(3) NO CASO DE USO DE PASSAGENS É OBRIGATÓRIA A DEVOLUÇÃO DOS RESPECTIVOS BILHETES.',
+    '(4) O GRUPO DO CARGO CONSTA NO ANEXO I DO DECRETO Nº 650/2020 (atualizado pelo Dec. 652/2024).',
+    'Valores: ≥12h = R$ 110,00 | ≥12h c/ pernoite = R$ 220,00 | 4h–12h = R$ 55,00 (Dec. 1.662/2022).',
+    'ANEXAR: DOCUMENTOS QUE COMPROVEM E/OU RATIFIQUEM O OBJETIVO DA VIAGEM.',
+  ];
+  const hNotas=notas.reduce((a,n)=>{const l=doc.splitTextToSize(n,cW-4);return a+l.length*5+2;},6);
+  rct(mL,y,cW,hNotas);
+  notas.forEach(n=>{tw(n,mL+2,y+4,cW-4,5.5);const l=doc.splitTextToSize(n,cW-4);y+=l.length*5+2;});
   y+=4;t('MLR-41',pW-mR,y+5,7,true,'right');
 
-  doc.save('MLR-41_'+d.srv.nome.replace(/\s+/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
+  doc.save('MLR-41_'+(d.srv.nome||'servidor').replace(/\s+/g,'_')+'_'
+    +new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
 }
 
-// ══════════════════════════════════════════════════
-// GERAÇÃO PDF MLR-42
-// ══════════════════════════════════════════════════
-function gerarPDF_MLR42(d) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const pW=210, mL=12, mR=12, mT=10, cW=186;
+// ── MLR-42 ───────────────────────────────────────────────────────
+function _gerarPDF42(d) {
+  const h = _pdfSetup();
+  const {doc,pW,mL,mR,mT,cW,rct,t,tw,ln} = h;
   let y = mT;
 
-  const rct=(x,yy,w,h,fill)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.25);if(fill){doc.setFillColor(...fill);doc.rect(x,yy,w,h,'FD');}else doc.rect(x,yy,w,h);};
-  const t=(str,x,yy,sz,bold,align)=>{doc.setFontSize(sz||8);doc.setFont('helvetica',bold?'bold':'normal');const s=String(str||'');if(align==='center')doc.text(s,x,yy,{align:'center'});else if(align==='right')doc.text(s,x,yy,{align:'right'});else doc.text(s,x,yy);};
-  const tw=(str,x,yy,maxW,sz)=>{doc.setFontSize(sz||7.5);doc.setFont('helvetica','normal');const lines=doc.splitTextToSize(String(str||''),maxW);doc.text(lines,x,yy);return lines.length;};
-  const ln=(x1,y1,x2,y2)=>{doc.setDrawColor(100,100,100);doc.setLineWidth(0.2);doc.line(x1,y1,x2,y2);};
+  t('2',pW-12,y+4,10,true,'right');y+=6;
+  y = _pdfCabecalho(h, y, 'RELATÓRIO DE VIAGEM');
+  y = _pdfOrgao(h, y, d.orgao, d.sigla);
+  y = _pdfServidor(h, y, d);
+  y = _pdfDeslocamentos(h, y, d.deslocamentos);
 
-  t('2',pW-mR,y+4,10,true,'right');y+=6;
-  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
-  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('RELATÓRIO DE VIAGEM',pW-mR,y+5,12,true,'right');y+=17;
-
-  rct(mL,y,cW*0.72,8);rct(mL+cW*0.72,y,cW*0.28,8);
-  t('DESCRIÇÃO DO ÓRGÃO/ENTIDADE:',mL+1,y+3.5,5.5,true);t('LOCAL DE TRABALHO (SIGLA):',mL+cW*0.72+1,y+3.5,5.5,true);
-  t(d.orgao,mL+1,y+7,7);t(d.sigla,mL+cW*0.72+1,y+7,7);y+=9;
-
-  rct(mL,y,cW,6,[225,225,225]);t('SERVIDOR',mL+2,y+4.5,8,true);y+=6;
-  rct(mL,y,cW,5,[240,240,240]);t('DADOS CADASTRAIS E FUNCIONAIS',pW/2,y+3.8,8,true,'center');y+=5;
-
-  rct(mL,y,cW*0.45,10);rct(mL+cW*0.45,y,cW*0.55,10);
-  t('CPF:',mL+1,y+3.5,5.5,true);t('MATRÍCULA (DV E VÍNCULO):',mL+cW*0.45+1,y+3.5,5.5,true);
-  t(d.srv.cpf,mL+1,y+8.5,8);t(d.srv.matricula,mL+cW*0.45+1,y+8.5,8);y+=10;
-
-  rct(mL,y,cW,10);t('NOME SOCIAL:',mL+1,y+3.5,5.5,true);t(d.nomeSocial||d.srv.nome,mL+1,y+8.5,8);y+=10;
-  rct(mL,y,cW,10);t('NOME CIVIL:',mL+1,y+3.5,5.5,true);t(d.srv.nome,mL+1,y+8.5,8);y+=10;
-
-  rct(mL,y,cW*0.55,10);rct(mL+cW*0.55,y,cW*0.45,10);
-  t('LOCAL DE TRABALHO (LOTAÇÃO):',mL+1,y+3.5,5.5,true);t('MUNICÍPIO DO LOCAL DE TRABALHO:',mL+cW*0.55+1,y+3.5,5.5,true);
-  t(d.srv.lotacao,mL+1,y+8.5,7.5);t(d.municipio||d.srv.municipio,mL+cW*0.55+1,y+8.5,7.5);y+=10;
-
-  rct(mL,y,cW*0.65,10);rct(mL+cW*0.65,y,cW*0.35,10);
-  t('CARGO/EMPREGO:',mL+1,y+3.5,5.5,true);t('COMPETÊNCIA: (1)',mL+cW*0.65+1,y+3.5,5.5,true);
-  tw(d.srv.cargo,mL+1,y+8.5,cW*0.63,7.5);y+=10;
-
-  rct(mL,y,cW*0.72,17);rct(mL+cW*0.72,y,cW*0.28,17);
-  t('CÓDIGO/NÍVEL DO CARGO/FUNÇÃO OCUPADA (2)',mL+1,y+3.5,5.5,true);
-  const codAll=['DGS-1','DGS-2','DGS-3','FTG-1','FTG-2','FTG-3','FG-1','FG-2','FG-3'];
-  let cx=mL+1;codAll.forEach(c=>{t('('+( (d.codigosCargo||[]).includes(c)?'X':' ')+') '+c,cx,y+9,5.5);cx+=21;});
-  t('( ) DGI-1 (CODIFICADO)',mL+1,y+14,5.5);t('( ) OUTRO. QUAL? __',mL+50,y+14,5.5);
-  t('( ) ADM. SUPERIOR-3 (AGENTE POLÍTICO)',mL+cW*0.72+1,y+8,5.5);
-  t('( ) ADM. SUPERIOR-8 (NÃO CODIFICADO)',mL+cW*0.72+1,y+14,5.5);y+=18;
-
-  rct(mL,y,cW*0.5,8);rct(mL+cW*0.5,y,cW*0.25,8);rct(mL+cW*0.75,y,cW*0.25,8);
-  t('E-MAIL:',mL+1,y+3,5.5,true);t('TELEFONE:',mL+cW*0.5+1,y+3,5.5,true);t('CELULAR:',mL+cW*0.75+1,y+3,5.5,true);
-  t(d.email||'',mL+1,y+7,7);t(d.srv.telefone||'',mL+cW*0.5+1,y+7,7);t(d.celular||d.srv.celular||'',mL+cW*0.75+1,y+7,7);y+=9;
-
-  rct(mL,y,cW,5,[240,240,240]);t('DESLOCAMENTOS',pW/2,y+3.8,8,true,'center');y+=5;
-  const cX=[mL,mL+23,mL+62,mL+101,mL+120,mL+139];
-  const cLab=['DIA/MÊS','DE (ORIGEM)','PARA (DESTINO)','SAÍDA','CHEGADA','MEIO DE TRANSPORTE'];
-  rct(mL,y,cW,8,[238,238,238]);cX.forEach((x,i)=>t(cLab[i],x+1,y+5,5,true));y+=8;
-  const dls=[];for(let i=0;i<10;i++)dls.push(d.deslocamentos[i]||{data:'',origem:'',destino:'',saida:'',chegada:'',transporte:''});
-  dls.forEach(dl=>{rct(mL,y,cW,7);cX.forEach(x=>ln(x,y,x,y+7));t(dl.data,cX[0]+1,y+5,7);t((dl.origem||'').toUpperCase(),cX[1]+1,y+5,7);t((dl.destino||'').toUpperCase(),cX[2]+1,y+5,7);t(dl.saida||'',cX[3]+1,y+5,7);t(dl.chegada||'',cX[4]+1,y+5,7);t(dl.transporte||'',cX[5]+1,y+5,7);y+=7;});
-
-  rct(mL,y,cW,5,[240,240,240]);t('RESULTADO DA VIAGEM, EM CONSONÂNCIA COM O(S) OBJETIVO(S) (3)',pW/2,y+3.8,8,true,'center');y+=5;
+  // Resultado
+  rct(mL,y,cW,5,[240,240,240]);
+  t('RESULTADO DA VIAGEM, EM CONSONÂNCIA COM O(S) OBJETIVO(S) (3)',pW/2,y+3.8,8,true,'center');y+=5;
   rct(mL,y,cW,28);tw(d.resultado||'',mL+2,y+5,cW-4,8);y+=30;
 
-  // PÁGINA 2 MLR-42
+  // ── Página 2 ──
   doc.addPage();y=mT;
-  doc.setFillColor(180,180,180);doc.circle(mL+8,y+7,6,'F');t('SC',mL+8,y+8,7,true,'center');
-  t('ESTADO DE SANTA CATARINA',mL+18,y+5,11,true);t('RELATÓRIO DE VIAGEM',pW-mR,y+5,12,true,'right');y+=17;
+  y = _pdfCabecalho(h, y, 'RELATÓRIO DE VIAGEM');
 
-  const calc = d.calc || {};
-  const qE2 = calc.qtInteiras||0, qP2 = calc.qtPernoites||0, qM2 = calc.qtMetades||0;
-  const totVal2 = calc.totalValor||0;
+  const c=d.calc||{};
+  const qE=c.qtInteiras||0,qP=c.qtPernoites||0,qM=c.qtMetades||0,totVal=c.totalValor||0;
 
   rct(mL,y,cW,5,[240,240,240]);t('DIÁRIAS RECEBIDAS',pW/2,y+3.8,8,true,'center');y+=5;
-  rct(mL,y,cW*0.35,8,[238,238,238]);rct(mL+cW*0.35,y,cW*0.2,8,[238,238,238]);rct(mL+cW*0.55,y,cW*0.23,8,[238,238,238]);rct(mL+cW*0.78,y,cW*0.22,8,[238,238,238]);
-  t('DESLOCAMENTO',mL+2,y+5.5,5.5,true);t('QUANTIDADE',mL+cW*0.35+2,y+5.5,5.5,true);t('VALOR UNITÁRIO',mL+cW*0.55+2,y+5.5,5.5,true);t('TOTAL',mL+cW*0.78+2,y+5.5,5.5,true);y+=8;
-  [['NO ESTADO (sem pernoite)',qE2,110,qE2*110],['PERNOITE',qP2,220,qP2*220],['MEIA DIÁRIA (4h–12h)',qM2,55,qM2*55]].forEach(([lbl,q,v,tv])=>{
-    rct(mL,y,cW*0.35,8);rct(mL+cW*0.35,y,cW*0.2,8);rct(mL+cW*0.55,y,cW*0.23,8);rct(mL+cW*0.78,y,cW*0.22,8);
-    t(lbl,mL+2,y+5.5,7);t(String(q),mL+cW*0.35+2,y+5.5,7);t(fmtR(v),mL+cW*0.55+2,y+5.5,7);t(fmtR(tv),mL+cW*0.78+2,y+5.5,7);y+=8;
+  rct(mL,y,cW*0.35,8,[238,238,238]);rct(mL+cW*0.35,y,cW*0.2,8,[238,238,238]);
+  rct(mL+cW*0.55,y,cW*0.23,8,[238,238,238]);rct(mL+cW*0.78,y,cW*0.22,8,[238,238,238]);
+  t('DESLOCAMENTO',mL+2,y+5.5,5.5,true);t('QUANTIDADE',mL+cW*0.35+2,y+5.5,5.5,true);
+  t('VALOR UNITÁRIO',mL+cW*0.55+2,y+5.5,5.5,true);t('TOTAL',mL+cW*0.78+2,y+5.5,5.5,true);y+=8;
+  [['NO ESTADO (sem pernoite)',qE,110,qE*110],
+   ['PERNOITE',qP,220,qP*220],
+   ['MEIA DIÁRIA (4h–12h)',qM,55,qM*55],
+  ].forEach(([lbl,q,v,tv])=>{
+    rct(mL,y,cW*0.35,8);rct(mL+cW*0.35,y,cW*0.2,8);
+    rct(mL+cW*0.55,y,cW*0.23,8);rct(mL+cW*0.78,y,cW*0.22,8);
+    t(lbl,mL+2,y+5.5,7);t(String(q),mL+cW*0.35+2,y+5.5,7);
+    t(fmtR(v),mL+cW*0.55+2,y+5.5,7);t(fmtR(tv),mL+cW*0.78+2,y+5.5,7);y+=8;
   });
-
   rct(mL,y,cW*0.35,18);rct(mL+cW*0.35,y,cW*0.65,18);
-  t('TOTAL GERAL',mL+2,y+6,8,true);t(fmtR(totVal2),mL+cW*0.78+2,y+6,8,true);
-  t('POR EXTENSO:',mL+cW*0.35+2,y+5,5.5,true);t(numeroParaExtenso(totVal2),mL+cW*0.35+2,y+11,7.5);y+=20;
+  t('TOTAL GERAL',mL+2,y+6,8,true);t(fmtR(totVal),mL+cW*0.78+2,y+6,8,true);
+  t('POR EXTENSO:',mL+cW*0.35+2,y+5,5.5,true);
+  t(_numeroParaExtenso(totVal),mL+cW*0.35+2,y+11,7.5);y+=20;
 
   rct(mL,y,cW*0.2,12);rct(mL+cW*0.2,y,cW*0.8,12);
   t('DATA:',mL+1,y+4,6,true);t(d.dataAss||'',mL+1,y+9,7);
-  t('ASSINATURA DO SERVIDOR  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);y+=14;
+  t('ASSINATURA DO SERVIDOR  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);
+  y+=14;
 
-  rct(mL,y,cW,5,[225,225,225]);t('ORDENADOR DE DESPESA OU AGENTE DELEGADO (DIRETOR OU EQUIVALENTE DA ÁREA FINANCEIRA/FUNDO)',mL+1,y+3.8,5.5,true);y+=5;
+  rct(mL,y,cW,5,[225,225,225]);
+  t('ORDENADOR DE DESPESA OU AGENTE DELEGADO (DIRETOR OU EQUIVALENTE DA ÁREA FINANCEIRA/FUNDO)',mL+1,y+3.8,5.5,true);y+=5;
   rct(mL,y,cW*0.2,12);rct(mL+cW*0.2,y,cW*0.8,12);
   t('DATA:',mL+1,y+4,6,true);t(d.dataAss||'',mL+1,y+9,7);
-  t('ASSINATURA DO ORDENADOR DA DESPESA  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);y+=16;
+  t('ASSINATURA DO ORDENADOR DA DESPESA  *Em processo digital, assinatura eletrônica/digital obrigatória pelo SGPE',mL+cW*0.2+2,y+7,5.5);
+  y+=16;
 
   rct(mL,y,cW,5,[225,225,225]);t('NOTAS EXPLICATIVAS',mL+1,y+3.8,7,true);y+=5;
-  const notas2=['(1) CAMPO DE USO EXCLUSIVO DE SERVIDOR EFETIVO DA SES.','(2) CAMPO OBRIGATÓRIO A SER PREENCHIDO POR SERVIDOR QUE NÃO OCUPA CARGO EFETIVO.','(3) DESCREVER SE OS OBJETIVOS PROPOSTOS FORAM ALCANÇADOS, JUSTIFICANDO.','* ANEXAR OS DOCUMENTOS EXIGIDOS PARA PRESTAÇÃO DE CONTAS (Art. 11, Dec. 650/2020).'];
-  const totalH=notas2.reduce((acc,n)=>{const l=doc.splitTextToSize(n,cW-4);return acc+l.length*5+2;},6);
-  rct(mL,y,cW,totalH);notas2.forEach(n=>{tw(n,mL+2,y+4,cW-4,5.5);const l=doc.splitTextToSize(n,cW-4);y+=l.length*5+2;});
+  const notas2=[
+    '(1) CAMPO DE USO EXCLUSIVO DE SERVIDOR EFETIVO DA SES.',
+    '(2) CAMPO OBRIGATÓRIO A SER PREENCHIDO POR SERVIDOR QUE NÃO OCUPA CARGO EFETIVO.',
+    '(3) DESCREVER SE OS OBJETIVOS PROPOSTOS FORAM ALCANÇADOS, JUSTIFICANDO.',
+    '* ANEXAR OS DOCUMENTOS EXIGIDOS PARA PRESTAÇÃO DE CONTAS (Art. 11, Dec. 650/2020).',
+  ];
+  const hN2=notas2.reduce((a,n)=>{const l=doc.splitTextToSize(n,cW-4);return a+l.length*5+2;},6);
+  rct(mL,y,cW,hN2);
+  notas2.forEach(n=>{tw(n,mL+2,y+4,cW-4,5.5);const l=doc.splitTextToSize(n,cW-4);y+=l.length*5+2;});
   y+=4;t('MLR-42',pW-mR,y+5,7,true,'right');
 
-  doc.save('MLR-42_'+d.srv.nome.replace(/\s+/g,'_')+'_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
+  doc.save('MLR-42_'+(d.srv.nome||'servidor').replace(/\s+/g,'_')+'_'
+    +new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.pdf');
 }
 
-// ══════════════════════════════════════════════════
-// SALVAR + GERAR PDF
-// ══════════════════════════════════════════════════
-async function salvarEGerarPDF(tipo) {
-  const p   = tipo === 'requerimento' ? 'r' : 'rl';
-  const sid = document.getElementById(p + '-servidor').value;
-  if (!sid) { toast('Selecione um servidor primeiro.', 'erro'); return; }
-  const srv = window._servidoresCache.find(x => x.id === sid);
-  if (!srv) { toast('Servidor não encontrado. Recarregue a página.', 'erro'); return; }
-  const deslocs    = coletarDeslocamentos(p);
-  const calcResult = window[p + '_calc'] || {};
+// ── CONECTAR PDF AO APP ───────────────────────────────────────────
+APP.gerarMLR41 = function() {
+  const srvId = document.getElementById('f-servidor').value;
+  if (!srvId) { toast('Selecione um servidor antes de gerar o PDF.','erro'); return; }
+  const objetivo = document.getElementById('f-objetivo').value.trim();
+  if (!objetivo) { toast('Preencha o objetivo da viagem.','erro'); return; }
 
-  let dados = { tipo, srv, deslocamentos: deslocs, calc: calcResult,
-    totalDiarias: calcResult.totalQtd || 0 };
-
-  if (tipo === 'requerimento') {
-    dados = { ...dados,
-      orgao: document.getElementById('r-orgao').value,
-      sigla: document.getElementById('r-sigla').value,
-      nomeSocial: document.getElementById('r-nome-social').value,
-      municipio: document.getElementById('r-municipio').value,
-      competencia: document.getElementById('r-competencia').value,
-      email: document.getElementById('r-email').value,
-      celular: document.getElementById('r-celular').value,
-      codigosCargo: Array.from(document.querySelectorAll('#r-codigos-cargo input:checked')).map(c=>c.value),
-      objetivo: document.getElementById('r-objetivo').value,
-      localData: document.getElementById('r-local-data').value,
-    };
-  } else {
-    dados = { ...dados,
-      orgao: document.getElementById('rl-orgao').value,
-      sigla: document.getElementById('rl-sigla').value,
-      nomeSocial: document.getElementById('rl-nome-social').value,
-      municipio: document.getElementById('rl-municipio').value,
-      email: document.getElementById('rl-email').value,
-      celular: document.getElementById('rl-celular').value,
-      codigosCargo: Array.from(document.querySelectorAll('#rl-codigos-cargo input:checked')).map(c=>c.value),
-      resultado: document.getElementById('rl-resultado-texto').value,
-      dataAss: document.getElementById('rl-data-ass').value,
-    };
-  }
-
-  toast('Salvando no Firebase...');
-  let firebaseId = '(Firebase não configurado)';
-  if (typeof window._saveToFirebase === 'function') {
-    const res = await window._saveToFirebase(dados);
-    if (res.ok) { firebaseId = res.id; toast('Salvo! Gerando PDF...'); }
-    else toast('Firebase: ' + res.erro, 'aviso');
-  }
-
+  const d = this._dadosFormulario();
   try {
-    if (tipo === 'requerimento') gerarPDF_MLR41(dados);
-    else gerarPDF_MLR42(dados);
-    toast('PDF gerado com sucesso!');
+    _gerarPDF41(d);
+    this._salvarViagem('requerido');
+    toast('MLR-41 gerado e salvo como Requerido!');
+    document.getElementById('res-41').textContent='✓ MLR-41 gerado. Status atualizado para Requerido.';
+    document.getElementById('res-41').style.display='block';
+    document.getElementById('sec-res').classList.remove('bloqueada');
+    this._mostrarPrazo();
   } catch(e) {
-    toast('Erro ao gerar PDF: ' + e.message, 'erro');
-    console.error(e); return;
+    toast('Erro ao gerar PDF: '+e.message,'erro');
+    console.error(e);
   }
+};
 
-  const boxId = tipo === 'requerimento' ? 'r-resultado' : 'rl-resultado-box';
-  document.getElementById(boxId).classList.add('visivel');
-  document.getElementById(tipo === 'requerimento' ? 'r-doc-id' : 'rl-doc-id').textContent = firebaseId;
-}
+APP.gerarMLR42 = function() {
+  const srvId = document.getElementById('f-servidor').value;
+  if (!srvId) { toast('Selecione um servidor antes de gerar o PDF.','erro'); return; }
+  const resultado = document.getElementById('f-resultado').value.trim();
+  if (!resultado) { toast('Preencha o resultado da viagem.','erro'); return; }
+  if (!STATE.calcResult) { toast('Preencha os deslocamentos para calcular as diárias.','aviso'); return; }
 
-// ══════════════════════════════════════════════════
-inicializar();
+  const d = this._dadosFormulario();
+  try {
+    _gerarPDF42(d);
+    this._salvarViagem('prestado');
+    toast('MLR-42 gerado e salvo como Prestado!');
+    document.getElementById('res-42').textContent='✓ MLR-42 gerado. Status atualizado para Prestado.';
+    document.getElementById('res-42').style.display='block';
+  } catch(e) {
+    toast('Erro ao gerar PDF: '+e.message,'erro');
+    console.error(e);
+  }
+};
+
+// ── AVISO AO FECHAR/RECARREGAR COM ALTERAÇÕES PENDENTES ──────────
+window.addEventListener('beforeunload', e => {
+  if (STATE.alteracoesPendentes && STATE.viagemAtual) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// ── CORRIGE: não marca como alterado ao ABRIR viagem existente ───
+// Sobrescreve _abrirForm para resetar o indicador após carregar
+const _abrirFormOriginal = APP._abrirForm.bind(APP);
+APP._abrirForm = function() {
+  _abrirFormOriginal();
+  // Aguarda o preenchimento terminar antes de resetar o indicador
+  setTimeout(() => {
+    STATE.alteracoesPendentes = false;
+    const ind = document.getElementById('indicador-salvo');
+    if (ind) { ind.style.display = 'none'; }
+  }, 80);
+};
+
+// ── INICIALIZAR ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>APP.init());
 </script>
 </body>
 </html>
