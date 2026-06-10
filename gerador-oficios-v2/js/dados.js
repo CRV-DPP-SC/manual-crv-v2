@@ -36,13 +36,13 @@ const UNS = [
   {n:'Presídio Regional de Itajaí',c:'Itajaí',sr:'SR04',dir:'Rogério José Bizatto',cg:'Diretor',em:'pr15@pp.sc.gov.br',tel:'(47) 3398-6750',e:'Estrada Geral João Tomaz Pinto, s/n — Canhanduba — Itajaí/SC — CEP 88307-770'},
   {n:'Presídio Regional de Itapema',c:'Itapema',sr:'SR04',dir:'Eduardo Weber Xavier',cg:'Diretor',em:'pr18@pp.sc.gov.br',tel:'(47) 3398-6684',e:'Rua 440, s/n — Morretes — Itapema/SC — CEP 88220-000'},
   /* SR05 — Serrana */
-  {n:'Penitenciária Industrial de São Cristóvão do Sul',c:'São Cristóvão do Sul',sr:'SR05',dir:'Giselle Cordeiro Demeneck Remor',cg:'Diretora',em:'pe09@pp.sc.gov.br',tel:'(49) 3412-3190',e:'Estrada Geral Paredão, s/n — São Cristóvão do Sul/SC — CEP 89533-000'},
-  {n:'Penitenciária Regional de Curitibanos',c:'São Cristóvão do Sul',sr:'SR05',dir:'Fabio Marcelo Palhano',cg:'Diretor',em:'pe08@pp.sc.gov.br',tel:'(49) 3412-3300',e:'Rua Juventino França de Moraes, s/n — São Cristóvão do Sul/SC — CEP 89533-000'},
+  {n:'Penitenciária Industrial de São Cristóvão do Sul',c:'São Cristóvão do Sul',sr:'SR05',dir:'Mario Machado Rosa',cg:'Diretor',em:'pe09@pp.sc.gov.br',tel:'(49) 3412-3190',e:'Estrada Geral Paredão, s/n — São Cristóvão do Sul/SC — CEP 89533-000'},
+  {n:'Penitenciária Regional de Curitibanos',c:'São Cristóvão do Sul',sr:'SR05',dir:'Sinara Ortiz Santos',cg:'Diretora',em:'pe08@pp.sc.gov.br',tel:'(49) 3412-3300',e:'Rua Juventino França de Moraes, s/n — São Cristóvão do Sul/SC — CEP 89533-000'},
   {n:'Presídio Masculino de Lages',c:'Lages',sr:'SR05',dir:'Rodrigo Araújo Aquino',cg:'Diretor',em:'pr19@pp.sc.gov.br',tel:'(49) 3289-8467',e:'Rua Ricardo Marin, s/n — Santa Clara — Lages/SC — CEP 88513-210'},
   {n:'Presídio Regional de Lages',c:'Lages',sr:'SR05',dir:'Ricardo Fernando Moreira Floriani',cg:'Diretor',em:'pr20@pp.sc.gov.br',tel:'(49) 3289-8403',e:'Rua Mato Grosso, 247 — São Cristóvão — Lages/SC — CEP 88509-220'},
   {n:'Presídio Regional de Caçador',c:'Caçador',sr:'SR05',dir:'André Luiz Pierdoná',cg:'Diretor',em:'pr21@pp.sc.gov.br',tel:'(49) 3561-6945',e:'Av. Albino Felipe Potrick, 50 — Bom Sucesso — Caçador/SC — CEP 89501-335'},
   {n:'Presídio Regional de Campos Novos',c:'Campos Novos',sr:'SR05',dir:'Evalcir Morais dos Santos',cg:'Diretor',em:'pr22@pp.sc.gov.br',tel:'(49) 3541-3588',e:'Estrada Geral Usina Velha, s/n — Campos Novos/SC — CEP 89620-000'},
-  {n:'Presídio Regional de Videira',c:'Videira',sr:'SR05',dir:'Marcus Vinicius Lorenzetti',cg:'Diretor',em:'pr23@pp.sc.gov.br',tel:'(49) 3533-5915',e:'Rodovia SC-303, Linha Scussiato — Videira/SC — CEP 89560-000'},
+  {n:'Presídio Regional de Videira',c:'Videira',sr:'SR05',dir:'Fabio Antunes Ramos',cg:'Diretor',em:'pr23@pp.sc.gov.br',tel:'(49) 3533-5915',e:'Rodovia SC-303, Linha Scussiato — Videira/SC — CEP 89560-000'},
   {n:'Unidade de Segurança Máxima de São Cristóvão do Sul',c:'São Cristóvão do Sul',sr:'SR05',dir:'Daniel de Sena',cg:'Diretor',em:'umax@pp.sc.gov.br',tel:'(49) 3412-3241',e:'Rua Juventino França de Moraes, s/n — São Cristóvão do Sul/SC — CEP 89533-000'},
   /* SR06 — Oeste */
   {n:'Penitenciária Agrícola de Chapecó',c:'Chapecó',sr:'SR06',dir:'Itacir Ricieri Cella',cg:'Diretor',em:'pe10@pp.sc.gov.br',tel:'(49) 2049-9760',e:'Rua Cunha Porã, 1600-E — Efapi — Chapecó/SC — CEP 89809-500'},
