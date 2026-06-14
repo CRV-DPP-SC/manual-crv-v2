@@ -640,6 +640,7 @@ function _atualizarTabAcessos() {
   const ver = ['dir', 'cpen'].includes(perfilAtual) ||
               (perfilAtual === 'crv' && modoLeitura());
   tabAcessos.style.display = ver ? '' : 'none';
+
 }
 
 // ══════════════════════════════════════════════
