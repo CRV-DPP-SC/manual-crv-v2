@@ -840,7 +840,17 @@ function _mostrarSubMenuCRV(show) {
 
 function _mostrarSubMenuPainel(show) {
   const sub = document.getElementById('sidebar-painel-sub');
-  if (sub) sub.style.display = show ? 'block' : 'none';
+  if (!sub) return;
+  sub.style.display = show ? 'block' : 'none';
+  if (show) {
+    ['sub-painel-manual', 'sub-painel-ferramentas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('open');
+      const btn = el?.previousElementSibling;
+      const arrow = btn?.querySelector('.nav-sub-arrow');
+      if (arrow) arrow.textContent = '▼';
+    });
+  }
 }
 
 /* ── Reset de senhas (apenas rodrigo.l.pastore@gmail.com) ── */
