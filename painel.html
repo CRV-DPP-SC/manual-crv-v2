@@ -161,13 +161,29 @@
 
     /* ── ABAS ── */
     .p-abas {
-      display: flex; gap: 2px;
+      display: flex; align-items: stretch; gap: 0;
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
       padding: 0 32px;
+      flex-wrap: wrap;
+    }
+    .p-aba-grupo {
+      display: flex; align-items: stretch; gap: 0;
+      position: relative;
+    }
+    .p-aba-grupo + .p-aba-grupo {
+      border-left: 1px solid var(--border);
+      margin-left: 4px;
+      padding-left: 4px;
+    }
+    .p-aba-grupo-label {
+      position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+      font-size: .6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--txt-3); white-space: nowrap;
+      pointer-events: none;
     }
     .p-aba-btn {
-      padding: 14px 20px;
+      padding: 20px 16px 10px;
       font-size: .875rem; font-weight: 500;
       color: var(--txt-3); background: none; border: none;
       border-bottom: 2px solid transparent;
@@ -541,27 +557,29 @@
 
   <!-- Abas -->
   <div class="p-abas">
-    <button class="p-aba-btn ativa" data-aba="pendentes" onclick="carregarAba('pendentes')">
-      Pendentes <span id="p-badge-pendentes" style="display:none;background:#dc2626;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
-    </button>
-    <button class="p-aba-btn" data-aba="minhas" onclick="carregarAba('minhas')">
-      Solicitações
-    </button>
-    <button class="p-aba-btn" data-aba="historico" onclick="carregarAba('historico')">
-      Histórico
-    </button>
-    <button class="p-aba-btn" data-aba="cancelados" onclick="carregarAba('cancelados')">
-      Cancelados
-    </button>
-    <button class="p-aba-btn" data-aba="acessos" id="tab-acessos" style="display:none;" onclick="carregarAba('acessos')">
-      Acessos <span id="p-badge-acessos" style="display:none;background:#f59e0b;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
-    </button>
-    <button class="p-aba-btn" data-aba="manual" onclick="carregarAba('manual')">
-      Manual
-    </button>
-    <button class="p-aba-btn" data-aba="ferramentas" onclick="carregarAba('ferramentas')">
-      Ferramentas
-    </button>
+    <!-- Grupo: Transferências -->
+    <div class="p-aba-grupo">
+      <span class="p-aba-grupo-label">Transferências</span>
+      <button class="p-aba-btn ativa" data-aba="pendentes" onclick="carregarAba('pendentes')">
+        Assinaturas Pendentes <span id="p-badge-pendentes" style="display:none;background:#dc2626;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
+      </button>
+      <button class="p-aba-btn" data-aba="minhas" onclick="carregarAba('minhas')">
+        Solicitação de Assinaturas
+      </button>
+      <button class="p-aba-btn" data-aba="historico" onclick="carregarAba('historico')">
+        Histórico de Pedidos
+      </button>
+      <button class="p-aba-btn" data-aba="cancelados" onclick="carregarAba('cancelados')">
+        Solicitações Canceladas
+      </button>
+    </div>
+    <!-- Grupo: Acesso -->
+    <div class="p-aba-grupo">
+      <span class="p-aba-grupo-label">Acesso</span>
+      <button class="p-aba-btn" data-aba="acessos" id="tab-acessos" style="display:none;" onclick="carregarAba('acessos')">
+        Controle de Acesso/Usuários <span id="p-badge-acessos" style="display:none;background:#f59e0b;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
+      </button>
+    </div>
   </div>
 
   <!-- Corpo -->
