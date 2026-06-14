@@ -793,6 +793,13 @@ function _htmlConteudoRestrito() {
       <div class="restrito-card-titulo">Sistemas — Estado</div>
       <div class="restrito-card-sub" style="color:#6ee7b7;">SIGRHPORTAL · iPEN · SGPe</div>
     </div>
+    <div class="restrito-card" onclick="document.getElementById('modal-grupo-cpen').classList.add('aberto')"
+      style="background:linear-gradient(135deg,#3b1f0a,#6b3a1f);border:2px solid #f97316;">
+      <span class="restrito-card-badge" style="background:#f97316;color:#fff;">CPEN</span>
+      <div class="restrito-card-icon">📋</div>
+      <div class="restrito-card-titulo" style="color:#fed7aa;">CPEN</div>
+      <div class="restrito-card-sub" style="color:#fdba74;">Coordenação Penal</div>
+    </div>
     <div class="restrito-card" onclick="abrirUSMControle()"
       style="background:#0d1117;border:2px solid #3b82f6;">
       <span class="restrito-card-badge" style="background:#3b82f6;color:#fff;">TEMPO REAL</span>
@@ -809,7 +816,7 @@ function _htmlConteudoRestrito() {
 /* ── Abre ferramenta interna no centro da página ── */
 window._abrirFerramenta = function(url, titulo) {
   /* Fecha todos os modais de grupo */
-  ['modal-grupo-crv','modal-grupo-jud','modal-grupo-estado'].forEach(function(id) {
+  ['modal-grupo-crv','modal-grupo-jud','modal-grupo-estado','modal-grupo-cpen'].forEach(function(id) {
     document.getElementById(id)?.classList.remove('aberto');
   });
   const iframe = document.getElementById('crv-tool-iframe');
