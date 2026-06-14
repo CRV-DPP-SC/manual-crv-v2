@@ -9,7 +9,8 @@ function getCSS() {
     '@page{size:A4;margin:1.5cm 1.75cm 1.2cm 2.5cm}',
     '@media print{',
       'body{-webkit-print-color-adjust:exact;print-color-adjust:exact;margin:0;padding:0}',
-      'html,body{height:100%}',
+      'html,body{height:100%;margin:0;padding:0}',
+      'thead{display:table-header-group}tfoot{display:table-footer-group}',
       'header,footer,.ofc-no-print,.page-break-preview{display:none!important}',
       '.ofc-placeholder{display:none}',
       '#oficio{min-height:0!important;border:none!important;box-shadow:none!important}',
@@ -139,9 +140,10 @@ function baixarPDF() {
   if (!janela) { _toast('Permita pop-ups para gerar o PDF.'); return; }
   janela.document.write(
     '<html><head><meta charset="UTF-8"><title>Ofício</title>'
+    + '<style>html,body{height:100%;margin:0;padding:0}</style>'
     + '<style>' + css + '</style></head><body>'
     + _wrapParaExport(el.innerHTML)
-    + '<script>window.onload=function(){window.print();}<\/script></body></html>'
+    + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>'
   );
   janela.document.close();
   _toast('Janela de impressão/PDF aberta!');
