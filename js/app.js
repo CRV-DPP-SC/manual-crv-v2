@@ -46,6 +46,21 @@ const NOMES_SECAO = {
   restrito:   'CRV',
 };
 
+/* Abre o painel e navega para uma aba específica */
+window._abrirPainelAba = function(aba) {
+  navegarPara('painel-embed');
+  const fr = document.getElementById('painel-embed-iframe');
+  if (!fr) return;
+  const _navegar = () => {
+    try { fr.contentWindow.carregarAba(aba); } catch(e) {}
+  };
+  if (fr.src && fr.src.includes('painel') && fr.contentWindow?.carregarAba) {
+    _navegar();
+  } else {
+    fr.addEventListener('load', _navegar, { once: true });
+  }
+};
+
 function navegarPara(id) {
   document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
   const alvo = document.getElementById(id);

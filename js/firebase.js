@@ -67,6 +67,7 @@ function _mostrarTopbarVisitante() {
   const btnS = document.getElementById('sidebar-btn-senha');
   if (btnS) btnS.style.display = 'none';
   _mostrarSubMenuCRV(false);
+  _mostrarSubMenuPainel(false);
 }
 
 function _iniciaisPerfil(email) {
@@ -102,8 +103,9 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const iniciais = _iniciaisPerfil(user.email || '');
   const btnSenha = document.getElementById('sidebar-btn-senha');
   if (btnSenha) btnSenha.style.display = '';
-  /* Submenu CRV apenas para perfil CRV */
+  /* Submenus conforme perfil */
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
+  _mostrarSubMenuPainel(perfil?.tipo !== 'crv' && perfil?.tipo !== null);
 
   area.innerHTML = `
     <div class="topbar-user-info">
@@ -833,6 +835,11 @@ window._sidebarToggle = function(subId, btn) {
 /* ── Mostra/oculta submenu CRV no sidebar ── */
 function _mostrarSubMenuCRV(show) {
   const sub = document.getElementById('sidebar-crv-sub');
+  if (sub) sub.style.display = show ? 'block' : 'none';
+}
+
+function _mostrarSubMenuPainel(show) {
+  const sub = document.getElementById('sidebar-painel-sub');
   if (sub) sub.style.display = show ? 'block' : 'none';
 }
 

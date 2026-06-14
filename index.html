@@ -45,6 +45,29 @@
       <button class="nav-item nav-item-painel" data-secao="painel-embed" onclick="navegarPara('painel-embed')">
         <span class="nav-icon">🏛️</span> Painel da Unidade
       </button>
+
+      <!-- ── Submenu Unidade — só para usuários autenticados (dir, cpen, servidor) ── -->
+      <div id="sidebar-painel-sub" style="display:none;">
+        <button class="nav-sub-group" onclick="_sidebarToggle('sub-painel-manual',this)">
+          <span>📖 Manual</span><span class="nav-sub-arrow">▶</span>
+        </button>
+        <div class="nav-sub-items" id="sub-painel-manual">
+          <button class="nav-sub-item" onclick="_abrirPainelAba('manual','hipoteses')">📌 Hipóteses</button>
+          <button class="nav-sub-item" onclick="_abrirPainelAba('manual','fluxo')">🔄 Fluxo Operacional</button>
+          <button class="nav-sub-item" onclick="_abrirPainelAba('manual','documentos')">📂 Documentos Necessários</button>
+        </div>
+        <button class="nav-sub-group" onclick="_sidebarToggle('sub-painel-ferramentas',this)">
+          <span>🛠️ Ferramentas</span><span class="nav-sub-arrow">▶</span>
+        </button>
+        <div class="nav-sub-items" id="sub-painel-ferramentas">
+          <button class="nav-sub-item" onclick="abrirGeradorOficios()">⚙️ Gerador de Ofícios</button>
+          <button class="nav-sub-item" onclick="abrirGuiaOficios()">📄 Guia — Gerador de Ofícios</button>
+          <a class="nav-sub-item" href="https://ppsc.com.br" target="_blank" rel="noopener">🌐 Portal de Transferências ↗</a>
+          <button class="nav-sub-item" onclick="navegarPara('unidades')">🏛️ Unidades Prisionais</button>
+          <button class="nav-sub-item" onclick="navegarPara('legislacao')">📚 Legislação</button>
+        </div>
+      </div>
+
       <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
         <span class="nav-icon">🔒</span> CRV
       </button>
