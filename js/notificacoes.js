@@ -81,23 +81,22 @@ function _tocarSom() {
 // ════════════════════════════════════════
 // ONESIGNAL — PUSH NOTIFICATIONS
 // ════════════════════════════════════════
-async function _registrarOneSignal(emailUnidade) {
+function _registrarOneSignal(emailUnidade) {
   if (!('Notification' in window)) return;
-  try {
-    await window.OneSignalDeferred.push(async os => {
-      await os.init({
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    try {
+      await OneSignal.init({
         appId: ONESIGNAL_APP_ID,
         notifyButton: { enable: false },
         allowLocalhostAsSecureOrigin: true,
       });
-      // Solicita permissão e registra
-      await os.Slidedown.promptPush();
-      // Marca a unidade do CPEN/DIR como tag para filtrar envios
-      await os.User.addTag('emailUnidade', emailUnidade);
-    });
-  } catch (e) {
-    console.warn('[OneSignal]', e.message);
-  }
+      await OneSignal.Slidedown.promptPush();
+      await OneSignal.User.addTag('emailUnidade', emailUnidade);
+    } catch (e) {
+      console.warn('[OneSignal]', e.message);
+    }
+  });
 }
 
 // ════════════════════════════════════════
