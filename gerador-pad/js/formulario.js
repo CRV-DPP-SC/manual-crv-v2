@@ -4,29 +4,40 @@
 
 var FormularioCtrl = (function() {
 
-  /* ── Renderiza o formulário completo ── */
+  /* ── Renderiza as seções do documento ativo ── */
   function _render() {
-    var s   = Estado.get();
-    var f   = document.getElementById('form-area');
+    var s = Estado.get();
+    var f = document.getElementById('form-area');
     if (!f) return;
 
-    f.innerHTML = ''
-      + _grupoCab('📋 Portaria de Instauração')
-      + _secPad(s)
-      + _secIncidentado(s)
-      + _secInfracao(s)
-      + _secConselho(s)
-      + _secDiretor(s)
-      + _grupoCab('⚖️ Oitiva do Incidentado')
-      + _secDefesa(s)
-      + _grupoCab('🧑‍💼 Oitiva das Testemunhas')
-      + _secTestemunhas(s)
-      + _grupoCab('📝 Manifestação do Conselho')
-      + _secManifestacao(s)
-      + _grupoCab('⚖️ Decisão da Direção')
-      + _secDecisao(s)
-      + _grupoCab('📨 Ofício ao Juiz')
-      + _secOficioJuiz(s)
+    var secoes = '';
+    switch (_DOC_ATUAL) {
+      case 'portaria':
+        secoes = _secUpload() + _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
+        break;
+      case 'oitiva_inc':
+        secoes = _secDefesa(s);
+        break;
+      case 'oitivas_test':
+        secoes = _secTestemunhas(s);
+        break;
+      case 'manifestacao':
+        secoes = _secManifestacao(s);
+        break;
+      case 'decisao':
+        secoes = _secDecisao(s);
+        break;
+      case 'oficio_vep':
+        secoes = _secOficioVep(s);
+        break;
+      case 'oficio_juiz':
+        secoes = _secOficioJuiz(s);
+        break;
+      default:
+        secoes = _secUpload() + _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
+    }
+
+    f.innerHTML = secoes
       + '<div class="form-rodape">'
         + '<button class="btn-limpar" onclick="FormularioCtrl.limpar()">🗑 Novo PAD</button>'
       + '</div>';
@@ -61,7 +72,7 @@ var FormularioCtrl = (function() {
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
-        + _campo('Número do PAD', 'text', 'inp-numPad', s.numPad, 'ex: 001/2026', true)
+        + _campo('Nº do PAD (Portaria de Instauração)', 'text', 'inp-numPad', s.numPad, 'ex: 001/2026', true)
         + _campo('Data de Instauração', 'date', 'inp-dataInst', s.dataInst, '', true)
       + '</div>'
     + '</div>';
@@ -70,6 +81,7 @@ var FormularioCtrl = (function() {
   /* ── Seção: Incidentado ── */
   function _secIncidentado(s) {
     var i = s.incidentado || {};
+    var cpfVal = i.ipen || '';
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
         + '<span class="sec-titulo">👤 Incidentado</span>'
@@ -80,14 +92,18 @@ var FormularioCtrl = (function() {
         + _campo('Nome completo', 'text', 'inp-inc-nome', i.nome, 'NOME DO INCIDENTADO', true)
         + _row2(
             _campo('Prontuário / IPEN', 'text', 'inp-inc-pront', i.prontuario, 'ex: 750126', true),
-            _campo('RG i-PEN', 'text', 'inp-inc-ipen', i.ipen, 'ex: 12181418918')
+            _campo('CPF', 'text', 'inp-inc-ipen', cpfVal, 'xxx.xxx.xxx-xx')
           )
         + _row2(
             _campo('Nascimento', 'date', 'inp-inc-nasc', i.nascimento),
             _campo('Naturalidade', 'text', 'inp-inc-nat', i.naturalidade, 'ex: Florianópolis - SC')
           )
         + _campo('Nome da mãe', 'text', 'inp-inc-mae', i.mae)
-        + _campo('Regime', 'text', 'inp-inc-regime', i.regime, 'ex: Fechado')
+        + _row2(
+            _campo('Regime', 'text', 'inp-inc-regime', i.regime, 'ex: Fechado'),
+            _campo('Comportamento', 'text', 'inp-inc-comp', i.comportamento, 'ex: Bom')
+          )
+        + _campo('Cela / Alojamento', 'text', 'inp-inc-cela', i.cela, 'ex: Ala M, Gal I, Bloco D, Cela 102')
       + '</div>'
     + '</div>';
   }
@@ -140,7 +156,7 @@ var FormularioCtrl = (function() {
     }
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
-        + '<span class="sec-titulo">⚖️ Defesa</span>'
+        + '<span class="sec-titulo">⚖️ Oitiva do Incidentado / Defesa</span>'
         + _ind(!!tipo)
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
@@ -317,20 +333,35 @@ var FormularioCtrl = (function() {
     + '</div>';
   }
 
-  /* ── Seção: Ofício ao Juiz ── */
-  function _secOficioJuiz(s) {
+  /* ── Seção: Ofício à VEP ── */
+  function _secOficioVep(s) {
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
-        + '<span class="sec-titulo">📨 Nº do Ofício ao Juiz</span>'
+        + '<span class="sec-titulo">📨 Ofício à VEP</span>'
+        + _ind(!!s.numOficioEnc)
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
-        + _campo('Nº Ofício ao Juiz', 'text', 'inp-num-juiz', s.numOficioJuiz, 'ex: 001/2026/PR18/CEPEN')
+        + _campo('Nº Ofício à VEP', 'text', 'inp-num-vep', s.numOficioEnc, 'ex: 001/2026/PE01/CEPEN')
       + '</div>'
     + '</div>';
   }
 
-  /* ── Seção: Diretor ── */
+  /* ── Seção: Ofício ao Juiz ── */
+  function _secOficioJuiz(s) {
+    return '<div class="form-secao">'
+      + '<div class="sec-head" onclick="_toggleSec(this)">'
+        + '<span class="sec-titulo">📨 Ofício ao Juiz</span>'
+        + _ind(!!s.numOficioJuiz)
+        + '<span class="sec-chevron">▼</span>'
+      + '</div>'
+      + '<div class="sec-corpo">'
+        + _campo('Nº Ofício ao Juiz', 'text', 'inp-num-juiz', s.numOficioJuiz, 'ex: 002/2026/PE01/CEPEN')
+      + '</div>'
+    + '</div>';
+  }
+
+  /* ── Seção: Diretor (somente leitura) ── */
   function _secDiretor(s) {
     var d = s.diretor || {};
     return '<div class="form-secao">'
@@ -340,16 +371,17 @@ var FormularioCtrl = (function() {
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
-        + _campo('Nome do Diretor(a)', 'text', 'inp-dir-nome', d.nome, 'Nome completo')
-        + _campo('Cargo / Título', 'text', 'inp-dir-cargo', d.cargo||'Diretor(a)', 'ex: Diretor(a), Diretor Interino(a)')
-        + '<button class="btn-acao btn-sec" onclick="salvarDiretor()" style="font-size:.76rem;padding:6px 13px;margin-top:4px;">💾 Salvar</button>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label">Nome do(a) Diretor(a)</label>'
+          + '<div class="campo-readonly">' + _esc(d.nome || '(não informado)') + '</div>'
+        + '</div>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label">Cargo</label>'
+          + '<div class="campo-readonly">' + _esc(d.cargo || 'Diretor(a)') + '</div>'
+        + '</div>'
+        + '<div class="campo-hint">Vinculado automaticamente à unidade prisional do login.</div>'
       + '</div>'
     + '</div>';
-  }
-
-  /* ── Separador de grupo de documentos ── */
-  function _grupoCab(lbl) {
-    return '<div class="form-grupo-sep">' + lbl + '</div>';
   }
 
   /* ── Helpers de markup ── */
@@ -369,35 +401,53 @@ var FormularioCtrl = (function() {
     return '<span class="sec-ind sec-vazia">—</span>';
   }
 
+  /* ── Formata CPF enquanto digita ── */
+  function _maskCPF(val) {
+    var v = val.replace(/\D/g, '').substring(0, 11);
+    if (v.length > 9)      return v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})$/, '$1.$2.$3-$4');
+    if (v.length > 6)      return v.replace(/^(\d{3})(\d{3})(\d{0,3})$/, '$1.$2.$3');
+    if (v.length > 3)      return v.replace(/^(\d{3})(\d{0,3})$/, '$1.$2');
+    return v;
+  }
+
   /* ── Vincula eventos ── */
   function _vincular(s) {
-    _bind('inp-numPad',      function(v) { Estado.set('numPad', v); });
-    _bind('inp-dataInst',    function(v) { Estado.set('dataInst', v); });
+    _bind('inp-numPad',   function(v) { Estado.set('numPad', v); });
+    _bind('inp-dataInst', function(v) { Estado.set('dataInst', v); });
 
-    _bind('inp-inc-nome',    function(v) { Estado.setNested('incidentado.nome', v); });
-    _bind('inp-inc-pront',   function(v) { Estado.setNested('incidentado.prontuario', v); });
-    _bind('inp-inc-ipen',    function(v) { Estado.setNested('incidentado.ipen', v); });
-    _bind('inp-inc-nasc',    function(v) { Estado.setNested('incidentado.nascimento', v); });
-    _bind('inp-inc-nat',     function(v) { Estado.setNested('incidentado.naturalidade', v); });
-    _bind('inp-inc-mae',     function(v) { Estado.setNested('incidentado.mae', v); });
-    _bind('inp-inc-regime',  function(v) { Estado.setNested('incidentado.regime', v); });
+    _bind('inp-inc-nome',   function(v) { Estado.setNested('incidentado.nome', v); });
+    _bind('inp-inc-pront',  function(v) { Estado.setNested('incidentado.prontuario', v); });
+    _bind('inp-inc-nasc',   function(v) { Estado.setNested('incidentado.nascimento', v); });
+    _bind('inp-inc-nat',    function(v) { Estado.setNested('incidentado.naturalidade', v); });
+    _bind('inp-inc-mae',    function(v) { Estado.setNested('incidentado.mae', v); });
+    _bind('inp-inc-regime', function(v) { Estado.setNested('incidentado.regime', v); });
+    _bind('inp-inc-comp',   function(v) { Estado.setNested('incidentado.comportamento', v); });
+    _bind('inp-inc-cela',   function(v) { Estado.setNested('incidentado.cela', v); });
+
+    /* CPF com máscara */
+    var cpfEl = document.getElementById('inp-inc-ipen');
+    if (cpfEl) {
+      cpfEl.addEventListener('input', function() {
+        var masked = _maskCPF(cpfEl.value);
+        cpfEl.value = masked;
+        Estado.setNested('incidentado.ipen', masked);
+      });
+    }
 
     _bind('sel-inf-artigo',  function(v) { Estado.setNested('infracao.artigo', v); });
     _bind('inp-inf-data',    function(v) { Estado.setNested('infracao.data', v); });
     _bind('inp-inf-desc',    function(v) { Estado.setNested('infracao.descricao', v); });
     _bind('inp-inf-agentes', function(v) { Estado.setNested('infracao.agentes', v.split(',').map(function(a){ return a.trim(); }).filter(Boolean)); });
 
-    _bind('inp-adv-nome',    function(v) { Estado.setNested('defesa.advNome', v); });
-    _bind('inp-adv-oab',     function(v) { Estado.setNested('defesa.advOab', v); });
-    _bind('inp-versao-inc',  function(v) { Estado.setNested('defesa.versaoIncidentado', v); });
+    _bind('inp-adv-nome',   function(v) { Estado.setNested('defesa.advNome', v); });
+    _bind('inp-adv-oab',    function(v) { Estado.setNested('defesa.advOab', v); });
+    _bind('inp-versao-inc', function(v) { Estado.setNested('defesa.versaoIncidentado', v); });
 
-    _bind('inp-mani-fund',   function(v) { Estado.setNested('manifestacao.fundamento', v); });
-    _bind('inp-dec-fund',    function(v) { Estado.setNested('decisao.fundamento', v); });
+    _bind('inp-mani-fund', function(v) { Estado.setNested('manifestacao.fundamento', v); });
+    _bind('inp-dec-fund',  function(v) { Estado.setNested('decisao.fundamento', v); });
 
-    _bind('inp-num-juiz',    function(v) { Estado.set('numOficioJuiz', v); });
-
-    _bind('inp-dir-nome',    function(v) { Estado.setNested('diretor.nome', v); });
-    _bind('inp-dir-cargo',   function(v) { Estado.setNested('diretor.cargo', v); });
+    _bind('inp-num-vep',  function(v) { Estado.set('numOficioEnc', v); });
+    _bind('inp-num-juiz', function(v) { Estado.set('numOficioJuiz', v); });
 
     // Conselho
     ['pres','m1','m2'].forEach(function(id) {
@@ -428,6 +478,8 @@ var FormularioCtrl = (function() {
 
     // Remição valor
     _bind('inp-remicao-val', function(v) { Estado.setNested('decisao.sancoes.perdaRemicao.valor', v); });
+
+    _initUpload();
   }
 
   function _bind(id, fn) {
@@ -444,7 +496,6 @@ var FormularioCtrl = (function() {
   function limpar() {
     if (!confirm('Limpar todos os dados do PAD atual?')) return;
     Estado.reset();
-    // mantém unidade e dados persistidos
     carregarConselho();
     carregarDiretor();
     _render();

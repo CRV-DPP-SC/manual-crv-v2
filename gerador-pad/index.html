@@ -231,10 +231,12 @@
     .pad-rel-btn-del:hover { background: #fee2e2; }
     .pad-rel-info { font-size: .73rem; color: #a8a29e; padding: 8px 28px; }
 
-    /* Status badges */
-    .pad-status-badge { font-size: .68rem; font-weight: 800; padding: 3px 9px; border-radius: 12px; white-space: nowrap; }
-    .pad-status-ok   { background: #dcfce7; color: #166534; }
-    .pad-status-pend { background: #fef3c7; color: #92400e; }
+    /* Campo somente leitura */
+    .campo-readonly {
+      padding: 9px 13px; background: #f5f5f4;
+      border: 1.5px solid #e5e7eb; border-radius: 8px;
+      font-size: .9rem; color: #57534e; font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -258,7 +260,7 @@
     <a href="../index.html" target="_parent" class="topo-btn" style="text-decoration:none;">← Voltar</a>
   </div>
   <div class="topo-acoes" id="topo-acoes-form" style="display:none;">
-    <button class="topo-btn" onclick="_irParaInicial()">← Início</button>
+    <button class="topo-btn" onclick="_irParaInicial()">← Voltar</button>
     <button class="topo-btn" onclick="abrirHistorico()">📂 Histórico</button>
   </div>
 </header>
@@ -290,7 +292,7 @@
 <div id="tela-cadastro">
   <div class="pad-cad-wrap">
     <div class="pad-cad-header">
-      <button class="pad-cad-back" onclick="_irParaInicial()">← Início</button>
+      <button class="pad-cad-back" onclick="_irParaInicial()">← Voltar</button>
       <span class="pad-cad-titulo">Cadastrar novo PAD</span>
     </div>
 
@@ -307,7 +309,7 @@
     <!-- Nº PAD + Data Instauração -->
     <div class="pad-cad-row">
       <div class="pad-cad-campo">
-        <label>Nº do PAD</label>
+        <label>Nº DO PAD (Portaria de Instauração)</label>
         <input type="text" id="intake-num-pad" placeholder="Ex.: 001/2025"
           oninput="Estado.set('numPad', this.value)">
       </div>
@@ -318,8 +320,8 @@
       </div>
     </div>
 
-    <button class="pad-cad-continuar" onclick="_cadastrarEIrParaFormulario()">
-      Cadastrar PAD e seguir para o formulário
+    <button class="pad-cad-continuar" onclick="_irParaFormulario()">
+      Continuar para o Formulário →
     </button>
   </div>
 </div>
@@ -333,7 +335,7 @@
         placeholder="🔍 Buscar por nome, IPEN, artigo…"
         oninput="_relFiltrar(this.value)">
       <button class="pad-rel-btn-cad" onclick="_irParaCadastro()">+ Cadastrar PAD</button>
-      <button class="pad-rel-btn-vol" onclick="_irParaInicial()">← Início</button>
+      <button class="pad-rel-btn-vol" onclick="_irParaInicial()">← Voltar</button>
     </div>
   </div>
   <div class="pad-rel-info" id="rel-info"></div>
@@ -355,10 +357,10 @@
     <div class="doc-tabs" id="doc-tabs"></div>
     <div class="preview-acoes">
       <button class="btn-acao btn-pri"   onclick="copiar()">📋 Copiar</button>
-      <button class="btn-acao btn-doc"   onclick="baixarDoc()">.doc</button>
-      <button class="btn-acao btn-pdf"   onclick="baixarPDF()">PDF</button>
+      <button class="btn-acao btn-doc"   onclick="baixarDoc()">Baixar em .doc</button>
+      <button class="btn-acao btn-pdf"   onclick="baixarPDF()">Baixar em PDF</button>
       <button class="btn-acao btn-todos" onclick="baixarTodosDoc()">📦 Todos (.doc)</button>
-      <button class="btn-acao btn-sec"   onclick="_irParaInicial()">↩ Início</button>
+      <button class="btn-acao btn-sec"   onclick="_irParaInicial()">↩ Voltar</button>
       <span id="previewAviso" class="preview-aviso"></span>
     </div>
     <div class="preview-documento">
@@ -419,7 +421,6 @@
    NAVEGAÇÃO ENTRE TELAS
 ══════════════════════════════════════════════ */
 var _telaAtual = 'inicial';
-window._padIdAtual = null;
 
 function _mostrarTela(id) {
   ['tela-inicial','tela-cadastro','tela-relacao'].forEach(function(t) {
@@ -449,14 +450,22 @@ window._irParaInicial = function() { _mostrarTela('inicial'); };
 
 window._irParaCadastro = function() {
   /* Limpa estado para um novo PAD */
-  window._padIdAtual = null;
   Estado.limpar && Estado.limpar();
   /* Sincroniza campos de intake com estado atual */
   var s = Estado.get();
   var inpNum  = document.getElementById('intake-num-pad');
   var inpData = document.getElementById('intake-data-inst');
   if (inpNum)  inpNum.value  = s.numPad   || '';
-  if (inpData) inpData.value = s.dataInst || '';
+  if (inpData) {
+    if (s.dataInst) {
+      inpData.value = s.dataInst;
+    } else {
+      var _hoje = new Date();
+      var _iso = _hoje.getFullYear() + '-' + String(_hoje.getMonth()+1).padStart(2,'0') + '-' + String(_hoje.getDate()).padStart(2,'0');
+      inpData.value = _iso;
+      Estado.set('dataInst', _iso);
+    }
+  }
   /* Limpa status de upload */
   var st = document.getElementById('upload-status-intake');
   if (st) { st.className = 'pad-cad-status'; st.textContent = ''; }
@@ -471,13 +480,7 @@ window._irParaRelacao = function() {
 };
 
 window._irParaFormulario = function() {
-  FormularioCtrl.sincronizar();
-  atualizarPreview();
-  _mostrarTela('formulario');
-};
-
-window._cadastrarEIrParaFormulario = function() {
-  window._padIdAtual = cadastrarPadNoHistorico();
+  /* Sincroniza formulário com estado antes de mostrar */
   FormularioCtrl.sincronizar();
   atualizarPreview();
   _mostrarTela('formulario');
@@ -551,14 +554,16 @@ function _relFiltrar(val) {
 }
 
 function _relRenderizar(filtro) {
-  var lista = _histCarregar();
   var infoEl = document.getElementById('rel-info');
   var listaEl = document.getElementById('rel-lista');
   if (!listaEl) return;
 
+  var listaFull = _histCarregar();
+  var listaComIdx = listaFull.map(function(it, i) { return { it: it, idx: i }; });
   if (filtro) {
     var f = filtro.toLowerCase();
-    lista = lista.filter(function(it) {
+    listaComIdx = listaComIdx.filter(function(entry) {
+      var it = entry.it;
       return (it.nome||'').toLowerCase().includes(f)
           || (it.ipen||'').toLowerCase().includes(f)
           || (it.numPad||'').toLowerCase().includes(f)
@@ -568,11 +573,10 @@ function _relRenderizar(filtro) {
   }
 
   if (infoEl) {
-    var total = _histCarregar().length;
-    infoEl.textContent = total + ' PAD(s) registrado(s)' + (filtro ? ' · ' + lista.length + ' resultado(s)' : '');
+    infoEl.textContent = listaFull.length + ' PAD(s) registrado(s)' + (filtro ? ' · ' + listaComIdx.length + ' resultado(s)' : '');
   }
 
-  if (!lista.length) {
+  if (!listaComIdx.length) {
     listaEl.innerHTML = '<div class="pad-rel-vazio">'
       + (filtro ? 'Nenhum PAD encontrado para "' + _esc(filtro) + '".'
                 : 'Nenhum PAD cadastrado ainda.<br>Clique em <strong>Cadastrar PAD</strong> para começar.')
@@ -580,12 +584,8 @@ function _relRenderizar(filtro) {
     return;
   }
 
-  /* Índices originais para excluir corretamente */
-  var listaFull = _histCarregar();
-
   listaEl.innerHTML = '<table class="pad-rel-tabela">'
     + '<thead><tr>'
-    + '<th>Status</th>'
     + '<th>Nº PAD</th>'
     + '<th>Nome do Incidentado</th>'
     + '<th>IPEN</th>'
@@ -594,15 +594,11 @@ function _relRenderizar(filtro) {
     + '<th>Art. da Falta</th>'
     + '<th></th>'
     + '</tr></thead><tbody>'
-    + lista.map(function(it) {
-        var idxFull = listaFull.indexOf(it);
+    + listaComIdx.map(function(entry) {
+        var it = entry.it;
+        var idxFull = entry.idx;
         var artLabel = _LABEL_ARTIGO[it.artigo] || it.artigo || '—';
-        var status = it.status || 'em_andamento';
-        var statusHtml = status === 'concluido'
-          ? '<span class="pad-status-badge pad-status-ok">✅ Concluído</span>'
-          : '<span class="pad-status-badge pad-status-pend">⏳ Em andamento</span>';
         return '<tr>'
-          + '<td>' + statusHtml + '</td>'
           + '<td>' + _esc(it.numPad || '—') + '</td>'
           + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
           + '<td>' + _esc(it.ipen || '—') + '</td>'
@@ -614,7 +610,7 @@ function _relRenderizar(filtro) {
           + '<button class="pad-rel-btn-del" onclick="_relExcluir(' + idxFull + ')" title="Excluir">✕</button>'
           + '</div></td>'
           + '</tr>';
-      }).join('')
+      }, this).join('')
     + '</tbody></table>';
 }
 
@@ -622,10 +618,10 @@ window._relAbrir = function(idx) {
   var lista = _histCarregar();
   var item = lista[idx];
   if (!item || !item.estado) { _toast('Dados indisponíveis.'); return; }
-  window._padIdAtual = item.padId || null;
   Estado.carregar(item.estado);
   FormularioCtrl.sincronizar();
 
+  /* Sincroniza campos de intake */
   var s = Estado.get();
   var inpNum  = document.getElementById('intake-num-pad');
   var inpData = document.getElementById('intake-data-inst');
@@ -658,19 +654,19 @@ document.addEventListener('DOMContentLoaded', function() {
     var unPai = window.parent && window.parent._padUnidadeAtual;
     if (unPai) {
       Estado.setMany({
-        unidade: { email: unPai.email || unPai.em || '', nome: unPai.nome || unPai.n || '', cidade: unPai.cidade || unPai.c || '', end: unPai.end || '', codigo: '' },
-        diretor: { nome: unPai.diretor || unPai.dir || '', cargo: 'Diretor(a)' },
+        unidade: { email: unPai.em || unPai.email || '', nome: unPai.n || unPai.nome || '', cidade: unPai.c || unPai.cidade || '', codigo: unPai.cod || unPai.codigo || '' },
+        diretor: { nome: unPai.dir || '', cargo: 'Diretor(a)' },
       });
     } else {
       var emailOri = localStorage.getItem('crv_ori_email') || '';
       if (emailOri) {
         Estado.setNested('unidade.email', emailOri);
         if (window.parent && window.parent.UNIDADES) {
-          var un = window.parent.UNIDADES.find(function(u) { return u.email === emailOri; });
+          var un = window.parent.UNIDADES.find(function(u) { return u.em === emailOri; });
           if (un) {
             Estado.setMany({
-              unidade: { email: un.email, nome: un.nome, cidade: un.cidade, end: un.end || '', codigo: '' },
-              diretor: { nome: un.diretor || '', cargo: 'Diretor(a)' },
+              unidade: { email: un.em, nome: un.n, cidade: un.c, codigo: un.cod || '' },
+              diretor: { nome: un.dir || '', cargo: 'Diretor(a)' },
             });
           }
         }
@@ -693,12 +689,9 @@ document.addEventListener('DOMContentLoaded', function() {
   /* Inicializa formulário (invisível ainda) */
   FormularioCtrl.inicializar();
 
-  /* Conecta preview ao estado e mantém histórico atualizado */
+  /* Conecta preview ao estado */
   Estado.onChange(function() {
-    if (_telaAtual === 'formulario') {
-      atualizarPreview();
-      if (window._padIdAtual) atualizarPadHistorico(window._padIdAtual, Estado.get());
-    }
+    if (_telaAtual === 'formulario') atualizarPreview();
   });
 
   /* Inicializa upload da tela de cadastro */

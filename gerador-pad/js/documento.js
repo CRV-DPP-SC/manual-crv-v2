@@ -19,6 +19,7 @@ function selecionarDoc(cod) {
   document.querySelectorAll('.doc-tab').forEach(function(b) {
     b.classList.toggle('ativa', b.dataset.doc === cod);
   });
+  FormularioCtrl && FormularioCtrl.sincronizar();
   atualizarPreview();
 }
 
