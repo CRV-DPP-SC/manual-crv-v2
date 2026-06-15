@@ -618,10 +618,15 @@ window.abrirGeradorPAD = function () {
   /* Resolve a unidade do usuário logado para pré-popular cabeçalho/rodapé */
   if (usuarioAtual && !window._padUnidadeAtual) {
     var e = (usuarioAtual.email || '').toLowerCase();
+    /* Tenta derivar o e-mail base da unidade pelo padrão DIR/CPEN */
     var emailBase = e
       .replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
       .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
-    if (emailBase !== e && window.UNIDADES) {
+    /* Para usuários comuns (e-mail particular), usa o vínculo gravado no login */
+    if (emailBase === e) {
+      emailBase = localStorage.getItem('crv_ori_email') || '';
+    }
+    if (emailBase && window.UNIDADES) {
       window._padUnidadeAtual = window.UNIDADES.find(function(u) { return u.email === emailBase; }) || null;
     }
   }
