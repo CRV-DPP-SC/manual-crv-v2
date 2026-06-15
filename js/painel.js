@@ -197,6 +197,8 @@ function mostrarPainel() {
   renderizarCabecalhoPainel();
   if ((perfilAtual === 'crv' || perfilAtual === 'super') && !modoLeitura()) {
     mostrarDashboard();
+  } else if (_ehNavCartoes()) {
+    mostrarLandingGrupos();
   } else {
     document.querySelector('.p-abas').style.display = '';
     document.getElementById('p-corpo').className = '';
@@ -240,7 +242,7 @@ function _iniciarListenerPendencias() {
     if (!_primeiraExecucaoSnap && novosIds.length > 0) {
       showToastPainel('⏳ ' + novosIds.length + ' nova(s) solicitação(ões) de assinatura recebida(s)!');
       /* Recarrega aba Pendentes se estiver ativa */
-      const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+      const abaAtiva = _ehNavCartoes() ? _abaAtiva : document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
       if (abaAtiva === 'pendentes') carregarAba('pendentes');
     }
 
@@ -279,7 +281,7 @@ function _iniciarListenerAcessosPendentes() {
     const novosIds = pendentes.map(p => p.id).filter(id => !_prevAcessosIds.has(id));
     if (!_primeiraExecucaoAcessos && novosIds.length > 0) {
       showToastPainel('🔔 ' + novosIds.length + ' nova(s) solicitação(ões) de acesso aguardando aprovação!');
-      const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+      const abaAtiva = _ehNavCartoes() ? _abaAtiva : document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
       if (abaAtiva === 'acessos') carregarAba('acessos');
     }
 
@@ -650,11 +652,197 @@ function _atualizarTabAcessos() {
 }
 
 // ══════════════════════════════════════════════
+// NAVEGAÇÃO POR CARTÕES (dir / cpen)
+// ══════════════════════════════════════════════
+let _grupoAtivo = null;
+let _abaAtiva   = null;
+
+function _ehNavCartoes() {
+  return ['dir', 'cpen'].includes(perfilAtual) && !modoLeitura();
+}
+
+const _GRUPO_DE_ABA = {
+  pendentes: 'transferencias', minhas: 'transferencias',
+  historico: 'transferencias', cancelados: 'transferencias',
+  acessos: 'acesso',
+};
+const _LABEL_GRUPO = { transferencias: 'Transferências', acesso: 'Controle de Acesso', ferramentas: 'Ferramentas' };
+const _LABEL_ABA   = {
+  pendentes: 'Assinaturas Pendentes', minhas: 'Solicitar Assinatura',
+  historico: 'Histórico', cancelados: 'Cancelados', acessos: 'Usuários',
+};
+
+function _atualizarBreadcrumb() {
+  const bc = document.getElementById('p-breadcrumb');
+  if (!bc) return;
+  if (!_ehNavCartoes() || !_abaAtiva) { bc.className = ''; return; }
+  const gl = _LABEL_GRUPO[_grupoAtivo] || '';
+  const al = _LABEL_ABA[_abaAtiva]    || _abaAtiva;
+  bc.className = 'visivel';
+  bc.innerHTML = `
+    <button class="p-bc-btn" onclick="mostrarLandingGrupos()">← Início</button>
+    <span class="p-bc-sep">/</span>
+    <button class="p-bc-btn" onclick="_mostrarSubGrupo('${_grupoAtivo}')">${gl}</button>
+    <span class="p-bc-sep">/</span>
+    <span class="p-bc-atual">${al}</span>`;
+}
+
+window.mostrarLandingGrupos = function() {
+  _grupoAtivo = null;
+  _abaAtiva   = null;
+  _atualizarBreadcrumb();
+  document.querySelector('.p-abas').style.display = 'none';
+
+  const corpo = document.getElementById('p-corpo');
+  corpo.className = '';
+
+  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+
+  const grupos = [
+    { id: 'transferencias', icon: '📋', titulo: 'Transferências',     sub: 'Anuências, solicitações e histórico', cor: 'var(--azul-600)' },
+    { id: 'acesso',         icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed'         },
+    { id: 'ferramentas',    icon: '🛠️', titulo: 'Ferramentas',        sub: 'Geradores e recursos da unidade',     cor: '#b45309'         },
+  ];
+
+  const badge = document.getElementById('p-badge-pendentes');
+  const nPend = badge && badge.style.display !== 'none' ? badge.textContent : '';
+
+  corpo.innerHTML = `
+  <div style="padding:28px 32px 40px;">
+    ${unNome ? `<p style="font-size:.78rem;color:var(--txt-3);margin:0 0 20px;">📍 ${unNome}</p>` : ''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;max-width:760px;">
+      ${grupos.map(g => {
+        const extra = (g.id === 'transferencias' && nPend)
+          ? `<span class="p-sub-card-badge" style="margin-left:auto;">${nPend}</span>` : '';
+        return `<button class="p-grupo-card" onclick="_mostrarSubGrupo('${g.id}')" style="--grupo-cor:${g.cor};"
+          onmouseover="this.style.borderColor='${g.cor}'" onmouseout="this.style.borderColor='var(--border)'">
+          <span class="p-grupo-icon">${g.icon}</span>
+          <div class="p-grupo-corpo">
+            <div class="p-grupo-titulo">${g.titulo} ${extra}</div>
+            <div class="p-grupo-sub">${g.sub}</div>
+          </div>
+          <span class="p-grupo-arrow" style="color:${g.cor};">›</span>
+        </button>`;
+      }).join('')}
+    </div>
+  </div>`;
+};
+
+window._mostrarSubGrupo = function(grupoId) {
+  _grupoAtivo = grupoId;
+  _abaAtiva   = null;
+  _atualizarBreadcrumb();
+  document.querySelector('.p-abas').style.display = 'none';
+
+  const corpo = document.getElementById('p-corpo');
+  corpo.className = '';
+
+  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+
+  const backBtn = `<button class="p-bc-btn" onclick="mostrarLandingGrupos()" style="display:flex;align-items:center;gap:5px;margin-bottom:20px;font-size:.82rem;">← Voltar</button>`;
+
+  /* ── FERRAMENTAS ── */
+  if (grupoId === 'ferramentas') {
+    const isCpen = perfilAtual === 'cpen';
+    const padCard = isCpen ? `
+      <button class="p-sub-card" onclick="_abrirPADdoPainel()"
+        style="border-color:#f97316;"
+        onmouseover="this.style.background='#fff8f3';this.style.borderColor='#ea580c';"
+        onmouseout="this.style.background='var(--bg-card)';this.style.borderColor='#f97316';">
+        <span class="p-sub-card-icon">📋</span>
+        <span class="p-sub-card-titulo" style="color:#9a3412;">Gerador de PAD</span>
+        <span class="p-sub-card-sub">Procedimento Administrativo Disciplinar</span>
+      </button>` : '';
+
+    const toolCards = [
+      { icon: '⚙️', titulo: 'Gerador de Ofícios', sub: 'Elaborar ofícios com formatação oficial',    onclick: `window.parent.abrirGeradorOficios && window.parent.abrirGeradorOficios()` },
+      { icon: '📄', titulo: 'Guia — Gerador de Ofícios', sub: 'Instruções de uso do gerador',        onclick: `window.parent.abrirGuiaOficios && window.parent.abrirGuiaOficios()` },
+      { icon: '🌐', titulo: 'Portal de Transferências ↗', sub: 'ppsc.com.br — pedidos voluntários',   onclick: `window.open('https://ppsc.com.br','_blank')` },
+      { icon: '🏛️', titulo: 'Unidades Prisionais', sub: 'Contatos e dados das unidades',             onclick: `window.parent.navegarPara && window.parent.navegarPara('unidades')` },
+      { icon: '📚', titulo: 'Legislação', sub: 'Base normativa aplicável',                            onclick: `window.parent.navegarPara && window.parent.navegarPara('legislacao')` },
+    ].map(t => `<button class="p-sub-card" onclick="${t.onclick}">
+        <span class="p-sub-card-icon">${t.icon}</span>
+        <span class="p-sub-card-titulo">${t.titulo}</span>
+        <span class="p-sub-card-sub">${t.sub}</span>
+      </button>`).join('');
+
+    corpo.innerHTML = `
+    <div style="padding:24px 32px 40px;">
+      ${backBtn}
+      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">🛠️ Ferramentas</h2>
+      ${unNome ? `<p style="font-size:.75rem;color:var(--txt-3);margin:0 0 20px;">📍 ${unNome}</p>` : '<div style="height:16px;"></div>'}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:760px;">
+        ${padCard}${toolCards}
+      </div>
+    </div>`;
+    return;
+  }
+
+  /* ── TRANSFERÊNCIAS ── */
+  if (grupoId === 'transferencias') {
+    const badge = document.getElementById('p-badge-pendentes');
+    const nPend = badge && badge.style.display !== 'none' ? badge.textContent : '';
+    const itens = [
+      { aba: 'pendentes', icon: '✍️', titulo: 'Assinaturas Pendentes', sub: 'Documentos aguardando sua anuência', badge: nPend },
+      { aba: 'minhas',    icon: '📤', titulo: 'Solicitar Assinatura',   sub: 'Criar nova solicitação de anuência' },
+      { aba: 'historico', icon: '📂', titulo: 'Histórico',              sub: 'Pedidos realizados' },
+      { aba: 'cancelados',icon: '🚫', titulo: 'Cancelados',             sub: 'Solicitações canceladas' },
+    ];
+    corpo.innerHTML = `
+    <div style="padding:24px 32px 40px;">
+      ${backBtn}
+      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 20px;">📋 Transferências</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:760px;">
+        ${itens.map(it => `
+          <button class="p-sub-card" onclick="carregarAba('${it.aba}')">
+            <span class="p-sub-card-icon">${it.icon}</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="p-sub-card-titulo">${it.titulo}</span>
+              ${it.badge ? `<span class="p-sub-card-badge">${it.badge}</span>` : ''}
+            </div>
+            <span class="p-sub-card-sub">${it.sub}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
+    return;
+  }
+
+  /* ── CONTROLE DE ACESSO ── */
+  if (grupoId === 'acesso') {
+    const badgeAc = document.getElementById('p-badge-acessos');
+    const nAc = badgeAc && badgeAc.style.display !== 'none' ? badgeAc.textContent : '';
+    corpo.innerHTML = `
+    <div style="padding:24px 32px 40px;">
+      ${backBtn}
+      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 20px;">🔐 Controle de Acesso</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:760px;">
+        <button class="p-sub-card" onclick="carregarAba('acessos')">
+          <span class="p-sub-card-icon">👤</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="p-sub-card-titulo">Usuários</span>
+            ${nAc ? `<span class="p-sub-card-badge" style="background:#f59e0b;">${nAc}</span>` : ''}
+          </div>
+          <span class="p-sub-card-sub">Gerenciar acesso dos servidores da unidade</span>
+        </button>
+      </div>
+    </div>`;
+    return;
+  }
+};
+
+// ══════════════════════════════════════════════
 // ABAS
 // ══════════════════════════════════════════════
 window.carregarAba = async function (aba) {
-  document.querySelectorAll('.p-aba-btn')
-    .forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
+  /* Modo cartões: rastreia grupo e aba para breadcrumb */
+  if (_ehNavCartoes()) {
+    _abaAtiva   = aba;
+    _grupoAtivo = _GRUPO_DE_ABA[aba] || _grupoAtivo;
+    _atualizarBreadcrumb();
+  } else {
+    document.querySelectorAll('.p-aba-btn')
+      .forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
+  }
 
   /* Limpa seleções ao trocar de aba */
   _selSols.clear(); _selAcess.clear();
@@ -868,7 +1056,7 @@ window.bulkAssinar = async function() {
   }
   selLimpar();
   showToastPainel(`${ok} documento(s) assinado(s)${err ? ` · ${err} erro(s)` : ''}.`);
-  const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+  const abaAtiva = _ehNavCartoes() ? _abaAtiva : document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
   if (abaAtiva) carregarAba(abaAtiva);
 };
 
@@ -912,7 +1100,7 @@ window.bulkExcluirSols = async function() {
   }
   selLimpar();
   showToastPainel(`${ok} documento(s) excluído(s)${err ? ` · ${err} erro(s)` : ''}.`);
-  const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+  const abaAtiva = _ehNavCartoes() ? _abaAtiva : document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
   if (abaAtiva) carregarAba(abaAtiva); else mostrarDashboard();
 };
 
@@ -1253,7 +1441,7 @@ window.excluirOficio = async function (id) {
   try {
     await deleteDoc(doc(db, 'solicitacoes', id));
     showToastPainel('Documento excluído.');
-    const abaAtiva = document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
+    const abaAtiva = _ehNavCartoes() ? _abaAtiva : document.querySelector('.p-aba-btn.ativa')?.dataset.aba;
     if (abaAtiva) carregarAba(abaAtiva);
     else mostrarDashboard();
   } catch (e) {

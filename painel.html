@@ -366,6 +366,60 @@
     .p-barra-btn-limpar { background: none; border: 1px solid rgba(255,255,255,.3); color: rgba(255,255,255,.7); font-size: .75rem; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; }
     .p-barra-btn-limpar:hover { background: rgba(255,255,255,.1); color: #fff; }
 
+    /* ── NAVEGAÇÃO POR CARTÕES (dir/cpen) ── */
+    #p-breadcrumb {
+      display: none; align-items: center; gap: 8px;
+      padding: 8px 32px; font-size: .8rem;
+      background: var(--bg-card); border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    #p-breadcrumb.visivel { display: flex; }
+    .p-bc-btn {
+      background: none; border: none; padding: 0;
+      color: var(--azul-500); cursor: pointer; font-size: .8rem;
+      font-family: inherit; transition: color var(--transition);
+    }
+    .p-bc-btn:hover { color: var(--azul-700); text-decoration: underline; }
+    .p-bc-sep { color: var(--txt-4); }
+    .p-bc-atual { color: var(--txt-2); font-weight: 600; }
+
+    .p-grupo-card {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 22px; border-radius: 12px; cursor: pointer;
+      text-align: left; font-family: inherit;
+      border: 2px solid var(--border);
+      background: var(--bg-card); box-shadow: var(--shadow-sm);
+      transition: all .15s; width: 100%;
+    }
+    .p-grupo-card:hover {
+      box-shadow: var(--shadow-md); transform: translateY(-1px);
+    }
+    .p-grupo-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .p-grupo-corpo { flex: 1; min-width: 0; }
+    .p-grupo-titulo { font-size: .95rem; font-weight: 700; color: var(--txt-1); margin-bottom: 3px; }
+    .p-grupo-sub    { font-size: .75rem; color: var(--txt-3); }
+    .p-grupo-arrow  { font-size: 1.1rem; flex-shrink: 0; font-weight: 700; opacity: .7; }
+
+    .p-sub-card {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      padding: 18px; border-radius: 10px; cursor: pointer;
+      text-align: left; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--bg-card); box-shadow: var(--shadow-sm);
+      transition: all .15s; width: 100%;
+    }
+    .p-sub-card:hover {
+      box-shadow: var(--shadow-md); border-color: var(--azul-400);
+      background: var(--azul-50);
+    }
+    .p-sub-card-icon  { font-size: 1.4rem; }
+    .p-sub-card-titulo { font-size: .88rem; font-weight: 700; color: var(--txt-1); }
+    .p-sub-card-sub   { font-size: .74rem; color: var(--txt-3); line-height: 1.4; }
+    .p-sub-card-badge {
+      font-size: .62rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; background: #dc2626; color: #fff;
+    }
+
     /* ── DASHBOARD / NAVEGAÇÃO CRV / SR ── */
     #p-corpo.dashboard-mode { padding: 0; max-width: none; }
 
@@ -588,6 +642,9 @@
       </button>
     </div>
   </div>
+
+  <!-- Breadcrumb (navegação por cartões, dir/cpen) -->
+  <div id="p-breadcrumb"></div>
 
   <!-- Corpo -->
   <div id="p-corpo">
