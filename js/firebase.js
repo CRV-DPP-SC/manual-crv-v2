@@ -34,7 +34,7 @@ const EMAILS_CRV = [
   'sepen@pp.sc.gov.br',
   'leilakfarias@gmail.com'
 ];
-const SENHA_TEMPORARIA = 'CRV@2026temp';
+const SENHA_TEMPORARIA = '12345crv';
 let usuarioAtual = null;
 
 // ══════════════════════════════════════════════
@@ -903,7 +903,7 @@ window._abrirResetSenhas = async function() {
       <h3 style="margin-bottom:8px;color:var(--texto);">🔑 Redefinir Senhas</h3>
       <p style="font-size:.85rem;color:var(--txt-3);margin-bottom:16px;line-height:1.6;">
         Esta ação marca todos os usuários como <strong>"primeiro acesso"</strong>.<br>
-        Você deve redefinir as senhas para <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">12345sejuri</code> manualmente no
+        Você deve redefinir as senhas para <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">12345crv</code> manualmente no
         <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a> antes de acionar esta função.
       </p>
       <div id="reset-resultado" style="margin-bottom:12px;font-size:.83rem;"></div>
@@ -932,7 +932,7 @@ window._executarResetSenhas = async function() {
     const snapC = await getDocs(collection(db2, 'usuarios_cadastrados'));
     snapC.forEach(d => { if (d.data().status === 'aprovado') { batch.update(d.ref, { senhaConfigurada: false }); count++; } });
     await batch.commit();
-    if (res) res.innerHTML = `<span style="color:#15803d;">✅ ${count} usuário(s) marcados para primeiro acesso.</span><br><span style="font-size:.78rem;color:var(--txt-3);">Redefina as senhas para <strong>12345sejuri</strong> no Firebase Console e comunique os usuários.</span>`;
+    if (res) res.innerHTML = `<span style="color:#15803d;">✅ ${count} usuário(s) marcados para primeiro acesso.</span><br><span style="font-size:.78rem;color:var(--txt-3);">Redefina as senhas para <strong>12345crv</strong> no Firebase Console e comunique os usuários.</span>`;
     if (btn) { btn.disabled = false; btn.textContent = '⚠ Marcar todos como primeiro acesso'; }
   } catch(e) {
     if (res) res.innerHTML = `<span style="color:#dc2626;">Erro: ${e.message}</span>`;
