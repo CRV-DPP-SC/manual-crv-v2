@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de PAD — CPEN/DPP</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/pad.css">
+  <!-- PDF.js para extração de texto do i-PEN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+</head>
+<body>
+
+<!-- ════════════ BARRA SUPERIOR ════════════ -->
+<header class="topo">
+  <img src="../gerador-oficios-v2/assets/brasao.png" alt="Brasão SC" onerror="this.style.display='none'">
+  <div class="topo-titulo">
+    <h1>📋 Gerador de PAD — CPEN</h1>
+    <p>Procedimento Administrativo Disciplinar · Polícia Penal de Santa Catarina</p>
+  </div>
+
+  <!-- Abas mobile -->
+  <div class="topo-tabs">
+    <button class="tab-btn at" data-aba="form"    onclick="_setAba('form')">Formulário</button>
+    <button class="tab-btn"    data-aba="preview" onclick="_setAba('preview')">Documento</button>
+  </div>
+
+  <!-- Ações desktop -->
+  <div class="topo-acoes">
+    <button class="topo-btn" onclick="abrirHistorico()">📂 Histórico</button>
+    <a href="../index.html" target="_parent" class="topo-btn" style="text-decoration:none;">← Voltar</a>
+  </div>
+</header>
+
+<!-- ════════════ LAYOUT ════════════ -->
+<div class="layout">
+
+  <!-- ── Painel Formulário ── -->
+  <div id="painel-form">
+    <div id="form-area">
+      <div style="padding:20px;text-align:center;color:#aaa;font-size:.9rem;">Carregando…</div>
+    </div>
+  </div>
+
+  <!-- ── Painel Preview ── -->
+  <div id="painel-prev">
+
+    <!-- Tabs dos documentos -->
+    <div class="doc-tabs" id="doc-tabs">
+      <!-- Renderizado por documento.js -->
+    </div>
+
+    <!-- Barra de ações -->
+    <div class="preview-acoes">
+      <button class="btn-acao btn-pri"   onclick="copiar()">📋 Copiar</button>
+      <button class="btn-acao btn-doc"   onclick="baixarDoc()">.doc</button>
+      <button class="btn-acao btn-pdf"   onclick="baixarPDF()">PDF</button>
+      <button class="btn-acao btn-todos" onclick="baixarTodosDoc()" title="Baixar todos os documentos em um único .doc">📦 Todos (.doc)</button>
+      <button class="btn-acao btn-sec"   onclick="FormularioCtrl.limpar()">↩ Novo PAD</button>
+      <span id="previewAviso" class="preview-aviso"></span>
+    </div>
+
+    <!-- Área do documento -->
+    <div class="preview-documento">
+      <div id="pad-preview-wrap">
+        <div class="preview-placeholder">
+          <p>Preencha o formulário ao lado<br>para visualizar os documentos em tempo real.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ════════════ BOTÃO FLUTUANTE MOBILE ════════════ -->
+<button class="btn-flutuante" onclick="_setAba('preview')">📄 Ver Documento →</button>
+
+<!-- ════════════ TOAST ════════════ -->
+<div id="toast"></div>
+
+<!-- ════════════ MODAL HISTÓRICO ════════════ -->
+<div class="modal-bg" id="mhistBg">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>📂 Histórico de PADs</h3>
+      <button onclick="fecharHistorico()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="mhist-busca" id="mhistBusca" placeholder="🔍 Buscar por nome, prontuário, nº do PAD..."
+        oninput="_histFiltro=this.value;_renderizarLista()">
+      <div id="mhistLista"></div>
+    </div>
+    <div class="modal-foot">
+      <span id="mhistInfo" style="font-size:.73rem;color:#999;"></span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="_histLimpar()" style="padding:6px 13px;border:2px solid #dc2626;border-radius:8px;background:#fff;color:#dc2626;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Limpar tudo</button>
+        <button onclick="fecharHistorico()" class="btn-acao btn-sec" style="padding:6px 13px;">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ SCRIPTS ════════════ -->
+<script src="js/dados.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/estado.js"></script>
+<script src="js/persistencia.js"></script>
+<script src="js/pdf-parser.js"></script>
+<script src="js/historico.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/documento.js"></script>
+<script src="js/exportar.js"></script>
+<script src="js/preview.js"></script>
+<script src="js/formulario.js"></script>
+
+<script>
+/* ── Inicialização ── */
+document.addEventListener('DOMContentLoaded', function() {
+
+  /* Carrega dados persistidos */
+  carregarConselho();
+  carregarDiretor();
+
+  /* Tenta obter unidade do contexto pai (Manual CRV) */
+  try {
+    var emailOri = localStorage.getItem('crv_ori_email') || '';
+    if (emailOri) {
+      Estado.setNested('unidade.email', emailOri);
+      /* Tenta resolver nome da unidade via pai */
+      if (window.parent && window.parent.UNIDADES) {
+        var un = window.parent.UNIDADES.find(function(u) { return u.em === emailOri; });
+        if (un) {
+          Estado.setMany({
+            unidade: { email: un.em, nome: un.n, cidade: un.c, codigo: un.cod || '' },
+            diretor: { nome: un.dir || '', cargo: 'Diretor(a)' },
+          });
+        }
+      }
+    }
+  } catch(e) {}
+
+  /* Renderiza tabs de documentos */
+  var tabs = document.getElementById('doc-tabs');
+  if (tabs) {
+    tabs.innerHTML = DOCS.map(function(d) {
+      return '<button class="doc-tab' + (d.cod === _DOC_ATUAL ? ' ativa' : '') + '" data-doc="' + d.cod + '" onclick="selecionarDoc(\'' + d.cod + '\')">' + d.label + '</button>';
+    }).join('');
+  }
+
+  /* Inicializa formulário */
+  FormularioCtrl.inicializar();
+
+  /* Conecta preview ao estado */
+  Estado.onChange(function() { atualizarPreview(); });
+
+  /* Preview inicial */
+  atualizarPreview();
+});
+</script>
+
+</body>
+</html>

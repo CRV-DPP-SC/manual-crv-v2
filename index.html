@@ -115,7 +115,7 @@
           <span>📋 CPEN</span><span class="nav-sub-arrow">▶</span>
         </button>
         <div class="nav-sub-items" id="sub-crv-cpen">
-          <button class="nav-sub-item" onclick="">📄 PAD</button>
+          <button class="nav-sub-item" onclick="_abrirFerramenta('gerador-pad/index.html','📋 Gerador de PAD')">📄 PAD</button>
         </div>
 
         <!-- USM -->
@@ -889,10 +889,10 @@
       <button class="modal-fechar" onclick="document.getElementById('modal-grupo-cpen').classList.remove('aberto')">✕</button>
     </div>
     <div class="grupo-grid">
-      <div class="grupo-item" style="opacity:.6;cursor:default;">
+      <div class="grupo-item" onclick="document.getElementById('modal-grupo-cpen').classList.remove('aberto');_abrirFerramenta('gerador-pad/index.html','📋 Gerador de PAD')">
         <div class="grupo-item-icon">📄</div>
         <div class="grupo-item-titulo">PAD</div>
-        <div class="grupo-item-sub">Em desenvolvimento</div>
+        <div class="grupo-item-sub">Gerador de documentos disciplinares</div>
       </div>
     </div>
   </div>
