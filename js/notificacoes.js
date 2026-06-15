@@ -1,13 +1,15 @@
 // ================================================
-// CRV — Widget Global de Notificações de Assinaturas
+// CRV — Widget Global de Notificações
 // js/notificacoes.js
-// Funciona em qualquer página do site.
+// Cobre: assinaturas pendentes + cadastros pendentes + push FCM
 // ================================================
 import { getApps, initializeApp }   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import { getFirestore, collection, query, orderBy,
-         onSnapshot, doc, getDoc, updateDoc, serverTimestamp }
+import { getFirestore, collection, query, orderBy, where,
+         onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getMessaging, getToken, onMessage }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
 const FC = {
@@ -22,7 +24,11 @@ const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FC);
 const _auth = getAuth(_app);
 const _db   = getFirestore(_app);
 
-// ── Perfis que podem assinar ──
+// ── Chave pública VAPID para Web Push ──
+// Gere em: Firebase Console → Configurações do projeto → Cloud Messaging → Certificados push da Web
+const VAPID_KEY = 'VAPID_KEY_AQUI';
+
+// ── Perfis que podem assinar transferências ──
 const EMAILS_CRV = [
   'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
   'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
@@ -37,10 +43,99 @@ function _podeSinalizar(email) {
     || /^.+cpen@pp\.sc\.gov\.br$/.test(e);
 }
 
+// Retorna o email-base da unidade para DIR/CPEN (ex: pr18@pp.sc.gov.br)
+// Retorna null para outros perfis
+function _getEmailUnidade(email) {
+  const e = (email || '').toLowerCase();
+  if (/^.+dir@pp\.sc\.gov\.br$/.test(e))  return e.replace(/dir@pp\.sc\.gov\.br$/,  '@pp.sc.gov.br');
+  if (/^.+cpen@pp\.sc\.gov\.br$/.test(e)) return e.replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
+  return null;
+}
+
 function _esc(s) {
   return String(s || '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════
+// SOM DE NOTIFICAÇÃO
+// ════════════════════════════════════════
+function _tocarSom() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Dois beeps rápidos e agradáveis
+    [{ t: 0, f: 880 }, { t: 0.18, f: 1100 }].forEach(({ t, f }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = f;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, ctx.currentTime + t);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.3);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.3);
+    });
+  } catch (e) { /* AudioContext não disponível */ }
+}
+
+// ════════════════════════════════════════
+// FCM — PUSH NOTIFICATIONS
+// ════════════════════════════════════════
+async function _registrarFCM(userId, emailUnidade) {
+  // Só registra em contexto seguro (HTTPS / localhost)
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+  if (VAPID_KEY === 'VAPID_KEY_AQUI') return; // não configurado ainda
+
+  try {
+    const permissao = await Notification.requestPermission();
+    if (permissao !== 'granted') return;
+
+    // Registra o Service Worker
+    const swPath = _swPath();
+    const reg = await navigator.serviceWorker.register(swPath, { scope: _swScope() });
+    await navigator.serviceWorker.ready;
+
+    const messaging = getMessaging(_app);
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: reg,
+    });
+
+    if (!token) return;
+
+    // Salva token no Firestore vinculado ao usuário
+    await setDoc(doc(_db, 'tokens_fcm', userId), {
+      token,
+      emailUnidade: emailUnidade || null,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    // Mensagens em primeiro plano (app aberto)
+    onMessage(messaging, payload => {
+      const body = payload.notification?.body || 'Nova notificação';
+      _ntfToast('🔔 ' + body);
+      _tocarSom();
+    });
+
+  } catch (e) {
+    // FCM pode não estar disponível em alguns contextos — ignora silenciosamente
+    console.warn('[FCM]', e.message);
+  }
+}
+
+// Calcula o caminho do SW e seu scope com base na URL atual
+function _swPath() {
+  const parts = location.pathname.split('/').filter(Boolean);
+  // parts[0] = nome do repo (ex: manual-crv-v2)
+  const base = parts.length > 0 ? '/' + parts[0] + '/' : '/';
+  return base + 'firebase-messaging-sw.js';
+}
+function _swScope() {
+  const parts = location.pathname.split('/').filter(Boolean);
+  return parts.length > 0 ? '/' + parts[0] + '/' : '/';
 }
 
 // ════════════════════════════════════════
@@ -74,7 +169,7 @@ const CSS = `
     box-shadow: 0 8px 40px rgba(0,0,0,.18);
     border: 1px solid #e2e8f0;
     display: none; flex-direction: column;
-    max-height: 70vh; overflow: hidden;
+    max-height: 80vh; overflow: hidden;
     animation: ntfSlide .18s ease;
   }
   @keyframes ntfSlide {
@@ -97,29 +192,49 @@ const CSS = `
     transition: background .15s;
   }
   .ntf-fechar:hover { background: #e2e8f0; }
+
+  /* Seções separadas */
+  .ntf-secao-titulo {
+    padding: 8px 14px 6px;
+    font-size: .68rem; font-weight: 800; color: #64748b;
+    text-transform: uppercase; letter-spacing: .07em;
+    background: #f8fafc; border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+  }
+  .ntf-secao-titulo.cad { color: #b45309; background: #fffbeb; border-bottom-color: #fef3c7; }
+
   .ntf-lista {
     overflow-y: auto; flex: 1;
     padding: 10px 12px;
     display: flex; flex-direction: column; gap: 8px;
+    max-height: 230px;
+  }
+  .ntf-lista-cad {
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 220px;
+    flex-shrink: 0;
   }
   .ntf-vazio {
-    padding: 28px 16px; text-align: center;
+    padding: 16px 16px; text-align: center;
     font-size: .84rem; color: #94a3b8;
   }
   .ntf-item {
     background: #f8fafc; border: 1px solid #e2e8f0;
     border-radius: 10px; overflow: hidden;
   }
-  .ntf-item-top {
-    padding: 10px 12px 8px;
+  .ntf-item-cad {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 10px; overflow: hidden;
   }
+  .ntf-item-top { padding: 10px 12px 8px; }
   .ntf-item-titulo {
     font-size: .82rem; font-weight: 700; color: #0f172a;
     margin-bottom: 4px; line-height: 1.3;
   }
-  .ntf-item-origem {
-    font-size: .69rem; color: #94a3b8; margin-bottom: 4px;
-  }
+  .ntf-item-titulo.cad { color: #92400e; }
+  .ntf-item-origem { font-size: .69rem; color: #94a3b8; margin-bottom: 4px; }
   .ntf-presos {
     display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
   }
@@ -144,6 +259,7 @@ const CSS = `
     border-top: 1px solid #f1f5f9;
     display: flex; gap: 6px;
   }
+  .ntf-acoes.cad { border-top-color: #fde68a; }
   .ntf-btn {
     flex: 1; padding: 7px 10px; border-radius: 7px;
     font-size: .74rem; font-weight: 700; cursor: pointer;
@@ -155,6 +271,8 @@ const CSS = `
   .ntf-btn-neg:hover  { background: #b91c1c; }
   .ntf-btn-ver  { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
   .ntf-btn-ver:hover  { background: #e2e8f0; }
+  .ntf-btn-painel { background: #f97316; color: #fff; }
+  .ntf-btn-painel:hover { background: #ea580c; }
   .ntf-rodape {
     padding: 10px 14px;
     border-top: 1px solid #f1f5f9;
@@ -266,9 +384,8 @@ function _injetarDOM() {
   style.textContent = CSS;
   document.head.appendChild(style);
 
-  /* Bell vai para o slot na topbar, se existir; senão, no body */
   const _slot = document.getElementById('ntf-topbar-slot');
-  const _bellHtml = `<button id="ntf-btn" class="ntf-oculto" title="Assinaturas pendentes" onclick="_ntfToggle()">🔔<span id="ntf-badge" style="display:none;"></span></button>`;
+  const _bellHtml = `<button id="ntf-btn" class="ntf-oculto" title="Notificações" onclick="_ntfToggle()">🔔<span id="ntf-badge" style="display:none;"></span></button>`;
   if (_slot) {
     _slot.insertAdjacentHTML('beforeend', _bellHtml);
   } else {
@@ -277,15 +394,23 @@ function _injetarDOM() {
 
   document.body.insertAdjacentHTML('beforeend', `
 
-    <div id="ntf-painel" role="dialog" aria-label="Assinaturas pendentes">
+    <div id="ntf-painel" role="dialog" aria-label="Notificações">
       <div class="ntf-head">
         <div>
-          <div class="ntf-head-titulo">⏳ Assinaturas Pendentes</div>
+          <div class="ntf-head-titulo">🔔 Notificações</div>
           <div class="ntf-head-sub" id="ntf-head-sub">Carregando…</div>
         </div>
         <button class="ntf-fechar" onclick="_ntfFechar()" title="Fechar">✕</button>
       </div>
+
+      <!-- Seção: Assinaturas Pendentes -->
+      <div class="ntf-secao-titulo" id="ntf-sec-ass">⏳ Assinaturas Pendentes</div>
       <div class="ntf-lista" id="ntf-lista"></div>
+
+      <!-- Seção: Cadastros Pendentes (só para CPEN/DIR) -->
+      <div class="ntf-secao-titulo cad" id="ntf-sec-cad" style="display:none;">🆕 Solicitações de Cadastro</div>
+      <div class="ntf-lista-cad" id="ntf-lista-cad" style="display:none;"></div>
+
       <div class="ntf-rodape">
         <a class="ntf-link-painel" href="/painel.html" id="ntf-link-painel">Abrir Painel da Unidade →</a>
       </div>
@@ -330,16 +455,12 @@ function _injetarDOM() {
     <div id="ntf-toast"></div>
   `);
 
-  /* Calcula caminho relativo correto para painel.html */
   const _parts = location.pathname.split('/').filter(Boolean);
-  /* _parts[0] = repo name ('manual-crv-v2'), _parts[-1] = filename */
-  /* depth = number of subdirectories between repo root and the file */
   const _depth = Math.max(0, _parts.length - 2);
   const _painelHref = '../'.repeat(_depth) + 'painel.html';
   const link = document.getElementById('ntf-link-painel');
   if (link) link.href = _painelHref;
 
-  /* Fecha painel ao clicar fora */
   document.addEventListener('click', function(e) {
     const painel = document.getElementById('ntf-painel');
     const btn    = document.getElementById('ntf-btn');
@@ -356,20 +477,26 @@ function _injetarDOM() {
 // ════════════════════════════════════════
 // ESTADO
 // ════════════════════════════════════════
-let _pendentes    = [];
-let _unsub        = null;
-let _pendConf     = null; // { id, titulo, resumo, presos }
-let _emailUsuario = null;
+let _pendentes     = [];  // assinaturas
+let _cadastros     = [];  // cadastros pendentes
+let _unsub         = null;
+let _unsubCad      = null;
+let _pendConf      = null;
+let _emailUsuario  = null;
+let _primeiraAss   = true; // ignora som no carregamento inicial
+let _primeiraCad   = true;
 
 // ════════════════════════════════════════
-// LISTENER FIRESTORE
+// LISTENER — ASSINATURAS
 // ════════════════════════════════════════
 function _iniciarListener(email) {
   if (_unsub) { _unsub(); _unsub = null; }
   _emailUsuario = email;
+  _primeiraAss  = true;
 
   const q = query(collection(_db, 'solicitacoes'), orderBy('criadoEm', 'desc'));
   _unsub = onSnapshot(q, snap => {
+    const anteriorN = _pendentes.length;
     const pend = [];
     snap.forEach(d => {
       const s = { id: d.id, ...d.data() };
@@ -380,17 +507,55 @@ function _iniciarListener(email) {
       if (minha) pend.push(s);
     });
     _pendentes = pend;
+
+    if (_primeiraAss) {
+      _primeiraAss = false;
+    } else if (_pendentes.length > anteriorN) {
+      _tocarSom();
+      _ntfToast('⏳ Nova assinatura pendente!');
+    }
     _atualizarUI();
   }, () => {
-    /* Erro de permissão — mantém botão visível sem badge */
     _pendentes = [];
     _atualizarUI();
   });
 }
 
-function _pararListener() {
-  if (_unsub) { _unsub(); _unsub = null; }
+// ════════════════════════════════════════
+// LISTENER — CADASTROS (somente CPEN/DIR)
+// ════════════════════════════════════════
+function _iniciarListenerCadastros(emailUnidade) {
+  if (_unsubCad) { _unsubCad(); _unsubCad = null; }
+  _primeiraCad = true;
+
+  const q = query(
+    collection(_db, 'usuarios_cadastrados'),
+    where('emailUnidade', '==', emailUnidade),
+    where('status', '==', 'pendente')
+  );
+
+  _unsubCad = onSnapshot(q, snap => {
+    const anteriorN = _cadastros.length;
+    _cadastros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (_primeiraCad) {
+      _primeiraCad = false;
+    } else if (_cadastros.length > anteriorN) {
+      _tocarSom();
+      _ntfToast('🆕 Nova solicitação de cadastro recebida!');
+    }
+    _atualizarUI();
+  }, () => {
+    _cadastros = [];
+    _atualizarUI();
+  });
+}
+
+function _pararListeners() {
+  if (_unsub)    { _unsub();    _unsub    = null; }
+  if (_unsubCad) { _unsubCad(); _unsubCad = null; }
   _pendentes    = [];
+  _cadastros    = [];
   _emailUsuario = null;
   const btn = document.getElementById('ntf-btn');
   if (btn) btn.classList.add('ntf-oculto');
@@ -404,34 +569,47 @@ function _atualizarUI() {
   const badge = document.getElementById('ntf-badge');
   if (!btn) return;
 
-  const n = _pendentes.length;
+  const total = _pendentes.length + _cadastros.length;
   btn.classList.remove('ntf-oculto');
-  badge.textContent   = n > 0 ? (n > 9 ? '9+' : String(n)) : '';
-  badge.style.display = n > 0 ? 'flex' : 'none';
+  badge.textContent   = total > 0 ? (total > 9 ? '9+' : String(total)) : '';
+  badge.style.display = total > 0 ? 'flex' : 'none';
 
-  /* Contador na aba do navegador */
   const baseTitle = document.title.replace(/^\(\d+\)\s*/, '');
-  document.title  = n > 0 ? '(' + String(n).padStart(2, '0') + ') ' + baseTitle : baseTitle;
+  document.title  = total > 0 ? '(' + String(total).padStart(2, '0') + ') ' + baseTitle : baseTitle;
 
-  /* Se o painel já está aberto, re-renderiza */
+  // Mostra/oculta seção de cadastros
+  const secCad  = document.getElementById('ntf-sec-cad');
+  const listaCad = document.getElementById('ntf-lista-cad');
+  const temCad  = _cadastros.length > 0;
+  if (secCad)  secCad.style.display   = temCad ? '' : 'none';
+  if (listaCad) listaCad.style.display = temCad ? '' : 'none';
+
   const painel = document.getElementById('ntf-painel');
   if (painel && painel.classList.contains('aberto')) {
     _renderizarLista();
+    _renderizarCadastros();
   }
+}
+
+function _atualizarSubtitulo() {
+  const sub = document.getElementById('ntf-head-sub');
+  if (!sub) return;
+  const nA = _pendentes.length;
+  const nC = _cadastros.length;
+  const partes = [];
+  if (nA > 0) partes.push(nA + ' assinatura' + (nA > 1 ? 's' : '') + ' pendente' + (nA > 1 ? 's' : ''));
+  if (nC > 0) partes.push(nC + ' cadastro' + (nC > 1 ? 's' : '') + ' aguardando');
+  sub.textContent = partes.length > 0 ? partes.join(' · ') : 'Nenhuma pendência no momento';
 }
 
 function _renderizarLista() {
   const lista = document.getElementById('ntf-lista');
-  const sub   = document.getElementById('ntf-head-sub');
   if (!lista) return;
+  _atualizarSubtitulo();
 
   const n = _pendentes.length;
-  if (sub) sub.textContent = n === 0
-    ? 'Nenhuma pendência no momento'
-    : n + ' solicitaç' + (n > 1 ? 'ões aguardando' : 'ão aguardando') + ' sua assinatura';
-
   if (n === 0) {
-    lista.innerHTML = '<div class="ntf-vazio">✓ Nenhuma assinatura pendente</div>';
+    lista.innerHTML = '<div class="ntf-vazio">✓ Sem assinaturas pendentes</div>';
     return;
   }
 
@@ -466,6 +644,33 @@ function _renderizarLista() {
   }).join('');
 }
 
+function _renderizarCadastros() {
+  const lista = document.getElementById('ntf-lista-cad');
+  if (!lista) return;
+
+  if (!_cadastros.length) {
+    lista.innerHTML = '';
+    return;
+  }
+
+  lista.innerHTML = _cadastros.map(c => {
+    const data = c.criadoEm?.toDate
+      ? c.criadoEm.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    return `
+      <div class="ntf-item-cad">
+        <div class="ntf-item-top">
+          <div class="ntf-item-titulo cad">👤 ${_esc(c.nome || c.email || '(sem nome)')}</div>
+          <div class="ntf-item-origem">${_esc(c.email || '')}${data ? ' · ' + data : ''}</div>
+        </div>
+        <div class="ntf-acoes cad">
+          <button class="ntf-btn ntf-btn-painel" onclick="_ntfVerNoPainel()">Ver no Painel →</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 // ════════════════════════════════════════
 // AÇÕES (expostas globalmente)
 // ════════════════════════════════════════
@@ -474,7 +679,10 @@ window._ntfToggle = function() {
   if (!painel) return;
   const abrindo = !painel.classList.contains('aberto');
   painel.classList.toggle('aberto');
-  if (abrindo) _renderizarLista();
+  if (abrindo) {
+    _renderizarLista();
+    _renderizarCadastros();
+  }
 };
 
 window._ntfFechar = function() {
@@ -512,7 +720,7 @@ window._ntfAbrirConf = function(id) {
     <p style="font-size:.8rem;color:#64748b;margin:0;">Confirma sua anuência ao presente expediente?</p>`;
 
   document.getElementById('ntf-modal-conf').classList.add('aberto');
-  _ntfFechar(); /* fecha o painel enquanto o modal está aberto */
+  _ntfFechar();
 };
 
 window._ntfFecharConf = function() {
@@ -584,7 +792,7 @@ window._ntfNegar = async function() {
   }
 };
 
-window._ntfVerNoPainel = function(id) {
+window._ntfVerNoPainel = function() {
   const _pts  = location.pathname.split('/').filter(Boolean);
   const _dep  = Math.max(0, _pts.length - 2);
   window.open('../'.repeat(_dep) + 'painel.html', '_blank');
@@ -607,11 +815,22 @@ _injetarDOM();
 
 onAuthStateChanged(_auth, user => {
   if (user) {
-    /* Exibe imediatamente enquanto o Firestore carrega */
     const btn = document.getElementById('ntf-btn');
     if (btn) btn.classList.remove('ntf-oculto');
-    _iniciarListener(user.email);
+
+    // Listener de assinaturas (para quem pode assinar)
+    if (_podeSinalizar(user.email)) {
+      _iniciarListener(user.email);
+    }
+
+    // Listener de cadastros + FCM (somente CPEN/DIR)
+    const emailUnidade = _getEmailUnidade(user.email);
+    if (emailUnidade) {
+      _iniciarListenerCadastros(emailUnidade);
+      _registrarFCM(user.uid, emailUnidade);
+    }
+
   } else {
-    _pararListener();
+    _pararListeners();
   }
 });
