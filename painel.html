@@ -161,13 +161,29 @@
 
     /* ── ABAS ── */
     .p-abas {
-      display: flex; gap: 2px;
+      display: flex; align-items: stretch; gap: 0;
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
       padding: 0 32px;
+      flex-wrap: wrap;
+    }
+    .p-aba-grupo {
+      display: flex; align-items: stretch; gap: 0;
+      position: relative;
+    }
+    .p-aba-grupo + .p-aba-grupo {
+      border-left: 1px solid var(--border);
+      margin-left: 4px;
+      padding-left: 4px;
+    }
+    .p-aba-grupo-label {
+      position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+      font-size: .6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--txt-3); white-space: nowrap;
+      pointer-events: none;
     }
     .p-aba-btn {
-      padding: 14px 20px;
+      padding: 20px 16px 10px;
       font-size: .875rem; font-weight: 500;
       color: var(--txt-3); background: none; border: none;
       border-bottom: 2px solid transparent;
@@ -350,6 +366,60 @@
     .p-barra-btn-limpar { background: none; border: 1px solid rgba(255,255,255,.3); color: rgba(255,255,255,.7); font-size: .75rem; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; }
     .p-barra-btn-limpar:hover { background: rgba(255,255,255,.1); color: #fff; }
 
+    /* ── NAVEGAÇÃO POR CARTÕES (dir/cpen) ── */
+    #p-breadcrumb {
+      display: none; align-items: center; gap: 8px;
+      padding: 8px 32px; font-size: .8rem;
+      background: var(--bg-card); border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    #p-breadcrumb.visivel { display: flex; }
+    .p-bc-btn {
+      background: none; border: none; padding: 0;
+      color: var(--azul-500); cursor: pointer; font-size: .8rem;
+      font-family: inherit; transition: color var(--transition);
+    }
+    .p-bc-btn:hover { color: var(--azul-700); text-decoration: underline; }
+    .p-bc-sep { color: var(--txt-4); }
+    .p-bc-atual { color: var(--txt-2); font-weight: 600; }
+
+    .p-grupo-card {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 22px; border-radius: 12px; cursor: pointer;
+      text-align: left; font-family: inherit;
+      border: 2px solid var(--border);
+      background: var(--bg-card); box-shadow: var(--shadow-sm);
+      transition: all .15s; width: 100%;
+    }
+    .p-grupo-card:hover {
+      box-shadow: var(--shadow-md); transform: translateY(-1px);
+    }
+    .p-grupo-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .p-grupo-corpo { flex: 1; min-width: 0; }
+    .p-grupo-titulo { font-size: .95rem; font-weight: 700; color: var(--txt-1); margin-bottom: 3px; }
+    .p-grupo-sub    { font-size: .75rem; color: var(--txt-3); }
+    .p-grupo-arrow  { font-size: 1.1rem; flex-shrink: 0; font-weight: 700; opacity: .7; }
+
+    .p-sub-card {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      padding: 18px; border-radius: 10px; cursor: pointer;
+      text-align: left; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--bg-card); box-shadow: var(--shadow-sm);
+      transition: all .15s; width: 100%;
+    }
+    .p-sub-card:hover {
+      box-shadow: var(--shadow-md); border-color: var(--azul-400);
+      background: var(--azul-50);
+    }
+    .p-sub-card-icon  { font-size: 1.4rem; }
+    .p-sub-card-titulo { font-size: .88rem; font-weight: 700; color: var(--txt-1); }
+    .p-sub-card-sub   { font-size: .74rem; color: var(--txt-3); line-height: 1.4; }
+    .p-sub-card-badge {
+      font-size: .62rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; background: #dc2626; color: #fff;
+    }
+
     /* ── DASHBOARD / NAVEGAÇÃO CRV / SR ── */
     #p-corpo.dashboard-mode { padding: 0; max-width: none; }
 
@@ -474,7 +544,7 @@
     <h1>Painel da Unidade Prisional</h1>
     <span>Polícia Penal SC · CRV · Gestão de Anuências</span>
   </div>
-  <a href="index.html" class="p-topbar-back">← Manual CRV</a>
+  <a href="index.html" class="p-topbar-back" target="_parent">← Manual CRV</a>
 </div>
 <script>
   /* Quando dentro de iframe, esconde topbar e remove padding-top */
@@ -511,7 +581,7 @@
         O acesso ao Painel requer autenticação prévia pelo <strong>site principal</strong>.<br>
         Faça login no Manual CRV e utilize o Painel a partir de lá.
       </p>
-      <a href="index.html" class="btn-primario" style="display:inline-block;text-decoration:none;padding:11px 28px;">
+      <a href="index.html" class="btn-primario" target="_parent" style="display:inline-block;text-decoration:none;padding:11px 28px;">
         → Ir para o Manual CRV
       </a>
     </div>
@@ -541,22 +611,40 @@
 
   <!-- Abas -->
   <div class="p-abas">
-    <button class="p-aba-btn ativa" data-aba="pendentes" onclick="carregarAba('pendentes')">
-      Pendentes <span id="p-badge-pendentes" style="display:none;background:#dc2626;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
-    </button>
-    <button class="p-aba-btn" data-aba="minhas" onclick="carregarAba('minhas')">
-      Solicitações
-    </button>
-    <button class="p-aba-btn" data-aba="historico" onclick="carregarAba('historico')">
-      Histórico
-    </button>
-    <button class="p-aba-btn" data-aba="cancelados" onclick="carregarAba('cancelados')">
-      Cancelados
-    </button>
-    <button class="p-aba-btn" data-aba="acessos" id="tab-acessos" style="display:none;" onclick="carregarAba('acessos')">
-      Acessos <span id="p-badge-acessos" style="display:none;background:#f59e0b;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
-    </button>
+    <!-- Grupo: Transferências -->
+    <div class="p-aba-grupo">
+      <span class="p-aba-grupo-label">Transferências</span>
+      <button class="p-aba-btn ativa" data-aba="pendentes" onclick="carregarAba('pendentes')">
+        Assinaturas Pendentes <span id="p-badge-pendentes" style="display:none;background:#dc2626;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
+      </button>
+      <button class="p-aba-btn" data-aba="minhas" onclick="carregarAba('minhas')">
+        Solicitação de Assinaturas
+      </button>
+      <button class="p-aba-btn" data-aba="historico" onclick="carregarAba('historico')">
+        Histórico de Pedidos
+      </button>
+      <button class="p-aba-btn" data-aba="cancelados" onclick="carregarAba('cancelados')">
+        Solicitações Canceladas
+      </button>
+    </div>
+    <!-- Grupo: Acesso -->
+    <div class="p-aba-grupo">
+      <span class="p-aba-grupo-label">Acesso</span>
+      <button class="p-aba-btn" data-aba="acessos" id="tab-acessos" style="display:none;" onclick="carregarAba('acessos')">
+        Controle de Acesso/Usuários <span id="p-badge-acessos" style="display:none;background:#f59e0b;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
+      </button>
+    </div>
+    <!-- Grupo: Ferramentas -->
+    <div class="p-aba-grupo">
+      <span class="p-aba-grupo-label">Ferramentas</span>
+      <button class="p-aba-btn" data-aba="ferramentas" id="tab-ferramentas" style="display:none;" onclick="carregarAba('ferramentas')">
+        🛠️ Ferramentas
+      </button>
+    </div>
   </div>
+
+  <!-- Breadcrumb (navegação por cartões, dir/cpen) -->
+  <div id="p-breadcrumb"></div>
 
   <!-- Corpo -->
   <div id="p-corpo">
@@ -693,6 +781,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-<script type="module" src="js/painel.js"></script>
+<script type="module" src="js/painel.js?v=2"></script>
 </body>
 </html>

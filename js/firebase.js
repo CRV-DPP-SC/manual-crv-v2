@@ -67,6 +67,7 @@ function _mostrarTopbarVisitante() {
   const btnS = document.getElementById('sidebar-btn-senha');
   if (btnS) btnS.style.display = 'none';
   _mostrarSubMenuCRV(false);
+  _mostrarSubMenuPainel(false);
 }
 
 function _iniciaisPerfil(email) {
@@ -102,8 +103,9 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const iniciais = _iniciaisPerfil(user.email || '');
   const btnSenha = document.getElementById('sidebar-btn-senha');
   if (btnSenha) btnSenha.style.display = '';
-  /* Submenu CRV apenas para perfil CRV */
+  /* Submenus conforme perfil */
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
+  _mostrarSubMenuPainel(perfil?.tipo !== null);
 
   area.innerHTML = `
     <div class="topbar-user-info">
@@ -606,6 +608,26 @@ window.abrirGuiaOficios = function () {
 };
 window.fecharGuiaOficios = function () { document.getElementById('modal-guia')?.classList.remove('aberto'); };
 
+/* Dados de unidade passados pelo Painel ao abrir o PAD */
+window._padUnidadeAtual = null;
+window._padSetUnidade = function(unidade) {
+  window._padUnidadeAtual = unidade || null;
+};
+
+window.abrirGeradorPAD = function () {
+  /* Resolve a unidade do usuário logado para pré-popular cabeçalho/rodapé */
+  if (usuarioAtual && !window._padUnidadeAtual) {
+    var e = (usuarioAtual.email || '').toLowerCase();
+    var emailBase = e
+      .replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
+      .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
+    if (emailBase !== e && window.UNIDADES) {
+      window._padUnidadeAtual = window.UNIDADES.find(function(u) { return u.email === emailBase; }) || null;
+    }
+  }
+  _abrirFerramenta('gerador-pad/index.html', '📋 Gerador de PAD');
+};
+
 window.abrirPainelUnidade = function () {
   const f = document.getElementById('painel-iframe');
   if (f && !f.src.includes('painel')) f.src = 'painel.html';
@@ -834,6 +856,21 @@ window._sidebarToggle = function(subId, btn) {
 function _mostrarSubMenuCRV(show) {
   const sub = document.getElementById('sidebar-crv-sub');
   if (sub) sub.style.display = show ? 'block' : 'none';
+}
+
+function _mostrarSubMenuPainel(show) {
+  const sub = document.getElementById('sidebar-painel-sub');
+  if (!sub) return;
+  sub.style.display = show ? 'block' : 'none';
+  if (show) {
+    ['sub-painel-manual', 'sub-painel-ferramentas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('open');
+      const btn = el?.previousElementSibling;
+      const arrow = btn?.querySelector('.nav-sub-arrow');
+      if (arrow) arrow.textContent = '▼';
+    });
+  }
 }
 
 /* ── Reset de senhas (apenas rodrigo.l.pastore@gmail.com) ── */

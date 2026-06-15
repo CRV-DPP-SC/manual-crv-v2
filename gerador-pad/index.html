@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de PAD — CPEN/DPP</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/pad.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+  <style>
+    /* ── Telas de navegação ── */
+    .pad-tela { display: none; }
+    .pad-tela.ativa { display: block; }
+
+    /* Tela inicial */
+    #tela-inicial {
+      min-height: calc(100vh - 60px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: var(--bg, #f8f9fa);
+    }
+    #tela-inicial.ativa { display: flex; }
+    .pad-ini-wrap { width: 100%; max-width: 680px; }
+    .pad-ini-titulo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .pad-ini-titulo h2 {
+      font-size: 1.2rem; font-weight: 800; color: #3b1f0a; margin: 0 0 6px;
+    }
+    .pad-ini-titulo p {
+      font-size: .83rem; color: #92400e; margin: 0;
+    }
+    .pad-ini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media(max-width:520px){ .pad-ini-grid { grid-template-columns: 1fr; } }
+    .pad-ini-card {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 12px; padding: 32px 24px;
+      background: #fff; border-radius: 14px;
+      border: 2px solid #e5e7eb;
+      cursor: pointer; font-family: inherit;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      transition: all .15s;
+    }
+    .pad-ini-card:hover {
+      border-color: #6b3a1f; box-shadow: 0 6px 20px rgba(107,58,31,.15);
+      transform: translateY(-2px);
+    }
+    .pad-ini-card.card-cadastrar { border-color: #f97316; }
+    .pad-ini-card.card-cadastrar:hover { border-color: #ea580c; box-shadow: 0 6px 20px rgba(249,115,22,.2); }
+    .pad-ini-icon { font-size: 2.4rem; }
+    .pad-ini-nome { font-size: 1rem; font-weight: 800; color: #1c1917; text-align: center; }
+    .pad-ini-sub  { font-size: .77rem; color: #78716c; text-align: center; line-height: 1.5; }
+    .pad-ini-badge {
+      font-size: .7rem; font-weight: 700; padding: 3px 12px;
+      border-radius: 20px; background: #f97316; color: #fff;
+    }
+
+    /* Tela Cadastro */
+    #tela-cadastro {
+      min-height: calc(100vh - 60px);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 20px 60px;
+      background: var(--bg, #f8f9fa);
+    }
+    #tela-cadastro.ativa { display: flex; }
+    .pad-cad-wrap { width: 100%; max-width: 560px; }
+    .pad-cad-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 28px;
+    }
+    .pad-cad-back {
+      background: none; border: none; padding: 6px 10px;
+      color: #92400e; font-size: .82rem; cursor: pointer;
+      font-family: inherit; border-radius: 6px;
+      transition: background .15s;
+    }
+    .pad-cad-back:hover { background: #fef3c7; }
+    .pad-cad-titulo { font-size: 1.05rem; font-weight: 800; color: #3b1f0a; }
+
+    .pad-upload-intake {
+      border: 2px dashed #f97316;
+      border-radius: 12px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      background: #fff8f3;
+      transition: background .15s, border-color .15s;
+      margin-bottom: 24px;
+    }
+    .pad-upload-intake:hover, .pad-upload-intake.drag-over {
+      background: #fff1e6; border-color: #ea580c;
+    }
+    .pad-upload-intake input { display: none; }
+    .pad-upload-icon { font-size: 2rem; margin-bottom: 8px; }
+    .pad-upload-txt  { font-size: .88rem; font-weight: 600; color: #9a3412; margin-bottom: 4px; }
+    .pad-upload-sub  { font-size: .75rem; color: #b45309; }
+    .pad-upload-nome { font-size: .8rem; color: #166534; margin-top: 8px; font-weight: 600; }
+
+    .pad-cad-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media(max-width:440px){ .pad-cad-row { grid-template-columns: 1fr; } }
+    .pad-cad-campo label {
+      display: block; font-size: .77rem; font-weight: 700;
+      color: #92400e; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .pad-cad-campo input {
+      width: 100%; box-sizing: border-box;
+      padding: 10px 13px; border: 1.5px solid #e5e7eb;
+      border-radius: 8px; font-size: .9rem; font-family: inherit;
+      color: #1c1917; background: #fff;
+      transition: border-color .15s;
+    }
+    .pad-cad-campo input:focus {
+      outline: none; border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+    }
+    .pad-cad-status {
+      font-size: .8rem; padding: 10px 14px; border-radius: 8px;
+      margin-bottom: 20px; display: none;
+    }
+    .pad-cad-status.ok    { display: block; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .pad-cad-status.info  { display: block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .pad-cad-status.erro  { display: block; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+    .pad-cad-continuar {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg,#ea580c,#c2410c);
+      color: #fff; font-size: .95rem; font-weight: 800;
+      border: none; border-radius: 10px; cursor: pointer;
+      font-family: inherit; letter-spacing: .02em;
+      transition: opacity .15s;
+    }
+    .pad-cad-continuar:hover { opacity: .9; }
+
+    /* Tela Relação */
+    #tela-relacao {
+      min-height: calc(100vh - 60px);
+      display: none;
+      flex-direction: column;
+      background: var(--bg, #f8f9fa);
+    }
+    #tela-relacao.ativa { display: flex; }
+    .pad-rel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 28px; background: #fff;
+      border-bottom: 1px solid #e5e7eb; gap: 12px; flex-wrap: wrap;
+    }
+    .pad-rel-titulo { font-size: 1rem; font-weight: 800; color: #3b1f0a; }
+    .pad-rel-acoes  { display: flex; gap: 10px; align-items: center; }
+    .pad-rel-busca {
+      padding: 7px 12px; border: 1.5px solid #e5e7eb;
+      border-radius: 8px; font-size: .82rem; font-family: inherit;
+      color: #1c1917; min-width: 220px;
+    }
+    .pad-rel-busca:focus { outline: none; border-color: #f97316; }
+    .pad-rel-btn-cad {
+      padding: 7px 16px;
+      background: #f97316; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: .82rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; white-space: nowrap;
+    }
+    .pad-rel-btn-cad:hover { background: #ea580c; }
+    .pad-rel-btn-vol {
+      background: none; border: 1.5px solid #e5e7eb;
+      padding: 7px 14px; border-radius: 8px;
+      font-size: .82rem; color: #92400e; cursor: pointer;
+      font-family: inherit; white-space: nowrap;
+    }
+    .pad-rel-btn-vol:hover { background: #fef3c7; }
+
+    .pad-rel-corpo { flex: 1; overflow-x: auto; padding: 20px 28px 40px; }
+    .pad-rel-vazio {
+      text-align: center; color: #a8a29e;
+      padding: 60px 20px; font-size: .9rem;
+    }
+    .pad-rel-tabela {
+      width: 100%; border-collapse: collapse;
+      background: #fff; border-radius: 10px; overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    }
+    .pad-rel-tabela thead th {
+      background: #3b1f0a; color: #fed7aa;
+      padding: 11px 14px; text-align: left;
+      font-size: .7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      white-space: nowrap;
+    }
+    .pad-rel-tabela tbody tr:nth-child(even) { background: #fffaf7; }
+    .pad-rel-tabela tbody tr:hover { background: #fff3e8; }
+    .pad-rel-tabela td {
+      padding: 11px 14px; font-size: .82rem;
+      color: #292524; border-bottom: 1px solid #f3f0ee;
+      vertical-align: middle;
+    }
+    .pad-rel-tabela td.nome { font-weight: 600; }
+    .pad-rel-tabela td.art  { font-size: .75rem; color: #9a3412; font-weight: 700; }
+    .pad-rel-acoes-cell { display: flex; gap: 6px; }
+    .pad-rel-btn-abrir {
+      padding: 4px 12px; background: #3b1f0a; color: #fed7aa;
+      border: none; border-radius: 6px; font-size: .73rem;
+      font-weight: 700; cursor: pointer; font-family: inherit;
+      white-space: nowrap;
+    }
+    .pad-rel-btn-abrir:hover { background: #6b3a1f; }
+    .pad-rel-btn-del {
+      padding: 4px 9px; background: #fef2f2; color: #dc2626;
+      border: 1px solid #fecaca; border-radius: 6px;
+      font-size: .73rem; cursor: pointer; font-family: inherit;
+    }
+    .pad-rel-btn-del:hover { background: #fee2e2; }
+    .pad-rel-info { font-size: .73rem; color: #a8a29e; padding: 8px 28px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════ BARRA SUPERIOR ════════════ -->
+<header class="topo">
+  <img src="../gerador-oficios-v2/assets/brasao.png" alt="Brasão SC" onerror="this.style.display='none'">
+  <div class="topo-titulo">
+    <h1>📋 Gerador de PAD — CPEN</h1>
+    <p>Procedimento Administrativo Disciplinar · Polícia Penal de Santa Catarina</p>
+  </div>
+
+  <!-- Abas mobile (só no formulário) -->
+  <div class="topo-tabs" id="topo-tabs" style="display:none;">
+    <button class="tab-btn at" data-aba="form"    onclick="_setAba('form')">Formulário</button>
+    <button class="tab-btn"    data-aba="preview" onclick="_setAba('preview')">Documento</button>
+  </div>
+
+  <!-- Ações -->
+  <div class="topo-acoes" id="topo-acoes-inicial">
+    <a href="../index.html" target="_parent" class="topo-btn" style="text-decoration:none;">← Voltar</a>
+  </div>
+  <div class="topo-acoes" id="topo-acoes-form" style="display:none;">
+    <button class="topo-btn" onclick="_irParaInicial()">← Início</button>
+    <button class="topo-btn" onclick="abrirHistorico()">📂 Histórico</button>
+  </div>
+</header>
+
+<!-- ════════════ TELA INICIAL ════════════ -->
+<div id="tela-inicial" class="ativa">
+  <div class="pad-ini-wrap">
+    <div class="pad-ini-titulo">
+      <h2>📋 Gerador de PAD</h2>
+      <p>Procedimento Administrativo Disciplinar</p>
+    </div>
+    <div class="pad-ini-grid">
+      <button class="pad-ini-card card-cadastrar" onclick="_irParaCadastro()">
+        <span class="pad-ini-icon">📝</span>
+        <span class="pad-ini-nome">Cadastrar PAD</span>
+        <span class="pad-ini-sub">Upload do i-PEN, número e data de instauração</span>
+        <span class="pad-ini-badge">Novo</span>
+      </button>
+      <button class="pad-ini-card" onclick="_irParaRelacao()">
+        <span class="pad-ini-icon">📋</span>
+        <span class="pad-ini-nome">Relação de PADs</span>
+        <span class="pad-ini-sub">Consultar e retomar PADs já cadastrados</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ TELA CADASTRAR PAD ════════════ -->
+<div id="tela-cadastro">
+  <div class="pad-cad-wrap">
+    <div class="pad-cad-header">
+      <button class="pad-cad-back" onclick="_irParaInicial()">← Início</button>
+      <span class="pad-cad-titulo">Cadastrar novo PAD</span>
+    </div>
+
+    <!-- Upload i-PEN -->
+    <div class="pad-upload-intake" id="zona-upload-intake">
+      <input type="file" id="inp-pdf-intake" accept=".pdf">
+      <div class="pad-upload-icon">📄</div>
+      <div class="pad-upload-txt">Carregar documento i-PEN (PDF)</div>
+      <div class="pad-upload-sub">Clique ou arraste o arquivo aqui</div>
+      <div class="pad-upload-nome" id="upload-nome-intake"></div>
+    </div>
+    <div class="pad-cad-status" id="upload-status-intake"></div>
+
+    <!-- Nº PAD + Data Instauração -->
+    <div class="pad-cad-row">
+      <div class="pad-cad-campo">
+        <label>Nº do PAD</label>
+        <input type="text" id="intake-num-pad" placeholder="Ex.: 001/2025"
+          oninput="Estado.set('numPad', this.value)">
+      </div>
+      <div class="pad-cad-campo">
+        <label>Data de Instauração</label>
+        <input type="date" id="intake-data-inst"
+          onchange="Estado.set('dataInst', this.value)">
+      </div>
+    </div>
+
+    <button class="pad-cad-continuar" onclick="_irParaFormulario()">
+      Continuar para o Formulário →
+    </button>
+  </div>
+</div>
+
+<!-- ════════════ TELA RELAÇÃO DE PADs ════════════ -->
+<div id="tela-relacao">
+  <div class="pad-rel-header">
+    <span class="pad-rel-titulo">📋 Relação de PADs</span>
+    <div class="pad-rel-acoes">
+      <input type="text" class="pad-rel-busca" id="rel-busca"
+        placeholder="🔍 Buscar por nome, IPEN, artigo…"
+        oninput="_relFiltrar(this.value)">
+      <button class="pad-rel-btn-cad" onclick="_irParaCadastro()">+ Cadastrar PAD</button>
+      <button class="pad-rel-btn-vol" onclick="_irParaInicial()">← Início</button>
+    </div>
+  </div>
+  <div class="pad-rel-info" id="rel-info"></div>
+  <div class="pad-rel-corpo">
+    <div id="rel-lista"></div>
+  </div>
+</div>
+
+<!-- ════════════ FORMULÁRIO + PREVIEW (layout principal) ════════════ -->
+<div class="layout" id="layout-principal" style="display:none;">
+
+  <div id="painel-form">
+    <div id="form-area">
+      <div style="padding:20px;text-align:center;color:#aaa;font-size:.9rem;">Carregando…</div>
+    </div>
+  </div>
+
+  <div id="painel-prev">
+    <div class="doc-tabs" id="doc-tabs"></div>
+    <div class="preview-acoes">
+      <button class="btn-acao btn-pri"   onclick="copiar()">📋 Copiar</button>
+      <button class="btn-acao btn-doc"   onclick="baixarDoc()">.doc</button>
+      <button class="btn-acao btn-pdf"   onclick="baixarPDF()">PDF</button>
+      <button class="btn-acao btn-todos" onclick="baixarTodosDoc()">📦 Todos (.doc)</button>
+      <button class="btn-acao btn-sec"   onclick="_irParaInicial()">↩ Início</button>
+      <span id="previewAviso" class="preview-aviso"></span>
+    </div>
+    <div class="preview-documento">
+      <div id="pad-preview-wrap">
+        <div class="preview-placeholder">
+          <p>Preencha o formulário ao lado<br>para visualizar os documentos em tempo real.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════ BOTÃO FLUTUANTE MOBILE ════════════ -->
+<button class="btn-flutuante" id="btn-flutuante" onclick="_setAba('preview')" style="display:none;">📄 Ver Documento →</button>
+
+<!-- ════════════ TOAST ════════════ -->
+<div id="toast"></div>
+
+<!-- ════════════ MODAL HISTÓRICO ════════════ -->
+<div class="modal-bg" id="mhistBg">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>📂 Histórico de PADs</h3>
+      <button onclick="fecharHistorico()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="mhist-busca" id="mhistBusca"
+        placeholder="🔍 Buscar por nome, prontuário, nº do PAD..."
+        oninput="_histFiltro=this.value;_renderizarLista()">
+      <div id="mhistLista"></div>
+    </div>
+    <div class="modal-foot">
+      <span id="mhistInfo" style="font-size:.73rem;color:#999;"></span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="_histLimpar()" style="padding:6px 13px;border:2px solid #dc2626;border-radius:8px;background:#fff;color:#dc2626;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Limpar tudo</button>
+        <button onclick="fecharHistorico()" class="btn-acao btn-sec" style="padding:6px 13px;">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ SCRIPTS ════════════ -->
+<script src="js/dados.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/estado.js"></script>
+<script src="js/persistencia.js"></script>
+<script src="js/pdf-parser.js"></script>
+<script src="js/historico.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/documento.js"></script>
+<script src="js/exportar.js"></script>
+<script src="js/preview.js"></script>
+<script src="js/formulario.js"></script>
+
+<script>
+/* ══════════════════════════════════════════════
+   NAVEGAÇÃO ENTRE TELAS
+══════════════════════════════════════════════ */
+var _telaAtual = 'inicial';
+
+function _mostrarTela(id) {
+  ['tela-inicial','tela-cadastro','tela-relacao'].forEach(function(t) {
+    var el = document.getElementById(t);
+    if (el) { el.style.display = 'none'; el.classList.remove('ativa'); }
+  });
+  document.getElementById('layout-principal').style.display = 'none';
+  document.getElementById('topo-tabs').style.display         = 'none';
+  document.getElementById('btn-flutuante').style.display     = 'none';
+  document.getElementById('topo-acoes-inicial').style.display = 'none';
+  document.getElementById('topo-acoes-form').style.display    = 'none';
+
+  if (id === 'formulario') {
+    document.getElementById('layout-principal').style.display = '';
+    document.getElementById('topo-tabs').style.display        = '';
+    document.getElementById('btn-flutuante').style.display    = '';
+    document.getElementById('topo-acoes-form').style.display  = '';
+  } else {
+    var el = document.getElementById('tela-' + id);
+    if (el) { el.style.display = ''; el.classList.add('ativa'); }
+    document.getElementById('topo-acoes-inicial').style.display = '';
+  }
+  _telaAtual = id;
+}
+
+window._irParaInicial = function() { _mostrarTela('inicial'); };
+
+window._irParaCadastro = function() {
+  /* Limpa estado para um novo PAD */
+  Estado.limpar && Estado.limpar();
+  /* Sincroniza campos de intake com estado atual */
+  var s = Estado.get();
+  var inpNum  = document.getElementById('intake-num-pad');
+  var inpData = document.getElementById('intake-data-inst');
+  if (inpNum)  inpNum.value  = s.numPad   || '';
+  if (inpData) inpData.value = s.dataInst || '';
+  /* Limpa status de upload */
+  var st = document.getElementById('upload-status-intake');
+  if (st) { st.className = 'pad-cad-status'; st.textContent = ''; }
+  var nm = document.getElementById('upload-nome-intake');
+  if (nm) nm.textContent = '';
+  _mostrarTela('cadastro');
+};
+
+window._irParaRelacao = function() {
+  _relRenderizar('');
+  _mostrarTela('relacao');
+};
+
+window._irParaFormulario = function() {
+  /* Sincroniza formulário com estado antes de mostrar */
+  FormularioCtrl.sincronizar();
+  atualizarPreview();
+  _mostrarTela('formulario');
+};
+
+/* ══════════════════════════════════════════════
+   UPLOAD NA TELA CADASTRO
+══════════════════════════════════════════════ */
+function _initUploadIntake() {
+  var zona   = document.getElementById('zona-upload-intake');
+  var input  = document.getElementById('inp-pdf-intake');
+  var status = document.getElementById('upload-status-intake');
+  var nomeEl = document.getElementById('upload-nome-intake');
+  if (!zona || !input) return;
+
+  zona.addEventListener('dragover',  function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+  zona.addEventListener('dragleave', function()  { zona.classList.remove('drag-over'); });
+  zona.addEventListener('drop', function(e) {
+    e.preventDefault(); zona.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) _processarIntake(e.dataTransfer.files[0]);
+  });
+  zona.addEventListener('click', function() { input.click(); });
+  input.addEventListener('change', function() {
+    if (input.files[0]) _processarIntake(input.files[0]);
+  });
+
+  function _processarIntake(file) {
+    if (status) { status.className = 'pad-cad-status info'; status.textContent = 'Extraindo dados do PDF…'; }
+
+    PdfParser.extrairTexto(file, function(err, texto) {
+      if (err || !texto) {
+        if (status) { status.className = 'pad-cad-status erro'; status.textContent = 'Não foi possível extrair o texto. Preencha manualmente.'; }
+        return;
+      }
+      var dados = PdfParser.parsear(texto);
+      PdfParser.aplicar(dados);
+
+      /* Pré-preenche campos de intake com o que foi extraído */
+      var s = Estado.get();
+      var inpNum  = document.getElementById('intake-num-pad');
+      var inpData = document.getElementById('intake-data-inst');
+      if (inpNum  && s.numPad)   inpNum.value  = s.numPad;
+      if (inpData && s.dataInst) inpData.value = s.dataInst;
+
+      var nome = dados.incidentado && dados.incidentado.nome;
+      if (nomeEl) nomeEl.textContent = '📎 ' + (file.name || '');
+      if (status) {
+        status.className = 'pad-cad-status ok';
+        status.textContent = nome
+          ? '✓ Dados extraídos: ' + nome
+          : '✓ PDF processado. Verifique os campos abaixo.';
+      }
+      _toast('Dados do i-PEN preenchidos automaticamente!');
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════
+   RELAÇÃO DE PADs
+══════════════════════════════════════════════ */
+var _relBusca = '';
+var _LABEL_ARTIGO = {
+  art50_i:'Art. 50-I', art50_ii:'Art. 50-II', art50_iii:'Art. 50-III',
+  art50_iv:'Art. 50-IV', art50_v:'Art. 50-V', art50_vi:'Art. 50-VI',
+  art50_vii:'Art. 50-VII', art52:'Art. 52',
+};
+
+function _relFiltrar(val) {
+  _relBusca = val;
+  _relRenderizar(val);
+}
+
+function _relRenderizar(filtro) {
+  var lista = _histCarregar();
+  var infoEl = document.getElementById('rel-info');
+  var listaEl = document.getElementById('rel-lista');
+  if (!listaEl) return;
+
+  if (filtro) {
+    var f = filtro.toLowerCase();
+    lista = lista.filter(function(it) {
+      return (it.nome||'').toLowerCase().includes(f)
+          || (it.ipen||'').toLowerCase().includes(f)
+          || (it.numPad||'').toLowerCase().includes(f)
+          || (it.artigo||'').toLowerCase().includes(f)
+          || (it.prontuario||'').toLowerCase().includes(f);
+    });
+  }
+
+  if (infoEl) {
+    var total = _histCarregar().length;
+    infoEl.textContent = total + ' PAD(s) registrado(s)' + (filtro ? ' · ' + lista.length + ' resultado(s)' : '');
+  }
+
+  if (!lista.length) {
+    listaEl.innerHTML = '<div class="pad-rel-vazio">'
+      + (filtro ? 'Nenhum PAD encontrado para "' + _esc(filtro) + '".'
+                : 'Nenhum PAD cadastrado ainda.<br>Clique em <strong>Cadastrar PAD</strong> para começar.')
+      + '</div>';
+    return;
+  }
+
+  /* Índices originais para excluir corretamente */
+  var listaFull = _histCarregar();
+
+  listaEl.innerHTML = '<table class="pad-rel-tabela">'
+    + '<thead><tr>'
+    + '<th>Nº PAD</th>'
+    + '<th>Nome do Incidentado</th>'
+    + '<th>IPEN</th>'
+    + '<th>Data de Instauração</th>'
+    + '<th>Data dos Fatos</th>'
+    + '<th>Art. da Falta</th>'
+    + '<th></th>'
+    + '</tr></thead><tbody>'
+    + lista.map(function(it) {
+        var idxFull = listaFull.indexOf(it);
+        var artLabel = _LABEL_ARTIGO[it.artigo] || it.artigo || '—';
+        return '<tr>'
+          + '<td>' + _esc(it.numPad || '—') + '</td>'
+          + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
+          + '<td>' + _esc(it.ipen || '—') + '</td>'
+          + '<td>' + _esc(it.dataInst || '—') + '</td>'
+          + '<td>' + _esc(it.dataInfracao || '—') + '</td>'
+          + '<td class="art">' + _esc(artLabel) + '</td>'
+          + '<td><div class="pad-rel-acoes-cell">'
+          + '<button class="pad-rel-btn-abrir" onclick="_relAbrir(' + idxFull + ')">Abrir</button>'
+          + '<button class="pad-rel-btn-del" onclick="_relExcluir(' + idxFull + ')" title="Excluir">✕</button>'
+          + '</div></td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table>';
+}
+
+window._relAbrir = function(idx) {
+  var lista = _histCarregar();
+  var item = lista[idx];
+  if (!item || !item.estado) { _toast('Dados indisponíveis.'); return; }
+  Estado.carregar(item.estado);
+  FormularioCtrl.sincronizar();
+
+  /* Sincroniza campos de intake */
+  var s = Estado.get();
+  var inpNum  = document.getElementById('intake-num-pad');
+  var inpData = document.getElementById('intake-data-inst');
+  if (inpNum)  inpNum.value  = s.numPad   || '';
+  if (inpData) inpData.value = s.dataInst || '';
+
+  _irParaFormulario();
+  _toast('PAD carregado!');
+};
+
+window._relExcluir = function(idx) {
+  if (!confirm('Excluir este PAD do histórico?')) return;
+  var lista = _histCarregar();
+  lista.splice(idx, 1);
+  try { localStorage.setItem('pad_historico', JSON.stringify(lista)); } catch(e) {}
+  _relRenderizar(_relBusca);
+};
+
+/* ══════════════════════════════════════════════
+   INICIALIZAÇÃO
+══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+
+  /* Carrega dados persistidos */
+  carregarConselho();
+  carregarDiretor();
+
+  /* Resolve unidade do contexto de login */
+  try {
+    var unPai = window.parent && window.parent._padUnidadeAtual;
+    if (unPai) {
+      Estado.setMany({
+        unidade: { email: unPai.email || unPai.em || '', nome: unPai.nome || unPai.n || '', cidade: unPai.cidade || unPai.c || '', codigo: '' },
+        diretor: { nome: unPai.diretor || unPai.dir || '', cargo: 'Diretor(a)' },
+      });
+    } else {
+      var emailOri = localStorage.getItem('crv_ori_email') || '';
+      if (emailOri) {
+        Estado.setNested('unidade.email', emailOri);
+        if (window.parent && window.parent.UNIDADES) {
+          var un = window.parent.UNIDADES.find(function(u) { return u.email === emailOri; });
+          if (un) {
+            Estado.setMany({
+              unidade: { email: un.email, nome: un.nome, cidade: un.cidade, codigo: '' },
+              diretor: { nome: un.diretor || '', cargo: 'Diretor(a)' },
+            });
+          }
+        }
+      }
+    }
+    if (window.parent && '_padUnidadeAtual' in window.parent) {
+      window.parent._padUnidadeAtual = null;
+    }
+  } catch(e) {}
+
+  /* Renderiza tabs de documentos */
+  var tabs = document.getElementById('doc-tabs');
+  if (tabs) {
+    tabs.innerHTML = DOCS.map(function(d) {
+      return '<button class="doc-tab' + (d.cod === _DOC_ATUAL ? ' ativa' : '')
+        + '" data-doc="' + d.cod + '" onclick="selecionarDoc(\'' + d.cod + '\')">' + d.label + '</button>';
+    }).join('');
+  }
+
+  /* Inicializa formulário (invisível ainda) */
+  FormularioCtrl.inicializar();
+
+  /* Conecta preview ao estado */
+  Estado.onChange(function() {
+    if (_telaAtual === 'formulario') atualizarPreview();
+  });
+
+  /* Inicializa upload da tela de cadastro */
+  _initUploadIntake();
+
+  /* Tela inicial */
+  _mostrarTela('inicial');
+});
+</script>
+
+</body>
+</html>
