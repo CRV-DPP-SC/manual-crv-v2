@@ -860,6 +860,12 @@ function _mostrarGuiaNotificacoes() {
         </div>
       </div>
       <div class="crv-guia-body">
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.8rem;color:#713f12;line-height:1.5;">
+          ⚠️ <strong>Importante:</strong> estes passos só funcionam no
+          <strong>navegador padrão do iPhone</strong> — o de ícone azul em forma de bússola
+          que já vem instalado no celular. Se você estiver usando Chrome, Firefox ou outro
+          navegador, feche-o e abra este site naquele navegador azul antes de continuar.
+        </div>
         <div class="crv-guia-passo">
           <div class="crv-guia-num">1</div>
           <div class="crv-guia-passo-txt">
