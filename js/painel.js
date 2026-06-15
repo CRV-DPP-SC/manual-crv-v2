@@ -629,9 +629,7 @@ function trocarUnidade(valor) {
   if (foiProprioPanel) {
     mostrarDashboard();
   } else {
-    document.querySelector('.p-abas').style.display = '';
-    document.getElementById('p-corpo').className = '';
-    carregarAba('pendentes');
+    mostrarLandingGrupos();
   }
 }
 
@@ -658,7 +656,7 @@ let _grupoAtivo = null;
 let _abaAtiva   = null;
 
 function _ehNavCartoes() {
-  return ['dir', 'cpen'].includes(perfilAtual) && !modoLeitura();
+  return ['dir', 'cpen'].includes(perfilAtual) || modoLeitura();
 }
 
 const _GRUPO_DE_ABA = {
@@ -700,8 +698,10 @@ window.mostrarLandingGrupos = function() {
 
   const grupos = [
     { id: 'transferencias', icon: '📋', titulo: 'Transferências',     sub: 'Anuências, solicitações e histórico', cor: 'var(--azul-600)' },
-    { id: 'acesso',         icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed'         },
-    { id: 'ferramentas',    icon: '🛠️', titulo: 'Ferramentas',        sub: 'Geradores e recursos da unidade',     cor: '#b45309'         },
+    ...(['dir','cpen'].includes(perfilAtual) || modoLeitura() ? [
+      { id: 'acesso',      icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed'         },
+      { id: 'ferramentas', icon: '🛠️', titulo: 'Ferramentas',        sub: 'Geradores e recursos da unidade',     cor: '#b45309'         },
+    ] : []),
   ];
 
   const badge = document.getElementById('p-badge-pendentes');
