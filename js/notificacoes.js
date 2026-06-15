@@ -26,7 +26,7 @@ const _db   = getFirestore(_app);
 
 // ── Chave pública VAPID para Web Push ──
 // Gere em: Firebase Console → Configurações do projeto → Cloud Messaging → Certificados push da Web
-const VAPID_KEY = 'VAPID_KEY_AQUI';
+const VAPID_KEY = 'BDyN1z9TPe7H3_i_inI7n6ovbaCokQTOrrEQt6MWOO0xIptI8e2CuMkMEOExItHEF27x9N0ndwish-XXG8YaOEI';
 
 // ── Perfis que podem assinar transferências ──
 const EMAILS_CRV = [
