@@ -96,9 +96,9 @@ function _registrarOneSignal(emailUnidade) {
               type: 'push',
               autoPrompt: true,
               text: {
-                actionMessage:  'Receba notificações de cadastros e assinaturas pendentes.',
-                acceptButton:   'Permitir',
-                cancelButton:   'Agora não',
+                actionMessage:  'DESEJA RECEBER NOTIFICAÇÕES DE CADASTRO DE USUÁRIOS E ASSINATURAS PENDENTES?',
+                acceptButton:   'SIM',
+                cancelButton:   'NÃO',
               },
             }],
           },
