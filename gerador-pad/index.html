@@ -654,19 +654,19 @@ document.addEventListener('DOMContentLoaded', function() {
     var unPai = window.parent && window.parent._padUnidadeAtual;
     if (unPai) {
       Estado.setMany({
-        unidade: { email: unPai.em || unPai.email || '', nome: unPai.n || unPai.nome || '', cidade: unPai.c || unPai.cidade || '', codigo: unPai.cod || unPai.codigo || '' },
-        diretor: { nome: unPai.dir || '', cargo: 'Diretor(a)' },
+        unidade: { email: unPai.email || unPai.em || '', nome: unPai.nome || unPai.n || '', cidade: unPai.cidade || unPai.c || '', codigo: unPai.cod || unPai.codigo || '' },
+        diretor: { nome: unPai.diretor || unPai.dir || '', cargo: 'Diretor(a)' },
       });
     } else {
       var emailOri = localStorage.getItem('crv_ori_email') || '';
       if (emailOri) {
         Estado.setNested('unidade.email', emailOri);
         if (window.parent && window.parent.UNIDADES) {
-          var un = window.parent.UNIDADES.find(function(u) { return u.em === emailOri; });
+          var un = window.parent.UNIDADES.find(function(u) { return u.email === emailOri; });
           if (un) {
             Estado.setMany({
-              unidade: { email: un.em, nome: un.n, cidade: un.c, codigo: un.cod || '' },
-              diretor: { nome: un.dir || '', cargo: 'Diretor(a)' },
+              unidade: { email: un.email || '', nome: un.nome || '', cidade: un.cidade || '', codigo: un.cod || '' },
+              diretor: { nome: un.diretor || '', cargo: 'Diretor(a)' },
             });
           }
         }
