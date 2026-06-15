@@ -498,6 +498,19 @@ window.fazerCadastro = async function () {
       motivoRecusa:  null,
     });
 
+    // Notifica CPEN/DIR via push (Cloudflare Worker → OneSignal)
+    try {
+      fetch('https://crv-notif.crv-a72.workers.dev/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailUnidade,
+          nomeUser:    nome,
+          nomeUnidade: unidade.nome,
+        }),
+      });
+    } catch (_) {}
+
     // Desloga imediatamente — acesso liberado apenas após aprovação do CPEN
     await signOut(auth);
 

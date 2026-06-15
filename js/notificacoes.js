@@ -8,8 +8,6 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getMessaging, getToken, onMessage }
-  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
 const FC = {
@@ -24,9 +22,8 @@ const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FC);
 const _auth = getAuth(_app);
 const _db   = getFirestore(_app);
 
-// ── Chave pública VAPID para Web Push ──
-// Gere em: Firebase Console → Configurações do projeto → Cloud Messaging → Certificados push da Web
-const VAPID_KEY = 'BDyN1z9TPe7H3_i_inI7n6ovbaCokQTOrrEQt6MWOO0xIptI8e2CuMkMEOExItHEF27x9N0ndwish-XXG8YaOEI';
+// ── OneSignal ──
+const ONESIGNAL_APP_ID = 'd8932eb7-fa75-4f11-b0a2-68974e0afe42';
 
 // ── Perfis que podem assinar transferências ──
 const EMAILS_CRV = [
@@ -82,60 +79,25 @@ function _tocarSom() {
 }
 
 // ════════════════════════════════════════
-// FCM — PUSH NOTIFICATIONS
+// ONESIGNAL — PUSH NOTIFICATIONS
 // ════════════════════════════════════════
-async function _registrarFCM(userId, emailUnidade) {
-  // Só registra em contexto seguro (HTTPS / localhost)
-  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
-  if (VAPID_KEY === 'VAPID_KEY_AQUI') return; // não configurado ainda
-
+async function _registrarOneSignal(emailUnidade) {
+  if (!('Notification' in window)) return;
   try {
-    const permissao = await Notification.requestPermission();
-    if (permissao !== 'granted') return;
-
-    // Registra o Service Worker
-    const swPath = _swPath();
-    const reg = await navigator.serviceWorker.register(swPath, { scope: _swScope() });
-    await navigator.serviceWorker.ready;
-
-    const messaging = getMessaging(_app);
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: reg,
+    await window.OneSignalDeferred.push(async os => {
+      await os.init({
+        appId: ONESIGNAL_APP_ID,
+        notifyButton: { enable: false },
+        allowLocalhostAsSecureOrigin: true,
+      });
+      // Solicita permissão e registra
+      await os.Slidedown.promptPush();
+      // Marca a unidade do CPEN/DIR como tag para filtrar envios
+      await os.User.addTag('emailUnidade', emailUnidade);
     });
-
-    if (!token) return;
-
-    // Salva token no Firestore vinculado ao usuário
-    await setDoc(doc(_db, 'tokens_fcm', userId), {
-      token,
-      emailUnidade: emailUnidade || null,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-
-    // Mensagens em primeiro plano (app aberto)
-    onMessage(messaging, payload => {
-      const body = payload.notification?.body || 'Nova notificação';
-      _ntfToast('🔔 ' + body);
-      _tocarSom();
-    });
-
   } catch (e) {
-    // FCM pode não estar disponível em alguns contextos — ignora silenciosamente
-    console.warn('[FCM]', e.message);
+    console.warn('[OneSignal]', e.message);
   }
-}
-
-// Calcula o caminho do SW e seu scope com base na URL atual
-function _swPath() {
-  const parts = location.pathname.split('/').filter(Boolean);
-  // parts[0] = nome do repo (ex: manual-crv-v2)
-  const base = parts.length > 0 ? '/' + parts[0] + '/' : '/';
-  return base + 'firebase-messaging-sw.js';
-}
-function _swScope() {
-  const parts = location.pathname.split('/').filter(Boolean);
-  return parts.length > 0 ? '/' + parts[0] + '/' : '/';
 }
 
 // ════════════════════════════════════════
@@ -823,11 +785,11 @@ onAuthStateChanged(_auth, user => {
       _iniciarListener(user.email);
     }
 
-    // Listener de cadastros + FCM (somente CPEN/DIR)
+    // Listener de cadastros + push OneSignal (somente CPEN/DIR)
     const emailUnidade = _getEmailUnidade(user.email);
     if (emailUnidade) {
       _iniciarListenerCadastros(emailUnidade);
-      _registrarFCM(user.uid, emailUnidade);
+      _registrarOneSignal(emailUnidade);
     }
 
   } else {
