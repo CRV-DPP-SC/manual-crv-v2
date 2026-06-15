@@ -855,23 +855,23 @@ function _mostrarGuiaNotificacoes() {
       <div class="crv-guia-head">
         <div class="crv-guia-head-ico">🔔</div>
         <div class="crv-guia-head-txt">
-          <h3>Ative as notificações no iPhone</h3>
-          <p>Receba avisos de cadastros e assinaturas mesmo com o app fechado</p>
+          <h3>Receba notificações no seu iPhone</h3>
+          <p>Siga os passos abaixo para ser avisado mesmo com o celular bloqueado</p>
         </div>
       </div>
       <div class="crv-guia-body">
         <div class="crv-guia-passo">
           <div class="crv-guia-num">1</div>
           <div class="crv-guia-passo-txt">
-            Toque no botão <strong>Compartilhar</strong>
+            Na barra inferior da tela, toque no ícone de
+            <strong>Compartilhar</strong> — parece uma caixa com uma seta apontando para cima
             <span class="crv-guia-passo-ico">⬜↑</span>
-            na barra inferior do Safari
           </div>
         </div>
         <div class="crv-guia-passo">
           <div class="crv-guia-num">2</div>
           <div class="crv-guia-passo-txt">
-            Role a lista e toque em
+            Role a lista de opções para baixo e toque em
             <strong>"Adicionar à Tela de Início"</strong>
             <span class="crv-guia-passo-ico">➕</span>
           </div>
@@ -879,21 +879,23 @@ function _mostrarGuiaNotificacoes() {
         <div class="crv-guia-passo">
           <div class="crv-guia-num">3</div>
           <div class="crv-guia-passo-txt">
-            Toque em <strong>"Adicionar"</strong> no canto superior direito
+            Toque em <strong>"Adicionar"</strong> no canto superior direito da tela
           </div>
         </div>
         <div class="crv-guia-passo">
           <div class="crv-guia-num">4</div>
           <div class="crv-guia-passo-txt">
-            Abra o CRV pelo <strong>ícone na tela inicial</strong>
+            Volte para a tela inicial do celular e abra o CRV pelo
+            <strong>ícone que acabou de aparecer</strong>
             <span class="crv-guia-passo-ico">📱</span>
-            — não pelo Safari
+            — não pelo navegador
           </div>
         </div>
         <div class="crv-guia-passo">
           <div class="crv-guia-num">5</div>
           <div class="crv-guia-passo-txt">
-            Faça login e toque em <strong>"Permitir"</strong> quando solicitado
+            Faça login normalmente e toque em <strong>"Permitir"</strong>
+            quando o app perguntar sobre notificações
           </div>
         </div>
       </div>
