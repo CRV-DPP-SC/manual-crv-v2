@@ -61,6 +61,7 @@
         </button>
         <div class="nav-sub-items" id="sub-painel-ferramentas">
           <button class="nav-sub-item" onclick="abrirGeradorOficios()">⚙️ Gerador de Ofícios</button>
+          <button class="nav-sub-item" onclick="abrirGeradorPAD()">📋 Gerador de PAD</button>
           <button class="nav-sub-item" onclick="abrirGuiaOficios()">📄 Guia — Gerador de Ofícios</button>
           <a class="nav-sub-item" href="https://ppsc.com.br" target="_blank" rel="noopener">🌐 Portal de Transferências ↗</a>
           <button class="nav-sub-item" onclick="navegarPara('unidades')">🏛️ Unidades Prisionais</button>
@@ -108,14 +109,6 @@
           <a class="nav-sub-item" href="https://sigrhportal.sea.sc.gov.br/SIGRHNovoPortal/#/auth" target="_blank">👤 SIGRHPORTAL ↗</a>
           <a class="nav-sub-item" href="https://www.sc.gov.br/sap/ipen/signin" target="_blank">🔗 iPEN ↗</a>
           <a class="nav-sub-item" href="https://sgpe.sea.sc.gov.br" target="_blank">📄 SGPe ↗</a>
-        </div>
-
-        <!-- Grupo: CPEN -->
-        <button class="nav-sub-group" onclick="_sidebarToggle('sub-crv-cpen',this)">
-          <span>📋 CPEN</span><span class="nav-sub-arrow">▶</span>
-        </button>
-        <div class="nav-sub-items" id="sub-crv-cpen">
-          <button class="nav-sub-item" onclick="_abrirFerramenta('gerador-pad/index.html','📋 Gerador de PAD')">📄 PAD</button>
         </div>
 
         <!-- USM -->
@@ -881,22 +874,6 @@
   </div>
 </div>
 
-<!-- ══ MODAL GRUPO CPEN ══ -->
-<div id="modal-grupo-cpen" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
-  <div class="modal-box">
-    <div class="modal-header" style="background:linear-gradient(135deg,#3b1f0a,#6b3a1f);color:#fff;">
-      <div><h3>📋 CPEN — Coordenação Penal</h3><p style="color:#fdba74;">Ferramentas da Coordenação Penal</p></div>
-      <button class="modal-fechar" onclick="document.getElementById('modal-grupo-cpen').classList.remove('aberto')">✕</button>
-    </div>
-    <div class="grupo-grid">
-      <div class="grupo-item" onclick="document.getElementById('modal-grupo-cpen').classList.remove('aberto');_abrirFerramenta('gerador-pad/index.html','📋 Gerador de PAD')">
-        <div class="grupo-item-icon">📄</div>
-        <div class="grupo-item-titulo">PAD</div>
-        <div class="grupo-item-sub">Gerador de documentos disciplinares</div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ══ MODAL GRUPO JUDICIÁRIO ══ -->
 <div id="modal-grupo-jud" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('aberto')">
