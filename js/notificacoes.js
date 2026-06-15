@@ -90,6 +90,19 @@ function _registrarOneSignal(emailUnidade) {
         appId: ONESIGNAL_APP_ID,
         notifyButton: { enable: false },
         allowLocalhostAsSecureOrigin: true,
+        promptOptions: {
+          slidedown: {
+            prompts: [{
+              type: 'push',
+              autoPrompt: true,
+              text: {
+                actionMessage:  'Receba notificações de cadastros e assinaturas pendentes.',
+                acceptButton:   'Permitir',
+                cancelButton:   'Agora não',
+              },
+            }],
+          },
+        },
       });
       await OneSignal.Slidedown.promptPush();
       await OneSignal.User.addTag('emailUnidade', emailUnidade);
