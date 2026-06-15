@@ -770,6 +770,149 @@ function _ntfToast(msg) {
 }
 
 // ════════════════════════════════════════
+// GUIA DE NOTIFICAÇÕES (iOS)
+// ════════════════════════════════════════
+function _mostrarGuiaNotificacoes() {
+  if (localStorage.getItem('crv_guia_notif_ok')) return;
+
+  const isIOS       = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone === true;
+
+  // iOS já instalado como PWA: não precisa do guia
+  if (isStandalone) return;
+  // Não é iOS: OneSignal cuida automaticamente
+  if (!isIOS) return;
+
+  // Injeta estilos do modal se necessário
+  const styleId = 'crv-guia-notif-style';
+  if (!document.getElementById(styleId)) {
+    const s = document.createElement('style');
+    s.id = styleId;
+    s.textContent = `
+      #crv-guia-notif {
+        position: fixed; inset: 0; z-index: 9700;
+        background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+        display: flex; align-items: flex-end; justify-content: center;
+        padding: 0 0 24px;
+        animation: ntfSlide .2s ease;
+      }
+      .crv-guia-box {
+        background: #fff; border-radius: 20px 20px 16px 16px;
+        width: min(96vw, 420px);
+        box-shadow: 0 -4px 32px rgba(0,0,0,.18);
+        overflow: hidden;
+      }
+      .crv-guia-head {
+        background: linear-gradient(135deg,#1e3a5f,#2563eb);
+        padding: 18px 20px 14px;
+        display: flex; align-items: center; gap: 12px;
+      }
+      .crv-guia-head-ico { font-size: 1.8rem; }
+      .crv-guia-head-txt h3 { color:#fff; font-size:.95rem; font-weight:800; margin:0 0 2px; }
+      .crv-guia-head-txt p  { color:rgba(255,255,255,.8); font-size:.75rem; margin:0; }
+      .crv-guia-body { padding: 16px 20px 6px; }
+      .crv-guia-passo {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+      }
+      .crv-guia-passo:last-child { border-bottom: none; }
+      .crv-guia-num {
+        flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+        background: #1e3a5f; color: #fff;
+        font-size: .75rem; font-weight: 800;
+        display: flex; align-items: center; justify-content: center;
+        margin-top: 1px;
+      }
+      .crv-guia-passo-txt { font-size: .83rem; color: #334155; line-height: 1.5; }
+      .crv-guia-passo-txt strong { color: #0f172a; }
+      .crv-guia-passo-ico { font-size: 1.1rem; margin-left: 4px; }
+      .crv-guia-rodape {
+        padding: 14px 20px 18px;
+        display: flex; flex-direction: column; gap: 8px;
+      }
+      .crv-guia-btn-ok {
+        width: 100%; padding: 12px; border: none; border-radius: 10px;
+        background: #1e3a5f; color: #fff;
+        font-size: .88rem; font-weight: 700; cursor: pointer;
+        font-family: inherit;
+      }
+      .crv-guia-btn-ok:hover { background: #16325a; }
+      .crv-guia-btn-skip {
+        width: 100%; padding: 9px; border: 1px solid #e2e8f0;
+        border-radius: 10px; background: #f8fafc; color: #64748b;
+        font-size: .8rem; font-weight: 600; cursor: pointer;
+        font-family: inherit;
+      }
+      .crv-guia-btn-skip:hover { background: #f1f5f9; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  const div = document.createElement('div');
+  div.id = 'crv-guia-notif';
+  div.innerHTML = `
+    <div class="crv-guia-box">
+      <div class="crv-guia-head">
+        <div class="crv-guia-head-ico">🔔</div>
+        <div class="crv-guia-head-txt">
+          <h3>Ative as notificações no iPhone</h3>
+          <p>Receba avisos de cadastros e assinaturas mesmo com o app fechado</p>
+        </div>
+      </div>
+      <div class="crv-guia-body">
+        <div class="crv-guia-passo">
+          <div class="crv-guia-num">1</div>
+          <div class="crv-guia-passo-txt">
+            Toque no botão <strong>Compartilhar</strong>
+            <span class="crv-guia-passo-ico">⬜↑</span>
+            na barra inferior do Safari
+          </div>
+        </div>
+        <div class="crv-guia-passo">
+          <div class="crv-guia-num">2</div>
+          <div class="crv-guia-passo-txt">
+            Role a lista e toque em
+            <strong>"Adicionar à Tela de Início"</strong>
+            <span class="crv-guia-passo-ico">➕</span>
+          </div>
+        </div>
+        <div class="crv-guia-passo">
+          <div class="crv-guia-num">3</div>
+          <div class="crv-guia-passo-txt">
+            Toque em <strong>"Adicionar"</strong> no canto superior direito
+          </div>
+        </div>
+        <div class="crv-guia-passo">
+          <div class="crv-guia-num">4</div>
+          <div class="crv-guia-passo-txt">
+            Abra o CRV pelo <strong>ícone na tela inicial</strong>
+            <span class="crv-guia-passo-ico">📱</span>
+            — não pelo Safari
+          </div>
+        </div>
+        <div class="crv-guia-passo">
+          <div class="crv-guia-num">5</div>
+          <div class="crv-guia-passo-txt">
+            Faça login e toque em <strong>"Permitir"</strong> quando solicitado
+          </div>
+        </div>
+      </div>
+      <div class="crv-guia-rodape">
+        <button class="crv-guia-btn-ok" onclick="_guiaNotifFechar(false)">Entendi, vou configurar agora</button>
+        <button class="crv-guia-btn-skip" onclick="_guiaNotifFechar(true)">Não ver mais esta mensagem</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div);
+}
+
+window._guiaNotifFechar = function(naoVerMais) {
+  if (naoVerMais) localStorage.setItem('crv_guia_notif_ok', '1');
+  const el = document.getElementById('crv-guia-notif');
+  if (el) el.remove();
+};
+
+// ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
 _injetarDOM();
@@ -790,6 +933,9 @@ onAuthStateChanged(_auth, user => {
       _iniciarListenerCadastros(emailUnidade);
       _registrarOneSignal(emailUnidade);
     }
+
+    // Guia de configuração de notificações (iPhone)
+    setTimeout(_mostrarGuiaNotificacoes, 1500);
 
   } else {
     _pararListeners();
