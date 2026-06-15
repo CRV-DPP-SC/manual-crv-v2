@@ -6,6 +6,14 @@
   <title>Gerador de PAD — CPEN/DPP</title>
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/pad.css">
+  <script>if (window.self !== window.top) document.documentElement.classList.add('no-header');</script>
+  <style>
+    .no-header header.topo { display: none !important; }
+    .no-header .layout { height: 100vh; }
+    .no-header #tela-inicial  { min-height: 100vh; }
+    .no-header #tela-cadastro { min-height: 100vh; }
+    .no-header #tela-relacao  { min-height: 100vh; }
+  </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
   <style>
@@ -222,6 +230,11 @@
     }
     .pad-rel-btn-del:hover { background: #fee2e2; }
     .pad-rel-info { font-size: .73rem; color: #a8a29e; padding: 8px 28px; }
+
+    /* Status badges */
+    .pad-status-badge { font-size: .68rem; font-weight: 800; padding: 3px 9px; border-radius: 12px; white-space: nowrap; }
+    .pad-status-ok   { background: #dcfce7; color: #166534; }
+    .pad-status-pend { background: #fef3c7; color: #92400e; }
   </style>
 </head>
 <body>
@@ -305,8 +318,8 @@
       </div>
     </div>
 
-    <button class="pad-cad-continuar" onclick="_irParaFormulario()">
-      Continuar para o Formulário →
+    <button class="pad-cad-continuar" onclick="_cadastrarEIrParaFormulario()">
+      Cadastrar PAD e seguir para o formulário
     </button>
   </div>
 </div>
@@ -406,6 +419,7 @@
    NAVEGAÇÃO ENTRE TELAS
 ══════════════════════════════════════════════ */
 var _telaAtual = 'inicial';
+window._padIdAtual = null;
 
 function _mostrarTela(id) {
   ['tela-inicial','tela-cadastro','tela-relacao'].forEach(function(t) {
@@ -435,6 +449,7 @@ window._irParaInicial = function() { _mostrarTela('inicial'); };
 
 window._irParaCadastro = function() {
   /* Limpa estado para um novo PAD */
+  window._padIdAtual = null;
   Estado.limpar && Estado.limpar();
   /* Sincroniza campos de intake com estado atual */
   var s = Estado.get();
@@ -456,7 +471,13 @@ window._irParaRelacao = function() {
 };
 
 window._irParaFormulario = function() {
-  /* Sincroniza formulário com estado antes de mostrar */
+  FormularioCtrl.sincronizar();
+  atualizarPreview();
+  _mostrarTela('formulario');
+};
+
+window._cadastrarEIrParaFormulario = function() {
+  window._padIdAtual = cadastrarPadNoHistorico();
   FormularioCtrl.sincronizar();
   atualizarPreview();
   _mostrarTela('formulario');
@@ -564,6 +585,7 @@ function _relRenderizar(filtro) {
 
   listaEl.innerHTML = '<table class="pad-rel-tabela">'
     + '<thead><tr>'
+    + '<th>Status</th>'
     + '<th>Nº PAD</th>'
     + '<th>Nome do Incidentado</th>'
     + '<th>IPEN</th>'
@@ -575,7 +597,12 @@ function _relRenderizar(filtro) {
     + lista.map(function(it) {
         var idxFull = listaFull.indexOf(it);
         var artLabel = _LABEL_ARTIGO[it.artigo] || it.artigo || '—';
+        var status = it.status || 'em_andamento';
+        var statusHtml = status === 'concluido'
+          ? '<span class="pad-status-badge pad-status-ok">✅ Concluído</span>'
+          : '<span class="pad-status-badge pad-status-pend">⏳ Em andamento</span>';
         return '<tr>'
+          + '<td>' + statusHtml + '</td>'
           + '<td>' + _esc(it.numPad || '—') + '</td>'
           + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
           + '<td>' + _esc(it.ipen || '—') + '</td>'
@@ -595,10 +622,10 @@ window._relAbrir = function(idx) {
   var lista = _histCarregar();
   var item = lista[idx];
   if (!item || !item.estado) { _toast('Dados indisponíveis.'); return; }
+  window._padIdAtual = item.padId || null;
   Estado.carregar(item.estado);
   FormularioCtrl.sincronizar();
 
-  /* Sincroniza campos de intake */
   var s = Estado.get();
   var inpNum  = document.getElementById('intake-num-pad');
   var inpData = document.getElementById('intake-data-inst');
@@ -631,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var unPai = window.parent && window.parent._padUnidadeAtual;
     if (unPai) {
       Estado.setMany({
-        unidade: { email: unPai.email || unPai.em || '', nome: unPai.nome || unPai.n || '', cidade: unPai.cidade || unPai.c || '', codigo: '' },
+        unidade: { email: unPai.email || unPai.em || '', nome: unPai.nome || unPai.n || '', cidade: unPai.cidade || unPai.c || '', end: unPai.end || '', codigo: '' },
         diretor: { nome: unPai.diretor || unPai.dir || '', cargo: 'Diretor(a)' },
       });
     } else {
@@ -642,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
           var un = window.parent.UNIDADES.find(function(u) { return u.email === emailOri; });
           if (un) {
             Estado.setMany({
-              unidade: { email: un.email, nome: un.nome, cidade: un.cidade, codigo: '' },
+              unidade: { email: un.email, nome: un.nome, cidade: un.cidade, end: un.end || '', codigo: '' },
               diretor: { nome: un.diretor || '', cargo: 'Diretor(a)' },
             });
           }
@@ -666,9 +693,12 @@ document.addEventListener('DOMContentLoaded', function() {
   /* Inicializa formulário (invisível ainda) */
   FormularioCtrl.inicializar();
 
-  /* Conecta preview ao estado */
+  /* Conecta preview ao estado e mantém histórico atualizado */
   Estado.onChange(function() {
-    if (_telaAtual === 'formulario') atualizarPreview();
+    if (_telaAtual === 'formulario') {
+      atualizarPreview();
+      if (window._padIdAtual) atualizarPadHistorico(window._padIdAtual, Estado.get());
+    }
   });
 
   /* Inicializa upload da tela de cadastro */

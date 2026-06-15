@@ -31,10 +31,9 @@ function getCSS() {
     '.pad-bcell{padding:0 1.5cm;border:none;vertical-align:top}',
     '.pad-cab{display:flex;align-items:center;gap:10px;padding-bottom:6px}',
     '.pad-cab img{height:42pt;flex-shrink:0}',
-    '.pad-cab-txt{flex:1;text-align:center;line-height:1.3}',
+    '.pad-cab-txt{flex:1;text-align:left;line-height:1.3}',
     '.c1,.c2,.c3{font-size:10pt;font-weight:normal;text-transform:uppercase;display:block;color:#111}',
     '.c4{font-size:10pt;font-weight:bold;text-transform:uppercase;display:block;margin-top:1px;color:#111}',
-    '.pad-cab-linha{border-bottom:2px solid #111;margin:4px 0 0}',
     '.pad-corpo{display:block;padding:0}',
     '.lb{display:block;height:11pt;line-height:11pt}',
     '.pad-p{text-align:justify;text-indent:1.25cm;font-size:11pt;line-height:1.15;margin:0 0 6pt;font-family:Arial,sans-serif}',
@@ -66,10 +65,10 @@ function copiar() {
   try {
     document.execCommand('copy');
     _toast('Copiado com formatação!');
-    salvarNoHistorico();
+    salvarNoHistorico(window._padIdAtual);
   } catch(e) {
     navigator.clipboard.writeText(el.innerText)
-      .then(function() { _toast('Texto copiado!'); salvarNoHistorico(); })
+      .then(function() { _toast('Texto copiado!'); salvarNoHistorico(window._padIdAtual); })
       .catch(function() { _toast('Erro ao copiar.'); });
   }
   window.getSelection().removeAllRanges();
@@ -81,7 +80,7 @@ function baixarDoc() {
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
   var s = Estado.get();
   _gerarDoc(el.innerHTML, _nomeArquivo(s, _DOC_ATUAL) + '.doc');
-  salvarNoHistorico();
+  salvarNoHistorico(window._padIdAtual);
 }
 
 /* ── Baixar .doc — todos os documentos ── */
@@ -89,7 +88,7 @@ function baixarTodosDoc() {
   var s    = Estado.get();
   var html = montarTodosDocumentos(s);
   _gerarDoc(html, _nomeArquivo(s, 'PAD-completo') + '.doc');
-  salvarNoHistorico();
+  salvarNoHistorico(window._padIdAtual);
 }
 
 function _gerarDoc(html, nome) {
@@ -110,14 +109,14 @@ function baixarPDF() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
   _abrirImpressao(el.innerHTML);
-  salvarNoHistorico();
+  salvarNoHistorico(window._padIdAtual);
 }
 
 function baixarTodosPDF() {
   var s    = Estado.get();
   var html = montarTodosDocumentos(s);
   _abrirImpressao(html);
-  salvarNoHistorico();
+  salvarNoHistorico(window._padIdAtual);
 }
 
 function _abrirImpressao(html) {

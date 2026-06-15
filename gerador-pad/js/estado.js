@@ -34,6 +34,7 @@ var Estado = (function() {
         nome:   '',
         email:  '',
         cidade: '',
+        end:    '',
       },
 
       // ── Infração

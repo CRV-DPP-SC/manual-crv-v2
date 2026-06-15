@@ -35,7 +35,6 @@ function _cabecalho(s) {
         + '<span class="c4">' + _esc(un.nome || 'UNIDADE PRISIONAL') + '</span>'
       + '</div>'
     + '</div>'
-    + '<div class="pad-cab-linha"></div>'
     + '</td></tr></thead>';
 }
 
@@ -43,12 +42,11 @@ function _cabecalho(s) {
 function _rodape(s) {
   var un = s.unidade || {};
   return '<tfoot><tr><td class="pad-fcell">'
-    + '<div class="pad-cab-linha"></div>'
     + '<div class="pad-rodape">'
       + '<div class="rod-info">'
         + '<span class="rod-dpp">POLÍCIA PENAL DE SANTA CATARINA</span>'
         + '<span class="rod-un">' + _esc(un.nome || '') + '</span>'
-        + (un.cidade ? '<span class="rod-cont">' + _esc(un.cidade) + '</span>' : '')
+        + (un.end ? '<span class="rod-cont">' + _esc(un.end) + '</span>' : (un.cidade ? '<span class="rod-cont">' + _esc(un.cidade) + '</span>' : ''))
       + '</div>'
     + '</div>'
     + '</td></tr></tfoot>';
