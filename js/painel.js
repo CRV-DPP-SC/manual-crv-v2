@@ -635,12 +635,18 @@ function trocarUnidade(valor) {
 
 function _atualizarTabAcessos() {
   const tabAcessos = document.getElementById('tab-acessos');
-  if (!tabAcessos) return;
-  // DIR/CPEN sempre veem Acessos; CRV só em modo leitura (unidade selecionada)
-  const ver = ['dir', 'cpen'].includes(perfilAtual) ||
-              (perfilAtual === 'crv' && modoLeitura());
-  tabAcessos.style.display = ver ? '' : 'none';
+  if (tabAcessos) {
+    // DIR/CPEN sempre veem Acessos; CRV só em modo leitura (unidade selecionada)
+    const verAcessos = ['dir', 'cpen'].includes(perfilAtual) ||
+                (perfilAtual === 'crv' && modoLeitura());
+    tabAcessos.style.display = verAcessos ? '' : 'none';
+  }
 
+  const tabFerr = document.getElementById('tab-ferramentas');
+  if (tabFerr) {
+    // DIR e CPEN veem Ferramentas
+    tabFerr.style.display = ['dir', 'cpen'].includes(perfilAtual) ? '' : 'none';
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -2234,7 +2240,13 @@ window.pAccToggleManual = function(header) {
 
 // ── ABA FERRAMENTAS ──
 function carregarAbaFerramentas(el) {
-  const unNome = escopoAtual?.n || escopoAtual?.nome || '';
+  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+  const cardPAD = perfilAtual === 'cpen' ? `
+      <button onclick="_abrirPADdoPainel()" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:2px solid #f97316;border-radius:10px;background:#fff8f3;cursor:pointer;text-align:left;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='#ffedd5'" onmouseout="this.style.background='#fff8f3'">
+        <span style="font-size:1.4rem;">📋</span>
+        <span style="font-size:.9rem;font-weight:700;color:#9a3412;">Gerador de PAD</span>
+        <span style="font-size:.78rem;color:#c2410c;">Procedimento Administrativo Disciplinar</span>
+      </button>` : '';
   el.innerHTML = `
   <div style="padding:16px 24px 32px;">
     <div style="margin-bottom:20px;">
@@ -2251,7 +2263,7 @@ function carregarAbaFerramentas(el) {
         <span style="font-size:1.4rem;">📄</span>
         <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Guia — Gerador de Ofícios</span>
         <span style="font-size:.78rem;color:var(--txt-3);">Instruções de uso do gerador</span>
-      </button>
+      </button>${cardPAD}
       <a href="https://ppsc.com.br" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);text-decoration:none;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
         <span style="font-size:1.4rem;">🌐</span>
         <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Portal de Transferências ↗</span>
@@ -2270,6 +2282,14 @@ function carregarAbaFerramentas(el) {
     </div>
   </div>`;
 }
+
+/* Abre o Gerador de PAD a partir do Painel, passando dados da unidade para o pai */
+window._abrirPADdoPainel = function() {
+  if (window.parent && window.parent._padSetUnidade) {
+    window.parent._padSetUnidade(escopoAtual?.unidade || null);
+  }
+  window.parent.abrirGeradorPAD && window.parent.abrirGeradorPAD();
+};
 
 // ── INIT ──
 // (dados já carregados via dadosPromise antes do onAuthStateChanged)

@@ -608,6 +608,16 @@ window.abrirGuiaOficios = function () {
 };
 window.fecharGuiaOficios = function () { document.getElementById('modal-guia')?.classList.remove('aberto'); };
 
+/* Dados de unidade passados pelo Painel ao abrir o PAD */
+window._padUnidadeAtual = null;
+window._padSetUnidade = function(unidade) {
+  window._padUnidadeAtual = unidade || null;
+};
+
+window.abrirGeradorPAD = function () {
+  _abrirFerramenta('gerador-pad/index.html', '📋 Gerador de PAD');
+};
+
 window.abrirPainelUnidade = function () {
   const f = document.getElementById('painel-iframe');
   if (f && !f.src.includes('painel')) f.src = 'painel.html';
