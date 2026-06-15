@@ -11,8 +11,7 @@ var DOCS = [
   { cod: 'oitivas_test',     label: '3. Oitiva das Testemunhas' },
   { cod: 'manifestacao',     label: '4. Manifestação do Conselho' },
   { cod: 'decisao',          label: '5. Decisão da Direção' },
-  { cod: 'oficio_vep',       label: '6. Ofício à VEP' },
-  { cod: 'oficio_juiz',      label: '7. Ofício ao Juiz' },
+  { cod: 'oficio_juiz',      label: '6. Ofício ao Juiz' },
 ];
 
 function selecionarDoc(cod) {
@@ -81,8 +80,6 @@ function montarPreview(s) {
       return montarDocumento(s, tplManifestacao);
     case 'decisao':
       return montarDocumento(s, tplDecisao);
-    case 'oficio_vep':
-      return montarDocumento(s, tplOficioVep);
     case 'oficio_juiz':
       return montarDocumento(s, tplOficioJuiz);
     default:
@@ -115,7 +112,6 @@ function montarTodosDocumentos(s) {
   });
   partes.push(montarDocumento(s, tplManifestacao));
   partes.push(montarDocumento(s, tplDecisao));
-  partes.push(montarDocumento(s, tplOficioVep));
   partes.push(montarDocumento(s, tplOficioJuiz));
   return partes.map(function(h, i) {
     return i > 0 ? '<div style="page-break-before:always;">' + h + '</div>' : h;

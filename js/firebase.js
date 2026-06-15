@@ -622,7 +622,7 @@ window.abrirGeradorPAD = function () {
       .replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
       .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
     if (emailBase !== e && window.UNIDADES) {
-      window._padUnidadeAtual = window.UNIDADES.find(function(u) { return u.em === emailBase; }) || null;
+      window._padUnidadeAtual = window.UNIDADES.find(function(u) { return u.email === emailBase; }) || null;
     }
   }
   _abrirFerramenta('gerador-pad/index.html', '📋 Gerador de PAD');

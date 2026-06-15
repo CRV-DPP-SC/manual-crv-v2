@@ -70,6 +70,19 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
 /* ── Formulário ── */
 #form-area { flex: 1; padding: 14px 14px 24px; }
 
+/* ── Separador de grupo de documentos ── */
+.form-grupo-sep {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .7rem; font-weight: 800; color: #6b3a1f;
+  text-transform: uppercase; letter-spacing: .06em;
+  margin: 18px 0 8px;
+  padding: 6px 10px;
+  background: #fff8f3;
+  border-left: 3px solid #f97316;
+  border-radius: 0 6px 6px 0;
+}
+.form-grupo-sep:first-child { margin-top: 0; }
+
 /* ── Seções colapsáveis ── */
 .form-secao { border: 1px solid var(--borda); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
 .sec-head {

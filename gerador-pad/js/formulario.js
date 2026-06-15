@@ -11,17 +11,22 @@ var FormularioCtrl = (function() {
     if (!f) return;
 
     f.innerHTML = ''
-      + _secUpload()
+      + _grupoCab('📋 Portaria de Instauração')
       + _secPad(s)
       + _secIncidentado(s)
       + _secInfracao(s)
-      + _secDefesa(s)
-      + _secTestemunhas(s)
       + _secConselho(s)
-      + _secManifestacao(s)
-      + _secDecisao(s)
-      + _secOficiosNums(s)
       + _secDiretor(s)
+      + _grupoCab('⚖️ Oitiva do Incidentado')
+      + _secDefesa(s)
+      + _grupoCab('🧑‍💼 Oitiva das Testemunhas')
+      + _secTestemunhas(s)
+      + _grupoCab('📝 Manifestação do Conselho')
+      + _secManifestacao(s)
+      + _grupoCab('⚖️ Decisão da Direção')
+      + _secDecisao(s)
+      + _grupoCab('📨 Ofício ao Juiz')
+      + _secOficioJuiz(s)
       + '<div class="form-rodape">'
         + '<button class="btn-limpar" onclick="FormularioCtrl.limpar()">🗑 Novo PAD</button>'
       + '</div>';
@@ -82,11 +87,7 @@ var FormularioCtrl = (function() {
             _campo('Naturalidade', 'text', 'inp-inc-nat', i.naturalidade, 'ex: Florianópolis - SC')
           )
         + _campo('Nome da mãe', 'text', 'inp-inc-mae', i.mae)
-        + _row2(
-            _campo('Regime', 'text', 'inp-inc-regime', i.regime, 'ex: Fechado'),
-            _campo('Comportamento', 'text', 'inp-inc-comp', i.comportamento, 'ex: Bom')
-          )
-        + _campo('Cela / Alojamento', 'text', 'inp-inc-cela', i.cela, 'ex: Ala M, Gal I, Bloco D, Cela 102')
+        + _campo('Regime', 'text', 'inp-inc-regime', i.regime, 'ex: Fechado')
       + '</div>'
     + '</div>';
   }
@@ -316,18 +317,15 @@ var FormularioCtrl = (function() {
     + '</div>';
   }
 
-  /* ── Seção: Números dos Ofícios ── */
-  function _secOficiosNums(s) {
+  /* ── Seção: Ofício ao Juiz ── */
+  function _secOficioJuiz(s) {
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
-        + '<span class="sec-titulo">📨 Números dos Ofícios</span>'
+        + '<span class="sec-titulo">📨 Nº do Ofício ao Juiz</span>'
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
-        + _row2(
-            _campo('Nº Ofício à VEP', 'text', 'inp-num-vep', s.numOficioEnc, 'ex: 001/2026/PE01/CEPEN'),
-            _campo('Nº Ofício ao Juiz', 'text', 'inp-num-juiz', s.numOficioJuiz, 'ex: 002/2026/PE01/CEPEN')
-          )
+        + _campo('Nº Ofício ao Juiz', 'text', 'inp-num-juiz', s.numOficioJuiz, 'ex: 001/2026/PR18/CEPEN')
       + '</div>'
     + '</div>';
   }
@@ -347,6 +345,11 @@ var FormularioCtrl = (function() {
         + '<button class="btn-acao btn-sec" onclick="salvarDiretor()" style="font-size:.76rem;padding:6px 13px;margin-top:4px;">💾 Salvar</button>'
       + '</div>'
     + '</div>';
+  }
+
+  /* ── Separador de grupo de documentos ── */
+  function _grupoCab(lbl) {
+    return '<div class="form-grupo-sep">' + lbl + '</div>';
   }
 
   /* ── Helpers de markup ── */
@@ -378,8 +381,6 @@ var FormularioCtrl = (function() {
     _bind('inp-inc-nat',     function(v) { Estado.setNested('incidentado.naturalidade', v); });
     _bind('inp-inc-mae',     function(v) { Estado.setNested('incidentado.mae', v); });
     _bind('inp-inc-regime',  function(v) { Estado.setNested('incidentado.regime', v); });
-    _bind('inp-inc-comp',    function(v) { Estado.setNested('incidentado.comportamento', v); });
-    _bind('inp-inc-cela',    function(v) { Estado.setNested('incidentado.cela', v); });
 
     _bind('sel-inf-artigo',  function(v) { Estado.setNested('infracao.artigo', v); });
     _bind('inp-inf-data',    function(v) { Estado.setNested('infracao.data', v); });
@@ -393,7 +394,6 @@ var FormularioCtrl = (function() {
     _bind('inp-mani-fund',   function(v) { Estado.setNested('manifestacao.fundamento', v); });
     _bind('inp-dec-fund',    function(v) { Estado.setNested('decisao.fundamento', v); });
 
-    _bind('inp-num-vep',     function(v) { Estado.set('numOficioEnc', v); });
     _bind('inp-num-juiz',    function(v) { Estado.set('numOficioJuiz', v); });
 
     _bind('inp-dir-nome',    function(v) { Estado.setNested('diretor.nome', v); });
@@ -428,8 +428,6 @@ var FormularioCtrl = (function() {
 
     // Remição valor
     _bind('inp-remicao-val', function(v) { Estado.setNested('decisao.sancoes.perdaRemicao.valor', v); });
-
-    _initUpload();
   }
 
   function _bind(id, fn) {
