@@ -86,28 +86,10 @@ function _registrarOneSignal(emailUnidade) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal) {
     try {
-      await OneSignal.init({
-        appId: ONESIGNAL_APP_ID,
-        notifyButton: { enable: false },
-        allowLocalhostAsSecureOrigin: true,
-        serviceWorkerPath: 'OneSignalSDKWorker.js',
-        serviceWorkerParam: { scope: '/manual-crv-v2/' },
-        promptOptions: {
-          slidedown: {
-            prompts: [{
-              type: 'push',
-              autoPrompt: true,
-              text: {
-                actionMessage:  'DESEJA RECEBER NOTIFICAÇÕES DE CADASTRO DE USUÁRIOS E ASSINATURAS PENDENTES?',
-                acceptButton:   'SIM',
-                cancelButton:   'NÃO',
-              },
-            }],
-          },
-        },
-      });
-      await OneSignal.Slidedown.promptPush();
+      // Marca a unidade para filtrar envios
       await OneSignal.User.addTag('emailUnidade', emailUnidade);
+      // Solicita permissão de push
+      await OneSignal.Slidedown.promptPush();
     } catch (e) {
       console.warn('[OneSignal]', e.message);
     }
