@@ -90,6 +90,8 @@ function _registrarOneSignal(emailUnidade) {
         appId: ONESIGNAL_APP_ID,
         notifyButton: { enable: false },
         allowLocalhostAsSecureOrigin: true,
+        serviceWorkerPath: 'OneSignalSDKWorker.js',
+        serviceWorkerParam: { scope: '/manual-crv-v2/' },
         promptOptions: {
           slidedown: {
             prompts: [{
