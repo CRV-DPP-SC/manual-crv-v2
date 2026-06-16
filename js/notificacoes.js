@@ -86,10 +86,21 @@ function _registrarOneSignal(emailUnidade) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal) {
     try {
-      // Marca a unidade para filtrar envios
-      await OneSignal.User.addTag('emailUnidade', emailUnidade);
-      // Solicita permissão após 4s para não competir com o carregamento
-      setTimeout(() => OneSignal.Slidedown.promptPush(), 4000);
+      // Solicita permissão e registra assinatura
+      setTimeout(async () => {
+        try {
+          // Se ainda não tem permissão, pede ao sistema
+          if (!OneSignal.Notifications.permission) {
+            await OneSignal.Notifications.requestPermission();
+          }
+          // Garante opt-in na assinatura push
+          await OneSignal.User.PushSubscription.optIn();
+          // Marca a unidade para filtrar envios
+          await OneSignal.User.addTag('emailUnidade', emailUnidade);
+        } catch (e) {
+          console.warn('[OneSignal registro]', e.message);
+        }
+      }, 3000);
     } catch (e) {
       console.warn('[OneSignal]', e.message);
     }
