@@ -88,8 +88,8 @@ function _registrarOneSignal(emailUnidade) {
     try {
       // Marca a unidade para filtrar envios
       await OneSignal.User.addTag('emailUnidade', emailUnidade);
-      // Solicita permissão de push
-      await OneSignal.Slidedown.promptPush();
+      // Solicita permissão após 4s para não competir com o carregamento
+      setTimeout(() => OneSignal.Slidedown.promptPush(), 4000);
     } catch (e) {
       console.warn('[OneSignal]', e.message);
     }
