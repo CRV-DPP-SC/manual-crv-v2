@@ -47,7 +47,9 @@
       grid-template-columns: 1fr 1fr;
       gap: 20px;
     }
-    @media(max-width:520px){ .pad-ini-grid { grid-template-columns: 1fr; } }
+    .pad-ini-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    @media(max-width:700px){ .pad-ini-grid-3 { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:520px){ .pad-ini-grid, .pad-ini-grid-3 { grid-template-columns: 1fr; } }
     .pad-ini-card {
       display: flex; flex-direction: column; align-items: center;
       gap: 12px; padding: 32px 24px;
@@ -63,6 +65,9 @@
     }
     .pad-ini-card.card-cadastrar { border-color: #f97316; }
     .pad-ini-card.card-cadastrar:hover { border-color: #ea580c; box-shadow: 0 6px 20px rgba(249,115,22,.2); }
+    .pad-ini-card.card-advogado { border-color: #2563eb; }
+    .pad-ini-card.card-advogado:hover { border-color: #1d4ed8; box-shadow: 0 6px 20px rgba(37,99,235,.18); }
+    .pad-ini-badge-adv { background: #2563eb; }
     .pad-ini-icon { font-size: 2.4rem; }
     .pad-ini-nome { font-size: 1rem; font-weight: 800; color: #1c1917; text-align: center; }
     .pad-ini-sub  { font-size: .77rem; color: #78716c; text-align: center; line-height: 1.5; }
@@ -272,7 +277,7 @@
       <h2>📋 Gerador de PAD</h2>
       <p>Procedimento Administrativo Disciplinar</p>
     </div>
-    <div class="pad-ini-grid">
+    <div class="pad-ini-grid pad-ini-grid-3">
       <button class="pad-ini-card card-cadastrar" onclick="_irParaCadastro()">
         <span class="pad-ini-icon">📝</span>
         <span class="pad-ini-nome">Cadastrar PAD</span>
@@ -283,6 +288,12 @@
         <span class="pad-ini-icon">📋</span>
         <span class="pad-ini-nome">Relação de PADs</span>
         <span class="pad-ini-sub">Consultar e retomar PADs já cadastrados</span>
+      </button>
+      <button class="pad-ini-card card-advogado" onclick="_irParaAdvogados()">
+        <span class="pad-ini-icon">👨‍⚖️</span>
+        <span class="pad-ini-nome">Advogados</span>
+        <span class="pad-ini-sub">Cadastrar advogados e vincular ao PAD</span>
+        <span class="pad-ini-badge pad-ini-badge-adv">Portal</span>
       </button>
     </div>
   </div>
@@ -360,6 +371,7 @@
       <button class="btn-acao btn-doc"   onclick="baixarDoc()">Baixar em .doc</button>
       <button class="btn-acao btn-pdf"   onclick="baixarPDF()">Baixar em PDF</button>
       <button class="btn-acao btn-todos" onclick="baixarTodosDoc()">📦 Todos (.doc)</button>
+      <button class="btn-acao btn-portal" onclick="abrirModalSalvarPortal()">☁️ Salvar no Portal</button>
       <button class="btn-acao btn-sec"   onclick="_irParaInicial()">↩ Voltar</button>
       <span id="previewAviso" class="preview-aviso"></span>
     </div>
@@ -403,6 +415,128 @@
   </div>
 </div>
 
+<!-- ════════════ TELA ADVOGADOS ════════════ -->
+<div id="tela-advogados" class="pad-tela">
+  <div class="pad-adv-wrap">
+    <div class="pad-adv-header">
+      <button class="pad-cad-back" onclick="_irParaInicial()">← Voltar</button>
+      <span class="pad-cad-titulo">👨‍⚖️ Advogados Cadastrados</span>
+      <button class="pad-rel-btn-cad" onclick="_abrirFormAdvogado()">+ Cadastrar Advogado</button>
+    </div>
+
+    <!-- Formulário de cadastro (oculto por padrão) -->
+    <div id="form-adv" style="display:none;" class="pad-adv-form">
+      <h3 class="pad-adv-form-titulo">Novo Advogado</h3>
+      <div class="pad-cad-row">
+        <div class="pad-cad-campo">
+          <label>Nome completo</label>
+          <input type="text" id="adv-nome" placeholder="Dr(a). Nome Sobrenome">
+        </div>
+        <div class="pad-cad-campo">
+          <label>OAB (nº / UF)</label>
+          <input type="text" id="adv-oab" placeholder="Ex.: 12345/SC">
+        </div>
+      </div>
+      <div class="pad-cad-row">
+        <div class="pad-cad-campo">
+          <label>E-mail</label>
+          <input type="email" id="adv-email" placeholder="advogado@escritorio.com.br">
+        </div>
+        <div class="pad-cad-campo">
+          <label>CPF (opcional)</label>
+          <input type="text" id="adv-cpf" placeholder="000.000.000-00" maxlength="14"
+            oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2')">
+        </div>
+      </div>
+      <div class="pad-cad-status" id="adv-status"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="pad-cad-continuar" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);"
+          onclick="_salvarAdvogado()">💾 Cadastrar e Enviar Acesso</button>
+        <button class="pad-rel-btn-vol" onclick="_fecharFormAdvogado()">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Lista de advogados -->
+    <div id="adv-lista-wrap" class="pad-rel-corpo">
+      <div class="pad-rel-vazio" id="adv-lista-vazio">Carregando…</div>
+      <table class="pad-rel-tabela" id="adv-tabela" style="display:none;">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>OAB</th>
+            <th>E-mail</th>
+            <th>PADs Vinculados</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="adv-tabela-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL SALVAR NO PORTAL ════════════ -->
+<div class="modal-bg" id="modalPortalBg" style="display:none;align-items:center;justify-content:center;">
+  <div class="modal" style="max-width:480px;width:95%;">
+    <div class="modal-head">
+      <h3>☁️ Salvar no Portal do Advogado</h3>
+      <button onclick="_fecharModalPortal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <p style="font-size:.85rem;color:#57534e;margin-bottom:16px;">
+        Selecione o advogado que poderá acessar este PAD no portal. Um link de acesso será enviado ao e-mail cadastrado.
+      </p>
+      <div class="pad-cad-campo" style="margin-bottom:16px;">
+        <label>Advogado vinculado</label>
+        <select id="portal-adv-select" style="width:100%;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.9rem;font-family:inherit;color:#1c1917;">
+          <option value="">Carregando advogados…</option>
+        </select>
+      </div>
+      <div class="pad-cad-status" id="portal-status"></div>
+    </div>
+    <div class="modal-foot" style="padding:16px 20px;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="_fecharModalPortal()" class="pad-rel-btn-vol">Cancelar</button>
+      <button onclick="_confirmarSalvarPortal()"
+        style="padding:8px 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
+        ☁️ Salvar e Disponibilizar
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Tela Advogados */
+  #tela-advogados {
+    min-height: calc(100vh - 60px);
+    background: var(--bg, #f8f9fa);
+    padding: 0;
+  }
+  .pad-adv-wrap { width: 100%; }
+  .pad-adv-header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 20px 28px; background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .pad-adv-header .pad-cad-titulo { flex: 1; }
+  .pad-adv-form {
+    margin: 20px 28px; background: #fff;
+    border: 1.5px solid #bfdbfe; border-radius: 12px;
+    padding: 20px;
+  }
+  .pad-adv-form-titulo {
+    font-size: .95rem; font-weight: 800; color: #1d4ed8;
+    margin-bottom: 16px;
+  }
+  /* Modal overlay */
+  #modalPortalBg { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000; }
+  /* Botão portal */
+  .btn-portal {
+    background: linear-gradient(135deg,#2563eb,#1d4ed8);
+    color: #fff; border: none;
+  }
+  .btn-portal:hover { opacity: .88; }
+</style>
+
 <!-- ════════════ SCRIPTS ════════════ -->
 <script src="js/dados.js"></script>
 <script src="js/utils.js"></script>
@@ -423,7 +557,7 @@
 var _telaAtual = 'inicial';
 
 function _mostrarTela(id) {
-  ['tela-inicial','tela-cadastro','tela-relacao'].forEach(function(t) {
+  ['tela-inicial','tela-cadastro','tela-relacao','tela-advogados'].forEach(function(t) {
     var el = document.getElementById(t);
     if (el) { el.style.display = 'none'; el.classList.remove('ativa'); }
   });
@@ -643,6 +777,163 @@ window._relExcluir = function(idx) {
 /* ══════════════════════════════════════════════
    INICIALIZAÇÃO
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   TELA ADVOGADOS
+══════════════════════════════════════════════ */
+window._irParaAdvogados = function() {
+  _mostrarTela('advogados');
+  _carregarListaAdvogados();
+};
+
+function _abrirFormAdvogado() {
+  document.getElementById('form-adv').style.display = '';
+  document.getElementById('adv-nome').focus();
+}
+function _fecharFormAdvogado() {
+  document.getElementById('form-adv').style.display = 'none';
+  ['adv-nome','adv-oab','adv-email','adv-cpf'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var st = document.getElementById('adv-status');
+  if (st) { st.className = 'pad-cad-status'; st.textContent = ''; }
+}
+
+function _carregarListaAdvogados() {
+  var vazio  = document.getElementById('adv-lista-vazio');
+  var tabela = document.getElementById('adv-tabela');
+  var tbody  = document.getElementById('adv-tabela-body');
+  if (!window.PadFirestore) {
+    if (vazio) vazio.textContent = 'Módulo Firebase não carregado ainda. Tente novamente.';
+    return;
+  }
+  if (vazio) vazio.textContent = 'Carregando…';
+  if (tabela) tabela.style.display = 'none';
+
+  window.PadFirestore.listarAdvogados().then(function(lista) {
+    if (!lista.length) {
+      if (vazio) vazio.textContent = 'Nenhum advogado cadastrado ainda.';
+      return;
+    }
+    if (vazio) vazio.style.display = 'none';
+    if (tabela) tabela.style.display = '';
+    if (tbody) {
+      tbody.innerHTML = lista.map(function(adv) {
+        var pads = (adv.padsVinculados || []).join(', ') || '—';
+        var status = adv.ativo
+          ? '<span style="color:#166534;font-weight:700;">✅ Ativo</span>'
+          : '<span style="color:#dc2626;">Inativo</span>';
+        return '<tr>'
+          + '<td class="nome">' + _esc(adv.nome  || '—') + '</td>'
+          + '<td>' + _esc(adv.oab   || '—') + '</td>'
+          + '<td>' + _esc(adv.email || '—') + '</td>'
+          + '<td style="font-size:.75rem;color:#92400e;">' + _esc(pads) + '</td>'
+          + '<td>' + status + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+  }).catch(function(e) {
+    if (vazio) { vazio.style.display = ''; vazio.textContent = 'Erro ao carregar: ' + e.message; }
+  });
+}
+
+window._salvarAdvogado = async function() {
+  var nome  = (document.getElementById('adv-nome')?.value  || '').trim();
+  var oab   = (document.getElementById('adv-oab')?.value   || '').trim();
+  var email = (document.getElementById('adv-email')?.value || '').trim();
+  var cpf   = (document.getElementById('adv-cpf')?.value   || '').trim();
+  var st    = document.getElementById('adv-status');
+
+  function _setStatus(tipo, msg) {
+    if (!st) return;
+    st.className = 'pad-cad-status ' + tipo;
+    st.textContent = msg;
+  }
+
+  if (!nome) return _setStatus('erro', 'Informe o nome do advogado.');
+  if (!oab)  return _setStatus('erro', 'Informe o número da OAB.');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return _setStatus('erro', 'Informe um e-mail válido.');
+
+  if (!window.PadFirestore) return _setStatus('erro', 'Firebase não carregado. Aguarde e tente novamente.');
+
+  _setStatus('info', 'Cadastrando…');
+
+  try {
+    await window.PadFirestore.cadastrarAdvogado({ nome, oab, email, cpf });
+    _setStatus('ok', '✓ Advogado cadastrado! Um e-mail de acesso foi enviado para ' + email);
+    _toast('Advogado cadastrado com sucesso!');
+    _fecharFormAdvogado();
+    _carregarListaAdvogados();
+  } catch(e) {
+    _setStatus('erro', 'Erro: ' + (e.message || 'tente novamente.'));
+  }
+};
+
+/* ── Modal Salvar no Portal ── */
+window.abrirModalSalvarPortal = function() {
+  var el = document.getElementById('pad-preview-wrap');
+  if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de salvar.'); return; }
+
+  var bg = document.getElementById('modalPortalBg');
+  if (bg) bg.style.display = 'flex';
+
+  var sel = document.getElementById('portal-adv-select');
+  if (sel) sel.innerHTML = '<option value="">Carregando advogados…</option>';
+
+  var st = document.getElementById('portal-status');
+  if (st) { st.className = 'pad-cad-status'; st.textContent = ''; }
+
+  if (!window.PadFirestore) return;
+  window.PadFirestore.listarAdvogados().then(function(lista) {
+    if (!sel) return;
+    if (!lista.length) {
+      sel.innerHTML = '<option value="">Nenhum advogado cadastrado</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Selecione o advogado…</option>'
+      + lista.map(function(adv) {
+          return '<option value="' + _esc(adv.oab) + '">'
+            + _esc(adv.nome) + ' — OAB ' + _esc(adv.oab) + '</option>';
+        }).join('');
+  });
+};
+
+window._fecharModalPortal = function() {
+  var bg = document.getElementById('modalPortalBg');
+  if (bg) bg.style.display = 'none';
+};
+
+window._confirmarSalvarPortal = async function() {
+  var sel    = document.getElementById('portal-adv-select');
+  var oab    = sel ? sel.value : '';
+  var st     = document.getElementById('portal-status');
+
+  function _setStatus(tipo, msg) {
+    if (!st) return;
+    st.className = 'pad-cad-status ' + tipo;
+    st.textContent = msg;
+  }
+
+  if (!oab) return _setStatus('erro', 'Selecione um advogado.');
+  if (!window.PadFirestore) return _setStatus('erro', 'Firebase não carregado. Aguarde.');
+
+  _setStatus('info', 'Salvando no portal…');
+
+  var el = document.getElementById('pad-preview-wrap');
+  var htmlDoc = el ? el.innerHTML : '';
+  var estado  = Estado.get();
+
+  try {
+    await window.PadFirestore.salvarPad(estado, htmlDoc, oab);
+    salvarNoHistorico(window._padIdAtual);
+    _setStatus('ok', '✓ PAD disponibilizado! O advogado já pode acessar no portal.');
+    _toast('PAD salvo no portal com sucesso!');
+    setTimeout(function() { window._fecharModalPortal(); }, 2200);
+  } catch(e) {
+    _setStatus('erro', 'Erro ao salvar: ' + (e.message || 'tente novamente.'));
+  }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
 
   /* Carrega dados persistidos */
@@ -701,6 +992,9 @@ document.addEventListener('DOMContentLoaded', function() {
   _mostrarTela('inicial');
 });
 </script>
+
+<!-- Firebase PAD (módulo ES) -->
+<script type="module" src="js/pad-firestore.js"></script>
 
 </body>
 </html>
