@@ -1103,12 +1103,33 @@ window._relExcluir = function(padId, fsId) {
       var nova = lista.filter(function(e) { return String(e.padId) !== String(padId); });
       try { localStorage.setItem('pad_historico', JSON.stringify(nova)); } catch(e) {}
 
-      /* Remove do Firestore */
-      if (fsId && window.PadFirestore) {
-        window.PadFirestore.excluirRelacao(fsId).catch(function() {});
+      /* Remove a linha do DOM imediatamente (sem re-buscar Firestore) */
+      var listaEl = document.getElementById('rel-lista');
+      var linhas = listaEl ? listaEl.querySelectorAll('tbody tr') : [];
+      linhas.forEach(function(tr) {
+        var btn = tr.querySelector('[onclick*="_relExcluir"]');
+        if (btn && btn.getAttribute('onclick').indexOf(JSON.stringify(String(padId))) !== -1) {
+          tr.remove();
+        }
+      });
+      /* Atualiza contador */
+      var infoEl = document.getElementById('rel-info');
+      if (infoEl) {
+        var restantes = listaEl ? listaEl.querySelectorAll('tbody tr').length : 0;
+        infoEl.textContent = restantes + ' PAD(s) registrado(s)';
+        if (restantes === 0 && listaEl) {
+          listaEl.innerHTML = '<div class="pad-rel-vazio">Nenhum PAD cadastrado ainda.<br>Clique em <strong>Cadastrar PAD</strong> para começar.</div>';
+        }
       }
 
-      _relRenderizar(_relBusca);
+      /* Remove do Firestore em background */
+      if (window.PadFirestore) {
+        var ids = [fsId, padId].filter(Boolean);
+        Promise.all(ids.map(function(id) {
+          return window.PadFirestore.excluirRelacao(id).catch(function() {});
+        }));
+      }
+
       _toast('PAD excluído.');
     }
   );
