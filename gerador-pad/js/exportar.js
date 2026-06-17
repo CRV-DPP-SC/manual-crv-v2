@@ -140,10 +140,31 @@ async function _renderizarIpenPdf() {
   }
 }
 
+/* ── Verifica se defesa está definida (obrigatório a partir do Termo de Cientificação) ── */
+function _verificarDefesa() {
+  var s    = Estado.get();
+  var tipo = s.defesa && s.defesa.tipo;
+  if (!tipo || tipo === 'sem_defesa') {
+    _toast('⚠️ Defina o tipo de defesa (Advogado ou Defensoria) antes de salvar este documento.');
+    var bg = document.getElementById('modalAdvBg');
+    if (bg) {
+      document.getElementById('modal-adv-opcoes').style.display  = '';
+      document.getElementById('modal-adv-vincular').style.display = 'none';
+      bg.style.display = 'flex';
+    }
+    return false;
+  }
+  return true;
+}
+
+/* ── Documentos que exigem defesa definida ── */
+var _DOCS_EXIGEM_DEFESA = ['termo_cient','oitiva_inc','oitivas_test','manifestacao','manif_defesa','decisao','oficio_juiz','oficio_vep'];
+
 /* ── Baixar .doc — documento atual ── */
 async function baixarDoc() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
+  if (_DOCS_EXIGEM_DEFESA.indexOf(_DOC_ATUAL) !== -1 && !_verificarDefesa()) return;
   var s    = Estado.get();
   var html = el.innerHTML;
   var docAtual = DOCS.find(function(d) { return d.cod === _DOC_ATUAL; });
@@ -172,6 +193,24 @@ async function baixarDoc() {
   if (_DOC_ATUAL === 'manif_defesa' && window._manifDefesaPdfFile) {
     var mdHtml = await _renderizarArquivoComoHtml(window._manifDefesaPdfFile);
     if (mdHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">MANIFESTAÇÃO DA DEFESA — DOCUMENTO ORIGINAL</p>' + mdHtml + '</div>';
+  }
+
+  /* Oitiva do incidentado: anexa documento assinado */
+  if (_DOC_ATUAL === 'oitiva_inc' && window._oitivaIncSignedFile) {
+    var oiHtml = await _renderizarArquivoComoHtml(window._oitivaIncSignedFile);
+    if (oiHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">DECLARAÇÕES DO INCIDENTADO — DOCUMENTO ASSINADO</p>' + oiHtml + '</div>';
+  }
+
+  /* Oitivas de testemunhas: anexa documentos assinados de cada uma */
+  if (_DOC_ATUAL === 'oitivas_test' && window._testemunhasSignedFiles) {
+    var testes = s.testemunhas || [];
+    for (var ti = 0; ti < testes.length; ti++) {
+      var sf = window._testemunhasSignedFiles[ti];
+      if (sf) {
+        var teHtml = await _renderizarArquivoComoHtml(sf);
+        if (teHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">OITIVA DE ' + (testes[ti].nome||'TESTEMUNHA '+(ti+1)) + ' — DOCUMENTO ASSINADO</p>' + teHtml + '</div>';
+      }
+    }
   }
 
   _gerarDoc(html, _nomeArquivo(s, _DOC_ATUAL) + '.doc');
@@ -208,6 +247,7 @@ function _gerarDoc(html, nome) {
 async function baixarPDF() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
+  if (_DOCS_EXIGEM_DEFESA.indexOf(_DOC_ATUAL) !== -1 && !_verificarDefesa()) return;
   var html     = el.innerHTML;
   var docAtual = DOCS.find(function(d) { return d.cod === _DOC_ATUAL; });
 
@@ -226,6 +266,17 @@ async function baixarPDF() {
   }
   if (_DOC_ATUAL === 'manif_defesa' && window._manifDefesaPdfFile) {
     html += '<div style="page-break-before:always;">' + await _renderizarArquivoComoHtml(window._manifDefesaPdfFile) + '</div>';
+  }
+  if (_DOC_ATUAL === 'oitiva_inc' && window._oitivaIncSignedFile) {
+    var oiPdf = await _renderizarArquivoComoHtml(window._oitivaIncSignedFile);
+    if (oiPdf) html += '<div style="page-break-before:always;">' + oiPdf + '</div>';
+  }
+  if (_DOC_ATUAL === 'oitivas_test' && window._testemunhasSignedFiles) {
+    var s2 = Estado.get(); var ts2 = s2.testemunhas || [];
+    for (var tj = 0; tj < ts2.length; tj++) {
+      var sf2 = window._testemunhasSignedFiles[tj];
+      if (sf2) { var th2 = await _renderizarArquivoComoHtml(sf2); if (th2) html += '<div style="page-break-before:always;">' + th2 + '</div>'; }
+    }
   }
 
   _abrirImpressao(html);

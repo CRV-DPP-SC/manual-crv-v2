@@ -149,25 +149,47 @@ var FormularioCtrl = (function() {
         _campo('OAB', 'text', 'inp-adv-oab', d.advOab, 'ex: OAB/SC 12345')
       );
     }
+    var oa = d.oitivaAnexo || {};
+    var anexoHtml = oa.temAnexo
+      ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;margin-top:6px;">'
+          + '<span>✅</span><span style="flex:1;font-size:.83rem;color:#166534;">' + _esc(oa.nomeAnexo||'Documento assinado anexado') + '</span>'
+          + '<button class="btn-te-del" onclick="FormularioCtrl.removerAnexoOitivaInc()" title="Remover">✕</button>'
+        + '</div>'
+      : '<div id="zona-oitiva-inc" class="zona-upload" style="padding:14px 20px;margin-top:6px;">'
+          + '<div class="upload-icon" style="font-size:1.3rem;">📎</div>'
+          + '<div class="upload-txt">Arraste o documento assinado digitalizado (PDF/imagem)</div>'
+        + '</div>'
+        + '<input type="file" id="inp-oitiva-inc" accept=".pdf,.jpg,.jpeg,.png" style="display:none">';
+
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
-        + '<span class="sec-titulo">⚖️ Oitiva do Incidentado / Defesa</span>'
-        + _ind(!!tipo)
+        + '<span class="sec-titulo">⚖️ Declarações do Incidentado / Defesa</span>'
+        + _ind(!!(tipo && d.versaoIncidentado))
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
         + '<div class="campo-wrap"><label class="campo-label">Tipo de Defesa <span style="color:#dc2626">*</span></label>'
           + '<div class="chip-group">'
-            + chipSel('sem_defesa', 'Sem Defesa')
-            + chipSel('defensoria', 'Defensoria Pública')
-            + chipSel('advogado',   'Advogado Constituído')
+            + chipSel('defensoria', '🏛️ Defensoria Pública')
+            + chipSel('advogado',   '👨‍⚖️ Advogado Constituído')
           + '</div>'
         + '</div>'
         + extra
         + '<div class="campo-wrap">'
-          + '<label class="campo-label">Versão do Incidentado <span class="opc">(opcional)</span></label>'
-          + '<textarea class="inp-textarea" id="inp-versao-inc" rows="3" placeholder="Resumo da versão apresentada pelo incidentado em sua oitiva...">' + _esc(d.versaoIncidentado||'') + '</textarea>'
-          + '<div class="campo-hint">Será reaproveitada na Manifestação do Conselho e na Decisão.</div>'
+          + '<label class="campo-label" style="display:flex;align-items:center;justify-content:space-between;">'
+            + 'Declarações do Incidentado'
+            + '<button id="mic-oitiva-inc" class="btn-mic" onclick="FormularioCtrl.toggleMicIncidentado()" title="Ditar por voz">🎙 Ditar</button>'
+          + '</label>'
+          + '<div id="mic-status-oitiva-inc" class="mic-status" style="display:none;"></div>'
+          + '<textarea class="inp-textarea" id="inp-versao-inc" rows="4" placeholder="Versão apresentada pelo incidentado em suas declarações...">' + _esc(d.versaoIncidentado||'') + '</textarea>'
+          + '<div class="campo-hint">Usado nas Declarações do Incidentado, Manifestação do Conselho e Decisão.</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;margin-top:8px;">'
+          + '<button class="btn-add-reed" style="flex:1;background:#3b1f0a;color:#fed7aa;border-color:#3b1f0a;" onclick="FormularioCtrl.imprimirOitivaInc()">🖨️ Imprimir para Assinar</button>'
+        + '</div>'
+        + '<div class="campo-wrap" style="margin-top:10px;">'
+          + '<label class="campo-label">Documento assinado digitalizado</label>'
+          + anexoHtml
         + '</div>'
       + '</div>'
     + '</div>';
@@ -198,14 +220,27 @@ var FormularioCtrl = (function() {
           + '<div class="campo-wrap" style="margin-bottom:4px;">'
             + '<label class="campo-label" style="display:flex;align-items:center;justify-content:space-between;">'
               + 'Depoimento / Declarações'
-              + '<button id="' + micId + '" class="btn-mic" onclick="FormularioCtrl.toggleMic(' + i + ')" title="Clique para ditar o depoimento por voz">🎙 Ditar</button>'
+              + '<button id="' + micId + '" class="btn-mic" onclick="FormularioCtrl.toggleMic(' + i + ')" title="Ditar por voz">🎙 Ditar</button>'
             + '</label>'
             + '<div id="' + statusId + '" class="mic-status" style="display:none;"></div>'
             + '<textarea class="inp-textarea inp-te-dep" id="' + areaId + '" data-idx="' + i + '" rows="4" '
-              + 'placeholder="Digite ou dite as declarações prestadas pela testemunha...">'
+              + 'placeholder="Digite ou dite as declarações prestadas...">'
               + _esc(te.depoimento||'')
             + '</textarea>'
           + '</div>'
+          + '<div style="display:flex;gap:8px;margin-bottom:8px;">'
+            + '<button class="btn-add-reed" style="flex:1;background:#3b1f0a;color:#fed7aa;border-color:#3b1f0a;font-size:.75rem;" onclick="FormularioCtrl.imprimirOitivaTe(' + i + ')">🖨️ Imprimir para Assinar</button>'
+          + '</div>'
+          + (te.temAnexo
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;margin-bottom:8px;">'
+                + '<span>✅</span><span style="flex:1;font-size:.83rem;color:#166534;">' + _esc(te.nomeAnexo||'Documento assinado') + '</span>'
+                + '<button class="btn-te-del" onclick="FormularioCtrl.removerAnexoTe(' + i + ')" title="Remover">✕</button>'
+              + '</div>'
+            : '<div id="zona-te-' + i + '" class="zona-upload" style="padding:12px 20px;margin-bottom:8px;" data-te-idx="' + i + '">'
+                + '<div class="upload-icon" style="font-size:1.1rem;">📎</div>'
+                + '<div class="upload-txt" style="font-size:.78rem;">Anexar documento assinado (PDF/imagem)</div>'
+              + '</div>'
+              + '<input type="file" id="inp-te-assinado-' + i + '" accept=".pdf,.jpg,.jpeg,.png" data-te-idx="' + i + '" style="display:none">')
         + '</div>'
       + '</div>';
     }).join('');
@@ -655,6 +690,8 @@ var FormularioCtrl = (function() {
     _initDocInicial();
     _initTermoCient();
     _initManifDefesaUpload();
+    _initOitivaIncUpload();
+    _initOitivaTeUploads();
   }
 
   function _bind(id, fn) {
@@ -726,7 +763,7 @@ var FormularioCtrl = (function() {
 
   function adicionarTestemunha() {
     var te = Estado.get('testemunhas');
-    te.push({ nome: '', qualificacao: '', depoimento: '', qualidade: 'testemunha' });
+    te.push({ nome: '', qualificacao: '', depoimento: '', qualidade: 'testemunha', temAnexo: false, nomeAnexo: '' });
     Estado.set('testemunhas', te);
     _render();
   }
@@ -735,6 +772,111 @@ var FormularioCtrl = (function() {
     te.splice(idx, 1);
     Estado.set('testemunhas', te);
     _render();
+  }
+
+  /* ── Upload: Oitiva do Incidentado assinada ── */
+  function _initOitivaIncUpload() {
+    var zona  = document.getElementById('zona-oitiva-inc');
+    var input = document.getElementById('inp-oitiva-inc');
+    if (!zona || !input) return;
+    zona.addEventListener('click', function() { input.click(); });
+    zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+    zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+    zona.addEventListener('drop', function(e) {
+      e.preventDefault(); zona.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) _processarOitivaInc(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', function() {
+      if (input.files[0]) _processarOitivaInc(input.files[0]);
+    });
+  }
+  function _processarOitivaInc(file) {
+    window._oitivaIncSignedFile = file;
+    Estado.setNested('defesa.oitivaAnexo', { temAnexo: true, nomeAnexo: file.name });
+    _render();
+    _toast('Documento assinado do incidentado anexado!');
+  }
+
+  /* ── Upload: Oitiva de Testemunha assinada ── */
+  function _initOitivaTeUploads() {
+    document.querySelectorAll('.zona-upload[data-te-idx]').forEach(function(zona) {
+      var idx   = parseInt(zona.dataset.teIdx);
+      var input = document.getElementById('inp-te-assinado-' + idx);
+      if (!input) return;
+      zona.addEventListener('click', function() { input.click(); });
+      zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+      zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+      zona.addEventListener('drop', function(e) {
+        e.preventDefault(); zona.classList.remove('drag-over');
+        if (e.dataTransfer.files[0]) _processarOitivaTe(idx, e.dataTransfer.files[0]);
+      });
+      input.addEventListener('change', function() {
+        if (input.files[0]) _processarOitivaTe(idx, input.files[0]);
+      });
+    });
+  }
+  function _processarOitivaTe(idx, file) {
+    if (!window._testemunhasSignedFiles) window._testemunhasSignedFiles = {};
+    window._testemunhasSignedFiles[idx] = file;
+    var te = Estado.get('testemunhas');
+    if (te[idx]) {
+      te[idx].temAnexo  = true;
+      te[idx].nomeAnexo = file.name;
+      Estado.set('testemunhas', te);
+    }
+    _render();
+    _toast('Documento assinado da testemunha ' + (idx+1) + ' anexado!');
+  }
+
+  /* ── Mic: Incidentado ── */
+  var _recIncidentado = null;
+  function toggleMicIncidentado() {
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) { _toast('Reconhecimento de voz disponível apenas no Chrome e Edge.'); return; }
+    var btnEl    = document.getElementById('mic-oitiva-inc');
+    var areaEl   = document.getElementById('inp-versao-inc');
+    var statusEl = document.getElementById('mic-status-oitiva-inc');
+    if (_recIncidentado) { _recIncidentado.stop(); return; }
+    _recIncidentado = new SpeechRec();
+    _recIncidentado.lang = 'pt-BR'; _recIncidentado.continuous = true; _recIncidentado.interimResults = true;
+    var anterior = (areaEl ? areaEl.value : '') + ' ';
+    _recIncidentado.onstart = function() {
+      if (btnEl) { btnEl.textContent = '⏹ Parar'; btnEl.classList.add('gravando'); }
+      if (statusEl) { statusEl.textContent = '🎙 Gravando…'; statusEl.style.display = ''; }
+    };
+    _recIncidentado.onresult = function(e) {
+      var interim = '', final = anterior;
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { final += e.results[i][0].transcript + ' '; anterior = final; }
+        else interim += e.results[i][0].transcript;
+      }
+      if (areaEl) areaEl.value = final + interim;
+      Estado.setNested('defesa.versaoIncidentado', final);
+    };
+    _recIncidentado.onend = function() {
+      _recIncidentado = null;
+      if (btnEl) { btnEl.textContent = '🎙 Ditar'; btnEl.classList.remove('gravando'); }
+      if (statusEl) statusEl.style.display = 'none';
+      if (areaEl) Estado.setNested('defesa.versaoIncidentado', areaEl.value);
+    };
+    _recIncidentado.start();
+  }
+
+  /* ── Imprimir Oitiva do Incidentado ── */
+  function imprimirOitivaInc() {
+    var s    = Estado.get();
+    var html = montarDocumento(s, tplOitivaIncidentado);
+    _abrirImpressao && _abrirImpressao(html);
+  }
+
+  /* ── Imprimir Oitiva de Testemunha específica ── */
+  function imprimirOitivaTe(idx) {
+    var s  = Estado.get();
+    var te = (s.testemunhas || [])[idx];
+    if (!te) return;
+    var fn   = function(st) { return tplOitivaTestemunha(st, te); };
+    var html = montarDocumento(s, fn);
+    _abrirImpressao && _abrirImpressao(html);
   }
 
   /* ── Upload: Documentação Inicial ── */
@@ -938,6 +1080,20 @@ var FormularioCtrl = (function() {
     setQualidadeTe: setQualidadeTe,
     toggleMic: toggleMic,
     toggleMicManifDefesa: toggleMicManifDefesa,
+    toggleMicIncidentado: toggleMicIncidentado,
+    imprimirOitivaInc: imprimirOitivaInc,
+    imprimirOitivaTe: imprimirOitivaTe,
+    removerAnexoOitivaInc: function() {
+      window._oitivaIncSignedFile = null;
+      Estado.setNested('defesa.oitivaAnexo', { temAnexo: false, nomeAnexo: '' });
+      _render();
+    },
+    removerAnexoTe: function(idx) {
+      if (window._testemunhasSignedFiles) delete window._testemunhasSignedFiles[idx];
+      var te = Estado.get('testemunhas');
+      if (te[idx]) { te[idx].temAnexo = false; te[idx].nomeAnexo = ''; Estado.set('testemunhas', te); }
+      _render();
+    },
     removerDocInicial: function(idx) {
       if (window._docInicialFiles) window._docInicialFiles.splice(idx, 1);
       var di = Estado.get('docInicial') || { arquivos: [] };

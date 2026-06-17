@@ -372,7 +372,6 @@ function tplTermoCientificacao(s) {
     lb(1),
     pSR('( ) Advogado constituído: ___________________________________________,  OAB nº ______________'),
     pSR('( ) Defensor público nomeado'),
-    pSR('( ) Não deseja constituir defesa'),
     lb(1),
     (obs ? p(obs) + lb(1) : ''),
     p('Nada mais havendo, encerra-se o presente Termo.'),

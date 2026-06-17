@@ -68,15 +68,16 @@ var Estado = (function() {
 
       // ── Defesa
       defesa: {
-        tipo:              '',  // 'sem_defesa' | 'defensoria' | 'advogado'
+        tipo:              '',  // 'defensoria' | 'advogado'
         advNome:           '',
         advOab:            '',
         versaoIncidentado: '',
+        oitivaAnexo: { temAnexo: false, nomeAnexo: '' },
       },
 
       // ── Testemunhas (0 a N)
       testemunhas: [],
-      // cada item: { nome: '', qualificacao: '', depoimento: '', qualidade: 'testemunha' | 'informante' }
+      // cada item: { nome, qualificacao, depoimento, qualidade: 'testemunha'|'informante', temAnexo, nomeAnexo }
 
       // ── Conselho Disciplinar
       conselho: {

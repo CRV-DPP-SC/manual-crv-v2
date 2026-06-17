@@ -546,30 +546,24 @@
       <span style="font-size:1.4rem;">⚖️</span>
       <div>
         <div style="color:#fff;font-size:.95rem;font-weight:800;">Tipo de Defesa</div>
-        <div style="color:#fed7aa;font-size:.75rem;margin-top:2px;">O incidentado possui defesa constituída para este PAD?</div>
+        <div style="color:#fed7aa;font-size:.75rem;margin-top:2px;">O incidentado será assistido por advogado constituído ou defensor público?</div>
       </div>
     </div>
 
     <!-- Tela 1: opções de defesa -->
     <div id="modal-adv-opcoes" style="padding:20px 22px 22px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px;">
         <button onclick="_modalAdvSim()"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;background:#fff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
-          <span style="font-size:1.6rem;">👨‍⚖️</span>
-          <span style="font-size:.82rem;font-weight:800;color:#1d4ed8;">Advogado</span>
-          <span style="font-size:.68rem;color:#64748b;text-align:center;">Constituído</span>
+          style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 12px;background:#fff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:2rem;">👨‍⚖️</span>
+          <span style="font-size:.88rem;font-weight:800;color:#1d4ed8;">Advogado Constituído</span>
+          <span style="font-size:.72rem;color:#64748b;text-align:center;">Indicado pelo incidentado</span>
         </button>
         <button onclick="_modalDefensoria()"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;background:#fff;border:2px solid #15803d;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
-          <span style="font-size:1.6rem;">🏛️</span>
-          <span style="font-size:.82rem;font-weight:800;color:#15803d;">Defensoria</span>
-          <span style="font-size:.68rem;color:#64748b;text-align:center;">Pública</span>
-        </button>
-        <button onclick="_modalAdvNao()"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
-          <span style="font-size:1.6rem;">⏭</span>
-          <span style="font-size:.82rem;font-weight:800;color:#374151;">Sem Defesa</span>
-          <span style="font-size:.68rem;color:#64748b;text-align:center;">Definir depois</span>
+          style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 12px;background:#fff;border:2px solid #15803d;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:2rem;">🏛️</span>
+          <span style="font-size:.88rem;font-weight:800;color:#15803d;">Defensoria Pública</span>
+          <span style="font-size:.72rem;color:#64748b;text-align:center;">Defensor nomeado pelo Estado</span>
         </button>
       </div>
     </div>
@@ -829,12 +823,7 @@ window._modalDefensoria = function() {
   _irParaFormulario();
 };
 
-/* Modal: clicou Sem Defesa / Definir Depois */
-window._modalAdvNao = function() {
-  document.getElementById('modalAdvBg').style.display = 'none';
-  Estado.setNested('defesa.tipo', 'sem_defesa');
-  _irParaFormulario();
-};
+/* _modalAdvNao removido — incidentado sempre terá defesa constituída */
 
 /* Modal: volta para opcoes */
 window._modalAdvVoltarOpcoes = function() {
