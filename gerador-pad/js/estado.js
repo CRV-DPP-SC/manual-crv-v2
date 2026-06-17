@@ -76,7 +76,7 @@ var Estado = (function() {
 
       // ── Testemunhas (0 a N)
       testemunhas: [],
-      // cada item: { nome: '', qualificacao: '' }
+      // cada item: { nome: '', qualificacao: '', depoimento: '', qualidade: 'testemunha' | 'informante' }
 
       // ── Conselho Disciplinar
       conselho: {

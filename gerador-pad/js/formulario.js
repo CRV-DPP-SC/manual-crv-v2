@@ -180,12 +180,17 @@ var FormularioCtrl = (function() {
       var micId    = 'mic-te-' + i;
       var areaId   = 'inp-te-dep-' + i;
       var statusId = 'mic-status-' + i;
+      var qual     = te.qualidade || 'testemunha';
       return '<div class="te-row" data-idx="' + i + '" style="flex-direction:column;gap:8px;">'
         + '<div style="display:flex;align-items:flex-start;gap:8px;">'
           + '<div class="te-idx" style="margin-top:4px;">' + (i+1) + '</div>'
           + '<div class="te-campos" style="flex:1;">'
-            + '<input type="text" class="inp-campo inp-te-nome" data-idx="' + i + '" placeholder="Nome da testemunha" value="' + _esc(te.nome||'') + '">'
+            + '<input type="text" class="inp-campo inp-te-nome" data-idx="' + i + '" placeholder="Nome" value="' + _esc(te.nome||'') + '">'
             + '<input type="text" class="inp-campo inp-te-qual" data-idx="' + i + '" placeholder="Qualificação (cargo, matrícula...)" value="' + _esc(te.qualificacao||'') + '" style="margin-top:5px">'
+            + '<div class="chip-group" style="margin-top:6px;">'
+              + '<button class="chip' + (qual === 'testemunha' ? ' sel' : '') + '" onclick="FormularioCtrl.setQualidadeTe(' + i + ',\'testemunha\')">👤 Testemunha</button>'
+              + '<button class="chip' + (qual === 'informante' ? ' sel' : '') + '" onclick="FormularioCtrl.setQualidadeTe(' + i + ',\'informante\')">💬 Informante</button>'
+            + '</div>'
           + '</div>'
           + '<button class="btn-te-del" onclick="FormularioCtrl.removerTestemunha(' + i + ')" title="Remover" style="margin-top:4px;">✕</button>'
         + '</div>'
@@ -714,9 +719,14 @@ var FormularioCtrl = (function() {
     Estado.setNested('decisao.sancoes.perdaRemicao.modalidade', mod);
     _render();
   }
+  function setQualidadeTe(idx, qualidade) {
+    var te = Estado.get('testemunhas');
+    if (te[idx]) { te[idx].qualidade = qualidade; Estado.set('testemunhas', te); _render(); }
+  }
+
   function adicionarTestemunha() {
     var te = Estado.get('testemunhas');
-    te.push({ nome: '', qualificacao: '', depoimento: '' });
+    te.push({ nome: '', qualificacao: '', depoimento: '', qualidade: 'testemunha' });
     Estado.set('testemunhas', te);
     _render();
   }
@@ -925,6 +935,7 @@ var FormularioCtrl = (function() {
     setRemicaoMod: setRemicaoMod,
     adicionarTestemunha: adicionarTestemunha,
     removerTestemunha: removerTestemunha,
+    setQualidadeTe: setQualidadeTe,
     toggleMic: toggleMic,
     toggleMicManifDefesa: toggleMicManifDefesa,
     removerDocInicial: function(idx) {

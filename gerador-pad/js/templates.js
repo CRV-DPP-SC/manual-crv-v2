@@ -120,16 +120,16 @@ function tplOitivaIncidentado(s) {
   var inc   = s.incidentado || {};
 
   return [
-    p('<strong>TERMO DE OITIVA DO INCIDENTADO</strong>'),
+    p('<strong>TERMO DE DECLARAÇÕES DO INCIDENTADO</strong>'),
     p('<strong>PAD Nº ' + fld(num) + '</strong>'),
     lb(1),
     p('Ao ' + dataI + ', na ' + _unidadeNome(s) + ', presentes os membros do Conselho Disciplinar e ' + _defensor(s) + ', procedeu-se à oitiva do(a) incidentado(a) ' + _nomeIpen(s) + '.'),
     lb(1),
-    p('Esclarecido(a) dos fatos que lhe são imputados — ' + _artigoLabel(s) + ' —, o(a) incidentado(a) apresentou a seguinte versão:'),
+    p('Cientificado(a) dos fatos que lhe são imputados — ' + _artigoLabel(s) + ' —, bem como dos documentos que instruem o presente PAD, e do seu direito constitucional de permanecer em silêncio, sendo-lhe esclarecido que tal omissão não poderá ser interpretada em seu desfavor, ao ser indagado(a), declarou:'),
     lb(1),
     p('"' + versao + '"'),
     lb(1),
-    p('Nada mais disse nem lhe foi perguntado. Lido e achado conforme, vai o presente Termo de Oitiva assinado pelos presentes.'),
+    p('Nada mais disse nem lhe foi perguntado. Lido e achado conforme, vai o presente Termo assinado pelos presentes.'),
     lb(2),
     p(_cidade(s) + ', ' + (s.dataInst ? dPorExtenso(s.dataInst) : ph('DATA'))),
     lb(3),
@@ -154,28 +154,40 @@ function tplOitivaIncidentado(s) {
    3. TERMO DE OITIVA DE TESTEMUNHA
    ══════════════════════════════════════════════════════════ */
 function tplOitivaTestemunha(s, testemunha) {
-  var num   = s.numPad || ph('Nº DO PAD');
-  var c     = _conselho(s);
-  var nomeTe = (testemunha && testemunha.nome)          ? fld(testemunha.nome)          : ph('NOME DA TESTEMUNHA');
-  var qualTe = (testemunha && testemunha.qualificacao)  ? _esc(testemunha.qualificacao) : ph('QUALIFICAÇÃO');
+  var num      = s.numPad || ph('Nº DO PAD');
+  var c        = _conselho(s);
+  var qualidade = (testemunha && testemunha.qualidade === 'informante') ? 'informante' : 'testemunha';
+  var nomeTe   = (testemunha && testemunha.nome)         ? fld(testemunha.nome)         : ph('NOME');
+  var qualTe   = (testemunha && testemunha.qualificacao) ? _esc(testemunha.qualificacao): ph('QUALIFICAÇÃO');
+  var depTe    = (testemunha && testemunha.depoimento)   ? _esc(testemunha.depoimento)  : ph('DECLARAÇÕES');
+
+  /* Texto de advertência conforme qualidade */
+  var advertencia = qualidade === 'informante'
+    ? p('O(A) depoente está sendo ouvido(a) na qualidade de <strong>INFORMANTE</strong>, em razão de ter declarado manter relação próxima com o(a) incidentado(a), não tendo, por isso, o compromisso legal de dizer a verdade.')
+    : p('O(A) depoente está sendo ouvido(a) na qualidade de <strong>TESTEMUNHA</strong>, tendo sido advertido(a) do dever de dizer a verdade sobre tudo o que souber e lhe for perguntado, sob pena de responder pelo crime de falso testemunho, previsto no <strong>art. 342 do Código Penal</strong>.');
+
+  var labelQual = qualidade === 'informante' ? 'Informante' : 'Testemunha';
+  var tituloDoc = qualidade === 'informante' ? 'TERMO DE OITIVA DE INFORMANTE' : 'TERMO DE OITIVA DE TESTEMUNHA';
 
   return [
-    p('<strong>TERMO DE OITIVA DE TESTEMUNHA</strong>'),
+    p('<strong>' + tituloDoc + '</strong>'),
     p('<strong>PAD Nº ' + fld(num) + '</strong>'),
     lb(1),
-    p('Ao ' + (s.dataInst ? dPorExtenso(s.dataInst, _cidade(s)) : ph('DATA')) + ', na ' + _unidadeNome(s) + ', presentes os membros do Conselho Disciplinar, procedeu-se à oitiva da testemunha ' + nomeTe + ', ' + qualTe + '.'),
+    p('Ao ' + (s.dataInst ? dPorExtenso(s.dataInst, _cidade(s)) : ph('DATA')) + ', na ' + _unidadeNome(s) + ', presentes os membros do Conselho Disciplinar, procedeu-se à oitiva de ' + nomeTe + ', ' + qualTe + '.'),
     lb(1),
-    p('Devidamente advertida a dizer a verdade, a testemunha prestou os seguintes esclarecimentos acerca dos fatos relacionados ao PAD acima referenciado:'),
+    advertencia,
     lb(1),
-    p((testemunha && testemunha.depoimento) ? _esc(testemunha.depoimento) : ph('DECLARAÇÕES DA TESTEMUNHA')),
+    p('Ao ser indagado(a) sobre os fatos relacionados ao PAD nº ' + fld(num) + ', declarou:'),
+    lb(1),
+    p('"' + depTe + '"'),
     lb(1),
     p('Nada mais disse nem lhe foi perguntado. Lido e achado conforme, vai o presente Termo assinado pelos presentes.'),
     lb(2),
     p(_cidade(s) + ', ' + (s.dataInst ? dPorExtenso(s.dataInst) : ph('DATA'))),
     lb(3),
     '<div class="pad-ass-dupla">'
-      + '<div class="pad-ass-item"><div class="pad-ass-linha"></div><div>Testemunha: ' + (testemunha && testemunha.nome ? fld(testemunha.nome) : '') + '</div></div>'
-      + '<div class="pad-ass-item"><div class="pad-ass-linha"></div><div>Presidente do Conselho<br>' + (c.presidente || '') + '</div></div>'
+      + '<div class="pad-ass-item"><div class="pad-ass-linha"></div><div>' + labelQual + ': ' + (testemunha && testemunha.nome ? fld(testemunha.nome) : '') + '</div></div>'
+      + '<div class="pad-ass-item"><div class="pad-ass-linha"></div><div>Presidente do Conselho Disciplinar<br>' + (c.presidente || '') + '</div></div>'
     + '</div>',
   ].join('');
 }
