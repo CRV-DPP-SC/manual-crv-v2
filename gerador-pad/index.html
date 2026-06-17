@@ -65,6 +65,9 @@
     }
     .pad-ini-card.card-cadastrar { border-color: #f97316; }
     .pad-ini-card.card-cadastrar:hover { border-color: #ea580c; box-shadow: 0 6px 20px rgba(249,115,22,.2); }
+    .pad-ini-card.card-relacao { border-color: #16a34a; }
+    .pad-ini-card.card-relacao:hover { border-color: #15803d; box-shadow: 0 6px 20px rgba(22,163,74,.18); }
+    .pad-ini-badge-rel { background: #16a34a; }
     .pad-ini-card.card-advogado { border-color: #2563eb; }
     .pad-ini-card.card-advogado:hover { border-color: #1d4ed8; box-shadow: 0 6px 20px rgba(37,99,235,.18); }
     .pad-ini-badge-adv { background: #2563eb; }
@@ -284,15 +287,16 @@
         <span class="pad-ini-sub">Upload do i-PEN, número e data de instauração</span>
         <span class="pad-ini-badge">Novo</span>
       </button>
-      <button class="pad-ini-card" onclick="_irParaRelacao()">
+      <button class="pad-ini-card card-relacao" onclick="_irParaRelacao()">
         <span class="pad-ini-icon">📋</span>
         <span class="pad-ini-nome">Relação de PADs</span>
         <span class="pad-ini-sub">Consultar e retomar PADs já cadastrados</span>
+        <span class="pad-ini-badge pad-ini-badge-rel">Histórico</span>
       </button>
       <button class="pad-ini-card card-advogado" onclick="_irParaAdvogados()">
-        <span class="pad-ini-icon">👨‍⚖️</span>
-        <span class="pad-ini-nome">Advogados</span>
-        <span class="pad-ini-sub">Cadastrar advogados e vincular ao PAD</span>
+        <span class="pad-ini-icon">⚖️</span>
+        <span class="pad-ini-nome">Portal da Defesa</span>
+        <span class="pad-ini-sub">Cadastrar defensores e enviar dossiê ao advogado</span>
         <span class="pad-ini-badge pad-ini-badge-adv">Portal</span>
       </button>
     </div>
