@@ -213,6 +213,18 @@ async function baixarDoc() {
     }
   }
 
+  /* Manifestação do Conselho: anexa documento externo se houver */
+  if (_DOC_ATUAL === 'manifestacao' && window._manifConselhoFile) {
+    var mcHtml = await _renderizarArquivoComoHtml(window._manifConselhoFile);
+    if (mcHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">MANIFESTAÇÃO DO CONSELHO — DOCUMENTO ORIGINAL</p>' + mcHtml + '</div>';
+  }
+
+  /* Decisão da Direção: anexa documento externo se houver */
+  if (_DOC_ATUAL === 'decisao' && window._decisaoPdfFile) {
+    var dcHtml = await _renderizarArquivoComoHtml(window._decisaoPdfFile);
+    if (dcHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">DECISÃO DA DIREÇÃO — DOCUMENTO ORIGINAL</p>' + dcHtml + '</div>';
+  }
+
   _gerarDoc(html, _nomeArquivo(s, _DOC_ATUAL) + '.doc');
   salvarNoHistorico(window._padIdAtual);
 
@@ -277,6 +289,14 @@ async function baixarPDF() {
       var sf2 = window._testemunhasSignedFiles[tj];
       if (sf2) { var th2 = await _renderizarArquivoComoHtml(sf2); if (th2) html += '<div style="page-break-before:always;">' + th2 + '</div>'; }
     }
+  }
+  if (_DOC_ATUAL === 'manifestacao' && window._manifConselhoFile) {
+    var mc2 = await _renderizarArquivoComoHtml(window._manifConselhoFile);
+    if (mc2) html += '<div style="page-break-before:always;">' + mc2 + '</div>';
+  }
+  if (_DOC_ATUAL === 'decisao' && window._decisaoPdfFile) {
+    var dc2 = await _renderizarArquivoComoHtml(window._decisaoPdfFile);
+    if (dc2) html += '<div style="page-break-before:always;">' + dc2 + '</div>';
   }
 
   _abrirImpressao(html);

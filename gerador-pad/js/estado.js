@@ -71,6 +71,7 @@ var Estado = (function() {
         tipo:              '',  // 'defensoria' | 'advogado'
         advNome:           '',
         advOab:            '',
+        silencio:          false,  // incidentado optou por permanecer em silêncio
         versaoIncidentado: '',
         oitivaAnexo: { temAnexo: false, nomeAnexo: '' },
       },
@@ -93,6 +94,8 @@ var Estado = (function() {
         desclassArt:      '',  // 'Art. 95' | 'Art. 96'
         desclassIncisos:  [],  // ex: ['art95_i', 'art95_iii']
         fundamento:       '',
+        temAnexo:         false,
+        nomeAnexo:        '',
       },
 
       // ── Decisão da Direção
@@ -113,6 +116,8 @@ var Estado = (function() {
           revogacaoTrabalhoExt:  false,
         },
         fundamento: '',
+        temAnexo:   false,
+        nomeAnexo:  '',
       },
 
       // ── Diretor da Unidade

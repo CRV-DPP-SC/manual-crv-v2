@@ -142,13 +142,38 @@ var FormularioCtrl = (function() {
     var chipSel = function(v, lbl) {
       return '<button class="chip' + (tipo === v ? ' sel' : '') + '" data-val="' + v + '" onclick="FormularioCtrl.setDefesaTipo(\'' + v + '\')">' + lbl + '</button>';
     };
+    /* Defensor vinculado — exibição automática (somente leitura) + botão alterar */
     var extra = '';
     if (tipo === 'advogado') {
-      extra = _row2(
-        _campo('Nome do Advogado', 'text', 'inp-adv-nome', d.advNome, 'Nome completo'),
-        _campo('OAB', 'text', 'inp-adv-oab', d.advOab, 'ex: OAB/SC 12345')
-      );
+      extra = '<div class="campo-wrap">'
+        + '<label class="campo-label">Defensor vinculado</label>'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+          + '<div class="campo-readonly" style="flex:1;">'
+            + _esc(d.advNome || ph('Nome do advogado')) + (d.advOab ? ' &nbsp;|&nbsp; OAB: ' + _esc(d.advOab) : '')
+          + '</div>'
+          + '<button class="btn-add-reed" style="white-space:nowrap;font-size:.75rem;" onclick="_reabrirModalDefesa()">🔄 Alterar</button>'
+        + '</div>'
+      + '</div>';
+    } else if (tipo === 'defensoria') {
+      extra = '<div class="campo-wrap">'
+        + '<label class="campo-label">Defensor vinculado</label>'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+          + '<div class="campo-readonly" style="flex:1;">Defensoria Pública do Estado de Santa Catarina</div>'
+          + '<button class="btn-add-reed" style="white-space:nowrap;font-size:.75rem;" onclick="_reabrirModalDefesa()">🔄 Alterar</button>'
+        + '</div>'
+      + '</div>';
     }
+
+    /* Seletor de silêncio */
+    var silencio = !!d.silencio;
+    var silencioHtml = '<div class="campo-wrap">'
+      + '<label class="campo-label">Postura do Incidentado</label>'
+      + '<div class="chip-group">'
+        + '<button class="chip' + (!silencio ? ' sel' : '') + '" onclick="FormularioCtrl.setSilencio(false)">💬 Prestou declarações</button>'
+        + '<button class="chip' + (silencio  ? ' sel' : '') + '" onclick="FormularioCtrl.setSilencio(true)">🤐 Permaneceu em silêncio</button>'
+      + '</div>'
+    + '</div>';
+
     var oa = d.oitivaAnexo || {};
     var anexoHtml = oa.temAnexo
       ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;margin-top:6px;">'
@@ -175,7 +200,8 @@ var FormularioCtrl = (function() {
           + '</div>'
         + '</div>'
         + extra
-        + '<div class="campo-wrap">'
+        + silencioHtml
+        + '<div class="campo-wrap"' + (silencio ? ' style="display:none;"' : '') + '>'
           + '<label class="campo-label" style="display:flex;align-items:center;justify-content:space-between;">'
             + 'Declarações do Incidentado'
             + '<button id="mic-oitiva-inc" class="btn-mic" onclick="FormularioCtrl.toggleMicIncidentado()" title="Ditar por voz">🎙 Ditar</button>'
@@ -454,6 +480,19 @@ var FormularioCtrl = (function() {
           + '<label class="campo-label">Fundamentação Complementar <span class="opc">(opcional)</span></label>'
           + '<textarea class="inp-textarea" id="inp-mani-fund" rows="3" placeholder="Fundamentos específicos adicionais...">' + _esc(m.fundamento||'') + '</textarea>'
         + '</div>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label">Documento externo do Conselho <span class="opc">(opcional — se elaborado fora do sistema)</span></label>'
+          + (m.temAnexo
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">'
+                + '<span>✅</span><span style="flex:1;font-size:.83rem;color:#166534;">' + _esc(m.nomeAnexo||'Documento anexado') + '</span>'
+                + '<button class="btn-te-del" onclick="FormularioCtrl.removerAnexoManifConselho()" title="Remover">✕</button>'
+              + '</div>'
+            : '<div id="zona-manif-conselho" class="zona-upload" style="padding:14px 20px;">'
+                + '<div class="upload-icon" style="font-size:1.3rem;">📎</div>'
+                + '<div class="upload-txt">Arraste o PDF/imagem da manifestação do Conselho</div>'
+              + '</div>'
+              + '<input type="file" id="inp-manif-conselho" accept=".pdf,.jpg,.jpeg,.png" style="display:none">')
+        + '</div>'
       + '</div>'
     + '</div>';
   }
@@ -542,6 +581,19 @@ var FormularioCtrl = (function() {
         + '<div class="campo-wrap">'
           + '<label class="campo-label">Fundamentação Complementar <span class="opc">(opcional)</span></label>'
           + '<textarea class="inp-textarea" id="inp-dec-fund" rows="3" placeholder="Fundamentos ou observações adicionais...">' + _esc(dec.fundamento||'') + '</textarea>'
+        + '</div>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label">Documento externo da Decisão <span class="opc">(opcional — se elaborada fora do sistema)</span></label>'
+          + (dec.temAnexo
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">'
+                + '<span>✅</span><span style="flex:1;font-size:.83rem;color:#166534;">' + _esc(dec.nomeAnexo||'Documento anexado') + '</span>'
+                + '<button class="btn-te-del" onclick="FormularioCtrl.removerAnexoDecisao()" title="Remover">✕</button>'
+              + '</div>'
+            : '<div id="zona-decisao-pdf" class="zona-upload" style="padding:14px 20px;">'
+                + '<div class="upload-icon" style="font-size:1.3rem;">📎</div>'
+                + '<div class="upload-txt">Arraste o PDF/imagem da Decisão da Direção</div>'
+              + '</div>'
+              + '<input type="file" id="inp-decisao-pdf" accept=".pdf,.jpg,.jpeg,.png" style="display:none">')
         + '</div>'
       + '</div>'
     + '</div>';
@@ -692,6 +744,8 @@ var FormularioCtrl = (function() {
     _initManifDefesaUpload();
     _initOitivaIncUpload();
     _initOitivaTeUploads();
+    _initManifConselhoUpload();
+    _initDecisaoUpload();
   }
 
   function _bind(id, fn) {
@@ -772,6 +826,54 @@ var FormularioCtrl = (function() {
     te.splice(idx, 1);
     Estado.set('testemunhas', te);
     _render();
+  }
+
+  /* ── Upload: Manifestação do Conselho (externo) ── */
+  function _initManifConselhoUpload() {
+    var zona  = document.getElementById('zona-manif-conselho');
+    var input = document.getElementById('inp-manif-conselho');
+    if (!zona || !input) return;
+    zona.addEventListener('click', function() { input.click(); });
+    zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+    zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+    zona.addEventListener('drop', function(e) {
+      e.preventDefault(); zona.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) _processarManifConselho(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', function() {
+      if (input.files[0]) _processarManifConselho(input.files[0]);
+    });
+  }
+  function _processarManifConselho(file) {
+    window._manifConselhoFile = file;
+    Estado.setNested('manifestacao.temAnexo',  true);
+    Estado.setNested('manifestacao.nomeAnexo', file.name);
+    _render();
+    _toast('Manifestação do Conselho anexada!');
+  }
+
+  /* ── Upload: Decisão da Direção (externa) ── */
+  function _initDecisaoUpload() {
+    var zona  = document.getElementById('zona-decisao-pdf');
+    var input = document.getElementById('inp-decisao-pdf');
+    if (!zona || !input) return;
+    zona.addEventListener('click', function() { input.click(); });
+    zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+    zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+    zona.addEventListener('drop', function(e) {
+      e.preventDefault(); zona.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) _processarDecisaoPdf(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', function() {
+      if (input.files[0]) _processarDecisaoPdf(input.files[0]);
+    });
+  }
+  function _processarDecisaoPdf(file) {
+    window._decisaoPdfFile = file;
+    Estado.setNested('decisao.temAnexo',  true);
+    Estado.setNested('decisao.nomeAnexo', file.name);
+    _render();
+    _toast('Decisão da Direção anexada!');
   }
 
   /* ── Upload: Oitiva do Incidentado assinada ── */
@@ -1092,6 +1194,22 @@ var FormularioCtrl = (function() {
       if (window._testemunhasSignedFiles) delete window._testemunhasSignedFiles[idx];
       var te = Estado.get('testemunhas');
       if (te[idx]) { te[idx].temAnexo = false; te[idx].nomeAnexo = ''; Estado.set('testemunhas', te); }
+      _render();
+    },
+    setSilencio: function(val) {
+      Estado.setNested('defesa.silencio', val);
+      _render();
+    },
+    removerAnexoManifConselho: function() {
+      window._manifConselhoFile = null;
+      Estado.setNested('manifestacao.temAnexo', false);
+      Estado.setNested('manifestacao.nomeAnexo', '');
+      _render();
+    },
+    removerAnexoDecisao: function() {
+      window._decisaoPdfFile = null;
+      Estado.setNested('decisao.temAnexo', false);
+      Estado.setNested('decisao.nomeAnexo', '');
       _render();
     },
     removerDocInicial: function(idx) {

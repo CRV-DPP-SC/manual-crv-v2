@@ -842,6 +842,30 @@ window._modalAdvSelectChange = function(oab) {
 };
 
 /* Modal: confirma vínculo e vai ao formulário */
+/* Reabre o modal de defesa a partir do formulário */
+window._reabrirModalDefesa = function() {
+  var bg = document.getElementById('modalAdvBg');
+  if (bg) {
+    document.getElementById('modal-adv-opcoes').style.display  = '';
+    document.getElementById('modal-adv-vincular').style.display = 'none';
+    bg.style.display = 'flex';
+    /* Pré-popula lista de advogados */
+    var sel = document.getElementById('modal-adv-select');
+    if (sel && window.PadFirestore) {
+      sel.innerHTML = '<option value="">Carregando…</option>';
+      window.PadFirestore.listarAdvogados().then(function(lista) {
+        sel.innerHTML = '<option value="">— Selecione ou preencha abaixo —</option>'
+          + lista.map(function(adv) {
+              return '<option value="' + _esc(adv.oab) + '" data-nome="' + _esc(adv.nome) + '" data-email="' + _esc(adv.email||'') + '">'
+                + _esc(adv.nome) + ' — OAB ' + _esc(adv.oab) + '</option>';
+            }).join('');
+      }).catch(function() {
+        sel.innerHTML = '<option value="">— Preencha manualmente abaixo —</option>';
+      });
+    }
+  }
+};
+
 window._modalAdvConfirmar = function() {
   var nome = (document.getElementById('modal-adv-nome').value || '').trim();
   var oab  = (document.getElementById('modal-adv-oab').value  || '').trim();

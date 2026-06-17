@@ -116,8 +116,20 @@ function tplOitivaIncidentado(s) {
   var num   = s.numPad || ph('Nº DO PAD');
   var dataI = s.dataInst ? dPorExtenso(s.dataInst, _cidade(s)) : ph('DATA');
   var c     = _conselho(s);
-  var versao = (s.defesa && s.defesa.versaoIncidentado) ? _esc(s.defesa.versaoIncidentado) : ph('VERSÃO APRESENTADA PELO INCIDENTADO');
-  var inc   = s.incidentado || {};
+  var defesa   = s.defesa || {};
+  var silencio = !!defesa.silencio;
+  var versao   = defesa.versaoIncidentado ? _esc(defesa.versaoIncidentado) : ph('VERSÃO APRESENTADA PELO INCIDENTADO');
+  var inc      = s.incidentado || {};
+
+  var corpoDec = silencio
+    ? p('Cientificado(a) dos fatos que lhe são imputados — ' + _artigoLabel(s) + ' —, bem como dos documentos que instruem o presente PAD, e do seu direito constitucional de permanecer em silêncio, sendo-lhe esclarecido que tal omissão não poderá ser interpretada em seu desfavor, o(a) incidentado(a) <strong>optou por permanecer em silêncio</strong>, não prestando qualquer declaração acerca dos fatos apurados.')
+      + lb(1)
+      + p('Nada mais havendo, encerra-se o presente Termo.')
+    : p('Cientificado(a) dos fatos que lhe são imputados — ' + _artigoLabel(s) + ' —, bem como dos documentos que instruem o presente PAD, e do seu direito constitucional de permanecer em silêncio, sendo-lhe esclarecido que tal omissão não poderá ser interpretada em seu desfavor, ao ser indagado(a), declarou:')
+      + lb(1)
+      + p('"' + versao + '"')
+      + lb(1)
+      + p('Nada mais disse nem lhe foi perguntado. Lido e achado conforme, vai o presente Termo assinado pelos presentes.');
 
   return [
     p('<strong>TERMO DE DECLARAÇÕES DO INCIDENTADO</strong>'),
@@ -125,11 +137,7 @@ function tplOitivaIncidentado(s) {
     lb(1),
     p('Ao ' + dataI + ', na ' + _unidadeNome(s) + ', presentes os membros do Conselho Disciplinar e ' + _defensor(s) + ', procedeu-se à oitiva do(a) incidentado(a) ' + _nomeIpen(s) + '.'),
     lb(1),
-    p('Cientificado(a) dos fatos que lhe são imputados — ' + _artigoLabel(s) + ' —, bem como dos documentos que instruem o presente PAD, e do seu direito constitucional de permanecer em silêncio, sendo-lhe esclarecido que tal omissão não poderá ser interpretada em seu desfavor, ao ser indagado(a), declarou:'),
-    lb(1),
-    p('"' + versao + '"'),
-    lb(1),
-    p('Nada mais disse nem lhe foi perguntado. Lido e achado conforme, vai o presente Termo assinado pelos presentes.'),
+    corpoDec,
     lb(2),
     p(_cidade(s) + ', ' + (s.dataInst ? dPorExtenso(s.dataInst) : ph('DATA'))),
     lb(3),
@@ -368,7 +376,7 @@ function tplTermoCientificacao(s) {
     lb(1),
     p('O(A) interno(a) foi formalmente cientificado(a) de que possui o direito à ampla defesa e ao contraditório, podendo constituir advogado ou requerer a nomeação de defensor público, nos termos do art. 5º, LV, da Constituição Federal e do art. 59 da Lei nº 7.210/84 (Lei de Execução Penal).'),
     lb(1),
-    p('Foi oportunizado ao(à) interno(a) o prazo de <strong>24 (vinte e quatro) horas</strong> para manifestação, devendo indicar:'),
+    p('O(A) interno(a) foi instado(a) a indicar o tipo de defesa, declarando:'),
     lb(1),
     pSR('( ) Advogado constituído: ___________________________________________,  OAB nº ______________'),
     pSR('( ) Defensor público nomeado'),
