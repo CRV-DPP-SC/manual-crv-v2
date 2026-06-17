@@ -331,7 +331,7 @@
       </div>
     </div>
 
-    <button class="pad-cad-continuar" onclick="_irParaFormulario()">
+    <button class="pad-cad-continuar" onclick="_iniciarNovoFormulario()">
       Continuar para o Formulário →
     </button>
   </div>
@@ -504,6 +504,71 @@
   </div>
 </div>
 
+<!-- ════════════ MODAL ADVOGADO (pré-formulário) ════════════ -->
+<div id="modalAdvBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;max-width:460px;width:95%;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#3b1f0a,#6b3a1f);padding:18px 22px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.4rem;">⚖️</span>
+      <div>
+        <div style="color:#fff;font-size:.95rem;font-weight:800;">Advogado Constituído?</div>
+        <div style="color:#fed7aa;font-size:.75rem;margin-top:2px;">O incidentado possui advogado constituído para este PAD?</div>
+      </div>
+    </div>
+
+    <!-- Tela 1: Sim ou Não -->
+    <div id="modal-adv-opcoes" style="padding:24px 22px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px;">
+        <button onclick="_modalAdvSim()"
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 12px;background:#fff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:1.8rem;">✅</span>
+          <span style="font-size:.9rem;font-weight:800;color:#1d4ed8;">Sim</span>
+          <span style="font-size:.73rem;color:#64748b;text-align:center;">Vincular advogado agora</span>
+        </button>
+        <button onclick="_modalAdvNao()"
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 12px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:1.8rem;">⏭</span>
+          <span style="font-size:.9rem;font-weight:800;color:#374151;">Não</span>
+          <span style="font-size:.73rem;color:#64748b;text-align:center;">Vincular depois, se necessário</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tela 2: Selecionar advogado cadastrado ou digitar -->
+    <div id="modal-adv-vincular" style="display:none;padding:20px 22px 22px;">
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:.75rem;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Advogado cadastrado no sistema</label>
+        <select id="modal-adv-select" style="width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.88rem;font-family:inherit;color:#1c1917;"
+          onchange="_modalAdvSelectChange(this.value)">
+          <option value="">— Selecione ou preencha abaixo —</option>
+        </select>
+      </div>
+      <div style="text-align:center;font-size:.75rem;color:#a8a29e;margin-bottom:12px;">— ou informe manualmente —</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <label style="display:block;font-size:.72rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:4px;">Nome do Advogado</label>
+          <input type="text" id="modal-adv-nome" placeholder="Dr(a). Nome Sobrenome"
+            style="width:100%;padding:9px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.85rem;font-family:inherit;">
+        </div>
+        <div>
+          <label style="display:block;font-size:.72rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:4px;">OAB</label>
+          <input type="text" id="modal-adv-oab" placeholder="ex: OAB/SC 12345"
+            style="width:100%;padding:9px 11px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.85rem;font-family:inherit;">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="_modalAdvVoltarOpcoes()"
+          style="flex:1;padding:10px;background:none;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.85rem;color:#92400e;cursor:pointer;font-family:inherit;">
+          ← Voltar
+        </button>
+        <button onclick="_modalAdvConfirmar()"
+          style="flex:2;padding:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;">
+          Vincular e Continuar →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
   /* Tela Advogados */
   #tela-advogados {
@@ -618,6 +683,88 @@ window._irParaFormulario = function() {
   FormularioCtrl.sincronizar();
   atualizarPreview();
   _mostrarTela('formulario');
+};
+
+/* ── Novo PAD: salva no histórico e abre modal de advogado ── */
+window._iniciarNovoFormulario = function() {
+  var s = Estado.get();
+  if (!s.numPad && !s.dataInst) {
+    _toast('Informe ao menos o número do PAD ou a data de instauração antes de continuar.');
+    return;
+  }
+
+  /* Salva imediatamente na relação de PADs */
+  if (!window._padIdAtual) {
+    window._padIdAtual = cadastrarPadNoHistorico();
+  }
+
+  /* Abre modal de advogado */
+  var bg = document.getElementById('modalAdvBg');
+  if (bg) { bg.style.display = 'flex'; }
+  document.getElementById('modal-adv-opcoes').style.display  = '';
+  document.getElementById('modal-adv-vincular').style.display = 'none';
+
+  /* Popula select com advogados cadastrados (se Firebase disponível) */
+  var sel = document.getElementById('modal-adv-select');
+  if (sel && window.PadFirestore) {
+    sel.innerHTML = '<option value="">Carregando…</option>';
+    window.PadFirestore.listarAdvogados().then(function(lista) {
+      sel.innerHTML = '<option value="">— Selecione ou preencha abaixo —</option>'
+        + lista.map(function(adv) {
+            return '<option value="' + _esc(adv.oab) + '" data-nome="' + _esc(adv.nome) + '">'
+              + _esc(adv.nome) + ' — OAB ' + _esc(adv.oab) + '</option>';
+          }).join('');
+    }).catch(function() {
+      sel.innerHTML = '<option value="">— Preencha manualmente abaixo —</option>';
+    });
+  } else if (sel) {
+    sel.innerHTML = '<option value="">— Preencha manualmente abaixo —</option>';
+  }
+};
+
+/* Modal: clicou SIM */
+window._modalAdvSim = function() {
+  document.getElementById('modal-adv-opcoes').style.display  = 'none';
+  document.getElementById('modal-adv-vincular').style.display = '';
+};
+
+/* Modal: clicou NÃO */
+window._modalAdvNao = function() {
+  document.getElementById('modalAdvBg').style.display = 'none';
+  Estado.setNested('defesa.tipo', 'sem_defesa');
+  _irParaFormulario();
+};
+
+/* Modal: volta para opcoes */
+window._modalAdvVoltarOpcoes = function() {
+  document.getElementById('modal-adv-opcoes').style.display  = '';
+  document.getElementById('modal-adv-vincular').style.display = 'none';
+};
+
+/* Modal: select preencheu os campos */
+window._modalAdvSelectChange = function(oab) {
+  if (!oab) return;
+  var sel  = document.getElementById('modal-adv-select');
+  var opt  = sel.querySelector('option[value="' + oab.replace(/"/g,'') + '"]');
+  var nome = opt ? (opt.dataset.nome || '') : '';
+  document.getElementById('modal-adv-nome').value = nome;
+  document.getElementById('modal-adv-oab').value  = oab;
+};
+
+/* Modal: confirma vínculo e vai ao formulário */
+window._modalAdvConfirmar = function() {
+  var nome = (document.getElementById('modal-adv-nome').value || '').trim();
+  var oab  = (document.getElementById('modal-adv-oab').value  || '').trim();
+  if (!nome && !oab) {
+    _toast('Informe o nome ou a OAB do advogado.');
+    return;
+  }
+  Estado.setNested('defesa.tipo',    'advogado');
+  Estado.setNested('defesa.advNome', nome);
+  Estado.setNested('defesa.advOab',  oab);
+  document.getElementById('modalAdvBg').style.display = 'none';
+  _toast('Advogado vinculado: ' + (nome || oab));
+  _irParaFormulario();
 };
 
 /* ══════════════════════════════════════════════
