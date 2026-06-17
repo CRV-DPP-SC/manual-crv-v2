@@ -85,12 +85,17 @@ window.PadFirestore = {
     return { padId, token, link };
   },
 
-  /* Cadastra advogado no Firestore (sem Firebase Auth — acesso por link) */
+  /* Cadastra advogado/defensor no Firestore */
   cadastrarAdvogado: async function(dados) {
-    const oabKey = _oabKey(dados.oab);
+    // tipo: 'advogado' | 'defensoria'
+    const tipo   = dados.tipo || 'advogado';
+    const oabKey = tipo === 'defensoria'
+      ? 'DEF_' + (dados.email || '').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()
+      : _oabKey(dados.oab);
     await setDoc(doc(_db, 'advogados', oabKey), {
       nome:           dados.nome  || '',
-      oab:            dados.oab   || '',
+      tipo:           tipo,
+      oab:            tipo === 'advogado' ? (dados.oab || '') : '',
       email:          (dados.email || '').toLowerCase(),
       telefone:       dados.tel   || '',
       ativo:          true,
@@ -136,6 +141,16 @@ window.PadFirestore = {
   /* Lista todos os advogados */
   listarAdvogados: async function() {
     const snap = await getDocs(collection(_db, 'advogados'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  /* Busca PADs vinculados a um advogado (pela OAB key) */
+  buscarPadsDoAdvogado: async function(oabKey) {
+    const q    = query(
+      collection(_db, 'pads_gerados'),
+      where('advogadoOAB', '==', oabKey.toUpperCase())
+    );
+    const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 

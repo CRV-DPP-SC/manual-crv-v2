@@ -74,19 +74,53 @@ function copiar() {
   window.getSelection().removeAllRanges();
 }
 
+/* ── Renderiza páginas do i-PEN PDF como imagens (usa PDF.js) ── */
+async function _renderizarIpenPdf() {
+  var file = window._iPenPdfFile;
+  if (!file || typeof pdfjsLib === 'undefined') return '';
+  try {
+    var ab  = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    var paginas = [];
+    for (var i = 1; i <= pdf.numPages; i++) {
+      var page = await pdf.getPage(i);
+      var vp   = page.getViewport({ scale: 2 });
+      var canvas = document.createElement('canvas');
+      canvas.width = vp.width; canvas.height = vp.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      paginas.push('<img src="' + canvas.toDataURL('image/jpeg', 0.9) + '" style="width:100%;display:block;page-break-inside:avoid;margin-bottom:4px;">');
+    }
+    return '<div style="page-break-before:always;">'
+      + '<p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;color:#555;margin:0 0 8px;">ANEXO — Relatório da Falta Grave (i-PEN)</p>'
+      + paginas.join('')
+      + '</div>';
+  } catch(e) {
+    return '<div style="page-break-before:always;font-family:Arial,sans-serif;font-size:9pt;color:#999;padding:20px;">'
+      + '[Anexo i-PEN não pôde ser incorporado: ' + e.message + ']'
+      + '</div>';
+  }
+}
+
 /* ── Baixar .doc — documento atual ── */
-function baixarDoc() {
+async function baixarDoc() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
-  var s = Estado.get();
-  _gerarDoc(el.innerHTML, _nomeArquivo(s, _DOC_ATUAL) + '.doc');
+  var s   = Estado.get();
+  var html = el.innerHTML;
+  /* Anexa i-PEN PDF se estiver na portaria */
+  if (_DOC_ATUAL === 'portaria') {
+    html += await _renderizarIpenPdf();
+  }
+  _gerarDoc(html, _nomeArquivo(s, _DOC_ATUAL) + '.doc');
   salvarNoHistorico(window._padIdAtual);
 }
 
 /* ── Baixar .doc — todos os documentos ── */
-function baixarTodosDoc() {
+async function baixarTodosDoc() {
   var s    = Estado.get();
   var html = montarTodosDocumentos(s);
+  /* Anexa i-PEN PDF ao final (após portaria) */
+  html += await _renderizarIpenPdf();
   _gerarDoc(html, _nomeArquivo(s, 'PAD-completo') + '.doc');
   salvarNoHistorico(window._padIdAtual);
 }
@@ -105,10 +139,15 @@ function _gerarDoc(html, nome) {
 }
 
 /* ── PDF via impressão ── */
-function baixarPDF() {
+async function baixarPDF() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
-  _abrirImpressao(el.innerHTML);
+  var html = el.innerHTML;
+  if (_DOC_ATUAL === 'portaria') {
+    _toast('Preparando anexo i-PEN…');
+    html += await _renderizarIpenPdf();
+  }
+  _abrirImpressao(html);
   salvarNoHistorico(window._padIdAtual);
 }
 
