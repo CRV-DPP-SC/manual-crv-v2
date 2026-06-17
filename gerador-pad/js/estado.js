@@ -96,6 +96,7 @@ var Estado = (function() {
         fundamento:       '',
         temAnexo:         false,
         nomeAnexo:        '',
+        textoExtraido:    '',  // texto extraído do PDF do conselho
       },
 
       // ── Decisão da Direção
@@ -115,7 +116,10 @@ var Estado = (function() {
           revogacaoSaidaTemp:    false,
           revogacaoTrabalhoExt:  false,
         },
-        fundamento: '',
+        fundamentacao:      '',  // II - Fundamentação (texto livre)
+        fundamento:         '',  // mantido por compatibilidade
+        textoManifConselho: '',  // texto extraído do PDF do conselho
+        textoManifDefesa:   '',  // texto extraído do PDF da defesa (portal ou upload)
         temAnexo:   false,
         nomeAnexo:  '',
       },

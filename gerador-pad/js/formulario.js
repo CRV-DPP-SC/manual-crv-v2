@@ -579,8 +579,16 @@ var FormularioCtrl = (function() {
         + '</div>'
         + extra
         + '<div class="campo-wrap">'
-          + '<label class="campo-label">Fundamentação Complementar <span class="opc">(opcional)</span></label>'
-          + '<textarea class="inp-textarea" id="inp-dec-fund" rows="3" placeholder="Fundamentos ou observações adicionais...">' + _esc(dec.fundamento||'') + '</textarea>'
+          + '<label class="campo-label" style="display:flex;align-items:center;justify-content:space-between;">'
+            + 'II — Fundamentação da Decisão <span style="color:#dc2626">*</span>'
+            + '<button id="mic-fundamentacao" class="btn-mic" onclick="FormularioCtrl.toggleMicFundamentacao()" title="Ditar por voz">🎙 Ditar</button>'
+          + '</label>'
+          + '<div id="mic-status-fund" class="mic-status" style="display:none;"></div>'
+          + '<textarea class="inp-textarea" id="inp-dec-fundamentacao" rows="6" placeholder="Analise as provas produzidas, a versão do incidentado, o parecer do Conselho e a manifestação da Defesa. Fundamente a decisão com base na legislação aplicável...">' + _esc(dec.fundamentacao||'') + '</textarea>'
+        + '</div>'
+        + '<div style="margin-bottom:10px;">'
+          + '<button class="btn-add-reed" style="font-size:.78rem;width:100%;" onclick="FormularioCtrl.carregarTextosPortal()">🔄 Carregar textos do portal (Manifestação do Conselho e Defesa)</button>'
+          + '<div class="campo-hint">Busca no portal os textos enviados pelo advogado e pelo conselho para compor o Relatório automaticamente.</div>'
         + '</div>'
         + '<div class="campo-wrap">'
           + '<label class="campo-label">Documento externo da Decisão <span class="opc">(opcional — se elaborada fora do sistema)</span></label>'
@@ -696,7 +704,8 @@ var FormularioCtrl = (function() {
     _bind('inp-termo-cient-obs',    function(v) { Estado.setNested('termoCient.texto', v); });
     _bind('inp-manif-defesa-texto', function(v) { Estado.setNested('manifDefesa.texto', v); });
     _bind('inp-mani-fund', function(v) { Estado.setNested('manifestacao.fundamento', v); });
-    _bind('inp-dec-fund',  function(v) { Estado.setNested('decisao.fundamento', v); });
+    _bind('inp-dec-fund',         function(v) { Estado.setNested('decisao.fundamento', v); });
+    _bind('inp-dec-fundamentacao', function(v) { Estado.setNested('decisao.fundamentacao', v); });
 
     _bind('inp-num-vep',  function(v) { Estado.set('numOficioEnc', v); });
     _bind('inp-num-juiz', function(v) { Estado.set('numOficioJuiz', v); });
@@ -848,8 +857,16 @@ var FormularioCtrl = (function() {
     window._manifConselhoFile = file;
     Estado.setNested('manifestacao.temAnexo',  true);
     Estado.setNested('manifestacao.nomeAnexo', file.name);
+    _extrairTextoPdf(file).then(function(texto) {
+      if (texto) {
+        Estado.setNested('manifestacao.textoExtraido',  texto);
+        Estado.setNested('decisao.textoManifConselho',  texto);
+        _toast('Texto extraido da Manifestacao do Conselho!');
+        atualizarPreview && atualizarPreview();
+      }
+    });
     _render();
-    _toast('Manifestação do Conselho anexada!');
+    _toast('Manifestacao do Conselho anexada!');
   }
 
   /* ── Upload: Decisão da Direção (externa) ── */
@@ -1091,6 +1108,96 @@ var FormularioCtrl = (function() {
     _recManifDefesa.start();
   }
 
+  /* ── Extrai texto de PDF/imagem via PDF.js ── */
+  function _extrairTextoPdf(file) {
+    if (!file || typeof pdfjsLib === 'undefined') return Promise.resolve('');
+    if (!file.type || !file.type.includes('pdf')) return Promise.resolve('');
+    return file.arrayBuffer().then(function(ab) {
+      return pdfjsLib.getDocument({ data: ab }).promise;
+    }).then(function(pdf) {
+      var paginas = [];
+      for (var i = 1; i <= pdf.numPages; i++) paginas.push(i);
+      return Promise.all(paginas.map(function(n) {
+        return pdf.getPage(n).then(function(page) {
+          return page.getTextContent().then(function(content) {
+            return content.items.map(function(it) { return it.str; }).join(' ');
+          });
+        });
+      }));
+    }).then(function(partes) {
+      return partes.join('\n').trim();
+    }).catch(function() { return ''; });
+  }
+
+  /* ── Mic: Fundamentação da Decisão ── */
+  var _recFundamentacao = null;
+  function toggleMicFundamentacao() {
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) { _toast('Reconhecimento de voz disponível apenas no Chrome e Edge.'); return; }
+    var btnEl    = document.getElementById('mic-fundamentacao');
+    var areaEl   = document.getElementById('inp-dec-fundamentacao');
+    var statusEl = document.getElementById('mic-status-fund');
+    if (_recFundamentacao) { _recFundamentacao.stop(); return; }
+    _recFundamentacao = new SpeechRec();
+    _recFundamentacao.lang = 'pt-BR'; _recFundamentacao.continuous = true; _recFundamentacao.interimResults = true;
+    var anterior = (areaEl ? areaEl.value : '') + ' ';
+    _recFundamentacao.onstart = function() {
+      if (btnEl) { btnEl.textContent = '⏹ Parar'; btnEl.classList.add('gravando'); }
+      if (statusEl) { statusEl.textContent = '🎙 Gravando fundamentação…'; statusEl.style.display = ''; }
+    };
+    _recFundamentacao.onresult = function(e) {
+      var interim = '', final = anterior;
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { final += e.results[i][0].transcript + ' '; anterior = final; }
+        else interim += e.results[i][0].transcript;
+      }
+      if (areaEl) areaEl.value = final + interim;
+      Estado.setNested('decisao.fundamentacao', final);
+    };
+    _recFundamentacao.onend = function() {
+      _recFundamentacao = null;
+      if (btnEl) { btnEl.textContent = '🎙 Ditar'; btnEl.classList.remove('gravando'); }
+      if (statusEl) statusEl.style.display = 'none';
+      if (areaEl) Estado.setNested('decisao.fundamentacao', areaEl.value);
+    };
+    _recFundamentacao.start();
+  }
+
+  /* ── Carrega textos do portal para alimentar o Relatório ── */
+  function carregarTextosPortal() {
+    var padId = window._padIdAtual;
+    if (!padId) { _toast('Salve o PAD primeiro antes de carregar textos do portal.'); return; }
+    if (!window.PadFirestore) { _toast('Firebase não disponível.'); return; }
+    _toast('Buscando textos no portal…');
+
+    /* Busca manifestação do conselho e da defesa no Firestore */
+    var buscas = [
+      window.PadFirestore.buscarTextoPeca(padId, 'manifestacao').then(function(t) {
+        if (t) {
+          Estado.setNested('decisao.textoManifConselho', t);
+          Estado.setNested('manifestacao.textoExtraido', t);
+        }
+        return t;
+      }),
+      window.PadFirestore.buscarTextoPeca(padId, 'manif_defesa').then(function(t) {
+        if (t) Estado.setNested('decisao.textoManifDefesa', t);
+        return t;
+      }),
+    ];
+
+    Promise.all(buscas).then(function(resultados) {
+      var count = resultados.filter(function(t) { return !!t; }).length;
+      if (count === 0) {
+        _toast('Nenhum texto encontrado no portal ainda. Aguarde o envio dos documentos.');
+      } else {
+        _toast('Textos carregados (' + count + ' peça(s))! O Relatório foi atualizado.');
+        atualizarPreview && atualizarPreview();
+      }
+    }).catch(function(e) {
+      _toast('Erro ao buscar textos: ' + e.message);
+    });
+  }
+
   /* ── Speech-to-text (Web Speech API) ── */
   var _reconhecimento = null;
   var _micIdxAtivo   = -1;
@@ -1196,6 +1303,8 @@ var FormularioCtrl = (function() {
       if (te[idx]) { te[idx].temAnexo = false; te[idx].nomeAnexo = ''; Estado.set('testemunhas', te); }
       _render();
     },
+    toggleMicFundamentacao: toggleMicFundamentacao,
+    carregarTextosPortal: carregarTextosPortal,
     setSilencio: function(val) {
       Estado.setNested('defesa.silencio', val);
       _render();

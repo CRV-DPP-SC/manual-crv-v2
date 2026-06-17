@@ -165,6 +165,27 @@ window.PadFirestore = {
     await deleteDoc(doc(_db, 'pads_relacao', fsId));
   },
 
+  /* Salva Manifestação da Defesa enviada pelo advogado no portal */
+  salvarManifDefesaPortal: async function(padId, htmlContent, textoExtraido) {
+    await setDoc(doc(_db, 'pads_pecas', String(padId) + '_manif_defesa'), {
+      padId:         String(padId),
+      tipo:          'manif_defesa',
+      ordem:         7,
+      label:         '7. Manifestação da Defesa',
+      htmlContent:   htmlContent   || '',
+      textoExtraido: textoExtraido || '',
+      savedAt:       serverTimestamp(),
+      origem:        'portal',
+    }, { merge: true });
+  },
+
+  /* Busca texto extraído de uma peça específica */
+  buscarTextoPeca: async function(padId, tipo) {
+    const snap = await getDoc(doc(_db, 'pads_pecas', String(padId) + '_' + tipo));
+    if (!snap.exists()) return '';
+    return snap.data().textoExtraido || '';
+  },
+
   /* Lista todos os advogados */
   listarAdvogados: async function() {
     const snap = await getDocs(collection(_db, 'advogados'));

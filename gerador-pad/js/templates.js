@@ -276,27 +276,89 @@ function tplManifestacao(s) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   5. DECISÃO DA DIREÇÃO
+   5. DECISÃO DA DIREÇÃO — Relatório / Fundamentação / Dispositivo
    ══════════════════════════════════════════════════════════ */
 function tplDecisao(s) {
-  var num   = s.numPad || ph('Nº DO PAD');
+  var num   = s.numPad  || ph('Nº DO PAD');
   var dec   = s.decisao || {};
-  var fundo = dec.fundamento || '';
+  var mani  = s.manifestacao || {};
+  var def   = s.defesa  || {};
+  var testes = s.testemunhas || [];
 
-  var corpo = '';
+  /* ── I — RELATÓRIO ── */
+  var relatorio = '';
+
+  // 1. Portaria
+  relatorio += p('Trata-se de Procedimento Administrativo Disciplinar instaurado pela Portaria nº '
+    + fld(num) + ', em ' + (s.dataInst ? fld(fmtData(s.dataInst)) : ph('DATA DE INSTAURAÇÃO'))
+    + ', em desfavor do(a) apenado(a) ' + _nomeIpen(s)
+    + ', decorrente do suposto cometimento de infração disciplinar de natureza grave, prevista no '
+    + _artigoTexto(s) + ', cujos fatos supostamente ocorreram em ' + _dataInf(s) + '.');
+
+  // 2. Testemunhas
+  if (testes.length > 0) {
+    relatorio += lb(1);
+    relatorio += p('Designada audiência para oitiva de testemunha(s)/informante(s), foram ouvidos:');
+    testes.forEach(function(te) {
+      var qualLabel = te.qualidade === 'informante' ? 'na qualidade de informante' : 'na qualidade de testemunha';
+      var dep = te.depoimento
+        ? ', declarando, em síntese: "' + _esc(te.depoimento) + '"'
+        : ', cujo depoimento encontra-se registrado nos autos';
+      relatorio += pSR(fld(te.nome || ph('TESTEMUNHA')) + ', ' + _esc(te.qualificacao || '') + ', ' + qualLabel + dep + '.');
+    });
+  } else {
+    relatorio += lb(1);
+    relatorio += p('Não foram arroladas testemunhas no presente procedimento.');
+  }
+
+  // 3. Incidentado
+  relatorio += lb(1);
+  if (def.silencio) {
+    relatorio += p('Encerrada a fase de produção de provas, procedeu-se à inquirição do(a) incidentado(a) '
+      + _nomeIpen(s) + ', que, devidamente cientificado(a) do seu direito constitucional ao silêncio, optou por não prestar declarações.');
+  } else {
+    var versao = def.versaoIncidentado
+      ? '"' + _esc(def.versaoIncidentado) + '"'
+      : ph('VERSÃO DO INCIDENTADO');
+    relatorio += p('Encerrada a fase de produção de provas, procedeu-se à inquirição do(a) incidentado(a) '
+      + _nomeIpen(s) + ', que, ao ser indagado(a), declarou, em síntese: ' + versao + '.');
+  }
+
+  // 4. Conselho
+  relatorio += lb(1);
+  var concLabel = {
+    procedencia:      'pela procedência do feito, reconhecendo a prática de falta grave',
+    improcedencia:    'pela improcedência do feito, pugnando pelo arquivamento',
+    desclassificacao: 'pela desclassificação da infração disciplinar',
+  }[mani.conclusao] || ph('CONCLUSÃO DO CONSELHO');
+  var textoConselho = dec.textoManifConselho || mani.textoExtraido || '';
+  relatorio += p('O Conselho Disciplinar manifestou-se ' + fld(concLabel)
+    + (textoConselho ? ', aduzindo, em síntese: "' + _esc(textoConselho) + '"' : ', conforme parecer acostado aos autos') + '.');
+
+  // 5. Defesa
+  relatorio += lb(1);
+  var textoDefesa = dec.textoManifDefesa || (s.manifDefesa && s.manifDefesa.texto ? _esc(s.manifDefesa.texto) : '');
+  relatorio += p('Por sua vez, a Defesa, promovida por ' + fld(_defensor(s)) + ', manifestou-se'
+    + (textoDefesa ? ', alegando, em síntese: "' + textoDefesa + '"' : ' conforme documentos acostados aos autos') + '.');
+
+  /* ── II — FUNDAMENTAÇÃO ── */
+  var fundamentacao = dec.fundamentacao
+    ? _esc(dec.fundamentacao)
+    : ph('FUNDAMENTAÇÃO DA DECISÃO — preencha no formulário ou dite por voz');
+
+  /* ── III — DISPOSITIVO ── */
+  var dispositivo = '';
 
   if (dec.resultado === 'absolvicao') {
-    corpo = p('Em razão das diligências realizadas pelo Conselho Disciplinar no PAD instaurado pela Portaria nº ' + fld(num) + ', envolvendo o(a) interno(a) ' + _nomeIpen(s) + ', e considerando a manifestação do Conselho Disciplinar pela improcedência do feito,')
-    + lb(1) + p('<strong>DECIDO:</strong>') + lb(1)
+    dispositivo = p('<strong>DECIDO:</strong>') + lb(1)
     + pSR('1. Acolher o parecer do Conselho Disciplinar pela <strong>IMPROCEDÊNCIA</strong> do PAD, absolvendo o(a) incidentado(a) ' + fld((s.incidentado||{}).nome||'') + ' das imputações que lhe foram atribuídas.')
     + pSR('2. Determinar o arquivamento dos autos.')
     + pSR('3. Remeta-se cópia ao(à) MM.(ª) Juiz(íza) de Direito da Vara de Execuções Penais.')
-    + pSR('4. Registre-se no prontuário do(a) incidentado(a).')
-    + (fundo ? lb(1) + p(fundo) : '');
+    + pSR('4. Registre-se no prontuário do(a) incidentado(a).');
 
   } else if (dec.resultado === 'desclassificacao') {
     var grau = dec.desclassGrau === 'media' ? 'MÉDIA' : dec.desclassGrau === 'leve' ? 'LEVE' : ph('LEVE OU MÉDIA');
-    var art  = dec.desclassArt  || ph('ARTIGO LC 529/2011');
+    var art  = dec.desclassArt || ph('ARTIGO LC 529/2011');
     var dIncisos = dec.desclassIncisos || [];
     var dIncisosTexto = '';
     if (dIncisos.length) {
@@ -311,13 +373,11 @@ function tplDecisao(s) {
           + ' e <strong>' + dSelecionados[dUltIdx].label + '</strong>';
       }
     }
-    corpo = p('Em razão das diligências realizadas pelo Conselho Disciplinar no PAD instaurado pela Portaria nº ' + fld(num) + ', envolvendo o(a) interno(a) ' + _nomeIpen(s) + ', e considerando a manifestação do Conselho Disciplinar pela desclassificação da falta,')
-    + lb(1) + p('<strong>DECIDO:</strong>') + lb(1)
+    dispositivo = p('<strong>DECIDO:</strong>') + lb(1)
     + pSR('1. Acolher o parecer do Conselho Disciplinar, <strong>desclassificando</strong> a infração para falta de natureza <strong>' + grau + '</strong>, nos termos do ' + fld(art + dIncisosTexto) + ' da Lei Complementar nº 529/2011 do Estado de Santa Catarina.')
     + pSR('2. Determinar o arquivamento dos autos.')
     + pSR('3. Remeta-se cópia ao(à) MM.(ª) Juiz(íza) de Direito da Vara de Execuções Penais.')
-    + pSR('4. Registre-se no prontuário do(a) incidentado(a).')
-    + (fundo ? lb(1) + p(fundo) : '');
+    + pSR('4. Registre-se no prontuário do(a) incidentado(a).');
 
   } else if (dec.resultado === 'falta_grave') {
     var sancs = dec.sancoes || {};
@@ -325,33 +385,41 @@ function tplDecisao(s) {
     if (sancs.regressaoRegime)        listaSancoes.push('regressão do regime de execução penal, nos termos do <strong>art. 118, I, da LEP</strong>');
     if (sancs.interrupcaoProgressao)  listaSancoes.push('interrupção da contagem do prazo para progressão de regime, nos termos do <strong>art. 112, § 6º, da LEP</strong>');
     if (sancs.perdaRemicao && sancs.perdaRemicao.aplicar) {
-      var vr = sancs.perdaRemicao.valor || ph('QUANTIDADE/FRAÇÃO');
+      var vr  = sancs.perdaRemicao.valor || ph('QUANTIDADE/FRAÇÃO');
       var mod = sancs.perdaRemicao.modalidade === 'fracao' ? vr + ' dos dias remidos' : vr + ' (dias) remidos';
       listaSancoes.push('perda de ' + fld(mod) + ', nos termos do <strong>art. 127 da LEP</strong>');
     }
-    if (sancs.revogacaoSaidaTemp)     listaSancoes.push('revogação da saída temporária, nos termos do <strong>art. 125 da LEP</strong>');
-    if (sancs.revogacaoTrabalhoExt)   listaSancoes.push('revogação do trabalho externo, nos termos do <strong>art. 123 da LEP</strong>');
+    if (sancs.revogacaoSaidaTemp)   listaSancoes.push('revogação da saída temporária, nos termos do <strong>art. 125 da LEP</strong>');
+    if (sancs.revogacaoTrabalhoExt) listaSancoes.push('revogação do trabalho externo, nos termos do <strong>art. 123 da LEP</strong>');
 
-    corpo = p('Em razão das diligências realizadas pelo Conselho Disciplinar no PAD instaurado pela Portaria nº ' + fld(num) + ', envolvendo o(a) interno(a) ' + _nomeIpen(s) + ', corroborando o parecer exarado pelo Conselho Disciplinar,')
-    + lb(1) + p('<strong>DECIDO:</strong>') + lb(1)
+    dispositivo = p('<strong>DECIDO:</strong>') + lb(1)
     + pSR('1. Reconhecer a prática de <strong>FALTA GRAVE</strong>, tipificada no ' + _artigoLabel(s) + ', pelo(a) interno(a) ' + _nomeIpen(s) + '.')
     + (listaSancoes.length
         ? pSR('2. Aplicar as seguintes sanções:')
           + listaSancoes.map(function(sc, i) { return pSR('&emsp;&emsp;' + String.fromCharCode(97+i) + ') ' + sc + ';'); }).join('')
         : pSR('2. ' + ph('SANÇÕES A APLICAR')))
     + pSR('3. Remeta-se cópia ao(à) MM.(ª) Juiz(íza) de Direito da Vara de Execuções Penais.')
-    + pSR('4. Arquive-se e registre-se no prontuário do(a) incidentado(a).')
-    + (fundo ? lb(1) + p(fundo) : '');
+    + pSR('4. Arquive-se e registre-se no prontuário do(a) incidentado(a).');
 
   } else {
-    corpo = p(ph('SELECIONE O RESULTADO DA DECISÃO'));
+    dispositivo = p(ph('SELECIONE O RESULTADO DA DECISÃO NO FORMULÁRIO'));
   }
 
   return [
     p('<strong>DECISÃO DA DIREÇÃO</strong>'),
     p('<strong>Procedimento Administrativo Disciplinar — PAD Nº ' + fld(num) + '</strong>'),
     lb(1),
-    corpo,
+    p('<strong>I — RELATÓRIO</strong>'),
+    lb(1),
+    relatorio,
+    lb(1),
+    p('<strong>II — FUNDAMENTAÇÃO</strong>'),
+    lb(1),
+    p(fundamentacao),
+    lb(1),
+    p('<strong>III — DISPOSITIVO</strong>'),
+    lb(1),
+    dispositivo,
     lb(2),
     p(_cidade(s) + ', ' + (s.dataInst ? dPorExtenso(s.dataInst) : ph('DATA'))),
     lb(3),

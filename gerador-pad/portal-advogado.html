@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dossiê do PAD — Portal da Defesa · DPP/SC</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>if(typeof pdfjsLib!=='undefined') pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --marrom:#3b1f0a; --marrom2:#6b3a1f; --laranja:#f97316; --bg:#f8f9fa; --borda:#e5e7eb; }
@@ -154,6 +156,23 @@
     🔒 Acesso somente leitura. Os documentos são exibidos conforme produzidos pela unidade prisional.
   </div>
   <div class="dossie-corpo">
+    <!-- Upload da Manifestação da Defesa -->
+    <div id="secao-upload-defesa" style="margin-bottom:20px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px 20px;">
+      <div style="font-size:.88rem;font-weight:800;color:#1d4ed8;margin-bottom:6px;">📤 Enviar Manifestação da Defesa</div>
+      <div style="font-size:.78rem;color:#374151;margin-bottom:12px;">Envie o documento da manifestação da defesa em PDF. Ele ficará disponível para a unidade e integrará o dossiê.</div>
+      <div id="upload-defesa-status" style="display:none;font-size:.8rem;padding:8px 12px;border-radius:8px;margin-bottom:10px;"></div>
+      <div id="zona-upload-defesa"
+        style="border:2px dashed #93c5fd;border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:#fff;transition:all .15s;"
+        ondragover="event.preventDefault();this.style.borderColor='#2563eb'"
+        ondragleave="this.style.borderColor='#93c5fd'"
+        ondrop="_dropDefesa(event)">
+        <div style="font-size:1.5rem;margin-bottom:6px;">📎</div>
+        <div style="font-size:.85rem;font-weight:600;color:#1d4ed8;">Clique ou arraste o PDF aqui</div>
+        <div style="font-size:.72rem;color:#64748b;margin-top:4px;">PDF criado digitalmente (Word → PDF)</div>
+      </div>
+      <input type="file" id="inp-upload-defesa" accept=".pdf" style="display:none" onchange="_processarArquivoDefesa(this.files[0])">
+    </div>
+
     <div class="dossie-titulo-sec">
       <span>📋 Documentos do Procedimento</span>
     </div>
@@ -181,7 +200,7 @@
 <script type="module">
 import { initializeApp, getApps }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs }
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, getDocs, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 const _CFG = {
@@ -324,6 +343,98 @@ function _imprimirHtml(html, titulo) {
     + '</body></html>'
   );
   janela.document.close();
+}
+
+/* ── Upload da Manifestação da Defesa ── */
+
+document.getElementById('zona-upload-defesa').addEventListener('click', () => {
+  document.getElementById('inp-upload-defesa').click();
+});
+
+window._dropDefesa = function(e) {
+  e.preventDefault();
+  document.getElementById('zona-upload-defesa').style.borderColor = '#93c5fd';
+  const file = e.dataTransfer?.files?.[0];
+  if (file) _processarArquivoDefesa(file);
+};
+
+window._processarArquivoDefesa = async function(file) {
+  if (!file || file.type !== 'application/pdf') {
+    _statusDefesa('error', '❌ Selecione um arquivo PDF válido.');
+    return;
+  }
+  if (!_padAtual) {
+    _statusDefesa('error', '❌ PAD não carregado. Recarregue a página.');
+    return;
+  }
+
+  _statusDefesa('info', '⏳ Processando PDF…');
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    let textoCompleto = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page    = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      textoCompleto += content.items.map(it => it.str).join(' ') + '\n';
+    }
+
+    textoCompleto = textoCompleto.trim();
+    if (!textoCompleto) {
+      _statusDefesa('warn', '⚠️ PDF sem texto extraível (pode ser scan). O arquivo foi recebido, mas o texto não pôde ser lido automaticamente.');
+    }
+
+    /* Monta htmlContent simples para exibição no dossiê */
+    const htmlContent = '<div style="font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;white-space:pre-wrap;">'
+      + '<h3 style="margin-bottom:12px;">Manifestação da Defesa</h3>'
+      + '<p><strong>Arquivo:</strong> ' + _esc(file.name) + '</p>'
+      + (textoCompleto
+          ? '<hr style="margin:12px 0"><div>' + _esc(textoCompleto) + '</div>'
+          : '<p style="color:#92400e;margin-top:12px;">⚠️ Texto não extraível (documento digitalizado).</p>')
+      + '</div>';
+
+    /* Salva no Firestore */
+    await setDoc(doc(db, 'pads_pecas', String(_padAtual.id) + '_manif_defesa'), {
+      padId:         String(_padAtual.id),
+      tipo:          'manif_defesa',
+      ordem:         7,
+      label:         '7. Manifestação da Defesa',
+      htmlContent:   htmlContent,
+      textoExtraido: textoCompleto,
+      savedAt:       serverTimestamp(),
+      origem:        'portal',
+      nomeArquivo:   file.name,
+    }, { merge: true });
+
+    _statusDefesa('ok', '✅ Manifestação da Defesa enviada com sucesso! A unidade já pode acessá-la.');
+
+    /* Oculta a zona de upload e atualiza a lista de peças */
+    document.getElementById('zona-upload-defesa').style.display = 'none';
+
+    /* Recarrega peças para incluir a defesa recém-enviada */
+    const q    = query(collection(db,'pads_pecas'), where('padId','==',String(_padAtual.id)), orderBy('ordem','asc'));
+    const snap = await getDocs(q);
+    _pecas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _renderPecas();
+
+  } catch(e) {
+    _statusDefesa('error', '❌ Erro ao enviar: ' + e.message);
+  }
+};
+
+function _statusDefesa(tipo, msg) {
+  const el = document.getElementById('upload-defesa-status');
+  const cores = {
+    ok:    { bg:'#f0fdf4', cor:'#166534', borda:'#bbf7d0' },
+    error: { bg:'#fef2f2', cor:'#991b1b', borda:'#fecaca' },
+    warn:  { bg:'#fffbeb', cor:'#92400e', borda:'#fde68a' },
+    info:  { bg:'#eff6ff', cor:'#1d4ed8', borda:'#bfdbfe' },
+  };
+  const c = cores[tipo] || cores.info;
+  el.style.cssText = `display:block;background:${c.bg};color:${c.cor};border:1.5px solid ${c.borda};padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:.8rem;`;
+  el.textContent = msg;
 }
 
 _init();
