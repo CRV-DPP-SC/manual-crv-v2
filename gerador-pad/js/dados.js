@@ -29,6 +29,38 @@ var ARTIGOS_LC = [
   { cod: 'art96', label: 'Art. 96 — LC 529/2011 (falta média)', grau: 'media' },
 ];
 
+/* Incisos do Art. 95 da LC 529/2011 — Faltas Leves */
+var INCISOS_ART95 = [
+  { cod: 'art95_i',    label: 'I',    texto: 'descumprir compromisso de ajustamento de conduta' },
+  { cod: 'art95_ii',   label: 'II',   texto: 'praticar agiotagem' },
+  { cod: 'art95_iii',  label: 'III',  texto: 'praticar jogo por dinheiro ou objeto de valor' },
+  { cod: 'art95_iv',   label: 'IV',   texto: 'traficar artigos permitidos sem autorização da administração' },
+  { cod: 'art95_v',    label: 'V',    texto: 'descumprir as normas disciplinares do estabelecimento' },
+  { cod: 'art95_vi',   label: 'VI',   texto: 'não observar higiene pessoal ou do alojamento' },
+  { cod: 'art95_vii',  label: 'VII',  texto: 'não zelar pela conservação dos bens públicos' },
+  { cod: 'art95_viii', label: 'VIII', texto: 'fazer uso indevido de aparelho sonoro' },
+  { cod: 'art95_ix',   label: 'IX',   texto: 'ingerir bebida alcoólica' },
+  { cod: 'art95_x',    label: 'X',    texto: 'atrasar-se na entrada ao alojamento' },
+  { cod: 'art95_xi',   label: 'XI',   texto: 'desacatar verbalmente qualquer servidor' },
+];
+
+/* Incisos do Art. 96 da LC 529/2011 — Faltas Médias */
+var INCISOS_ART96 = [
+  { cod: 'art96_i',    label: 'I',    texto: 'descumprir as normas de tratamento e cortesia' },
+  { cod: 'art96_ii',   label: 'II',   texto: 'praticar ato imoral ou obsceno' },
+  { cod: 'art96_iii',  label: 'III',  texto: 'destruir, danificar ou inutilizar obras ou bens do estabelecimento' },
+  { cod: 'art96_iv',   label: 'IV',   texto: 'provocar perturbação coletiva' },
+  { cod: 'art96_v',    label: 'V',    texto: 'jogar objetos pelas janelas ou pelos muros do estabelecimento' },
+  { cod: 'art96_vi',   label: 'VI',   texto: 'deixar de cumprir ordem legal de servidor' },
+  { cod: 'art96_vii',  label: 'VII',  texto: 'agenciar negócios sem autorização da administração' },
+  { cod: 'art96_viii', label: 'VIII', texto: 'introduzir ou tentar introduzir artigos proibidos no estabelecimento' },
+];
+
+/* Retorna array de incisos conforme grau ('leve' ou 'media') */
+function getIncisosDesclass(grau) {
+  return grau === 'media' ? INCISOS_ART96 : INCISOS_ART95;
+}
+
 /* Retorna objeto do artigo por código */
 function getArtigo(cod) {
   return ARTIGOS_LEP.find(function(a) { return a.cod === cod; }) || null;

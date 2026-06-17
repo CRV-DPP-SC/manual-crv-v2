@@ -182,13 +182,31 @@ var FormularioCtrl = (function() {
   function _secTestemunhas(s) {
     var testes = s.testemunhas || [];
     var rows = testes.map(function(te, i) {
-      return '<div class="te-row" data-idx="' + i + '">'
-        + '<div class="te-idx">' + (i+1) + '</div>'
-        + '<div class="te-campos">'
-          + '<input type="text" class="inp-campo inp-te-nome" data-idx="' + i + '" placeholder="Nome da testemunha" value="' + _esc(te.nome||'') + '">'
-          + '<input type="text" class="inp-campo inp-te-qual" data-idx="' + i + '" placeholder="Qualificação (cargo, matrícula...)" value="' + _esc(te.qualificacao||'') + '" style="margin-top:5px">'
+      var micId    = 'mic-te-' + i;
+      var areaId   = 'inp-te-dep-' + i;
+      var statusId = 'mic-status-' + i;
+      return '<div class="te-row" data-idx="' + i + '" style="flex-direction:column;gap:8px;">'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;">'
+          + '<div class="te-idx" style="margin-top:4px;">' + (i+1) + '</div>'
+          + '<div class="te-campos" style="flex:1;">'
+            + '<input type="text" class="inp-campo inp-te-nome" data-idx="' + i + '" placeholder="Nome da testemunha" value="' + _esc(te.nome||'') + '">'
+            + '<input type="text" class="inp-campo inp-te-qual" data-idx="' + i + '" placeholder="Qualificação (cargo, matrícula...)" value="' + _esc(te.qualificacao||'') + '" style="margin-top:5px">'
+          + '</div>'
+          + '<button class="btn-te-del" onclick="FormularioCtrl.removerTestemunha(' + i + ')" title="Remover" style="margin-top:4px;">✕</button>'
         + '</div>'
-        + '<button class="btn-te-del" onclick="FormularioCtrl.removerTestemunha(' + i + ')" title="Remover">✕</button>'
+        + '<div style="padding-left:32px;">'
+          + '<div class="campo-wrap" style="margin-bottom:4px;">'
+            + '<label class="campo-label" style="display:flex;align-items:center;justify-content:space-between;">'
+              + 'Depoimento / Declarações'
+              + '<button id="' + micId + '" class="btn-mic" onclick="FormularioCtrl.toggleMic(' + i + ')" title="Clique para ditar o depoimento por voz">🎙 Ditar</button>'
+            + '</label>'
+            + '<div id="' + statusId + '" class="mic-status" style="display:none;"></div>'
+            + '<textarea class="inp-textarea inp-te-dep" id="' + areaId + '" data-idx="' + i + '" rows="4" '
+              + 'placeholder="Digite ou dite as declarações prestadas pela testemunha...">'
+              + _esc(te.depoimento||'')
+            + '</textarea>'
+          + '</div>'
+        + '</div>'
       + '</div>';
     }).join('');
 
@@ -198,9 +216,16 @@ var FormularioCtrl = (function() {
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
+        + '<style>'
+          + '.btn-mic{background:none;border:1.5px solid #d1d5db;border-radius:6px;padding:3px 9px;font-size:.72rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;transition:all .15s;}'
+          + '.btn-mic:hover{border-color:#2563eb;color:#2563eb;}'
+          + '.btn-mic.gravando{border-color:#dc2626;color:#dc2626;animation:pulso .8s infinite;}'
+          + '@keyframes pulso{0%,100%{opacity:1;}50%{opacity:.5;}}'
+          + '.mic-status{font-size:.72rem;color:#2563eb;padding:4px 8px;background:#eff6ff;border-radius:6px;margin-bottom:6px;}'
+        + '</style>'
         + (rows || '<div style="font-size:.82rem;color:#999;margin-bottom:10px;">Nenhuma testemunha cadastrada.</div>')
         + '<button class="btn-add-reed" onclick="FormularioCtrl.adicionarTestemunha()">+ Adicionar Testemunha</button>'
-        + '<div class="campo-hint" style="margin-top:6px;">Um Termo de Oitiva será gerado para cada testemunha.</div>'
+        + '<div class="campo-hint" style="margin-top:6px;">Um Termo de Oitiva será gerado para cada testemunha. Use 🎙 para ditar o depoimento por voz (Chrome/Edge).</div>'
       + '</div>'
     + '</div>';
   }
@@ -242,6 +267,38 @@ var FormularioCtrl = (function() {
     var chipSel = function(v, lbl) {
       return '<button class="chip' + (cc === v ? ' sel' : '') + '" data-val="' + v + '" onclick="FormularioCtrl.setConclusao(\'' + v + '\')">' + lbl + '</button>';
     };
+
+    var extraDesclass = '';
+    if (cc === 'desclassificacao') {
+      var grau = m.desclassGrau || '';
+      var gSel = function(v, lbl) {
+        return '<button class="chip' + (grau === v ? ' sel' : '') + '" onclick="FormularioCtrl.setDesclassManifest(\'' + v + '\')">' + lbl + '</button>';
+      };
+      extraDesclass = '<div class="campo-wrap" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;">'
+        + '<label class="campo-label" style="color:#92400e;">⚖️ Enquadramento após desclassificação</label>'
+        + '<div class="chip-group" style="margin-bottom:10px;">'
+          + gSel('leve',  'Falta Leve — Art. 95, LC 529/2011')
+          + gSel('media', 'Falta Média — Art. 96, LC 529/2011')
+        + '</div>';
+
+      if (grau) {
+        var incisos = getIncisosDesclass(grau);
+        var selecionados = m.desclassIncisos || [];
+        extraDesclass += '<label class="campo-label" style="color:#92400e;margin-bottom:6px;">Selecione o(s) inciso(s):</label>'
+          + '<div class="check-group">'
+          + incisos.map(function(inc) {
+              var chk = selecionados.indexOf(inc.cod) !== -1 ? ' checked' : '';
+              return '<label class="check-item">'
+                + '<input type="checkbox" class="chk-mani-inciso" data-cod="' + inc.cod + '"' + chk
+                + ' onchange="FormularioCtrl.toggleIncisoConclusao(\'' + inc.cod + '\',this.checked)">'
+                + '<strong>' + inc.label + '</strong> — ' + _esc(inc.texto)
+              + '</label>';
+            }).join('')
+          + '</div>';
+      }
+      extraDesclass += '</div>';
+    }
+
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
         + '<span class="sec-titulo">📝 Manifestação do Conselho</span>'
@@ -256,6 +313,7 @@ var FormularioCtrl = (function() {
             + chipSel('desclassificacao', '⚖️ Desclassificação')
           + '</div>'
         + '</div>'
+        + extraDesclass
         + '<div class="campo-wrap">'
           + '<label class="campo-label">Fundamentação Complementar <span class="opc">(opcional)</span></label>'
           + '<textarea class="inp-textarea" id="inp-mani-fund" rows="3" placeholder="Fundamentos específicos adicionais...">' + _esc(m.fundamento||'') + '</textarea>'
@@ -280,9 +338,29 @@ var FormularioCtrl = (function() {
       var gSel = function(v, lbl) {
         return '<button class="chip' + (dec.desclassGrau === v ? ' sel' : '') + '" onclick="FormularioCtrl.setDesclass(\'' + v + '\')">' + lbl + '</button>';
       };
-      extra = '<div class="campo-wrap"><label class="campo-label">Grau após desclassificação</label>'
-        + '<div class="chip-group">' + gSel('leve','Falta Leve (Art. 95)') + gSel('media','Falta Média (Art. 96)') + '</div>'
-      + '</div>';
+      extra = '<div class="campo-wrap" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;">'
+        + '<label class="campo-label" style="color:#92400e;">⚖️ Enquadramento após desclassificação</label>'
+        + '<div class="chip-group" style="margin-bottom:10px;">'
+          + gSel('leve',  'Falta Leve — Art. 95, LC 529/2011')
+          + gSel('media', 'Falta Média — Art. 96, LC 529/2011')
+        + '</div>';
+
+      if (dec.desclassGrau) {
+        var incisosD = getIncisosDesclass(dec.desclassGrau);
+        var selD = dec.desclassIncisos || [];
+        extra += '<label class="campo-label" style="color:#92400e;margin-bottom:6px;">Selecione o(s) inciso(s):</label>'
+          + '<div class="check-group">'
+          + incisosD.map(function(inc) {
+              var chk = selD.indexOf(inc.cod) !== -1 ? ' checked' : '';
+              return '<label class="check-item">'
+                + '<input type="checkbox" class="chk-dec-inciso" data-cod="' + inc.cod + '"' + chk
+                + ' onchange="FormularioCtrl.toggleIncisoDecisao(\'' + inc.cod + '\',this.checked)">'
+                + '<strong>' + inc.label + '</strong> — ' + _esc(inc.texto)
+              + '</label>';
+            }).join('')
+          + '</div>';
+      }
+      extra += '</div>';
     } else if (res === 'falta_grave') {
       var chk = function(id, campo, lbl) {
         return '<label class="check-item">'
@@ -475,6 +553,13 @@ var FormularioCtrl = (function() {
         if (te[idx]) { te[idx].qualificacao = el.value; Estado.set('testemunhas', te); }
       });
     });
+    document.querySelectorAll('.inp-te-dep').forEach(function(el) {
+      el.addEventListener('input', function() {
+        var idx = parseInt(el.dataset.idx);
+        var te = Estado.get('testemunhas');
+        if (te[idx]) { te[idx].depoimento = el.value; Estado.set('testemunhas', te); }
+      });
+    });
 
     // Remição valor
     _bind('inp-remicao-val', function(v) { Estado.setNested('decisao.sancoes.perdaRemicao.valor', v); });
@@ -509,7 +594,29 @@ var FormularioCtrl = (function() {
   function setDesclass(g) {
     Estado.setNested('decisao.desclassGrau', g);
     Estado.setNested('decisao.desclassArt', g === 'leve' ? 'Art. 95' : 'Art. 96');
+    Estado.setNested('decisao.desclassIncisos', []);
     _render();
+  }
+  function setDesclassManifest(g) {
+    Estado.setNested('manifestacao.desclassGrau', g);
+    Estado.setNested('manifestacao.desclassArt', g === 'leve' ? 'Art. 95' : 'Art. 96');
+    Estado.setNested('manifestacao.desclassIncisos', []);
+    _render();
+  }
+  function toggleIncisoConclusao(cod, checked) {
+    var lista = Estado.get('manifestacao').desclassIncisos || [];
+    if (checked) { if (lista.indexOf(cod) === -1) lista.push(cod); }
+    else { lista = lista.filter(function(c) { return c !== cod; }); }
+    Estado.setNested('manifestacao.desclassIncisos', lista);
+    // não re-renderiza para não perder o estado dos checkboxes
+    atualizarPreview && atualizarPreview();
+  }
+  function toggleIncisoDecisao(cod, checked) {
+    var lista = Estado.get('decisao').desclassIncisos || [];
+    if (checked) { if (lista.indexOf(cod) === -1) lista.push(cod); }
+    else { lista = lista.filter(function(c) { return c !== cod; }); }
+    Estado.setNested('decisao.desclassIncisos', lista);
+    atualizarPreview && atualizarPreview();
   }
   function setSancao(campo, val) {
     Estado.setNested('decisao.sancoes.' + campo, val);
@@ -524,7 +631,7 @@ var FormularioCtrl = (function() {
   }
   function adicionarTestemunha() {
     var te = Estado.get('testemunhas');
-    te.push({ nome: '', qualificacao: '' });
+    te.push({ nome: '', qualificacao: '', depoimento: '' });
     Estado.set('testemunhas', te);
     _render();
   }
@@ -535,6 +642,78 @@ var FormularioCtrl = (function() {
     _render();
   }
 
+  /* ── Speech-to-text (Web Speech API) ── */
+  var _reconhecimento = null;
+  var _micIdxAtivo   = -1;
+
+  function toggleMic(idx) {
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      _toast('Reconhecimento de voz não suportado neste navegador. Use Chrome ou Edge.');
+      return;
+    }
+
+    var btnEl    = document.getElementById('mic-te-' + idx);
+    var areaEl   = document.getElementById('inp-te-dep-' + idx);
+    var statusEl = document.getElementById('mic-status-' + idx);
+
+    // Se já está gravando para este índice, para
+    if (_reconhecimento && _micIdxAtivo === idx) {
+      _reconhecimento.stop();
+      return;
+    }
+
+    // Para qualquer gravação anterior
+    if (_reconhecimento) { try { _reconhecimento.stop(); } catch(_) {} }
+
+    _reconhecimento = new SpeechRec();
+    _reconhecimento.lang = 'pt-BR';
+    _reconhecimento.continuous = true;
+    _reconhecimento.interimResults = true;
+    _micIdxAtivo = idx;
+
+    var textoAnterior = (areaEl ? areaEl.value : '') + ' ';
+
+    _reconhecimento.onstart = function() {
+      if (btnEl)    { btnEl.textContent = '⏹ Parar'; btnEl.classList.add('gravando'); }
+      if (statusEl) { statusEl.textContent = '🎙 Gravando… fale agora'; statusEl.style.display = ''; }
+    };
+
+    _reconhecimento.onresult = function(e) {
+      var interim = '';
+      var final   = textoAnterior;
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript + ' ';
+          textoAnterior = final;
+        } else {
+          interim += e.results[i][0].transcript;
+        }
+      }
+      if (areaEl) areaEl.value = final + interim;
+      // Persiste no estado
+      var te = Estado.get('testemunhas');
+      if (te[idx]) { te[idx].depoimento = final; Estado.set('testemunhas', te); }
+    };
+
+    _reconhecimento.onerror = function(e) {
+      if (statusEl) { statusEl.textContent = '⚠️ Erro: ' + e.error; }
+    };
+
+    _reconhecimento.onend = function() {
+      _micIdxAtivo = -1;
+      if (btnEl)    { btnEl.textContent = '🎙 Ditar'; btnEl.classList.remove('gravando'); }
+      if (statusEl) { statusEl.style.display = 'none'; }
+      // Persiste valor final
+      if (areaEl) {
+        var te = Estado.get('testemunhas');
+        if (te[idx]) { te[idx].depoimento = areaEl.value; Estado.set('testemunhas', te); }
+      }
+    };
+
+    _reconhecimento.start();
+  }
+
   return {
     inicializar: _render,
     sincronizar: sincronizar,
@@ -543,10 +722,14 @@ var FormularioCtrl = (function() {
     setConclusao: setConclusao,
     setResultado: setResultado,
     setDesclass: setDesclass,
+    setDesclassManifest: setDesclassManifest,
+    toggleIncisoConclusao: toggleIncisoConclusao,
+    toggleIncisoDecisao: toggleIncisoDecisao,
     setSancao: setSancao,
     setSancaoRemicao: setSancaoRemicao,
     setRemicaoMod: setRemicaoMod,
     adicionarTestemunha: adicionarTestemunha,
     removerTestemunha: removerTestemunha,
+    toggleMic: toggleMic,
   };
 })();

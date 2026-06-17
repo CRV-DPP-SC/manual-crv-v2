@@ -167,7 +167,7 @@ function tplOitivaTestemunha(s, testemunha) {
     lb(1),
     p('Devidamente advertida a dizer a verdade, a testemunha prestou os seguintes esclarecimentos acerca dos fatos relacionados ao PAD acima referenciado:'),
     lb(1),
-    p(ph('DECLARAÇÕES DA TESTEMUNHA')),
+    p((testemunha && testemunha.depoimento) ? _esc(testemunha.depoimento) : ph('DECLARAÇÕES DA TESTEMUNHA')),
     lb(1),
     p('Nada mais disse nem lhe foi perguntado. Lido e achado conforme, vai o presente Termo assinado pelos presentes.'),
     lb(2),
@@ -207,11 +207,27 @@ function tplManifestacao(s) {
     + lb(1)
     + p('Pelo exposto, o Conselho Disciplinar, <strong>por unanimidade, manifesta-se pela IMPROCEDÊNCIA</strong> do presente PAD, recomendando o arquivamento dos autos.')
   } else if (mani.conclusao === 'desclassificacao') {
+    var mGrauLabel = mani.desclassGrau === 'media' ? 'MÉDIA' : mani.desclassGrau === 'leve' ? 'LEVE' : 'LEVE OU MÉDIA';
+    var mArt = mani.desclassArt || ph('ART. 95 OU 96');
+    var mIncisos = mani.desclassIncisos || [];
+    var mIncisosTexto = '';
+    if (mIncisos.length) {
+      var incisosDisp = getIncisosDesclass(mani.desclassGrau);
+      var selecionados = incisosDisp.filter(function(inc) { return mIncisos.indexOf(inc.cod) !== -1; });
+      if (selecionados.length === 1) {
+        mIncisosTexto = ', especificamente o inciso <strong>' + selecionados[0].label + '</strong> (' + _esc(selecionados[0].texto) + ')';
+      } else if (selecionados.length > 1) {
+        var ultIdx = selecionados.length - 1;
+        mIncisosTexto = ', especificamente os incisos '
+          + selecionados.slice(0, ultIdx).map(function(i) { return '<strong>' + i.label + '</strong>'; }).join(', ')
+          + ' e <strong>' + selecionados[ultIdx].label + '</strong>';
+      }
+    }
     fundamentoAuto = p('Analisando os elementos constantes nos autos, o Conselho Disciplinar verificou que, embora a conduta do(a) incidentado(a) ' + _nomeIpen(s) + ' configure irregularidade disciplinar, os elementos probatórios não demonstram o preenchimento de todos os requisitos necessários à caracterização de falta grave.')
     + (vers ? p('Em sua oitiva, o(a) incidentado(a) apresentou a seguinte versão: "' + vers + '"') : '')
     + (fundo ? p(fundo) : '')
     + lb(1)
-    + p('Pelo exposto, o Conselho Disciplinar, <strong>por unanimidade, manifesta-se pela DESCLASSIFICAÇÃO</strong> da falta, por entender que os fatos apurados configuram falta de natureza <strong>leve ou média</strong>, nos termos da legislação estadual aplicável (LC nº 529/2011).')
+    + p('Pelo exposto, o Conselho Disciplinar, <strong>por unanimidade, manifesta-se pela DESCLASSIFICAÇÃO</strong> da falta, por entender que os fatos apurados configuram falta de natureza <strong>' + mGrauLabel + '</strong>, nos termos do <strong>' + mArt + '</strong> da Lei Complementar nº 529/2011 do Estado de Santa Catarina' + mIncisosTexto + '.')
   } else {
     fundamentoAuto = p(ph('SELECIONE A CONCLUSÃO DO CONSELHO'));
   }
@@ -259,11 +275,25 @@ function tplDecisao(s) {
     + (fundo ? lb(1) + p(fundo) : '');
 
   } else if (dec.resultado === 'desclassificacao') {
-    var grau = dec.desclassGrau === 'media' ? 'MÉDIA' : 'LEVE';
+    var grau = dec.desclassGrau === 'media' ? 'MÉDIA' : dec.desclassGrau === 'leve' ? 'LEVE' : ph('LEVE OU MÉDIA');
     var art  = dec.desclassArt  || ph('ARTIGO LC 529/2011');
+    var dIncisos = dec.desclassIncisos || [];
+    var dIncisosTexto = '';
+    if (dIncisos.length) {
+      var dIncisosDisp = getIncisosDesclass(dec.desclassGrau);
+      var dSelecionados = dIncisosDisp.filter(function(inc) { return dIncisos.indexOf(inc.cod) !== -1; });
+      if (dSelecionados.length === 1) {
+        dIncisosTexto = ', inciso <strong>' + dSelecionados[0].label + '</strong> (' + _esc(dSelecionados[0].texto) + ')';
+      } else if (dSelecionados.length > 1) {
+        var dUltIdx = dSelecionados.length - 1;
+        dIncisosTexto = ', incisos '
+          + dSelecionados.slice(0, dUltIdx).map(function(i) { return '<strong>' + i.label + '</strong>'; }).join(', ')
+          + ' e <strong>' + dSelecionados[dUltIdx].label + '</strong>';
+      }
+    }
     corpo = p('Em razão das diligências realizadas pelo Conselho Disciplinar no PAD instaurado pela Portaria nº ' + fld(num) + ', envolvendo o(a) interno(a) ' + _nomeIpen(s) + ', e considerando a manifestação do Conselho Disciplinar pela desclassificação da falta,')
     + lb(1) + p('<strong>DECIDO:</strong>') + lb(1)
-    + pSR('1. Acolher o parecer do Conselho Disciplinar, <strong>desclassificando</strong> a infração para falta de natureza <strong>' + grau + '</strong>, nos termos do ' + fld(art) + ' da Lei Complementar nº 529/2011 do Estado de Santa Catarina.')
+    + pSR('1. Acolher o parecer do Conselho Disciplinar, <strong>desclassificando</strong> a infração para falta de natureza <strong>' + grau + '</strong>, nos termos do ' + fld(art + dIncisosTexto) + ' da Lei Complementar nº 529/2011 do Estado de Santa Catarina.')
     + pSR('2. Determinar o arquivamento dos autos.')
     + pSR('3. Remeta-se cópia ao(à) MM.(ª) Juiz(íza) de Direito da Vara de Execuções Penais.')
     + pSR('4. Registre-se no prontuário do(a) incidentado(a).')

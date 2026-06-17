@@ -68,8 +68,11 @@ var Estado = (function() {
 
       // ── Manifestação do Conselho
       manifestacao: {
-        conclusao:  '',  // 'procedencia' | 'improcedencia' | 'desclassificacao'
-        fundamento: '',
+        conclusao:        '',  // 'procedencia' | 'improcedencia' | 'desclassificacao'
+        desclassGrau:     '',  // 'leve' | 'media'
+        desclassArt:      '',  // 'Art. 95' | 'Art. 96'
+        desclassIncisos:  [],  // ex: ['art95_i', 'art95_iii']
+        fundamento:       '',
       },
 
       // ── Decisão da Direção
@@ -77,6 +80,7 @@ var Estado = (function() {
         resultado:             '',   // 'absolvicao' | 'desclassificacao' | 'falta_grave'
         desclassGrau:          '',   // 'leve' | 'media'
         desclassArt:           '',   // 'Art. 95' | 'Art. 96'
+        desclassIncisos:       [],   // ex: ['art96_i', 'art96_ii']
         sancoes: {
           regressaoRegime:       false,
           interrupcaoProgressao: false,
@@ -163,8 +167,14 @@ var Estado = (function() {
     if (snap.infracao)    _data.infracao    = Object.assign(_estadoVazio().infracao,    snap.infracao);
     if (snap.defesa)      _data.defesa      = Object.assign(_estadoVazio().defesa,      snap.defesa);
     if (snap.conselho)    _data.conselho    = _clonar(snap.conselho);
-    if (snap.manifestacao)_data.manifestacao= Object.assign(_estadoVazio().manifestacao, snap.manifestacao);
-    if (snap.decisao)     _data.decisao     = _clonar(snap.decisao);
+    if (snap.manifestacao){
+      _data.manifestacao = Object.assign(_estadoVazio().manifestacao, snap.manifestacao);
+      if (!Array.isArray(_data.manifestacao.desclassIncisos)) _data.manifestacao.desclassIncisos = [];
+    }
+    if (snap.decisao) {
+      _data.decisao = _clonar(snap.decisao);
+      if (!Array.isArray(_data.decisao.desclassIncisos)) _data.decisao.desclassIncisos = [];
+    }
     if (snap.diretor)     _data.diretor     = Object.assign(_estadoVazio().diretor, snap.diretor);
     if (snap.unidade)     _data.unidade     = Object.assign(_estadoVazio().unidade, snap.unidade);
     _notificar();
