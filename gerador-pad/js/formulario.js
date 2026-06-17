@@ -15,6 +15,12 @@ var FormularioCtrl = (function() {
       case 'portaria':
         secoes = _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
         break;
+      case 'doc_inicial':
+        secoes = _secDocInicial(s);
+        break;
+      case 'termo_cient':
+        secoes = _secTermoCient(s);
+        break;
       case 'oitiva_inc':
         secoes = _secDefesa(s);
         break;
@@ -23,6 +29,9 @@ var FormularioCtrl = (function() {
         break;
       case 'manifestacao':
         secoes = _secManifestacao(s);
+        break;
+      case 'manif_defesa':
+        secoes = _secManifDefesa(s);
         break;
       case 'decisao':
         secoes = _secDecisao(s);
@@ -241,6 +250,107 @@ var FormularioCtrl = (function() {
         + '<div style="margin-top:8px;">'
           + '<button class="btn-acao btn-sec" onclick="salvarConselho()" style="font-size:.76rem;padding:6px 13px;">💾 Salvar Conselho</button>'
           + '<div class="campo-hint">Os membros ficam salvos para sua unidade.</div>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+
+  /* ── Seção: Documentação Inicial ── */
+  function _secDocInicial(s) {
+    var di   = s.docInicial || {};
+    var arqs = di.arquivos  || [];
+    var listaHtml = arqs.length
+      ? arqs.map(function(a, i) {
+          return '<div class="te-row" style="flex-direction:row;align-items:center;gap:8px;padding:8px 0;">'
+            + '<span style="font-size:1.2rem;">' + (a.tipo && a.tipo.startsWith('image') ? '🖼️' : '📄') + '</span>'
+            + '<span style="flex:1;font-size:.83rem;color:#1c1917;">' + _esc(a.nome) + '</span>'
+            + '<button class="btn-te-del" onclick="FormularioCtrl.removerDocInicial(' + i + ')" title="Remover">✕</button>'
+            + '</div>';
+        }).join('')
+      : '<div style="font-size:.82rem;color:#999;margin-bottom:6px;">Nenhum arquivo adicionado ainda.</div>';
+
+    return '<div class="form-secao">'
+      + '<div class="sec-head" onclick="_toggleSec(this)">'
+        + '<span class="sec-titulo">📂 Documentação Inicial</span>'
+        + _ind(arqs.length > 0)
+        + '<span class="sec-chevron">▼</span>'
+      + '</div>'
+      + '<div class="sec-corpo">'
+        + '<div class="campo-hint" style="margin-bottom:12px;">Adicione comunicações de ocorrência, relatórios, fotografias e demais provas. Serão incluídos após a Portaria no dossiê.</div>'
+        + listaHtml
+        + '<div id="zona-doc-inicial" class="zona-upload" style="margin-top:10px;">'
+          + '<div class="upload-icon">📂</div>'
+          + '<div class="upload-txt">Arraste arquivos aqui<br><span style="font-size:.75rem;color:#999;">PDF, JPG, PNG — múltiplos arquivos permitidos</span></div>'
+        + '</div>'
+        + '<input type="file" id="inp-doc-inicial" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none">'
+      + '</div>'
+    + '</div>';
+  }
+
+  /* ── Seção: Termo de Cientificação ── */
+  function _secTermoCient(s) {
+    var tc = s.termoCient || {};
+    return '<div class="form-secao">'
+      + '<div class="sec-head" onclick="_toggleSec(this)">'
+        + '<span class="sec-titulo">📋 Termo de Cientificação</span>'
+        + _ind(!!tc.temAnexo)
+        + '<span class="sec-chevron">▼</span>'
+      + '</div>'
+      + '<div class="sec-corpo">'
+        + '<div class="campo-hint" style="margin-bottom:12px;">O documento é gerado automaticamente com os dados do PAD. Imprima, colha a assinatura do apenado e digitalize.</div>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label">Observações adicionais <span class="opc">(opcional)</span></label>'
+          + '<textarea class="inp-textarea" id="inp-termo-cient-obs" rows="2" placeholder="Ex.: interno recusou-se a assinar...">' + _esc(tc.texto||'') + '</textarea>'
+        + '</div>'
+        + '<div class="campo-wrap" style="margin-top:4px;">'
+          + '<label class="campo-label">Documento assinado digitalizado <span class="opc">(opcional)</span></label>'
+          + (tc.temAnexo
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">'
+                + '<span>✅</span><span style="flex:1;font-size:.83rem;color:#166534;">' + _esc(tc.nomeAnexo||'Documento anexado') + '</span>'
+                + '<button class="btn-te-del" onclick="FormularioCtrl.removerAnexoTermoCient()" title="Remover">✕</button>'
+              + '</div>'
+            : '<div id="zona-termo-cient" class="zona-upload" style="padding:16px 20px;">'
+                + '<div class="upload-icon" style="font-size:1.4rem;">📎</div>'
+                + '<div class="upload-txt">Arraste o PDF digitalizado aqui</div>'
+              + '</div>'
+              + '<input type="file" id="inp-termo-cient" accept=".pdf,.jpg,.jpeg,.png" style="display:none">')
+        + '</div>'
+      + '</div>'
+    + '</div>';
+  }
+
+  /* ── Seção: Manifestação da Defesa ── */
+  function _secManifDefesa(s) {
+    var md  = s.manifDefesa || {};
+    var micId = 'mic-manif-defesa';
+    return '<div class="form-secao">'
+      + '<div class="sec-head" onclick="_toggleSec(this)">'
+        + '<span class="sec-titulo">⚖️ Manifestação da Defesa</span>'
+        + _ind(!!(md.texto || md.temAnexo))
+        + '<span class="sec-chevron">▼</span>'
+      + '</div>'
+      + '<div class="sec-corpo">'
+        + '<div class="campo-hint" style="margin-bottom:12px;">Registre a defesa oral ou por memoriais. Se recebida por e-mail/papel, faça o upload do documento.</div>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label" style="display:flex;align-items:center;justify-content:space-between;">'
+            + 'Defesa oral / Memoriais (texto ou voz)'
+            + '<button id="' + micId + '" class="btn-mic" onclick="FormularioCtrl.toggleMicManifDefesa()" title="Ditar">🎙 Ditar</button>'
+          + '</label>'
+          + '<div id="mic-status-manif" class="mic-status" style="display:none;"></div>'
+          + '<textarea class="inp-textarea" id="inp-manif-defesa-texto" rows="5" placeholder="Digite ou dite a manifestação da defesa...">' + _esc(md.texto||'') + '</textarea>'
+        + '</div>'
+        + '<div class="campo-wrap">'
+          + '<label class="campo-label">Documento da defesa (upload) <span class="opc">(opcional)</span></label>'
+          + (md.temAnexo
+            ? '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">'
+                + '<span>✅</span><span style="flex:1;font-size:.83rem;color:#166534;">' + _esc(md.nomeAnexo||'Documento anexado') + '</span>'
+                + '<button class="btn-te-del" onclick="FormularioCtrl.removerAnexoManifDefesa()" title="Remover">✕</button>'
+              + '</div>'
+            : '<div id="zona-manif-defesa" class="zona-upload" style="padding:16px 20px;">'
+                + '<div class="upload-icon" style="font-size:1.4rem;">📎</div>'
+                + '<div class="upload-txt">Arraste o PDF/imagem da defesa</div>'
+              + '</div>'
+              + '<input type="file" id="inp-manif-defesa-pdf" accept=".pdf,.jpg,.jpeg,.png" style="display:none">')
         + '</div>'
       + '</div>'
     + '</div>';
@@ -491,6 +601,8 @@ var FormularioCtrl = (function() {
     _bind('inp-adv-oab',    function(v) { Estado.setNested('defesa.advOab', v); });
     _bind('inp-versao-inc', function(v) { Estado.setNested('defesa.versaoIncidentado', v); });
 
+    _bind('inp-termo-cient-obs',    function(v) { Estado.setNested('termoCient.texto', v); });
+    _bind('inp-manif-defesa-texto', function(v) { Estado.setNested('manifDefesa.texto', v); });
     _bind('inp-mani-fund', function(v) { Estado.setNested('manifestacao.fundamento', v); });
     _bind('inp-dec-fund',  function(v) { Estado.setNested('decisao.fundamento', v); });
 
@@ -535,6 +647,9 @@ var FormularioCtrl = (function() {
     _bind('inp-remicao-val', function(v) { Estado.setNested('decisao.sancoes.perdaRemicao.valor', v); });
 
     _initUpload();
+    _initDocInicial();
+    _initTermoCient();
+    _initManifDefesaUpload();
   }
 
   function _bind(id, fn) {
@@ -610,6 +725,116 @@ var FormularioCtrl = (function() {
     te.splice(idx, 1);
     Estado.set('testemunhas', te);
     _render();
+  }
+
+  /* ── Upload: Documentação Inicial ── */
+  function _initDocInicial() {
+    var zona  = document.getElementById('zona-doc-inicial');
+    var input = document.getElementById('inp-doc-inicial');
+    if (!zona || !input) return;
+    zona.addEventListener('click', function() { input.click(); });
+    zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+    zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+    zona.addEventListener('drop', function(e) {
+      e.preventDefault(); zona.classList.remove('drag-over');
+      _processarDocInicialFiles(Array.from(e.dataTransfer.files));
+    });
+    input.addEventListener('change', function() {
+      _processarDocInicialFiles(Array.from(input.files));
+    });
+  }
+  function _processarDocInicialFiles(files) {
+    if (!files.length) return;
+    if (!window._docInicialFiles) window._docInicialFiles = [];
+    files.forEach(function(f) {
+      window._docInicialFiles.push(f);
+      var di   = Estado.get('docInicial') || { arquivos: [] };
+      di.arquivos.push({ nome: f.name, tipo: f.type });
+      Estado.set('docInicial', di);
+    });
+    _render();
+  }
+
+  /* ── Upload: Termo de Cientificação assinado ── */
+  function _initTermoCient() {
+    var zona  = document.getElementById('zona-termo-cient');
+    var input = document.getElementById('inp-termo-cient');
+    if (!zona || !input) return;
+    zona.addEventListener('click', function() { input.click(); });
+    zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+    zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+    zona.addEventListener('drop', function(e) {
+      e.preventDefault(); zona.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) _processarTermoCient(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', function() {
+      if (input.files[0]) _processarTermoCient(input.files[0]);
+    });
+  }
+  function _processarTermoCient(file) {
+    window._termoCientPdfFile = file;
+    Estado.setNested('termoCient.temAnexo',  true);
+    Estado.setNested('termoCient.nomeAnexo', file.name);
+    _render();
+    _toast('Documento assinado anexado!');
+  }
+
+  /* ── Upload: Manifestação da Defesa PDF ── */
+  function _initManifDefesaUpload() {
+    var zona  = document.getElementById('zona-manif-defesa');
+    var input = document.getElementById('inp-manif-defesa-pdf');
+    if (!zona || !input) return;
+    zona.addEventListener('click', function() { input.click(); });
+    zona.addEventListener('dragover', function(e) { e.preventDefault(); zona.classList.add('drag-over'); });
+    zona.addEventListener('dragleave', function() { zona.classList.remove('drag-over'); });
+    zona.addEventListener('drop', function(e) {
+      e.preventDefault(); zona.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) _processarManifDefesaPdf(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', function() {
+      if (input.files[0]) _processarManifDefesaPdf(input.files[0]);
+    });
+  }
+  function _processarManifDefesaPdf(file) {
+    window._manifDefesaPdfFile = file;
+    Estado.setNested('manifDefesa.temAnexo',  true);
+    Estado.setNested('manifDefesa.nomeAnexo', file.name);
+    _render();
+    _toast('Documento da defesa anexado!');
+  }
+
+  /* ── Mic: Manifestação da Defesa ── */
+  var _recManifDefesa = null;
+  function toggleMicManifDefesa() {
+    var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) { _toast('Reconhecimento de voz não suportado. Use Chrome ou Edge.'); return; }
+    var btnEl    = document.getElementById('mic-manif-defesa');
+    var areaEl   = document.getElementById('inp-manif-defesa-texto');
+    var statusEl = document.getElementById('mic-status-manif');
+    if (_recManifDefesa) { _recManifDefesa.stop(); return; }
+    _recManifDefesa = new SpeechRec();
+    _recManifDefesa.lang = 'pt-BR'; _recManifDefesa.continuous = true; _recManifDefesa.interimResults = true;
+    var anterior = (areaEl ? areaEl.value : '') + ' ';
+    _recManifDefesa.onstart = function() {
+      if (btnEl) { btnEl.textContent = '⏹ Parar'; btnEl.classList.add('gravando'); }
+      if (statusEl) { statusEl.textContent = '🎙 Gravando…'; statusEl.style.display = ''; }
+    };
+    _recManifDefesa.onresult = function(e) {
+      var interim = '', final = anterior;
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { final += e.results[i][0].transcript + ' '; anterior = final; }
+        else interim += e.results[i][0].transcript;
+      }
+      if (areaEl) areaEl.value = final + interim;
+      Estado.setNested('manifDefesa.texto', final);
+    };
+    _recManifDefesa.onend = function() {
+      _recManifDefesa = null;
+      if (btnEl) { btnEl.textContent = '🎙 Ditar'; btnEl.classList.remove('gravando'); }
+      if (statusEl) statusEl.style.display = 'none';
+      if (areaEl) Estado.setNested('manifDefesa.texto', areaEl.value);
+    };
+    _recManifDefesa.start();
   }
 
   /* ── Speech-to-text (Web Speech API) ── */
@@ -701,5 +926,25 @@ var FormularioCtrl = (function() {
     adicionarTestemunha: adicionarTestemunha,
     removerTestemunha: removerTestemunha,
     toggleMic: toggleMic,
+    toggleMicManifDefesa: toggleMicManifDefesa,
+    removerDocInicial: function(idx) {
+      if (window._docInicialFiles) window._docInicialFiles.splice(idx, 1);
+      var di = Estado.get('docInicial') || { arquivos: [] };
+      di.arquivos.splice(idx, 1);
+      Estado.set('docInicial', di);
+      _render();
+    },
+    removerAnexoTermoCient: function() {
+      window._termoCientPdfFile = null;
+      Estado.setNested('termoCient.temAnexo', false);
+      Estado.setNested('termoCient.nomeAnexo', '');
+      _render();
+    },
+    removerAnexoManifDefesa: function() {
+      window._manifDefesaPdfFile = null;
+      Estado.setNested('manifDefesa.temAnexo', false);
+      Estado.setNested('manifDefesa.nomeAnexo', '');
+      _render();
+    },
   };
 })();

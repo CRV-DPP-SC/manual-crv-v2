@@ -47,6 +47,25 @@ var Estado = (function() {
         observacao:'',
       },
 
+      // ── Documentação Inicial (arquivos juntados)
+      docInicial: {
+        arquivos: [],   // [{ nome, tipo }] — metadados; binários em window._docInicialFiles
+      },
+
+      // ── Termo de Cientificação
+      termoCient: {
+        texto:     '',   // observações adicionais
+        temAnexo:  false,
+        nomeAnexo: '',
+      },
+
+      // ── Manifestação da Defesa
+      manifDefesa: {
+        texto:     '',   // digitado ou ditado
+        temAnexo:  false,
+        nomeAnexo: '',
+      },
+
       // ── Defesa
       defesa: {
         tipo:              '',  // 'sem_defesa' | 'defensoria' | 'advogado'
@@ -167,6 +186,9 @@ var Estado = (function() {
     if (snap.infracao)    _data.infracao    = Object.assign(_estadoVazio().infracao,    snap.infracao);
     if (snap.defesa)      _data.defesa      = Object.assign(_estadoVazio().defesa,      snap.defesa);
     if (snap.conselho)    _data.conselho    = _clonar(snap.conselho);
+    if (snap.docInicial)   _data.docInicial   = Object.assign(_estadoVazio().docInicial,  snap.docInicial);
+    if (snap.termoCient)   _data.termoCient   = Object.assign(_estadoVazio().termoCient,  snap.termoCient);
+    if (snap.manifDefesa)  _data.manifDefesa  = Object.assign(_estadoVazio().manifDefesa, snap.manifDefesa);
     if (snap.manifestacao){
       _data.manifestacao = Object.assign(_estadoVazio().manifestacao, snap.manifestacao);
       if (!Array.isArray(_data.manifestacao.desclassIncisos)) _data.manifestacao.desclassIncisos = [];

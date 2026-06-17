@@ -105,6 +105,33 @@ window.PadFirestore = {
     return oabKey;
   },
 
+  /* ── PEÇAS DO DOSSIÊ ── */
+
+  /* Salva uma peça do PAD no portal */
+  salvarPeca: async function(padId, tipo, ordem, label, htmlContent) {
+    const docId = String(padId) + '_' + tipo;
+    await setDoc(doc(_db, 'pads_pecas', docId), {
+      padId:       String(padId),
+      tipo,
+      ordem,
+      label,
+      htmlContent: htmlContent || '',
+      savedAt:     serverTimestamp(),
+    });
+    return docId;
+  },
+
+  /* Busca todas as peças de um PAD, ordenadas */
+  buscarPecasDoPad: async function(padId) {
+    const q    = query(
+      collection(_db, 'pads_pecas'),
+      where('padId', '==', String(padId)),
+      orderBy('ordem', 'asc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
   /* ── RELAÇÃO DE PADs DA UNIDADE ── */
 
   /* Salva / atualiza entrada na relação */

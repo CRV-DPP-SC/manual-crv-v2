@@ -6,12 +6,15 @@
 var _DOC_ATUAL = 'portaria'; // documento selecionado no preview
 
 var DOCS = [
-  { cod: 'portaria',         label: '1. Portaria de Instauração' },
-  { cod: 'oitiva_inc',       label: '2. Oitiva do Incidentado' },
-  { cod: 'oitivas_test',     label: '3. Oitiva das Testemunhas' },
-  { cod: 'manifestacao',     label: '4. Manifestação do Conselho' },
-  { cod: 'decisao',          label: '5. Decisão da Direção' },
-  { cod: 'oficio_juiz',      label: '6. Ofício ao Juiz' },
+  { cod: 'portaria',     label: '1. Portaria de Instauração',      ordem: 1 },
+  { cod: 'doc_inicial',  label: '2. Documentação Inicial',         ordem: 2 },
+  { cod: 'termo_cient',  label: '3. Termo de Cientificação',       ordem: 3 },
+  { cod: 'oitivas_test', label: '4. Oitiva de Testemunhas',        ordem: 4 },
+  { cod: 'oitiva_inc',   label: '5. Declarações do Apenado',       ordem: 5 },
+  { cod: 'manifestacao', label: '6. Manifestação do Conselho',     ordem: 6 },
+  { cod: 'manif_defesa', label: '7. Manifestação da Defesa',       ordem: 7 },
+  { cod: 'decisao',      label: '8. Decisão da Direção',           ordem: 8 },
+  { cod: 'oficio_juiz',  label: '9. Ofício ao Juiz',               ordem: 9 },
 ];
 
 function selecionarDoc(cod) {
@@ -69,21 +72,43 @@ function montarDocumento(s, corpofn) {
 /* ── Preview principal ── */
 function montarPreview(s) {
   switch (_DOC_ATUAL) {
-    case 'portaria':
-      return montarDocumento(s, tplPortaria);
-    case 'oitiva_inc':
-      return montarDocumento(s, tplOitivaIncidentado);
-    case 'oitivas_test':
-      return montarOitivasTestemunhas(s);
-    case 'manifestacao':
-      return montarDocumento(s, tplManifestacao);
-    case 'decisao':
-      return montarDocumento(s, tplDecisao);
-    case 'oficio_juiz':
-      return montarDocumento(s, tplOficioJuiz);
+    case 'portaria':     return montarDocumento(s, tplPortaria);
+    case 'doc_inicial':  return montarDocInicial(s);
+    case 'termo_cient':  return montarDocumento(s, tplTermoCientificacao);
+    case 'oitivas_test': return montarOitivasTestemunhas(s);
+    case 'oitiva_inc':   return montarDocumento(s, tplOitivaIncidentado);
+    case 'manifestacao': return montarDocumento(s, tplManifestacao);
+    case 'manif_defesa': return montarDocumento(s, tplManifDefesa);
+    case 'decisao':      return montarDocumento(s, tplDecisao);
+    case 'oficio_juiz':  return montarDocumento(s, tplOficioJuiz);
     default:
       return '<div class="preview-placeholder"><p>Selecione um documento na barra acima.</p></div>';
   }
+}
+
+/* ── Preview da Documentação Inicial ── */
+function montarDocInicial(s) {
+  var di    = s.docInicial || {};
+  var arqs  = di.arquivos  || [];
+  var files = window._docInicialFiles || [];
+  if (!arqs.length && !files.length) {
+    return '<div class="preview-placeholder">'
+      + '<p>📂 Nenhum arquivo carregado ainda.<br>'
+      + 'Use o formulário ao lado para adicionar documentos,<br>'
+      + 'fotografias, comunicações e demais provas.</p></div>';
+  }
+  var itens = arqs.map(function(a, i) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f0ee;">'
+      + '<span style="font-size:1.4rem;">' + (a.tipo && a.tipo.startsWith('image') ? '🖼️' : '📄') + '</span>'
+      + '<div><div style="font-size:.88rem;font-weight:600;color:#1c1917;">' + _esc(a.nome) + '</div>'
+      + '<div style="font-size:.72rem;color:#78716c;">' + _esc(a.tipo || '') + '</div></div>'
+      + '</div>';
+  }).join('');
+  return '<div style="padding:24px;font-family:\'Segoe UI\',sans-serif;">'
+    + '<h3 style="font-size:.9rem;font-weight:800;color:#3b1f0a;margin-bottom:16px;">📂 Documentação Inicial — ' + arqs.length + ' arquivo(s)</h3>'
+    + itens
+    + '<p style="font-size:.75rem;color:#a8a29e;margin-top:14px;">Esses documentos serão incluídos após a Portaria no dossiê do advogado.</p>'
+    + '</div>';
 }
 
 /* ── Oitivas de testemunhas (múltiplas) ── */
@@ -103,13 +128,16 @@ function montarOitivasTestemunhas(s) {
 function montarTodosDocumentos(s) {
   var partes = [];
   partes.push(montarDocumento(s, tplPortaria));
-  partes.push(montarDocumento(s, tplOitivaIncidentado));
+  // doc_inicial é incluído pelo exportar.js como imagens renderizadas
+  partes.push(montarDocumento(s, tplTermoCientificacao));
   var testes = s.testemunhas || [];
   testes.forEach(function(te) {
     var fn = function(s) { return tplOitivaTestemunha(s, te); };
     partes.push(montarDocumento(s, fn));
   });
+  partes.push(montarDocumento(s, tplOitivaIncidentado));
   partes.push(montarDocumento(s, tplManifestacao));
+  partes.push(montarDocumento(s, tplManifDefesa));
   partes.push(montarDocumento(s, tplDecisao));
   partes.push(montarDocumento(s, tplOficioJuiz));
   return partes.map(function(h, i) {

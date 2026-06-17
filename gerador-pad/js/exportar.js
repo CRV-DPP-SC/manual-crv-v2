@@ -74,6 +74,45 @@ function copiar() {
   window.getSelection().removeAllRanges();
 }
 
+/* ── Renderiza um arquivo (PDF ou imagem) como HTML com imagens embutidas ── */
+async function _renderizarArquivoComoHtml(file) {
+  if (!file) return '';
+  if (file.type && file.type.startsWith('image/')) {
+    return await new Promise(function(resolve) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        resolve('<img src="' + e.target.result + '" style="width:100%;display:block;page-break-inside:avoid;">');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  /* PDF — renderiza via PDF.js */
+  if (typeof pdfjsLib === 'undefined') return '';
+  try {
+    var ab  = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    var paginas = [];
+    for (var i = 1; i <= pdf.numPages; i++) {
+      var page = await pdf.getPage(i);
+      var vp   = page.getViewport({ scale: 2 });
+      var canvas = document.createElement('canvas');
+      canvas.width = vp.width; canvas.height = vp.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      paginas.push('<img src="' + canvas.toDataURL('image/jpeg', 0.85) + '" style="width:100%;display:block;page-break-inside:avoid;margin-bottom:2px;">');
+    }
+    return paginas.join('');
+  } catch(e) { return ''; }
+}
+
+/* ── Salva peça atual no portal (Firestore) ── */
+async function _salvarPecaPortal(tipo, ordem, label, htmlContent) {
+  var padId = window._padIdAtual;
+  if (!padId || !window.PadFirestore) return;
+  try {
+    await window.PadFirestore.salvarPeca(padId, tipo, ordem, label, htmlContent);
+  } catch(e) { console.warn('[PadPortal] Erro ao salvar peça:', e.message); }
+}
+
 /* ── Renderiza páginas do i-PEN PDF como imagens (usa PDF.js) ── */
 async function _renderizarIpenPdf() {
   var file = window._iPenPdfFile;
@@ -105,14 +144,41 @@ async function _renderizarIpenPdf() {
 async function baixarDoc() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
-  var s   = Estado.get();
+  var s    = Estado.get();
   var html = el.innerHTML;
-  /* Anexa i-PEN PDF se estiver na portaria */
+  var docAtual = DOCS.find(function(d) { return d.cod === _DOC_ATUAL; });
+
+  /* Portaria: anexa i-PEN + documentação inicial */
   if (_DOC_ATUAL === 'portaria') {
     html += await _renderizarIpenPdf();
+    if (window._docInicialFiles && window._docInicialFiles.length) {
+      var docInicialHtml = '';
+      for (var i = 0; i < window._docInicialFiles.length; i++) {
+        docInicialHtml += await _renderizarArquivoComoHtml(window._docInicialFiles[i]);
+      }
+      if (docInicialHtml) {
+        html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;color:#555;margin:0 0 8px;">DOCUMENTAÇÃO INICIAL — JUNTADA DE PROVAS</p>' + docInicialHtml + '</div>';
+      }
+    }
   }
+
+  /* Termo de cientificação: anexa versão assinada digitalizada */
+  if (_DOC_ATUAL === 'termo_cient' && window._termoCientPdfFile) {
+    var tcHtml = await _renderizarArquivoComoHtml(window._termoCientPdfFile);
+    if (tcHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">TERMO ASSINADO — DIGITALIZADO</p>' + tcHtml + '</div>';
+  }
+
+  /* Manifestação da defesa: anexa PDF recebido */
+  if (_DOC_ATUAL === 'manif_defesa' && window._manifDefesaPdfFile) {
+    var mdHtml = await _renderizarArquivoComoHtml(window._manifDefesaPdfFile);
+    if (mdHtml) html += '<div style="page-break-before:always;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;color:#555;margin:0 0 8px;">MANIFESTAÇÃO DA DEFESA — DOCUMENTO ORIGINAL</p>' + mdHtml + '</div>';
+  }
+
   _gerarDoc(html, _nomeArquivo(s, _DOC_ATUAL) + '.doc');
   salvarNoHistorico(window._padIdAtual);
+
+  /* Salva peça no dossiê do portal */
+  if (docAtual) _salvarPecaPortal(_DOC_ATUAL, docAtual.ordem, docAtual.label, html);
 }
 
 /* ── Baixar .doc — todos os documentos ── */
@@ -142,13 +208,31 @@ function _gerarDoc(html, nome) {
 async function baixarPDF() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de baixar.'); return; }
-  var html = el.innerHTML;
+  var html     = el.innerHTML;
+  var docAtual = DOCS.find(function(d) { return d.cod === _DOC_ATUAL; });
+
   if (_DOC_ATUAL === 'portaria') {
-    _toast('Preparando anexo i-PEN…');
+    _toast('Preparando dossiê…');
     html += await _renderizarIpenPdf();
+    if (window._docInicialFiles && window._docInicialFiles.length) {
+      var di = '';
+      for (var i = 0; i < window._docInicialFiles.length; i++)
+        di += await _renderizarArquivoComoHtml(window._docInicialFiles[i]);
+      if (di) html += '<div style="page-break-before:always;">' + di + '</div>';
+    }
   }
+  if (_DOC_ATUAL === 'termo_cient' && window._termoCientPdfFile) {
+    html += '<div style="page-break-before:always;">' + await _renderizarArquivoComoHtml(window._termoCientPdfFile) + '</div>';
+  }
+  if (_DOC_ATUAL === 'manif_defesa' && window._manifDefesaPdfFile) {
+    html += '<div style="page-break-before:always;">' + await _renderizarArquivoComoHtml(window._manifDefesaPdfFile) + '</div>';
+  }
+
   _abrirImpressao(html);
   salvarNoHistorico(window._padIdAtual);
+
+  /* Salva peça no dossiê do portal */
+  if (docAtual) _salvarPecaPortal(_DOC_ATUAL, docAtual.ordem, docAtual.label, html);
 }
 
 function baixarTodosPDF() {

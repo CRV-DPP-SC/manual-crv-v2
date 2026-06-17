@@ -340,6 +340,66 @@ function tplDecisao(s) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   TERMO DE CIENTIFICAÇÃO
+   ══════════════════════════════════════════════════════════ */
+function tplTermoCientificacao(s) {
+  var num  = s.numPad  || ph('Nº DO PAD');
+  var dataI = s.dataInst ? dPorExtenso(s.dataInst, _cidade(s)) : ph('DATA DE INSTAURAÇÃO');
+  var inc  = s.incidentado || {};
+  var obs  = (s.termoCient && s.termoCient.texto) ? _esc(s.termoCient.texto) : '';
+
+  return [
+    p('<strong>TERMO DE CIENTIFICAÇÃO</strong>'),
+    p('<strong>PAD Nº ' + fld(num) + '</strong>'),
+    lb(1),
+    p('Ao ' + dataI + ', na ' + _unidadeNome(s) + ', o(a) policial penal abaixo assinado(a) procedeu à cientificação do(a) interno(a) ' + _nomeIpen(s) + ' acerca da instauração do Procedimento Administrativo Disciplinar (PAD) nº ' + fld(num) + ', pela prática, em tese, do ' + _artigoTexto(s) + '.'),
+    lb(1),
+    p('O(A) interno(a) foi formalmente cientificado(a) de que possui o direito à ampla defesa e ao contraditório, podendo constituir advogado ou requerer a nomeação de defensor público, nos termos do art. 5º, LV, da Constituição Federal e do art. 59 da Lei nº 7.210/84 (Lei de Execução Penal).'),
+    lb(1),
+    p('Foi oportunizado ao(à) interno(a) o prazo de <strong>24 (vinte e quatro) horas</strong> para manifestação, devendo indicar:'),
+    lb(1),
+    pSR('( ) Advogado constituído: ___________________________________________,  OAB nº ______________'),
+    pSR('( ) Defensor público nomeado'),
+    pSR('( ) Não deseja constituir defesa'),
+    lb(1),
+    (obs ? p(obs) + lb(1) : ''),
+    p('Nada mais havendo, encerra-se o presente Termo.'),
+    lb(2),
+    p(_cidade(s) + ', ' + (s.dataInst ? dPorExtenso(s.dataInst) : ph('DATA'))),
+    lb(3),
+    '<div class="pad-ass-dupla">'
+      + '<div class="pad-ass-item"><div class="pad-ass-linha"></div><div>Interno(a): ' + fld(inc.nome || '') + '<br>IPEN Nº ' + fld(inc.prontuario || '') + '</div></div>'
+      + '<div class="pad-ass-item"><div class="pad-ass-linha"></div><div>Policial Penal<br>' + _unidadeNome(s) + '</div></div>'
+    + '</div>',
+  ].join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   MANIFESTAÇÃO DA DEFESA
+   ══════════════════════════════════════════════════════════ */
+function tplManifDefesa(s) {
+  var num   = s.numPad || ph('Nº DO PAD');
+  var md    = s.manifDefesa || {};
+  var texto = md.texto ? _esc(md.texto) : ph('MANIFESTAÇÃO DA DEFESA — preencha no formulário ou faça upload do documento');
+
+  return [
+    p('<strong>MANIFESTAÇÃO DA DEFESA</strong>'),
+    p('<strong>PAD Nº ' + fld(num) + '</strong>'),
+    lb(1),
+    p('Incidentado(a): ' + _nomeIpen(s)),
+    p('Infração: ' + _artigoLabel(s) + ' — Data: ' + _dataInf(s)),
+    lb(1),
+    p(_defensor(s) + ', no exercício da defesa do(a) incidentado(a), vem apresentar sua manifestação:'),
+    lb(1),
+    p(texto),
+    lb(2),
+    p(_cidade(s) + ', ' + (s.dataInst ? dPorExtenso(s.dataInst) : ph('DATA'))),
+    lb(3),
+    '<div class="pad-ass-bloco">' + _defensor(s) + '</div>',
+  ].join('');
+}
+
+/* ══════════════════════════════════════════════════════════
    6. OFÍCIO DE ENCAMINHAMENTO À VEP
    ══════════════════════════════════════════════════════════ */
 function tplOficioVep(s) {
