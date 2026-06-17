@@ -332,7 +332,7 @@
     </div>
 
     <button class="pad-cad-continuar" onclick="_iniciarNovoFormulario()">
-      Continuar para o Formulário →
+      Seguir →
     </button>
   </div>
 </div>
@@ -723,9 +723,19 @@ window._iniciarNovoFormulario = function() {
     return;
   }
 
-  /* Salva imediatamente na relação de PADs */
+  /* Salva imediatamente na relação de PADs (localStorage + Firestore) */
   if (!window._padIdAtual) {
     window._padIdAtual = cadastrarPadNoHistorico();
+    /* Espelha no Firestore para acesso multi-dispositivo da unidade */
+    var _emailUn = Estado.get().unidade && Estado.get().unidade.email
+                   || localStorage.getItem('crv_ori_email') || '';
+    if (_emailUn && window.PadFirestore) {
+      var _lista = _histCarregar();
+      var _entrada = _lista.find(function(e) { return e.padId === window._padIdAtual; });
+      if (_entrada) {
+        window.PadFirestore.salvarRelacao(_emailUn, _entrada).catch(function() {});
+      }
+    }
   }
 
   /* Abre modal de advogado */
@@ -874,17 +884,11 @@ function _relFiltrar(val) {
   _relRenderizar(val);
 }
 
-function _relRenderizar(filtro) {
-  var infoEl = document.getElementById('rel-info');
-  var listaEl = document.getElementById('rel-lista');
-  if (!listaEl) return;
-
-  var listaFull = _histCarregar();
-  var listaComIdx = listaFull.map(function(it, i) { return { it: it, idx: i }; });
+function _relMontarTabela(listaFull, filtro, infoEl, listaEl) {
+  var lista = listaFull.slice();
   if (filtro) {
     var f = filtro.toLowerCase();
-    listaComIdx = listaComIdx.filter(function(entry) {
-      var it = entry.it;
+    lista = lista.filter(function(it) {
       return (it.nome||'').toLowerCase().includes(f)
           || (it.ipen||'').toLowerCase().includes(f)
           || (it.numPad||'').toLowerCase().includes(f)
@@ -892,33 +896,34 @@ function _relRenderizar(filtro) {
           || (it.prontuario||'').toLowerCase().includes(f);
     });
   }
-
   if (infoEl) {
-    infoEl.textContent = listaFull.length + ' PAD(s) registrado(s)' + (filtro ? ' · ' + listaComIdx.length + ' resultado(s)' : '');
+    infoEl.textContent = listaFull.length + ' PAD(s) registrado(s)' + (filtro ? ' · ' + lista.length + ' resultado(s)' : '');
   }
-
-  if (!listaComIdx.length) {
+  if (!lista.length) {
     listaEl.innerHTML = '<div class="pad-rel-vazio">'
       + (filtro ? 'Nenhum PAD encontrado para "' + _esc(filtro) + '".'
                 : 'Nenhum PAD cadastrado ainda.<br>Clique em <strong>Cadastrar PAD</strong> para começar.')
       + '</div>';
     return;
   }
-
   listaEl.innerHTML = '<table class="pad-rel-tabela">'
     + '<thead><tr>'
     + '<th>Nº PAD</th>'
     + '<th>Nome do Incidentado</th>'
     + '<th>IPEN</th>'
-    + '<th>Data de Instauração</th>'
+    + '<th>Instauração</th>'
     + '<th>Data dos Fatos</th>'
     + '<th>Art. da Falta</th>'
+    + '<th>Status</th>'
     + '<th></th>'
     + '</tr></thead><tbody>'
-    + listaComIdx.map(function(entry) {
-        var it = entry.it;
-        var idxFull = entry.idx;
+    + lista.map(function(it) {
         var artLabel = _LABEL_ARTIGO[it.artigo] || it.artigo || '—';
+        var padId = it.padId ? String(it.padId) : '';
+        var fsId  = it._fsId || padId;
+        var statusBadge = it.status === 'concluido'
+          ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">✅ Concluído</span>'
+          : '<span style="background:#fef3c7;color:#92400e;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">⏳ Em andamento</span>';
         return '<tr>'
           + '<td>' + _esc(it.numPad || '—') + '</td>'
           + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
@@ -926,39 +931,99 @@ function _relRenderizar(filtro) {
           + '<td>' + _esc(it.dataInst || '—') + '</td>'
           + '<td>' + _esc(it.dataInfracao || '—') + '</td>'
           + '<td class="art">' + _esc(artLabel) + '</td>'
+          + '<td>' + statusBadge + '</td>'
           + '<td><div class="pad-rel-acoes-cell">'
-          + '<button class="pad-rel-btn-abrir" onclick="_relAbrir(' + idxFull + ')">Abrir</button>'
-          + '<button class="pad-rel-btn-del" onclick="_relExcluir(' + idxFull + ')" title="Excluir">✕</button>'
+          + '<button class="pad-rel-btn-abrir" onclick="_relAbrir(' + JSON.stringify(padId) + ')">✏️ Editar</button>'
+          + '<button class="pad-rel-btn-del" onclick="_relExcluir(' + JSON.stringify(padId) + ',' + JSON.stringify(fsId) + ')" title="Excluir permanentemente">🗑</button>'
           + '</div></td>'
           + '</tr>';
-      }, this).join('')
+      }).join('')
     + '</tbody></table>';
 }
 
-window._relAbrir = function(idx) {
-  var lista = _histCarregar();
-  var item = lista[idx];
-  if (!item || !item.estado) { _toast('Dados indisponíveis.'); return; }
-  Estado.carregar(item.estado);
-  FormularioCtrl.sincronizar();
+function _relRenderizar(filtro) {
+  var infoEl  = document.getElementById('rel-info');
+  var listaEl = document.getElementById('rel-lista');
+  if (!listaEl) return;
 
-  /* Sincroniza campos de intake */
-  var s = Estado.get();
-  var inpNum  = document.getElementById('intake-num-pad');
-  var inpData = document.getElementById('intake-data-inst');
-  if (inpNum)  inpNum.value  = s.numPad   || '';
-  if (inpData) inpData.value = s.dataInst || '';
+  /* Tenta carregar do Firestore (fonte primária para a unidade) */
+  var emailUn = (Estado.get().unidade && Estado.get().unidade.email)
+                || localStorage.getItem('crv_ori_email') || '';
 
-  _irParaFormulario();
-  _toast('PAD carregado!');
+  if (emailUn && window.PadFirestore) {
+    listaEl.innerHTML = '<div class="pad-rel-vazio">⏳ Carregando relação da unidade…</div>';
+    window.PadFirestore.carregarRelacao(emailUn).then(function(lista) {
+      /* Mescla com localStorage: itens locais não ainda sincronizados */
+      var local = _histCarregar();
+      var fsIds = lista.map(function(e) { return String(e.padId); });
+      local.forEach(function(loc) {
+        if (!fsIds.includes(String(loc.padId))) lista.push(loc);
+      });
+      _relMontarTabela(lista, filtro, infoEl, listaEl);
+    }).catch(function() {
+      /* Fallback localStorage */
+      _relMontarTabela(_histCarregar(), filtro, infoEl, listaEl);
+    });
+  } else {
+    /* Sem unidade identificada: usa apenas localStorage */
+    _relMontarTabela(_histCarregar(), filtro, infoEl, listaEl);
+  }
+}
+
+window._relAbrir = function(padId) {
+  /* Tenta Firestore primeiro, depois localStorage */
+  var emailUn = (Estado.get().unidade && Estado.get().unidade.email)
+                || localStorage.getItem('crv_ori_email') || '';
+  function _carregarItem(item) {
+    if (!item || !item.estado) { _toast('Dados indisponíveis.'); return; }
+    window._padIdAtual = item.padId || null;
+    Estado.carregar(item.estado);
+    FormularioCtrl.sincronizar();
+    var s = Estado.get();
+    var inpNum  = document.getElementById('intake-num-pad');
+    var inpData = document.getElementById('intake-data-inst');
+    if (inpNum)  inpNum.value  = s.numPad   || '';
+    if (inpData) inpData.value = s.dataInst || '';
+    _irParaFormulario();
+    _toast('PAD carregado para edição!');
+  }
+
+  if (emailUn && window.PadFirestore) {
+    window.PadFirestore.carregarRelacao(emailUn).then(function(lista) {
+      var item = lista.find(function(e) { return String(e.padId) === String(padId); });
+      if (item) { _carregarItem(item); return; }
+      /* Fallback localStorage */
+      var local = _histCarregar().find(function(e) { return String(e.padId) === String(padId); });
+      _carregarItem(local || null);
+    }).catch(function() {
+      var local = _histCarregar().find(function(e) { return String(e.padId) === String(padId); });
+      _carregarItem(local || null);
+    });
+  } else {
+    var local = _histCarregar().find(function(e) { return String(e.padId) === String(padId); });
+    _carregarItem(local || null);
+  }
 };
 
-window._relExcluir = function(idx) {
-  if (!confirm('Excluir este PAD do histórico?')) return;
-  var lista = _histCarregar();
-  lista.splice(idx, 1);
-  try { localStorage.setItem('pad_historico', JSON.stringify(lista)); } catch(e) {}
+window._relExcluir = function(padId, fsId) {
+  var numPad = '';
+  var lista  = _histCarregar();
+  var local  = lista.find(function(e) { return String(e.padId) === String(padId); });
+  if (local) numPad = local.numPad ? ' (PAD Nº ' + local.numPad + ')' : '';
+
+  if (!confirm('⚠️ ATENÇÃO: Excluir este PAD' + numPad + ' da relação?\n\nEsta ação é PERMANENTE e não pode ser desfeita.')) return;
+
+  /* Remove do localStorage */
+  var nova = lista.filter(function(e) { return String(e.padId) !== String(padId); });
+  try { localStorage.setItem('pad_historico', JSON.stringify(nova)); } catch(e) {}
+
+  /* Remove do Firestore */
+  if (fsId && window.PadFirestore) {
+    window.PadFirestore.excluirRelacao(fsId).catch(function() {});
+  }
+
   _relRenderizar(_relBusca);
+  _toast('PAD excluído permanentemente.');
 };
 
 /* ══════════════════════════════════════════════

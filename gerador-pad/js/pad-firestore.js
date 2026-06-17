@@ -4,8 +4,8 @@
 
 import { initializeApp, getApps }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, getDocs,
-         collection, serverTimestamp }
+import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc,
+         collection, query, where, orderBy, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 const _CFG = {
@@ -98,6 +98,39 @@ window.PadFirestore = {
       cadastradoEm:   serverTimestamp(),
     });
     return oabKey;
+  },
+
+  /* ── RELAÇÃO DE PADs DA UNIDADE ── */
+
+  /* Salva / atualiza entrada na relação */
+  salvarRelacao: async function(emailUnidade, entrada) {
+    if (!emailUnidade) return;
+    const fsId = String(entrada.padId || Date.now());
+    await setDoc(doc(_db, 'pads_relacao', fsId), {
+      ...entrada,
+      estado:       entrada.estado ? JSON.parse(JSON.stringify(entrada.estado)) : {},
+      emailUnidade: emailUnidade,
+      _fsId:        fsId,
+      tsAtual:      serverTimestamp(),
+    }, { merge: true });
+    return fsId;
+  },
+
+  /* Carrega relação ordenada por criação (mais recente primeiro) */
+  carregarRelacao: async function(emailUnidade) {
+    if (!emailUnidade) return [];
+    const q    = query(
+      collection(_db, 'pads_relacao'),
+      where('emailUnidade', '==', emailUnidade),
+      orderBy('ts', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ ...d.data(), _fsId: d.id }));
+  },
+
+  /* Exclusão permanente */
+  excluirRelacao: async function(fsId) {
+    await deleteDoc(doc(_db, 'pads_relacao', fsId));
   },
 
   /* Lista todos os advogados */

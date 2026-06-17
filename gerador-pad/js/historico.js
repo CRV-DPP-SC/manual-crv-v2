@@ -91,38 +91,48 @@ function salvarNoHistorico(padId) {
   var resultado = dec.resultado || '';
   var lista = _histCarregar();
 
+  var entrada = null;
+
   if (padId) {
     for (var i = 0; i < lista.length; i++) {
       if (lista[i].padId === padId) {
         lista[i].resultado = resultado;
         lista[i].status    = resultado ? 'concluido' : 'em_andamento';
         lista[i].estado    = JSON.parse(JSON.stringify(s));
+        entrada = lista[i];
         _histSalvar(lista);
-        return;
+        break;
       }
     }
   }
 
-  var entrada = {
-    padId:        padId || agora.getTime(),
-    ts:           agora.getTime(),
-    data:         dataStr,
-    numPad:       s.numPad        || '',
-    nome:         inc.nome        || '',
-    prontuario:   inc.prontuario  || '',
-    ipen:         inc.ipen        || '',
-    dataInfracao: fmtData(inf.data)   || '',
-    dataInst:     fmtData(s.dataInst)  || '',
-    artigo:       inf.artigo      || '',
-    resultado:    resultado,
-    status:       resultado ? 'concluido' : 'em_andamento',
-    unidade:      (s.unidade && s.unidade.nome) || '',
-    estado:       JSON.parse(JSON.stringify(s)),
-  };
+  if (!entrada) {
+    entrada = {
+      padId:        padId || agora.getTime(),
+      ts:           agora.getTime(),
+      data:         dataStr,
+      numPad:       s.numPad        || '',
+      nome:         inc.nome        || '',
+      prontuario:   inc.prontuario  || '',
+      ipen:         inc.ipen        || '',
+      dataInfracao: fmtData(inf.data)   || '',
+      dataInst:     fmtData(s.dataInst)  || '',
+      artigo:       inf.artigo      || '',
+      resultado:    resultado,
+      status:       resultado ? 'concluido' : 'em_andamento',
+      unidade:      (s.unidade && s.unidade.nome) || '',
+      estado:       JSON.parse(JSON.stringify(s)),
+    };
+    lista.unshift(entrada);
+    if (lista.length > _HIST_MAX) lista = lista.slice(0, _HIST_MAX);
+    _histSalvar(lista);
+  }
 
-  lista.unshift(entrada);
-  if (lista.length > _HIST_MAX) lista = lista.slice(0, _HIST_MAX);
-  _histSalvar(lista);
+  /* Espelha no Firestore */
+  var emailUn = (s.unidade && s.unidade.email) || localStorage.getItem('crv_ori_email') || '';
+  if (emailUn && window.PadFirestore) {
+    window.PadFirestore.salvarRelacao(emailUn, entrada).catch(function() {});
+  }
 }
 
 /* ── Modal Histórico ── */
