@@ -443,9 +443,9 @@
           <input type="email" id="adv-email" placeholder="advogado@escritorio.com.br">
         </div>
         <div class="pad-cad-campo">
-          <label>CPF (opcional)</label>
-          <input type="text" id="adv-cpf" placeholder="000.000.000-00" maxlength="14"
-            oninput="this.value=this.value.replace(/\D/g,'').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2')">
+          <label>Telefone <span style="font-weight:400;color:#a8a29e;">(opcional)</span></label>
+          <input type="text" id="adv-tel" placeholder="(48) 99999-0000" maxlength="15"
+            oninput="this.value=this.value.replace(/\D/g,'').replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2').substring(0,15)">
         </div>
       </div>
       <div class="pad-cad-status" id="adv-status"></div>
@@ -510,25 +510,31 @@
     <div style="background:linear-gradient(135deg,#3b1f0a,#6b3a1f);padding:18px 22px;display:flex;align-items:center;gap:10px;">
       <span style="font-size:1.4rem;">⚖️</span>
       <div>
-        <div style="color:#fff;font-size:.95rem;font-weight:800;">Advogado Constituído?</div>
-        <div style="color:#fed7aa;font-size:.75rem;margin-top:2px;">O incidentado possui advogado constituído para este PAD?</div>
+        <div style="color:#fff;font-size:.95rem;font-weight:800;">Tipo de Defesa</div>
+        <div style="color:#fed7aa;font-size:.75rem;margin-top:2px;">O incidentado possui defesa constituída para este PAD?</div>
       </div>
     </div>
 
-    <!-- Tela 1: Sim ou Não -->
-    <div id="modal-adv-opcoes" style="padding:24px 22px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px;">
+    <!-- Tela 1: opções de defesa -->
+    <div id="modal-adv-opcoes" style="padding:20px 22px 22px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px;">
         <button onclick="_modalAdvSim()"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 12px;background:#fff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
-          <span style="font-size:1.8rem;">✅</span>
-          <span style="font-size:.9rem;font-weight:800;color:#1d4ed8;">Sim</span>
-          <span style="font-size:.73rem;color:#64748b;text-align:center;">Vincular advogado agora</span>
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;background:#fff;border:2px solid #2563eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:1.6rem;">👨‍⚖️</span>
+          <span style="font-size:.82rem;font-weight:800;color:#1d4ed8;">Advogado</span>
+          <span style="font-size:.68rem;color:#64748b;text-align:center;">Constituído</span>
+        </button>
+        <button onclick="_modalDefensoria()"
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;background:#fff;border:2px solid #15803d;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:1.6rem;">🏛️</span>
+          <span style="font-size:.82rem;font-weight:800;color:#15803d;">Defensoria</span>
+          <span style="font-size:.68rem;color:#64748b;text-align:center;">Pública</span>
         </button>
         <button onclick="_modalAdvNao()"
-          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 12px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
-          <span style="font-size:1.8rem;">⏭</span>
-          <span style="font-size:.9rem;font-weight:800;color:#374151;">Não</span>
-          <span style="font-size:.73rem;color:#64748b;text-align:center;">Vincular depois, se necessário</span>
+          style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;font-family:inherit;transition:all .15s;">
+          <span style="font-size:1.6rem;">⏭</span>
+          <span style="font-size:.82rem;font-weight:800;color:#374151;">Sem Defesa</span>
+          <span style="font-size:.68rem;color:#64748b;text-align:center;">Definir depois</span>
         </button>
       </div>
     </div>
@@ -728,7 +734,17 @@ window._modalAdvSim = function() {
   document.getElementById('modal-adv-vincular').style.display = '';
 };
 
-/* Modal: clicou NÃO */
+/* Modal: clicou Defensoria Pública */
+window._modalDefensoria = function() {
+  document.getElementById('modalAdvBg').style.display = 'none';
+  Estado.setNested('defesa.tipo',    'defensoria');
+  Estado.setNested('defesa.advNome', '');
+  Estado.setNested('defesa.advOab',  '');
+  _toast('Defensoria Pública vinculada.');
+  _irParaFormulario();
+};
+
+/* Modal: clicou Sem Defesa / Definir Depois */
 window._modalAdvNao = function() {
   document.getElementById('modalAdvBg').style.display = 'none';
   Estado.setNested('defesa.tipo', 'sem_defesa');
@@ -938,7 +954,7 @@ function _abrirFormAdvogado() {
 }
 function _fecharFormAdvogado() {
   document.getElementById('form-adv').style.display = 'none';
-  ['adv-nome','adv-oab','adv-email','adv-cpf'].forEach(function(id) {
+  ['adv-nome','adv-oab','adv-email','adv-tel'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var st = document.getElementById('adv-status');
@@ -987,7 +1003,7 @@ window._salvarAdvogado = async function() {
   var nome  = (document.getElementById('adv-nome')?.value  || '').trim();
   var oab   = (document.getElementById('adv-oab')?.value   || '').trim();
   var email = (document.getElementById('adv-email')?.value || '').trim();
-  var cpf   = (document.getElementById('adv-cpf')?.value   || '').trim();
+  var tel   = (document.getElementById('adv-tel')?.value   || '').trim();
   var st    = document.getElementById('adv-status');
 
   function _setStatus(tipo, msg) {
@@ -996,8 +1012,8 @@ window._salvarAdvogado = async function() {
     st.textContent = msg;
   }
 
-  if (!nome) return _setStatus('erro', 'Informe o nome do advogado.');
-  if (!oab)  return _setStatus('erro', 'Informe o número da OAB.');
+  if (!nome)  return _setStatus('erro', 'Informe o nome completo do advogado.');
+  if (!oab)   return _setStatus('erro', 'Informe o número da OAB.');
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return _setStatus('erro', 'Informe um e-mail válido.');
 
@@ -1006,7 +1022,7 @@ window._salvarAdvogado = async function() {
   _setStatus('info', 'Cadastrando…');
 
   try {
-    await window.PadFirestore.cadastrarAdvogado({ nome, oab, email, cpf });
+    await window.PadFirestore.cadastrarAdvogado({ nome, oab, email, tel });
     _setStatus('ok', '✓ Advogado cadastrado! Um e-mail de acesso foi enviado para ' + email);
     _toast('Advogado cadastrado com sucesso!');
     _fecharFormAdvogado();

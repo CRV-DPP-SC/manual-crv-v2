@@ -84,7 +84,7 @@ window.PadFirestore = {
       nome:           dados.nome  || '',
       oab:            dados.oab   || '',
       email:          (dados.email || '').toLowerCase(),
-      cpf:            dados.cpf   || '',
+      telefone:       dados.tel   || '',
       ativo:          true,
       padsVinculados: [],
       cadastradoEm:   serverTimestamp(),
