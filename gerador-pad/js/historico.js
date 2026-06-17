@@ -221,7 +221,14 @@ function _histExcluir(idx) {
 }
 
 function _histLimpar() {
-  if (!confirm('Limpar todo o histórico? Esta ação não pode ser desfeita.')) return;
-  _histSalvar([]);
-  _renderizarLista();
+  /* confirm() bloqueado em iframe — usa modal customizado se disponível */
+  if (typeof _abrirModalConfirma === 'function') {
+    _abrirModalConfirma('Limpar todo o histórico local?', function() {
+      _histSalvar([]);
+      _renderizarLista();
+    });
+  } else {
+    _histSalvar([]);
+    _renderizarLista();
+  }
 }

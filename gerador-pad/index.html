@@ -610,6 +610,27 @@
   </div>
 </div>
 
+<!-- ════════════ MODAL CONFIRMAÇÃO DE EXCLUSÃO ════════════ -->
+<div id="modalConfirmaBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;max-width:400px;width:95%;box-shadow:0 8px 32px rgba(0,0,0,.22);overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#dc2626,#b91c1c);padding:16px 20px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.4rem;">🗑</span>
+      <div style="color:#fff;font-size:.95rem;font-weight:800;">Confirmar Exclusão</div>
+    </div>
+    <div style="padding:20px;">
+      <p id="modal-confirma-msg" style="font-size:.88rem;color:#374151;line-height:1.6;margin-bottom:6px;"></p>
+      <p style="font-size:.78rem;color:#dc2626;font-weight:700;">⚠️ Esta ação é permanente e não pode ser desfeita.</p>
+    </div>
+    <div style="padding:0 20px 18px;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="_fecharModalConfirma()" class="pad-rel-btn-vol">Cancelar</button>
+      <button id="modal-confirma-btn"
+        style="padding:8px 20px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
+        Excluir
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════ MODAL PADs DO ADVOGADO ════════════ -->
 <div id="modalPadsAdvBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;max-width:640px;width:95%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
@@ -1038,25 +1059,46 @@ window._relAbrir = function(padId) {
   }
 };
 
-window._relExcluir = function(padId, fsId) {
-  var numPad = '';
-  var lista  = _histCarregar();
-  var local  = lista.find(function(e) { return String(e.padId) === String(padId); });
-  if (local) numPad = local.numPad ? ' (PAD Nº ' + local.numPad + ')' : '';
-
-  if (!confirm('⚠️ ATENÇÃO: Excluir este PAD' + numPad + ' da relação?\n\nEsta ação é PERMANENTE e não pode ser desfeita.')) return;
-
-  /* Remove do localStorage */
-  var nova = lista.filter(function(e) { return String(e.padId) !== String(padId); });
-  try { localStorage.setItem('pad_historico', JSON.stringify(nova)); } catch(e) {}
-
-  /* Remove do Firestore */
-  if (fsId && window.PadFirestore) {
-    window.PadFirestore.excluirRelacao(fsId).catch(function() {});
+/* Abre modal de confirmação customizado (confirm() bloqueado em iframe) */
+function _abrirModalConfirma(msg, onConfirm) {
+  var bg  = document.getElementById('modalConfirmaBg');
+  var txt = document.getElementById('modal-confirma-msg');
+  var btn = document.getElementById('modal-confirma-btn');
+  if (txt) txt.textContent = msg;
+  if (btn) {
+    btn.onclick = function() {
+      _fecharModalConfirma();
+      onConfirm();
+    };
   }
+  if (bg) bg.style.display = 'flex';
+}
+window._fecharModalConfirma = function() {
+  var bg = document.getElementById('modalConfirmaBg');
+  if (bg) bg.style.display = 'none';
+};
 
-  _relRenderizar(_relBusca);
-  _toast('PAD excluído permanentemente.');
+window._relExcluir = function(padId, fsId) {
+  var lista = _histCarregar();
+  var local = lista.find(function(e) { return String(e.padId) === String(padId); });
+  var numPad = (local && local.numPad) ? 'PAD Nº ' + local.numPad : 'este PAD';
+
+  _abrirModalConfirma(
+    'Deseja excluir ' + numPad + ' da relação? Todos os dados vinculados serão removidos.',
+    function() {
+      /* Remove do localStorage */
+      var nova = lista.filter(function(e) { return String(e.padId) !== String(padId); });
+      try { localStorage.setItem('pad_historico', JSON.stringify(nova)); } catch(e) {}
+
+      /* Remove do Firestore */
+      if (fsId && window.PadFirestore) {
+        window.PadFirestore.excluirRelacao(fsId).catch(function() {});
+      }
+
+      _relRenderizar(_relBusca);
+      _toast('PAD excluído.');
+    }
+  );
 };
 
 /* ══════════════════════════════════════════════
