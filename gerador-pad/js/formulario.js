@@ -13,7 +13,7 @@ var FormularioCtrl = (function() {
     var secoes = '';
     switch (_DOC_ATUAL) {
       case 'portaria':
-        secoes = _secUpload() + _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
+        secoes = _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
         break;
       case 'oitiva_inc':
         secoes = _secDefesa(s);
@@ -34,7 +34,7 @@ var FormularioCtrl = (function() {
         secoes = _secOficioJuiz(s);
         break;
       default:
-        secoes = _secUpload() + _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
+        secoes = _secPad(s) + _secIncidentado(s) + _secInfracao(s) + _secConselho(s) + _secDiretor(s);
     }
 
     f.innerHTML = secoes
@@ -81,29 +81,15 @@ var FormularioCtrl = (function() {
   /* ── Seção: Incidentado ── */
   function _secIncidentado(s) {
     var i = s.incidentado || {};
-    var cpfVal = i.ipen || '';
     return '<div class="form-secao">'
       + '<div class="sec-head" onclick="_toggleSec(this)">'
         + '<span class="sec-titulo">👤 Incidentado</span>'
-        + _ind(i.nome && (i.prontuario || i.ipen))
+        + _ind(!!(i.nome && i.prontuario))
         + '<span class="sec-chevron">▼</span>'
       + '</div>'
       + '<div class="sec-corpo">'
         + _campo('Nome completo', 'text', 'inp-inc-nome', i.nome, 'NOME DO INCIDENTADO', true)
-        + _row2(
-            _campo('Prontuário / IPEN', 'text', 'inp-inc-pront', i.prontuario, 'ex: 750126', true),
-            _campo('CPF', 'text', 'inp-inc-ipen', cpfVal, 'xxx.xxx.xxx-xx')
-          )
-        + _row2(
-            _campo('Nascimento', 'date', 'inp-inc-nasc', i.nascimento),
-            _campo('Naturalidade', 'text', 'inp-inc-nat', i.naturalidade, 'ex: Florianópolis - SC')
-          )
-        + _campo('Nome da mãe', 'text', 'inp-inc-mae', i.mae)
-        + _row2(
-            _campo('Regime', 'text', 'inp-inc-regime', i.regime, 'ex: Fechado'),
-            _campo('Comportamento', 'text', 'inp-inc-comp', i.comportamento, 'ex: Bom')
-          )
-        + _campo('Cela / Alojamento', 'text', 'inp-inc-cela', i.cela, 'ex: Ala M, Gal I, Bloco D, Cela 102')
+        + _campo('Prontuário / IPEN', 'text', 'inp-inc-pront', i.prontuario, 'ex: 750126', true)
       + '</div>'
     + '</div>';
   }
@@ -493,24 +479,8 @@ var FormularioCtrl = (function() {
     _bind('inp-numPad',   function(v) { Estado.set('numPad', v); });
     _bind('inp-dataInst', function(v) { Estado.set('dataInst', v); });
 
-    _bind('inp-inc-nome',   function(v) { Estado.setNested('incidentado.nome', v); });
-    _bind('inp-inc-pront',  function(v) { Estado.setNested('incidentado.prontuario', v); });
-    _bind('inp-inc-nasc',   function(v) { Estado.setNested('incidentado.nascimento', v); });
-    _bind('inp-inc-nat',    function(v) { Estado.setNested('incidentado.naturalidade', v); });
-    _bind('inp-inc-mae',    function(v) { Estado.setNested('incidentado.mae', v); });
-    _bind('inp-inc-regime', function(v) { Estado.setNested('incidentado.regime', v); });
-    _bind('inp-inc-comp',   function(v) { Estado.setNested('incidentado.comportamento', v); });
-    _bind('inp-inc-cela',   function(v) { Estado.setNested('incidentado.cela', v); });
-
-    /* CPF com máscara */
-    var cpfEl = document.getElementById('inp-inc-ipen');
-    if (cpfEl) {
-      cpfEl.addEventListener('input', function() {
-        var masked = _maskCPF(cpfEl.value);
-        cpfEl.value = masked;
-        Estado.setNested('incidentado.ipen', masked);
-      });
-    }
+    _bind('inp-inc-nome',  function(v) { Estado.setNested('incidentado.nome', v); });
+    _bind('inp-inc-pront', function(v) { Estado.setNested('incidentado.prontuario', v); });
 
     _bind('sel-inf-artigo',  function(v) { Estado.setNested('infracao.artigo', v); });
     _bind('inp-inf-data',    function(v) { Estado.setNested('infracao.data', v); });
