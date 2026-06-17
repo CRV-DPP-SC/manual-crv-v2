@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Como Usar — Gerador de PAD · CPEN/DPP-SC</title>
+<style>
+  @page { size: A4; margin: 2cm 2cm 2.5cm 2.5cm; }
+  @media print {
+    .no-print { display: none !important; }
+    .quebra   { page-break-before: always; }
+    body      { font-size: 10.5pt; }
+    h1.capa   { margin-top: 6cm; }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #fff;
+    max-width: 21cm;
+    margin: 0 auto;
+    padding: 1cm;
+  }
+
+  /* ── Botão imprimir ── */
+  .btn-imprimir {
+    position: fixed; top: 16px; right: 16px;
+    background: #3b1f0a; color: #fff;
+    border: none; border-radius: 8px;
+    padding: 10px 20px; font-size: .9rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 2px 10px rgba(0,0,0,.2);
+    z-index: 999;
+  }
+  .btn-imprimir:hover { background: #6b3a1f; }
+
+  /* ── Capa ── */
+  .capa {
+    text-align: center;
+    min-height: 26cm;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-bottom: 3px solid #3b1f0a;
+    padding-bottom: 2cm;
+  }
+  .capa-brasao { font-size: 4rem; margin-bottom: 1cm; }
+  .capa-orgao  { font-size: 10pt; text-transform: uppercase; letter-spacing: .1em; color: #555; margin-bottom: .3cm; }
+  .capa-titulo { font-size: 22pt; font-weight: 900; color: #3b1f0a; line-height: 1.2; margin-bottom: .5cm; }
+  .capa-sub    { font-size: 13pt; color: #6b3a1f; margin-bottom: 1.5cm; }
+  .capa-versao { font-size: 9pt; color: #999; margin-top: 1cm; }
+  .capa-linha  { width: 8cm; height: 3px; background: linear-gradient(to right, #f97316, #3b1f0a); border-radius: 2px; margin: .8cm auto; }
+
+  /* ── Sumário ── */
+  .sumario { margin: .5cm 0 1cm; }
+  .sumario h2 { font-size: 13pt; color: #3b1f0a; border-bottom: 2px solid #f97316; padding-bottom: 4px; margin-bottom: .4cm; }
+  .sumario ol { padding-left: 1.2cm; }
+  .sumario li { margin-bottom: .15cm; font-size: 10pt; }
+  .sumario li a { color: #3b1f0a; text-decoration: none; }
+  .sumario li a:hover { text-decoration: underline; }
+  .sumario .sub { margin-left: .8cm; color: #666; font-size: 9.5pt; }
+
+  /* ── Seções ── */
+  .secao { margin-bottom: 1cm; }
+  h2.titulo-secao {
+    font-size: 14pt; font-weight: 900; color: #fff;
+    background: linear-gradient(135deg, #3b1f0a, #6b3a1f);
+    padding: 8px 14px; border-radius: 6px;
+    margin-bottom: .5cm;
+    display: flex; align-items: center; gap: 8px;
+  }
+  h3 {
+    font-size: 11pt; font-weight: 800; color: #3b1f0a;
+    margin: .5cm 0 .2cm;
+    padding-left: 10px;
+    border-left: 4px solid #f97316;
+  }
+  p { margin-bottom: .3cm; text-align: justify; }
+
+  /* ── Caixa de destaque ── */
+  .box {
+    border-radius: 8px; padding: 10px 14px;
+    margin: .35cm 0;
+    font-size: 10pt;
+    line-height: 1.5;
+  }
+  .box-dica   { background: #fffbeb; border-left: 4px solid #f59e0b; }
+  .box-aviso  { background: #fef2f2; border-left: 4px solid #dc2626; }
+  .box-info   { background: #eff6ff; border-left: 4px solid #2563eb; }
+  .box-ok     { background: #f0fdf4; border-left: 4px solid #16a34a; }
+  .box strong { display: block; margin-bottom: 4px; }
+
+  /* ── Tabela ── */
+  table { width: 100%; border-collapse: collapse; margin: .35cm 0; font-size: 9.5pt; }
+  th { background: #3b1f0a; color: #fed7aa; padding: 7px 10px; text-align: left; font-size: 9pt; }
+  td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #fffaf7; }
+
+  /* ── Passos numerados ── */
+  .passos { list-style: none; padding: 0; margin: .3cm 0; }
+  .passos li {
+    display: flex; gap: 12px; align-items: flex-start;
+    margin-bottom: .4cm;
+    font-size: 10pt;
+  }
+  .passo-num {
+    min-width: 28px; height: 28px;
+    background: #3b1f0a; color: #fed7aa;
+    border-radius: 50%; display: flex;
+    align-items: center; justify-content: center;
+    font-weight: 900; font-size: 10pt; flex-shrink: 0;
+  }
+  .passo-txt { flex: 1; padding-top: 3px; }
+  .passo-txt strong { color: #3b1f0a; }
+
+  /* ── Chip ── */
+  .chip {
+    display: inline-block;
+    padding: 2px 10px; border-radius: 20px;
+    font-size: 9pt; font-weight: 700; margin: 2px;
+  }
+  .chip-marrom { background: #fef3c7; color: #92400e; }
+  .chip-azul   { background: #dbeafe; color: #1d4ed8; }
+  .chip-verde  { background: #dcfce7; color: #166534; }
+  .chip-laranja{ background: #ffedd5; color: #c2410c; }
+
+  /* ── Fluxo ── */
+  .fluxo {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 6px; margin: .3cm 0; font-size: 9pt;
+  }
+  .fluxo-item {
+    background: #3b1f0a; color: #fed7aa;
+    padding: 5px 12px; border-radius: 6px; font-weight: 700;
+  }
+  .fluxo-seta { color: #f97316; font-weight: 900; font-size: 12pt; }
+
+  /* ── Docs lista ── */
+  .docs-lista { list-style: none; padding: 0; margin: .3cm 0; }
+  .docs-lista li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 10px; margin-bottom: 4px;
+    background: #fffaf7; border-radius: 6px;
+    border-left: 3px solid #f97316; font-size: 10pt;
+  }
+  .docs-lista .icone { font-size: 1.1rem; flex-shrink: 0; }
+  .docs-lista .num   { font-weight: 900; color: #92400e; flex-shrink: 0; min-width: 20px; }
+
+  /* rodapé */
+  .rodape {
+    text-align: center; font-size: 8.5pt; color: #aaa;
+    border-top: 1px solid #e5e7eb; padding-top: .4cm;
+    margin-top: 1cm;
+  }
+</style>
+</head>
+<body>
+
+<button class="btn-imprimir no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+
+<!-- ══════════════ CAPA ══════════════ -->
+<div class="capa">
+  <div class="capa-brasao">⚖️</div>
+  <div class="capa-orgao">Polícia Penal de Santa Catarina · DPP/SC · CPEN</div>
+  <div class="capa-linha"></div>
+  <div class="capa-titulo">Gerador de PAD</div>
+  <div class="capa-sub">Procedimento Administrativo Disciplinar</div>
+  <div class="capa-linha"></div>
+  <p style="color:#555;font-size:11pt;max-width:12cm;text-align:center;margin-top:.5cm;">
+    Manual de utilização do sistema de geração, gestão e compartilhamento de documentos do PAD para usuários CPEN/DIR.
+  </p>
+  <div class="capa-versao">Versão 2026 · crv-dpp-sc.github.io/manual-crv-v2</div>
+</div>
+
+<!-- ══════════════ SUMÁRIO ══════════════ -->
+<div class="quebra"></div>
+<div class="sumario secao">
+  <h2>Sumário</h2>
+  <ol>
+    <li><a href="#visao">Visão Geral do Sistema</a></li>
+    <li><a href="#fluxo">Fluxo Completo de um PAD</a></li>
+    <li><a href="#cadastro">Cadastrar novo PAD</a></li>
+    <li><a href="#formulario">Formulário — Seções e Campos</a></li>
+    <li><a href="#documentos">Os 9 Documentos</a>
+      <div class="sub">Portaria · Documentação Inicial · Termo de Cientificação · Oitivas · Declarações · Manifestação do Conselho · Manifestação da Defesa · Decisão · Ofício</div>
+    </li>
+    <li><a href="#exportar">Exportar e Salvar no Dossiê</a></li>
+    <li><a href="#relacao">Relação de PADs</a></li>
+    <li><a href="#advogados">Painel de Advogados e Defensores</a></li>
+    <li><a href="#portal">Portal da Defesa (Advogado)</a></li>
+    <li><a href="#dicas">Dicas e Observações</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════ 1. VISÃO GERAL ══════════════ -->
+<div class="quebra"></div>
+<div class="secao" id="visao">
+  <h2 class="titulo-secao">📌 1. Visão Geral do Sistema</h2>
+  <p>O <strong>Gerador de PAD</strong> é uma ferramenta digital que permite aos servidores CPEN e DIR criar, gerenciar e compartilhar todos os documentos de um Procedimento Administrativo Disciplinar de forma organizada, segura e em conformidade com a legislação.</p>
+
+  <table>
+    <tr><th>O que o sistema faz</th><th>Benefício</th></tr>
+    <tr><td>Gera 9 documentos do PAD automaticamente</td><td>Elimina retrabalho e padroniza os textos</td></tr>
+    <tr><td>Extrai dados do PDF do i-PEN</td><td>Evita digitação manual dos dados do apenado</td></tr>
+    <tr><td>Armazena PADs em nuvem (Firestore)</td><td>Acesso de qualquer dispositivo da unidade</td></tr>
+    <tr><td>Gera link exclusivo para o advogado/defensor</td><td>Compartilhamento seguro sem envio de arquivos</td></tr>
+    <tr><td>Converte fala em texto (ditado por voz)</td><td>Agiliza o preenchimento de depoimentos</td></tr>
+  </table>
+
+  <div class="box box-info">
+    <strong>🔑 Quem pode usar</strong>
+    Usuários com login <strong>CPEN</strong> (xxxcpen@pp.sc.gov.br) ou <strong>DIR</strong> (xxxdir@pp.sc.gov.br) têm acesso completo ao Gerador de PAD.
+  </div>
+</div>
+
+<!-- ══════════════ 2. FLUXO ══════════════ -->
+<div class="secao" id="fluxo">
+  <h2 class="titulo-secao">🔄 2. Fluxo Completo de um PAD</h2>
+
+  <h3>Visão macro do processo</h3>
+  <div class="fluxo">
+    <div class="fluxo-item">1. Cadastrar PAD</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">2. Definir Defesa</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">3. Preencher Formulário</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">4. Gerar Documentos</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">5. Exportar / Dossiê</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">6. Vincular Advogado</div>
+  </div>
+
+  <h3>Detalhamento</h3>
+  <ul class="passos">
+    <li><div class="passo-num">1</div><div class="passo-txt"><strong>Cadastrar PAD:</strong> Faz upload do PDF do i-PEN, informa o número do PAD e clica em "Seguir". O PAD é registrado imediatamente na Relação.</div></li>
+    <li><div class="passo-num">2</div><div class="passo-txt"><strong>Definir tipo de defesa:</strong> Modal pergunta se há advogado constituído, defensoria pública ou se será definido depois.</div></li>
+    <li><div class="passo-num">3</div><div class="passo-txt"><strong>Preencher o formulário:</strong> Dados do PAD, incidentado, infração, conselho, diretor — usados em todos os documentos.</div></li>
+    <li><div class="passo-num">4</div><div class="passo-txt"><strong>Gerar documentos:</strong> Navega pelas 9 abas e gera cada documento. O sistema preenche automaticamente os campos com os dados inseridos.</div></li>
+    <li><div class="passo-num">5</div><div class="passo-txt"><strong>Exportar:</strong> Baixa em <strong>.doc</strong> ou <strong>PDF</strong>. Ao exportar, o documento é salvo automaticamente no dossiê digital do portal.</div></li>
+    <li><div class="passo-num">6</div><div class="passo-txt"><strong>Vincular advogado:</strong> Gera link exclusivo e envia por e-mail. O advogado acessa o dossiê sem precisar de login.</div></li>
+  </ul>
+</div>
+
+<!-- ══════════════ 3. CADASTRO ══════════════ -->
+<div class="quebra"></div>
+<div class="secao" id="cadastro">
+  <h2 class="titulo-secao">📝 3. Cadastrar Novo PAD</h2>
+
+  <h3>Tela Inicial</h3>
+  <p>Ao acessar o Gerador de PAD, a tela inicial apresenta três opções:</p>
+  <table>
+    <tr><th>Opção</th><th>O que faz</th></tr>
+    <tr><td>📝 <strong>Cadastrar PAD</strong></td><td>Inicia um novo PAD — preenche número, data e faz upload do i-PEN</td></tr>
+    <tr><td>📋 <strong>Relação de PADs</strong></td><td>Lista todos os PADs cadastrados pela unidade, permite editar ou excluir</td></tr>
+    <tr><td>👨‍⚖️ <strong>Advogados</strong></td><td>Gerencia cadastro de advogados e defensores públicos vinculados</td></tr>
+  </table>
+
+  <h3>Passos do Cadastro</h3>
+  <ul class="passos">
+    <li><div class="passo-num">1</div><div class="passo-txt"><strong>Upload do i-PEN (PDF):</strong> Arraste o arquivo ou clique na área pontilhada. O sistema extrai automaticamente o nome do apenado, IPEN e dados da infração.</div></li>
+    <li><div class="passo-num">2</div><div class="passo-txt"><strong>Número do PAD:</strong> Informe o número da Portaria de Instauração (ex.: 001/2026).</div></li>
+    <li><div class="passo-num">3</div><div class="passo-txt"><strong>Data de Instauração:</strong> Preenchida automaticamente ou ajuste manualmente.</div></li>
+    <li><div class="passo-num">4</div><div class="passo-txt"><strong>Clique em "Seguir →":</strong> O PAD é registrado na Relação de PADs imediatamente. Um modal pergunta sobre o tipo de defesa.</div></li>
+  </ul>
+
+  <h3>Modal de Defesa</h3>
+  <table>
+    <tr><th>Opção</th><th>O que define</th></tr>
+    <tr><td>👨‍⚖️ Advogado Constituído</td><td>Abre campo para selecionar advogado cadastrado ou informar nome/OAB manualmente</td></tr>
+    <tr><td>🏛️ Defensoria Pública</td><td>Define automaticamente. O documento menciona "Defensoria Pública do Estado de SC"</td></tr>
+    <tr><td>⏭ Sem Defesa / Definir depois</td><td>Prossegue sem vínculo. Pode ser alterado a qualquer momento no formulário</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════ 4. FORMULÁRIO ══════════════ -->
+<div class="secao" id="formulario">
+  <h2 class="titulo-secao">📋 4. Formulário — Seções e Campos</h2>
+  <p>O formulário aparece no lado esquerdo da tela. Cada seção é expansível (clique no cabeçalho). Os dados preenchem todos os documentos simultaneamente.</p>
+
+  <table>
+    <tr><th>Seção</th><th>Campos principais</th><th>Usado em</th></tr>
+    <tr><td>📋 Identificação do PAD</td><td>Nº do PAD, Data de Instauração</td><td>Todos os documentos</td></tr>
+    <tr><td>👤 Incidentado</td><td>Nome completo, Prontuário/IPEN</td><td>Todos os documentos</td></tr>
+    <tr><td>⚠️ Infração</td><td>Data da infração, Artigo da LEP, Descrição dos fatos, Agentes</td><td>Portaria, Manifestação, Decisão, Ofício</td></tr>
+    <tr><td>⚖️ Defesa</td><td>Tipo de defesa, Nome/OAB do advogado, Versão do incidentado</td><td>Oitiva incidentado, Manifestação, Decisão</td></tr>
+    <tr><td>👥 Conselho Disciplinar</td><td>Presidente, Membro 1, Membro 2 (nome + matrícula)</td><td>Portaria, Oitivas, Manifestação</td></tr>
+    <tr><td>🏛 Diretor(a)</td><td>Preenchido automaticamente pelo login</td><td>Portaria, Decisão, Ofícios</td></tr>
+  </table>
+
+  <div class="box box-dica">
+    <strong>💡 Dica</strong>
+    O ícone <span class="chip chip-verde">✓</span> ao lado de cada seção indica que os campos obrigatórios foram preenchidos. <span class="chip chip-laranja">—</span> indica que falta preenchimento.
+  </div>
+</div>
+
+<!-- ══════════════ 5. DOCUMENTOS ══════════════ -->
+<div class="quebra"></div>
+<div class="secao" id="documentos">
+  <h2 class="titulo-secao">📄 5. Os 9 Documentos</h2>
+  <p>O sistema gera 9 documentos na sequência processual do PAD. Clique nas abas superiores para navegar entre eles.</p>
+
+  <ul class="docs-lista">
+    <li><div class="icone">📋</div><div class="num">1.</div><div><strong>Portaria de Instauração</strong> — Documento oficial que formaliza a instauração do PAD, nomeia o Conselho Disciplinar e define o prazo. Ao exportar, o PDF do i-PEN e a Documentação Inicial são anexados automaticamente nas páginas seguintes.</div></li>
+    <li><div class="icone">📂</div><div class="num">2.</div><div><strong>Documentação Inicial</strong> — Juntada de provas: adicione múltiplos arquivos (PDFs, fotos, comunicações de ocorrência, relatórios). Serão incluídos após a Portaria no dossiê.</div></li>
+    <li><div class="icone">📄</div><div class="num">3.</div><div><strong>Termo de Cientificação</strong> — Gerado automaticamente com os dados do PAD. Inclui espaço para o apenado indicar advogado, solicitar defensor ou declarar que não quer defesa. Após colher assinatura física, digitalize e faça upload do documento assinado.</div></li>
+    <li><div class="icone">🧑‍💼</div><div class="num">4.</div><div><strong>Oitiva de Testemunhas / Informantes</strong> — Um documento por pessoa. Cada testemunha tem campos para: Nome, Qualificação, Qualidade (Testemunha ou Informante) e Depoimento (texto ou voz 🎙).</div></li>
+    <li><div class="icone">👤</div><div class="num">5.</div><div><strong>Declarações do Incidentado</strong> — Termo que registra a versão apresentada pelo apenado. Menciona o direito constitucional ao silêncio e que o silêncio não pode ser usado contra ele.</div></li>
+    <li><div class="icone">📝</div><div class="num">6.</div><div><strong>Manifestação do Conselho Disciplinar</strong> — Parecer do Conselho: Procedência, Improcedência ou Desclassificação. Em caso de desclassificação, selecione o grau (Leve/Média) e os incisos específicos da LC 529/2011.</div></li>
+    <li><div class="icone">⚖️</div><div class="num">7.</div><div><strong>Manifestação da Defesa</strong> — Registro da defesa do advogado/defensor: por texto, por voz (🎙) ou por upload do documento recebido. Gera termo imprimível para colher assinatura.</div></li>
+    <li><div class="icone">⚖️</div><div class="num">8.</div><div><strong>Decisão da Direção</strong> — Resultado final: Absolvição, Desclassificação (com artigo e incisos da LC 529/2011) ou Falta Grave (com sanções aplicáveis: regressão, remição, saída temporária, trabalho externo).</div></li>
+    <li><div class="icone">📨</div><div class="num">9.</div><div><strong>Ofício ao Juiz</strong> — Comunicação ao Juízo da Vara de Execuções Penais. Informa a instauração do PAD e encaminha os autos ao final.</div></li>
+  </ul>
+
+  <h3>Desclassificação — Incisos da LC 529/2011</h3>
+  <p>Quando o resultado for <strong>desclassificação</strong> (na Manifestação do Conselho e/ou Decisão), o sistema exibe:</p>
+  <ol style="padding-left:1.2cm;font-size:10pt;">
+    <li>Chips para selecionar o grau: <span class="chip chip-marrom">Falta Leve — Art. 95</span> ou <span class="chip chip-marrom">Falta Média — Art. 96</span></li>
+    <li>Checkboxes com todos os incisos do artigo selecionado (texto oficial da ALESC)</li>
+    <li>O documento gerado menciona automaticamente o artigo e os incisos marcados</li>
+  </ol>
+
+  <h3>Testemunha vs. Informante</h3>
+  <table>
+    <tr><th>Qualidade</th><th>Texto gerado no documento</th></tr>
+    <tr><td><span class="chip chip-azul">👤 Testemunha</span></td><td>Advertida do dever de dizer a verdade, sob pena do <strong>art. 342 do CP</strong> (falso testemunho). Título: <em>Termo de Oitiva de Testemunha</em></td></tr>
+    <tr><td><span class="chip chip-laranja">💬 Informante</span></td><td>Ouvida sem compromisso com a verdade, por relação próxima com o incidentado. Título: <em>Termo de Oitiva de Informante</em></td></tr>
+  </table>
+</div>
+
+<!-- ══════════════ 6. EXPORTAR ══════════════ -->
+<div class="quebra"></div>
+<div class="secao" id="exportar">
+  <h2 class="titulo-secao">💾 6. Exportar e Salvar no Dossiê</h2>
+
+  <h3>Botões de exportação</h3>
+  <table>
+    <tr><th>Botão</th><th>O que faz</th></tr>
+    <tr><td>📋 Copiar</td><td>Copia o documento com formatação para a área de transferência (para colar no Word)</td></tr>
+    <tr><td>Baixar em .doc</td><td>Gera arquivo Word do documento atual</td></tr>
+    <tr><td>Baixar em PDF</td><td>Abre janela de impressão — salve como PDF</td></tr>
+    <tr><td>📦 Todos (.doc)</td><td>Gera um único arquivo Word com todos os 9 documentos em sequência</td></tr>
+    <tr><td>☁️ Salvar no Portal</td><td>Salva o documento atual no dossiê digital do advogado</td></tr>
+  </table>
+
+  <div class="box box-ok">
+    <strong>✅ Salvamento automático no dossiê</strong>
+    Toda vez que você baixa um documento (.doc ou PDF), ele é <strong>salvo automaticamente</strong> no dossiê digital do portal do advogado. Não é necessário clicar em "Salvar no Portal" separadamente.
+  </div>
+
+  <h3>Portaria — o que é incluído automaticamente</h3>
+  <p>Ao exportar a <strong>Portaria de Instauração</strong>, os seguintes itens são anexados nas páginas seguintes:</p>
+  <ol style="padding-left:1.2cm;font-size:10pt;margin:.2cm 0;">
+    <li>Páginas do <strong>PDF do i-PEN</strong> (o relatório da falta grave carregado no início)</li>
+    <li>Todos os arquivos da <strong>Documentação Inicial</strong> adicionados na aba 2</li>
+  </ol>
+
+  <h3>Termo de Cientificação e Manifestação da Defesa</h3>
+  <p>Esses dois documentos seguem o fluxo:</p>
+  <div class="fluxo">
+    <div class="fluxo-item">Gerar documento</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">Imprimir</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">Colher assinatura</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">Digitalizar</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">Upload no sistema</div>
+    <div class="fluxo-seta">→</div>
+    <div class="fluxo-item">Vai ao dossiê</div>
+  </div>
+</div>
+
+<!-- ══════════════ 7. RELAÇÃO ══════════════ -->
+<div class="secao" id="relacao">
+  <h2 class="titulo-secao">📋 7. Relação de PADs</h2>
+  <p>A Relação de PADs é o painel de controle da unidade. Armazenada na nuvem (Firestore), pode ser acessada de qualquer dispositivo com login da unidade.</p>
+
+  <h3>Colunas da tabela</h3>
+  <table>
+    <tr><th>Coluna</th><th>Descrição</th></tr>
+    <tr><td>Nº PAD</td><td>Número da Portaria de Instauração</td></tr>
+    <tr><td>Nome do Incidentado</td><td>Nome extraído do i-PEN ou digitado</td></tr>
+    <tr><td>IPEN</td><td>Prontuário do apenado</td></tr>
+    <tr><td>Instauração</td><td>Data de instauração do PAD</td></tr>
+    <tr><td>Data dos Fatos</td><td>Data da infração disciplinar</td></tr>
+    <tr><td>Art. da Falta</td><td>Artigo da LEP enquadrado</td></tr>
+    <tr><td>Status</td><td><span class="chip chip-marrom">⏳ Em andamento</span> ou <span class="chip chip-verde">✅ Concluído</span></td></tr>
+  </table>
+
+  <h3>Ações disponíveis</h3>
+  <table>
+    <tr><th>Botão</th><th>O que faz</th></tr>
+    <tr><td>✏️ Editar</td><td>Abre o PAD no formulário para continuar ou corrigir em qualquer momento</td></tr>
+    <tr><td>🗑 Excluir</td><td>Remove o PAD permanentemente (localStorage + Firestore). Exibe confirmação antes de executar.</td></tr>
+  </table>
+
+  <div class="box box-aviso">
+    <strong>⚠️ Atenção</strong>
+    A exclusão de um PAD da Relação é <strong>permanente e irreversível</strong>. Os documentos já enviados ao portal do advogado não são removidos automaticamente.
+  </div>
+</div>
+
+<!-- ══════════════ 8. ADVOGADOS ══════════════ -->
+<div class="quebra"></div>
+<div class="secao" id="advogados">
+  <h2 class="titulo-secao">👨‍⚖️ 8. Painel de Advogados e Defensores</h2>
+  <p>Acessível pela aba <strong>"👨‍⚖️ Advogados"</strong> na tela inicial. Permite cadastrar e consultar advogados e defensores vinculados a PADs da unidade.</p>
+
+  <h3>Cadastrar advogado ou defensor</h3>
+  <ul class="passos">
+    <li><div class="passo-num">1</div><div class="passo-txt">Clique em <strong>"+ Cadastrar Advogado"</strong></div></li>
+    <li><div class="passo-num">2</div><div class="passo-txt">Selecione o tipo: <span class="chip chip-azul">👨‍⚖️ Advogado Constituído</span> ou <span class="chip chip-verde">🏛️ Defensor Público</span></div></li>
+    <li><div class="passo-num">3</div><div class="passo-txt">Preencha: Nome (obrigatório), OAB (obrigatório para advogados), E-mail (obrigatório), Telefone (opcional)</div></li>
+    <li><div class="passo-num">4</div><div class="passo-txt">Clique em <strong>"💾 Cadastrar"</strong> — salvo no Firestore para uso em todos os PADs da unidade</div></li>
+  </ul>
+
+  <h3>Ver PADs de um advogado</h3>
+  <p>Clique em qualquer linha da tabela para ver a lista de PADs vinculados a aquele advogado/defensor, com: Nº do PAD, Data de instauração, Nome do preso (cliente) e IPEN.</p>
+</div>
+
+<!-- ══════════════ 9. PORTAL ══════════════ -->
+<div class="secao" id="portal">
+  <h2 class="titulo-secao">☁️ 9. Portal da Defesa (Advogado)</h2>
+  <p>O portal permite que o advogado ou defensor acesse todos os documentos do PAD digitalmente, sem precisar de login.</p>
+
+  <h3>Como o advogado recebe o acesso</h3>
+  <ul class="passos">
+    <li><div class="passo-num">1</div><div class="passo-txt">No formulário do PAD, clique em <strong>"☁️ Salvar no Portal"</strong> no painel de preview</div></li>
+    <li><div class="passo-num">2</div><div class="passo-txt">Selecione o advogado/defensor na lista</div></li>
+    <li><div class="passo-num">3</div><div class="passo-txt">Clique em <strong>"☁️ Gerar Link de Acesso"</strong> — um link único é criado</div></li>
+    <li><div class="passo-num">4</div><div class="passo-txt">Clique em <strong>"✉️ Abrir E-mail com o Link Preenchido"</strong> — abre seu cliente de e-mail com destinatário, assunto e corpo já preenchidos</div></li>
+    <li><div class="passo-num">5</div><div class="passo-txt">Envie o e-mail — o advogado clica no link e acessa o dossiê</div></li>
+  </ul>
+
+  <h3>O que o advogado vê no portal</h3>
+  <table>
+    <tr><th>Recurso</th><th>Descrição</th></tr>
+    <tr><td>📋 Lista de documentos</td><td>Peças na ordem processual — apenas as que já foram salvas aparecem</td></tr>
+    <tr><td>👁 Ver</td><td>Abre o documento na tela em modo somente leitura</td></tr>
+    <tr><td>📥 PDF</td><td>Baixa o documento individual em PDF</td></tr>
+    <tr><td>⬇️ Dossiê Completo</td><td>Baixa todos os documentos em um único PDF, na sequência correta</td></tr>
+  </table>
+
+  <div class="box box-info">
+    <strong>🔗 Sobre o link de acesso</strong>
+    O link é único por PAD e não requer senha. Ele pode ser enviado a qualquer momento — os documentos continuam sendo adicionados ao dossiê conforme o CPEN os exporta. O advogado sempre verá a versão mais atualizada ao acessar o link.
+  </div>
+</div>
+
+<!-- ══════════════ 10. DICAS ══════════════ -->
+<div class="quebra"></div>
+<div class="secao" id="dicas">
+  <h2 class="titulo-secao">💡 10. Dicas e Observações</h2>
+
+  <h3>Ditado por Voz (🎙)</h3>
+  <p>Disponível nos campos de depoimento de testemunhas e na Manifestação da Defesa. Funciona apenas no <strong>Google Chrome</strong> e <strong>Microsoft Edge</strong>. O microfone deve ser permitido pelo browser.</p>
+  <p>Clique em <strong>"🎙 Ditar"</strong> → fale normalmente → clique em <strong>"⏹ Parar"</strong>. O texto aparece automaticamente no campo.</p>
+
+  <h3>Salvamento Automático</h3>
+  <p>Os dados do formulário são salvos automaticamente no navegador (localStorage) a cada alteração. Se fechar a aba por acidente, ao reabrir o Gerador de PAD e ir em "Relação de PADs", o PAD estará lá — basta clicar em "✏️ Editar".</p>
+
+  <h3>Conselho Disciplinar</h3>
+  <p>O botão <strong>"💾 Salvar Conselho"</strong> memoriza os membros do Conselho para uso futuro. Na próxima instauração, os dados já estarão preenchidos.</p>
+
+  <h3>Extração automática do i-PEN</h3>
+  <p>O sistema tenta extrair automaticamente: nome do apenado, IPEN, data e descrição da infração. Se o PDF for digitalizado (imagem), a extração pode não funcionar — preencha manualmente.</p>
+
+  <div class="box box-aviso">
+    <strong>⚠️ Regras do Firestore (para o administrador)</strong>
+    As coleções <code>pads_relacao</code>, <code>pads_gerados</code>, <code>pads_pecas</code>, <code>pad_links</code> e <code>advogados</code> precisam ter regras de leitura/escrita configuradas no Firebase Console para funcionarem corretamente em produção.
+  </div>
+
+  <h3>Compatibilidade</h3>
+  <table>
+    <tr><th>Recurso</th><th>Chrome</th><th>Edge</th><th>Firefox</th><th>Safari</th></tr>
+    <tr><td>Geração de documentos</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Ditado por voz (🎙)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Exportar .doc</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Portal do advogado</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════ RODAPÉ ══════════════ -->
+<div class="rodape">
+  Gerador de PAD · Polícia Penal de Santa Catarina · DPP/SC · CPEN &nbsp;|&nbsp;
+  <strong>crv-dpp-sc.github.io/manual-crv-v2</strong> &nbsp;|&nbsp;
+  Documento gerado em junho/2026
+</div>
+
+</body>
+</html>
