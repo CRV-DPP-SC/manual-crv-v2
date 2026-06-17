@@ -477,29 +477,53 @@
 
 <!-- ════════════ MODAL SALVAR NO PORTAL ════════════ -->
 <div class="modal-bg" id="modalPortalBg" style="display:none;align-items:center;justify-content:center;">
-  <div class="modal" style="max-width:480px;width:95%;">
+  <div class="modal" style="max-width:500px;width:95%;">
     <div class="modal-head">
-      <h3>☁️ Salvar no Portal do Advogado</h3>
+      <h3>☁️ Disponibilizar PAD ao Advogado</h3>
       <button onclick="_fecharModalPortal()">✕</button>
     </div>
-    <div class="modal-body" style="padding:20px;">
-      <p style="font-size:.85rem;color:#57534e;margin-bottom:16px;">
-        Selecione o advogado que poderá acessar este PAD no portal. Um link de acesso será enviado ao e-mail cadastrado.
-      </p>
+
+    <!-- Passo 1: selecionar advogado -->
+    <div id="portal-passo1" style="padding:20px;">
       <div class="pad-cad-campo" style="margin-bottom:16px;">
-        <label>Advogado vinculado</label>
+        <label style="display:block;font-size:.75rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:6px;">Advogado vinculado</label>
         <select id="portal-adv-select" style="width:100%;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.9rem;font-family:inherit;color:#1c1917;">
           <option value="">Carregando advogados…</option>
         </select>
       </div>
       <div class="pad-cad-status" id="portal-status"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="_fecharModalPortal()" class="pad-rel-btn-vol">Cancelar</button>
+        <button onclick="_confirmarSalvarPortal()"
+          style="padding:8px 20px;background:linear-gradient(135deg,#ea580c,#c2410c);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          ☁️ Gerar Link de Acesso
+        </button>
+      </div>
     </div>
-    <div class="modal-foot" style="padding:16px 20px;display:flex;gap:10px;justify-content:flex-end;">
-      <button onclick="_fecharModalPortal()" class="pad-rel-btn-vol">Cancelar</button>
-      <button onclick="_confirmarSalvarPortal()"
-        style="padding:8px 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
-        ☁️ Salvar e Disponibilizar
-      </button>
+
+    <!-- Passo 2: link gerado -->
+    <div id="portal-passo2" style="display:none;padding:20px;">
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:.75rem;font-weight:700;color:#166534;text-transform:uppercase;margin-bottom:8px;">✅ Link gerado com sucesso!</div>
+        <div style="font-size:.78rem;color:#15803d;margin-bottom:10px;">Envie o link abaixo ao advogado. O acesso é exclusivo e direto — sem necessidade de login.</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="portal-link-input" readonly
+            style="flex:1;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:.75rem;color:#166534;background:#fff;font-family:monospace;">
+          <button onclick="_copiarLinkPortal()"
+            style="padding:8px 12px;background:#166534;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+            📋 Copiar
+          </button>
+        </div>
+      </div>
+      <div id="portal-email-wrap" style="margin-bottom:16px;">
+        <button id="portal-btn-email" onclick="_abrirEmailPortal()"
+          style="width:100%;padding:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
+          ✉️ Abrir E-mail com o Link Preenchido
+        </button>
+      </div>
+      <div style="text-align:center;">
+        <button onclick="_fecharModalPortal()" class="pad-rel-btn-vol">Fechar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1055,8 +1079,8 @@ window.abrirModalSalvarPortal = function() {
     }
     sel.innerHTML = '<option value="">Selecione o advogado…</option>'
       + lista.map(function(adv) {
-          return '<option value="' + _esc(adv.oab) + '">'
-            + _esc(adv.nome) + ' — OAB ' + _esc(adv.oab) + '</option>';
+          return '<option value="' + _esc(adv.oab) + '" data-nome="' + _esc(adv.nome) + '" data-email="' + _esc(adv.email || '') + '">'
+            + _esc(adv.nome) + ' — OAB ' + _esc(adv.oab) + (adv.email ? ' (' + _esc(adv.email) + ')' : '') + '</option>';
         }).join('');
   });
 };
@@ -1064,12 +1088,20 @@ window.abrirModalSalvarPortal = function() {
 window._fecharModalPortal = function() {
   var bg = document.getElementById('modalPortalBg');
   if (bg) bg.style.display = 'none';
+  /* Reseta para passo 1 */
+  var p1 = document.getElementById('portal-passo1');
+  var p2 = document.getElementById('portal-passo2');
+  if (p1) p1.style.display = '';
+  if (p2) p2.style.display = 'none';
 };
 
+/* Guarda dados do advogado selecionado para o e-mail */
+var _portalAdvDados = { nome: '', email: '', oab: '', link: '' };
+
 window._confirmarSalvarPortal = async function() {
-  var sel    = document.getElementById('portal-adv-select');
-  var oab    = sel ? sel.value : '';
-  var st     = document.getElementById('portal-status');
+  var sel = document.getElementById('portal-adv-select');
+  var oab = sel ? sel.value : '';
+  var st  = document.getElementById('portal-status');
 
   function _setStatus(tipo, msg) {
     if (!st) return;
@@ -1080,21 +1112,67 @@ window._confirmarSalvarPortal = async function() {
   if (!oab) return _setStatus('erro', 'Selecione um advogado.');
   if (!window.PadFirestore) return _setStatus('erro', 'Firebase não carregado. Aguarde.');
 
-  _setStatus('info', 'Salvando no portal…');
+  /* Recupera dados do advogado selecionado */
+  var opt = sel.querySelector('option[value="' + oab.replace(/"/g, '') + '"]');
+  _portalAdvDados.nome  = opt ? (opt.dataset.nome  || '') : '';
+  _portalAdvDados.email = opt ? (opt.dataset.email || '') : '';
+  _portalAdvDados.oab   = oab;
 
-  var el = document.getElementById('pad-preview-wrap');
+  _setStatus('info', 'Gerando link de acesso…');
+
+  var el      = document.getElementById('pad-preview-wrap');
   var htmlDoc = el ? el.innerHTML : '';
   var estado  = Estado.get();
 
   try {
-    await window.PadFirestore.salvarPad(estado, htmlDoc, oab);
+    var resultado = await window.PadFirestore.salvarPad(estado, htmlDoc, oab);
     salvarNoHistorico(window._padIdAtual);
-    _setStatus('ok', '✓ PAD disponibilizado! O advogado já pode acessar no portal.');
-    _toast('PAD salvo no portal com sucesso!');
-    setTimeout(function() { window._fecharModalPortal(); }, 2200);
+    _portalAdvDados.link = resultado.link;
+
+    /* Mostra passo 2 com o link */
+    var inp = document.getElementById('portal-link-input');
+    if (inp) inp.value = resultado.link;
+    document.getElementById('portal-passo1').style.display = 'none';
+    document.getElementById('portal-passo2').style.display = '';
+    _toast('Link gerado! Envie ao advogado.');
   } catch(e) {
-    _setStatus('erro', 'Erro ao salvar: ' + (e.message || 'tente novamente.'));
+    _setStatus('erro', 'Erro ao gerar link: ' + (e.message || 'tente novamente.'));
   }
+};
+
+window._copiarLinkPortal = function() {
+  var inp = document.getElementById('portal-link-input');
+  if (!inp) return;
+  inp.select(); inp.setSelectionRange(0, 9999);
+  try {
+    document.execCommand('copy');
+    _toast('Link copiado!');
+  } catch(_) {
+    navigator.clipboard && navigator.clipboard.writeText(inp.value).then(function() { _toast('Link copiado!'); });
+  }
+};
+
+window._abrirEmailPortal = function() {
+  var s      = Estado.get();
+  var inc    = s.incidentado || {};
+  var numPad = s.numPad || '—';
+  var nome   = _portalAdvDados.nome  || 'Advogado(a)';
+  var email  = _portalAdvDados.email || '';
+  var link   = _portalAdvDados.link  || '';
+
+  var assunto = encodeURIComponent('Acesso ao PAD Nº ' + numPad + ' — Portal da Defesa');
+  var corpo   = encodeURIComponent(
+    'Prezado(a) ' + nome + ',\n\n'
+    + 'Informamos que o Procedimento Administrativo Disciplinar (PAD) Nº ' + numPad
+    + ', referente ao(à) interno(a) ' + (inc.nome || '—') + ', foi disponibilizado para sua consulta.\n\n'
+    + 'Acesse os documentos pelo link exclusivo abaixo:\n'
+    + link + '\n\n'
+    + 'O link é de uso exclusivo e não requer login.\n\n'
+    + 'Atenciosamente,\n'
+    + ((s.unidade && s.unidade.nome) || 'Unidade Prisional')
+  );
+
+  window.location.href = 'mailto:' + email + '?subject=' + assunto + '&body=' + corpo;
 };
 
 document.addEventListener('DOMContentLoaded', function() {

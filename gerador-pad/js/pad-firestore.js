@@ -1,17 +1,12 @@
 /* ============================================================
    PAD-FIRESTORE.JS — Integração Firebase para o Gerador de PAD
-   Expõe window.PadFirestore com funções de persistência e
-   cadastro de advogados.
    ============================================================ */
 
 import { initializeApp, getApps }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, getDocs,
-         collection, query, where, serverTimestamp }
+         collection, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword,
-         sendPasswordResetEmail }
-  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
 const _CFG = {
   apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
@@ -22,13 +17,10 @@ const _CFG = {
   appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a",
 };
 
-const _app  = getApps().length ? getApps()[0] : initializeApp(_CFG);
-const _db   = getFirestore(_app);
-const _auth = getAuth(_app);
+const _app = getApps().length ? getApps()[0] : initializeApp(_CFG);
+const _db  = getFirestore(_app);
 
-/* ──────────────────────────────────────────
-   Utilitários internos
-────────────────────────────────────────── */
+/* ── Utilitários ── */
 function _oabKey(oab) {
   return (oab || '').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
 }
@@ -37,49 +29,65 @@ function _padKey(numPad) {
   return (numPad || Date.now().toString()).replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now();
 }
 
+/* Gera token aleatório para o link do advogado */
+function _gerarToken() {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
+}
+
 /* ──────────────────────────────────────────
    API pública
 ────────────────────────────────────────── */
 window.PadFirestore = {
 
-  /* Salva o PAD gerado no Firestore e retorna o ID do documento */
+  /* Salva o PAD e gera link único para o advogado.
+     Retorna { padId, token, link } */
   salvarPad: async function(estado, htmlDocumento, advogadoOAB) {
     const s   = estado;
-    const inc = s.incidentado  || {};
-    const inf = s.infracao     || {};
-    const dec = s.decisao      || {};
+    const inc = s.incidentado || {};
+    const inf = s.infracao    || {};
+    const dec = s.decisao     || {};
 
-    const id = _padKey(s.numPad);
-    await setDoc(doc(_db, 'pads_gerados', id), {
-      numPad:           s.numPad           || '',
-      dataInst:         s.dataInst         || '',
-      nomeIncidentado:  inc.nome           || '',
-      prontuario:       inc.prontuario     || '',
-      ipen:             inc.ipen           || '',
-      artigo:           inf.artigo         || '',
-      resultado:        dec.resultado      || '',
-      unidade:          (s.unidade && s.unidade.nome)  || '',
-      emailUnidade:     (s.unidade && s.unidade.email) || '',
-      advogadoOAB:      _oabKey(advogadoOAB),
-      htmlDocumento:    htmlDocumento || '',
-      estado:           JSON.parse(JSON.stringify(s)),
-      validado:         true,
-      ts:               serverTimestamp(),
+    const padId = _padKey(s.numPad);
+
+    await setDoc(doc(_db, 'pads_gerados', padId), {
+      numPad:          s.numPad          || '',
+      dataInst:        s.dataInst        || '',
+      nomeIncidentado: inc.nome          || '',
+      prontuario:      inc.prontuario    || '',
+      artigo:          inf.artigo        || '',
+      resultado:       dec.resultado     || '',
+      unidade:         (s.unidade && s.unidade.nome)  || '',
+      emailUnidade:    (s.unidade && s.unidade.email) || '',
+      advogadoOAB:     _oabKey(advogadoOAB),
+      htmlDocumento:   htmlDocumento || '',
+      estado:          JSON.parse(JSON.stringify(s)),
+      validado:        true,
+      ts:              serverTimestamp(),
     });
 
-    /* Vincula o PAD ao advogado */
+    /* Gera token de acesso único para o advogado */
+    const token = _gerarToken();
+    await setDoc(doc(_db, 'pad_links', token), {
+      padId,
+      advogadoOAB: _oabKey(advogadoOAB),
+      criado:      serverTimestamp(),
+    });
+
+    /* Vincula PAD ao cadastro do advogado */
     if (advogadoOAB) {
-      await window.PadFirestore.vincularPadAoAdvogado(_oabKey(advogadoOAB), s.numPad || id);
+      await window.PadFirestore.vincularPadAoAdvogado(_oabKey(advogadoOAB), s.numPad || padId);
     }
 
-    return id;
+    /* Monta URL do portal */
+    const base = window.location.href.replace(/\/[^/]*$/, '');
+    const link = base + '/portal-advogado.html?token=' + token;
+
+    return { padId, token, link };
   },
 
-  /* Cadastra advogado no Firestore e cria conta Firebase Auth */
+  /* Cadastra advogado no Firestore (sem Firebase Auth — acesso por link) */
   cadastrarAdvogado: async function(dados) {
-    // dados: { nome, oab, email, cpf }
     const oabKey = _oabKey(dados.oab);
-
     await setDoc(doc(_db, 'advogados', oabKey), {
       nome:           dados.nome  || '',
       oab:            dados.oab   || '',
@@ -89,29 +97,16 @@ window.PadFirestore = {
       padsVinculados: [],
       cadastradoEm:   serverTimestamp(),
     });
-
-    /* Cria conta Firebase Auth */
-    try {
-      await createUserWithEmailAndPassword(_auth, dados.email.toLowerCase(), 'PAD@portal2025');
-    } catch(e) {
-      if (e.code !== 'auth/email-already-in-use') throw e;
-    }
-
-    /* Envia e-mail de redefinição para o advogado definir sua senha */
-    try {
-      await sendPasswordResetEmail(_auth, dados.email.toLowerCase());
-    } catch(_) {}
-
     return oabKey;
   },
 
-  /* Lista todos os advogados cadastrados */
+  /* Lista todos os advogados */
   listarAdvogados: async function() {
     const snap = await getDocs(collection(_db, 'advogados'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  /* Vincula número do PAD ao array padsVinculados do advogado */
+  /* Vincula número do PAD ao advogado */
   vincularPadAoAdvogado: async function(oabKey, numPad) {
     const ref  = doc(_db, 'advogados', oabKey);
     const snap = await getDoc(ref);
@@ -121,20 +116,14 @@ window.PadFirestore = {
     await setDoc(ref, { padsVinculados: lista }, { merge: true });
   },
 
-  /* Busca advogado pelo e-mail (usado no portal) */
-  buscarAdvogadoPorEmail: async function(email) {
-    const q    = query(collection(_db, 'advogados'), where('email', '==', email.toLowerCase()));
-    const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const d = snap.docs[0];
-    return { id: d.id, ...d.data() };
-  },
-
-  /* Busca PADs vinculados a um OAB key */
-  buscarPadsDoAdvogado: async function(oabKey) {
-    const q    = query(collection(_db, 'pads_gerados'), where('advogadoOAB', '==', oabKey));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  /* Busca PAD pelo token do link */
+  buscarPadPorToken: async function(token) {
+    const linkSnap = await getDoc(doc(_db, 'pad_links', token));
+    if (!linkSnap.exists()) return null;
+    const { padId } = linkSnap.data();
+    const padSnap = await getDoc(doc(_db, 'pads_gerados', padId));
+    if (!padSnap.exists()) return null;
+    return { id: padSnap.id, ...padSnap.data() };
   },
 };
 
