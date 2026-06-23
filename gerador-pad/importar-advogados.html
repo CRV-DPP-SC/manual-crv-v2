@@ -165,7 +165,10 @@ window._importar = async function() {
   document.getElementById('btn-importar').disabled = true;
   document.getElementById('progress').style.display = 'block';
   _status('info', '⏳ Autenticando…');
-  try { await signInAnonymously(auth); } catch(e) { /* continua mesmo sem auth */ }
+  try {
+    const { currentUser } = auth;
+    if (!currentUser) await signInAnonymously(auth);
+  } catch(e) { /* continua mesmo sem auth */ }
   _status('info', '⏳ Importando… 0 de ' + _advogados.length);
 
   const BATCH = 400; // Firestore limite 500 por batch
