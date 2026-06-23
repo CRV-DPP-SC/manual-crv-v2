@@ -75,7 +75,8 @@
 
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getFirestore, doc, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getFirestore, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
 const _CFG = {
   apiKey:"AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
@@ -85,8 +86,9 @@ const _CFG = {
   messagingSenderId:"513539683551",
   appId:"1:513539683551:web:2fdcdd236f0c37853ae56a",
 };
-const app = getApps().length ? getApps()[0] : initializeApp(_CFG);
-const db  = getFirestore(app);
+const app  = getApps().length ? getApps()[0] : initializeApp(_CFG);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
 let _advogados = [];
 
@@ -162,6 +164,8 @@ window._importar = async function() {
   if (!_advogados.length) return;
   document.getElementById('btn-importar').disabled = true;
   document.getElementById('progress').style.display = '';
+  _status('info', '⏳ Autenticando…');
+  try { await signInAnonymously(auth); } catch(e) { /* continua mesmo sem auth */ }
   _status('info', '⏳ Importando… 0 de ' + _advogados.length);
 
   const BATCH = 400; // Firestore limite 500 por batch
