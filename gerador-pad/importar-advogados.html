@@ -95,7 +95,7 @@ let _advogados = [];
 function _status(tipo, msg) {
   const el = document.getElementById('status-box');
   el.className = 'status-box status-' + tipo;
-  el.style.display = '';
+  el.style.display = 'block';
   el.innerHTML = msg;
 }
 
@@ -149,7 +149,7 @@ window._carregar = function(file) {
       document.getElementById('r-dup').textContent     = (rows.length - _advogados.length).toLocaleString('pt-BR');
       document.getElementById('r-email').textContent   = comEmail.toLocaleString('pt-BR');
       document.getElementById('r-semail').textContent  = (_advogados.length - comEmail).toLocaleString('pt-BR');
-      document.getElementById('resumo').style.display  = '';
+      document.getElementById('resumo').style.display  = 'block';
       document.getElementById('zona-txt').textContent  = '✅ ' + file.name + ' carregado';
       document.getElementById('btn-importar').disabled = false;
       _status('info', '📋 Arquivo lido. Revise o resumo acima e clique em <strong>Importar</strong> para gravar no Firestore.');
@@ -163,7 +163,7 @@ window._carregar = function(file) {
 window._importar = async function() {
   if (!_advogados.length) return;
   document.getElementById('btn-importar').disabled = true;
-  document.getElementById('progress').style.display = '';
+  document.getElementById('progress').style.display = 'block';
   _status('info', '⏳ Autenticando…');
   try { await signInAnonymously(auth); } catch(e) { /* continua mesmo sem auth */ }
   _status('info', '⏳ Importando… 0 de ' + _advogados.length);
