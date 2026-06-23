@@ -428,9 +428,10 @@
       <button class="pad-rel-btn-cad" onclick="_abrirFormAdvogado()">+ Cadastrar Advogado</button>
     </div>
 
-    <!-- Formulário de cadastro (oculto por padrão) -->
+    <!-- Formulário de cadastro/edição (oculto por padrão) -->
     <div id="form-adv" style="display:none;" class="pad-adv-form">
-      <h3 class="pad-adv-form-titulo">Novo Cadastro</h3>
+      <input type="hidden" id="adv-edit-key">
+      <h3 class="pad-adv-form-titulo" id="adv-form-titulo">Novo Cadastro</h3>
       <!-- Tipo -->
       <div class="campo-wrap" style="margin-bottom:14px;">
         <label class="campo-label" style="color:#1d4ed8;">Tipo</label>
@@ -465,7 +466,7 @@
       <div class="pad-cad-status" id="adv-status"></div>
       <div style="display:flex;gap:10px;">
         <button class="pad-cad-continuar" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);"
-          onclick="_salvarAdvogado()">💾 Cadastrar</button>
+          id="adv-btn-salvar" onclick="_salvarAdvogado()">💾 Cadastrar</button>
         <button class="pad-rel-btn-vol" onclick="_fecharFormAdvogado()">Cancelar</button>
       </div>
     </div>
@@ -481,6 +482,7 @@
             <th>OAB</th>
             <th>E-mail</th>
             <th>Telefone</th>
+            <th>Atualização</th>
             <th></th>
           </tr>
         </thead>
@@ -1169,17 +1171,57 @@ function _setAdvTipo(tipo) {
 function _abrirFormAdvogado() {
   _advTipoAtual = 'advogado';
   _setAdvTipo('advogado');
+  var key = document.getElementById('adv-edit-key');
+  if (key) key.value = '';
+  var titulo = document.getElementById('adv-form-titulo');
+  if (titulo) titulo.textContent = 'Novo Cadastro';
+  var btn = document.getElementById('adv-btn-salvar');
+  if (btn) btn.textContent = '💾 Cadastrar';
   document.getElementById('form-adv').style.display = '';
   document.getElementById('adv-nome').focus();
 }
 function _fecharFormAdvogado() {
   document.getElementById('form-adv').style.display = 'none';
-  ['adv-nome','adv-oab','adv-email','adv-tel'].forEach(function(id) {
+  ['adv-nome','adv-oab','adv-email','adv-tel','adv-edit-key'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var st = document.getElementById('adv-status');
   if (st) { st.className = 'pad-cad-status'; st.textContent = ''; }
 }
+
+window._editarAdvogado = function(adv) {
+  if (typeof adv === 'string') adv = JSON.parse(adv);
+  _advTipoAtual = adv.tipo || 'advogado';
+  _setAdvTipo(_advTipoAtual);
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('adv-nome',     adv.nome);
+  set('adv-oab',      adv.oab);
+  set('adv-email',    adv.email);
+  set('adv-tel',      adv.telefone);
+  set('adv-edit-key', adv.id);
+  var titulo = document.getElementById('adv-form-titulo');
+  if (titulo) titulo.textContent = 'Editar Cadastro';
+  var btn = document.getElementById('adv-btn-salvar');
+  if (btn) btn.textContent = '💾 Salvar Alterações';
+  document.getElementById('form-adv').style.display = '';
+  document.getElementById('adv-nome').focus();
+  document.getElementById('form-adv').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window._excluirAdvogado = function(oabKey, nome) {
+  _abrirModalConfirma(
+    'Excluir ' + (nome || 'este advogado') + ' do cadastro? Esta ação não pode ser desfeita.',
+    function() {
+      if (!window.PadFirestore) return;
+      window.PadFirestore.excluirAdvogado(oabKey).then(function() {
+        _toast('Advogado excluído.');
+        _carregarListaAdvogados();
+      }).catch(function(e) {
+        _toast('Erro ao excluir: ' + e.message);
+      });
+    }
+  );
+};
 
 function _carregarListaAdvogados() {
   var vazio  = document.getElementById('adv-lista-vazio');
@@ -1202,15 +1244,31 @@ function _carregarListaAdvogados() {
     if (tbody) {
       tbody.innerHTML = lista.map(function(adv) {
         var tipoBadge = adv.tipo === 'defensoria'
-          ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">🏛️ Defensor Público</span>'
+          ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">🏛️ Defensor</span>'
           : '<span style="background:#dbeafe;color:#1d4ed8;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">👨‍⚖️ Advogado</span>';
-        return '<tr style="cursor:pointer;" onclick="_abrirPadsAdv(' + JSON.stringify(adv.id) + ',' + JSON.stringify(adv.nome||'') + ',' + JSON.stringify(adv.oab||'') + ')">'
-          + '<td class="nome">' + _esc(adv.nome  || '—') + '</td>'
+        var semEmail = !adv.email
+          ? '<span style="color:#dc2626;font-size:.7rem;">⚠️ sem e-mail</span>'
+          : _esc(adv.email);
+        var atualizado = (adv.atualizadoEm && adv.atualizadoEm.seconds)
+          ? new Date(adv.atualizadoEm.seconds * 1000).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+          : (adv.cadastradoEm && adv.cadastradoEm.seconds)
+            ? new Date(adv.cadastradoEm.seconds * 1000).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+            : '—';
+        var idJson  = JSON.stringify(adv.id);
+        var nomeJson = JSON.stringify(adv.nome||'');
+        var oabJson  = JSON.stringify(adv.oab||'');
+        return '<tr>'
+          + '<td class="nome" style="cursor:pointer;" onclick="_abrirPadsAdv(' + idJson + ',' + nomeJson + ',' + oabJson + ')">' + _esc(adv.nome || '—') + '</td>'
           + '<td>' + tipoBadge + '</td>'
-          + '<td>' + _esc(adv.oab || (adv.tipo === 'defensoria' ? '—' : '—')) + '</td>'
-          + '<td>' + _esc(adv.email || '—') + '</td>'
+          + '<td>' + _esc(adv.oab || '—') + '</td>'
+          + '<td>' + semEmail + '</td>'
           + '<td>' + _esc(adv.telefone || '—') + '</td>'
-          + '<td><button class="pad-rel-btn-abrir" style="font-size:.7rem;">📋 Ver PADs</button></td>'
+          + '<td style="font-size:.72rem;color:#78716c;white-space:nowrap;">' + atualizado + '</td>'
+          + '<td><div class="pad-rel-acoes-cell">'
+            + '<button class="pad-rel-btn-abrir" style="font-size:.7rem;" onclick="_abrirPadsAdv(' + idJson + ',' + nomeJson + ',' + oabJson + ')">📋 PADs</button>'
+            + '<button class="pad-rel-btn-abrir" style="font-size:.7rem;background:#fffbeb;color:#92400e;border:1.5px solid #fde68a;" onclick="_editarAdvogado(' + JSON.stringify(adv) + ')">✏️ Editar</button>'
+            + '<button class="pad-rel-btn-del" onclick="_excluirAdvogado(' + idJson + ',' + nomeJson + ')" title="Excluir advogado">🗑</button>'
+          + '</div></td>'
           + '</tr>';
       }).join('');
     }
@@ -1260,12 +1318,13 @@ window._abrirPadsAdv = function(oabKey, nome, oab) {
 };
 
 window._salvarAdvogado = async function() {
-  var nome  = (document.getElementById('adv-nome')?.value  || '').trim();
-  var oab   = (document.getElementById('adv-oab')?.value   || '').trim();
-  var email = (document.getElementById('adv-email')?.value || '').trim();
-  var tel   = (document.getElementById('adv-tel')?.value   || '').trim();
-  var tipo  = _advTipoAtual || 'advogado';
-  var st    = document.getElementById('adv-status');
+  var nome    = (document.getElementById('adv-nome')?.value     || '').trim();
+  var oab     = (document.getElementById('adv-oab')?.value      || '').trim();
+  var email   = (document.getElementById('adv-email')?.value    || '').trim();
+  var tel     = (document.getElementById('adv-tel')?.value      || '').trim();
+  var tipo    = _advTipoAtual || 'advogado';
+  var editKey = (document.getElementById('adv-edit-key')?.value || '').trim();
+  var st      = document.getElementById('adv-status');
 
   function _setStatus(t, msg) {
     if (!st) return;
@@ -1274,11 +1333,27 @@ window._salvarAdvogado = async function() {
   }
 
   if (!nome) return _setStatus('erro', 'Informe o nome completo.');
-  if (tipo === 'advogado' && !oab) return _setStatus('erro', 'Informe o número da OAB.');
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return _setStatus('erro', 'Informe um e-mail válido.');
+  if (tipo === 'advogado' && !oab && !editKey) return _setStatus('erro', 'Informe o número da OAB.');
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return _setStatus('erro', 'E-mail inválido.');
   if (!window.PadFirestore) return _setStatus('erro', 'Firebase não carregado. Aguarde.');
 
+  /* Modo edição */
+  if (editKey) {
+    _setStatus('info', 'Salvando alterações…');
+    try {
+      await window.PadFirestore.atualizarAdvogado(editKey, { nome, email, tel, tipo });
+      _setStatus('ok', '✓ Cadastro atualizado!');
+      _toast('Cadastro atualizado!');
+      _fecharFormAdvogado();
+      _carregarListaAdvogados();
+    } catch(e) {
+      _setStatus('erro', 'Erro: ' + (e.message || 'tente novamente.'));
+    }
+    return;
+  }
+
+  /* Modo novo cadastro */
   _setStatus('info', 'Cadastrando…');
   try {
     await window.PadFirestore.cadastrarAdvogado({ nome, oab, email, tel, tipo });

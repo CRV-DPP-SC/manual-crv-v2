@@ -87,22 +87,40 @@ window.PadFirestore = {
 
   /* Cadastra advogado/defensor no Firestore */
   cadastrarAdvogado: async function(dados) {
-    // tipo: 'advogado' | 'defensoria'
     const tipo   = dados.tipo || 'advogado';
     const oabKey = tipo === 'defensoria'
-      ? 'DEF_' + (dados.email || '').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()
+      ? 'DEF_' + (dados.email || dados.nome || '').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()
       : _oabKey(dados.oab);
     await setDoc(doc(_db, 'advogados', oabKey), {
-      nome:           dados.nome  || '',
+      nome:           dados.nome     || '',
       tipo:           tipo,
       oab:            tipo === 'advogado' ? (dados.oab || '') : '',
-      email:          (dados.email || '').toLowerCase(),
-      telefone:       dados.tel   || '',
+      email:          (dados.email   || '').toLowerCase(),
+      telefone:       dados.tel      || '',
+      endereco:       dados.endereco || '',
       ativo:          true,
       padsVinculados: [],
       cadastradoEm:   serverTimestamp(),
+      atualizadoEm:   serverTimestamp(),
     });
     return oabKey;
+  },
+
+  /* Atualiza campos de um advogado já cadastrado */
+  atualizarAdvogado: async function(oabKey, dados) {
+    await setDoc(doc(_db, 'advogados', oabKey), {
+      nome:         dados.nome     || '',
+      email:        (dados.email   || '').toLowerCase(),
+      telefone:     dados.tel      || '',
+      endereco:     dados.endereco || '',
+      tipo:         dados.tipo     || 'advogado',
+      atualizadoEm: serverTimestamp(),
+    }, { merge: true });
+  },
+
+  /* Exclui um advogado pelo oabKey */
+  excluirAdvogado: async function(oabKey) {
+    await deleteDoc(doc(_db, 'advogados', oabKey));
   },
 
   /* ── PEÇAS DO DOSSIÊ ── */
