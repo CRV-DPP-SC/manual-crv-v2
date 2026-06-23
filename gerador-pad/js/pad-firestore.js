@@ -7,9 +7,6 @@ import { initializeApp, getApps }
 import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc,
          collection, query, where, orderBy, limit, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-
 const _CFG = {
   apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
   authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
@@ -19,13 +16,8 @@ const _CFG = {
   appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a",
 };
 
-const _app  = getApps().length ? getApps()[0] : initializeApp(_CFG);
-const _db   = getFirestore(_app);
-
-/* Login anÃ´nimo apenas se nÃ£o houver sessÃ£o institucional jÃ¡ ativa */
-onAuthStateChanged(getAuth(_app), function(user) {
-  if (!user) signInAnonymously(getAuth(_app)).catch(() => {});
-});
+const _app = getApps().length ? getApps()[0] : initializeApp(_CFG);
+const _db  = getFirestore(_app);
 
 /* â”€â”€ UtilitÃ¡rios â”€â”€ */
 function _oabKey(oab) {

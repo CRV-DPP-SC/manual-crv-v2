@@ -246,6 +246,55 @@
       border: 1.5px solid #e5e7eb; border-radius: 8px;
       font-size: .9rem; color: #57534e; font-family: inherit;
     }
+
+    /* ── Login / Perfil ── */
+    #tela-login, #tela-perfil {
+      display: none; min-height: 100vh;
+      align-items: center; justify-content: center;
+      padding: 40px 20px; background: #f8f9fa;
+    }
+    #tela-login.ativa, #tela-perfil.ativa { display: flex; }
+    .login-card {
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 4px 28px rgba(0,0,0,.11);
+      padding: 40px 36px; width: 100%; max-width: 420px;
+    }
+    .login-logo { text-align: center; margin-bottom: 24px; }
+    .login-logo img { height: 52px; margin-bottom: 8px; }
+    .login-logo h2 { font-size: 1rem; font-weight: 800; color: #3b1f0a; margin-bottom: 4px; }
+    .login-logo p  { font-size: .78rem; color: #78716c; }
+    .login-campo { margin-bottom: 14px; }
+    .login-campo label { display: block; font-size: .73rem; font-weight: 700; color: #3b1f0a; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+    .login-campo input, .login-campo textarea {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+      font-size: .92rem; font-family: inherit; box-sizing: border-box; transition: border-color .15s;
+      resize: vertical;
+    }
+    .login-campo input:focus, .login-campo textarea:focus { outline: none; border-color: #f97316; }
+    .login-btn {
+      width: 100%; padding: 13px; margin-top: 4px;
+      background: linear-gradient(135deg, #3b1f0a, #6b3a1f);
+      color: #fff; border: none; border-radius: 9px;
+      font-size: .95rem; font-weight: 800; cursor: pointer;
+      font-family: inherit; transition: opacity .15s;
+    }
+    .login-btn:hover:not(:disabled) { opacity: .88; }
+    .login-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .login-status { margin-top: 12px; font-size: .82rem; padding: 10px 14px; border-radius: 8px; display: none; }
+    .login-status.erro { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; display: block; }
+    .login-status.info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; display: block; }
+    .login-status.ok   { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; display: block; }
+    .login-link { background: none; border: none; color: #f97316; font-size: .82rem; cursor: pointer; font-family: inherit; text-decoration: underline; padding: 0; }
+    .login-rodape { margin-top: 18px; text-align: center; display: flex; flex-direction: column; gap: 6px; }
+    /* Usuário logado no topo */
+    .topo-usuario { font-size: .72rem; color: rgba(255,255,255,.8); display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-right: 4px; }
+    .topo-usuario strong { color: #fff; font-size: .78rem; }
+    .btn-sair {
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+      color: #fff; font-size: .72rem; padding: 5px 12px; border-radius: 6px;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .btn-sair:hover { background: rgba(255,255,255,.28); }
   </style>
 </head>
 <body>
@@ -265,8 +314,12 @@
   </div>
 
   <!-- Ações -->
-  <div class="topo-acoes" id="topo-acoes-inicial">
-    <a href="../index.html" target="_parent" class="topo-btn" style="text-decoration:none;">← Voltar</a>
+  <div class="topo-acoes" id="topo-acoes-inicial" style="gap:8px;">
+    <div class="topo-usuario" id="topo-usuario-info" style="display:none;">
+      <strong id="topo-unidade-nome">Unidade</strong>
+      <span id="topo-usuario-email" style="font-size:.68rem;"></span>
+    </div>
+    <button class="btn-sair" id="btn-sair" style="display:none;" onclick="_sairSistema()">Sair</button>
   </div>
   <div class="topo-acoes" id="topo-acoes-form" style="display:none;">
     <button class="topo-btn" onclick="_irParaInicial()">← Voltar</button>
@@ -274,8 +327,93 @@
   </div>
 </header>
 
+<!-- ════════════ TELA LOGIN ════════════ -->
+<div id="tela-login" class="ativa">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="https://www.sc.gov.br/images/cabecalho/brasao_sc.png" alt="SC" onerror="this.style.display='none'">
+      <h2>📋 Gerador de PAD</h2>
+      <p>Procedimento Administrativo Disciplinar · Polícia Penal de Santa Catarina</p>
+    </div>
+
+    <!-- Modo: Entrar -->
+    <div id="login-modo-entrar">
+      <div class="login-campo">
+        <label>E-mail institucional</label>
+        <input type="email" id="login-email" placeholder="seu@pp.sc.gov.br" autocomplete="email">
+      </div>
+      <div class="login-campo">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="Sua senha" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') _loginEntrar()">
+      </div>
+      <button class="login-btn" onclick="_loginEntrar()">Entrar</button>
+      <div class="login-status" id="login-status-entrar"></div>
+      <div class="login-rodape">
+        <button class="login-link" onclick="_loginResetSenha()">Esqueci minha senha</button>
+        <button class="login-link" onclick="_loginModoAlternar(true)">Primeiro acesso? Cadastre-se →</button>
+      </div>
+    </div>
+
+    <!-- Modo: Cadastrar -->
+    <div id="login-modo-cadastrar" style="display:none;">
+      <div class="login-campo">
+        <label>E-mail institucional</label>
+        <input type="email" id="cad-email" placeholder="seu@pp.sc.gov.br" autocomplete="email">
+      </div>
+      <div class="login-campo">
+        <label>Senha (mín. 6 caracteres)</label>
+        <input type="password" id="cad-senha" placeholder="Crie uma senha">
+      </div>
+      <div class="login-campo">
+        <label>Confirmar senha</label>
+        <input type="password" id="cad-senha-conf" placeholder="Repita a senha"
+          onkeydown="if(event.key==='Enter') _loginCadastrar()">
+      </div>
+      <button class="login-btn" onclick="_loginCadastrar()">Criar conta</button>
+      <div class="login-status" id="login-status-cadastrar"></div>
+      <div class="login-rodape">
+        <button class="login-link" onclick="_loginModoAlternar(false)">← Já tenho conta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ TELA PERFIL (configura unidade) ════════════ -->
+<div id="tela-perfil">
+  <div class="login-card">
+    <div class="login-logo">
+      <h2>🏛️ Configure sua Unidade</h2>
+      <p>Informe os dados da unidade prisional. Serão usados nos documentos do PAD.</p>
+    </div>
+    <div class="login-campo">
+      <label>Nome da Unidade <span style="color:#dc2626">*</span></label>
+      <input type="text" id="perfil-unidade-nome" placeholder="Ex.: Complexo Penitenciário de Florianópolis">
+    </div>
+    <div class="login-campo">
+      <label>E-mail da Unidade <span style="color:#dc2626">*</span></label>
+      <input type="email" id="perfil-unidade-email" placeholder="unidade@pp.sc.gov.br">
+      <div style="font-size:.72rem;color:#78716c;margin-top:4px;">Usado para identificar os PADs desta unidade no sistema.</div>
+    </div>
+    <div class="login-campo">
+      <label>Município</label>
+      <input type="text" id="perfil-cidade" placeholder="Ex.: Florianópolis">
+    </div>
+    <div class="login-campo">
+      <label>Endereço</label>
+      <input type="text" id="perfil-end" placeholder="Rua, número, bairro">
+    </div>
+    <div class="login-campo">
+      <label>Nome do(a) Diretor(a)</label>
+      <input type="text" id="perfil-diretor" placeholder="Nome completo">
+    </div>
+    <button class="login-btn" onclick="_salvarPerfil()">Salvar e Continuar →</button>
+    <div class="login-status" id="perfil-status"></div>
+  </div>
+</div>
+
 <!-- ════════════ TELA INICIAL ════════════ -->
-<div id="tela-inicial" class="ativa">
+<div id="tela-inicial">
   <div class="pad-ini-wrap">
     <div class="pad-ini-titulo">
       <h2>📋 Gerador de PAD</h2>
@@ -787,17 +925,21 @@
 var _telaAtual = 'inicial';
 
 function _mostrarTela(id) {
-  ['tela-inicial','tela-cadastro','tela-relacao','tela-advogados','tela-portal-defesa'].forEach(function(t) {
+  ['tela-login','tela-perfil','tela-inicial','tela-cadastro','tela-relacao','tela-advogados','tela-portal-defesa'].forEach(function(t) {
     var el = document.getElementById(t);
     if (el) { el.style.display = 'none'; el.classList.remove('ativa'); }
   });
-  document.getElementById('layout-principal').style.display = 'none';
-  document.getElementById('topo-tabs').style.display         = 'none';
-  document.getElementById('btn-flutuante').style.display     = 'none';
+  document.getElementById('layout-principal').style.display   = 'none';
+  document.getElementById('topo-tabs').style.display          = 'none';
+  document.getElementById('btn-flutuante').style.display      = 'none';
   document.getElementById('topo-acoes-inicial').style.display = 'none';
   document.getElementById('topo-acoes-form').style.display    = 'none';
 
-  if (id === 'formulario') {
+  if (id === 'login' || id === 'perfil') {
+    /* Telas de autenticação: sem topo de ações */
+    var el = document.getElementById('tela-' + id);
+    if (el) { el.style.display = ''; el.classList.add('ativa'); }
+  } else if (id === 'formulario') {
     document.getElementById('layout-principal').style.display = '';
     document.getElementById('topo-tabs').style.display        = '';
     document.getElementById('btn-flutuante').style.display    = '';
@@ -1892,34 +2034,6 @@ document.addEventListener('DOMContentLoaded', function() {
   carregarConselho();
   carregarDiretor();
 
-  /* Resolve unidade do contexto de login */
-  try {
-    var unPai = window.parent && window.parent._padUnidadeAtual;
-    if (unPai) {
-      Estado.setMany({
-        unidade: { email: unPai.email || unPai.em || '', nome: unPai.nome || unPai.n || '', cidade: unPai.cidade || unPai.c || '', codigo: unPai.cod || unPai.codigo || '' },
-        diretor: { nome: unPai.diretor || unPai.dir || '', cargo: 'Diretor(a)' },
-      });
-    } else {
-      var emailOri = localStorage.getItem('crv_ori_email') || '';
-      if (emailOri) {
-        Estado.setNested('unidade.email', emailOri);
-        if (window.parent && window.parent.UNIDADES) {
-          var un = window.parent.UNIDADES.find(function(u) { return u.email === emailOri; });
-          if (un) {
-            Estado.setMany({
-              unidade: { email: un.email || '', nome: un.nome || '', cidade: un.cidade || '', codigo: un.cod || '' },
-              diretor: { nome: un.diretor || '', cargo: 'Diretor(a)' },
-            });
-          }
-        }
-      }
-    }
-    if (window.parent && '_padUnidadeAtual' in window.parent) {
-      window.parent._padUnidadeAtual = null;
-    }
-  } catch(e) {}
-
   /* Renderiza tabs de documentos */
   var tabs = document.getElementById('doc-tabs');
   if (tabs) {
@@ -1940,13 +2054,199 @@ document.addEventListener('DOMContentLoaded', function() {
   /* Inicializa upload da tela de cadastro */
   _initUploadIntake();
 
-  /* Tela inicial */
-  _mostrarTela('inicial');
+  /* A tela inicial será mostrada pelo módulo de autenticação após o login */
 });
 </script>
 
 <!-- Firebase PAD (módulo ES) -->
 <script type="module" src="js/pad-firestore.js"></script>
+
+<!-- Módulo de autenticação standalone -->
+<script type="module">
+import { initializeApp, getApps }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged,
+         signInWithEmailAndPassword, createUserWithEmailAndPassword,
+         sendPasswordResetEmail, signOut }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+const _CFG = {
+  apiKey:"AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
+  authDomain:"crv-dpp-sc-v2.firebaseapp.com",
+  projectId:"crv-dpp-sc-v2",
+  storageBucket:"crv-dpp-sc-v2.firebasestorage.app",
+  messagingSenderId:"513539683551",
+  appId:"1:513539683551:web:2fdcdd236f0c37853ae56a",
+};
+
+const _app  = getApps().length ? getApps()[0] : initializeApp(_CFG);
+const _db   = getFirestore(_app);
+const _auth = getAuth(_app);
+
+/* ── Aplica perfil no Estado e mostra o app ── */
+function _aplicarPerfil(user, perfil) {
+  const un  = perfil.unidade || {};
+  const dir = perfil.diretor  || '';
+  Estado.setMany({
+    unidade: {
+      email:   un.email   || user.email,
+      nome:    un.nome    || '',
+      cidade:  un.cidade  || '',
+      end:     un.end     || '',
+      codigo:  un.codigo  || '',
+    },
+    diretor: { nome: dir, cargo: 'Diretor(a)' },
+  });
+  /* Compatibilidade com código que lê localStorage */
+  localStorage.setItem('crv_ori_email', un.email || user.email);
+  window._emailUnidade = un.email || user.email;
+
+  /* Atualiza topo */
+  const elNome  = document.getElementById('topo-unidade-nome');
+  const elEmail = document.getElementById('topo-usuario-email');
+  const elInfo  = document.getElementById('topo-usuario-info');
+  const elSair  = document.getElementById('btn-sair');
+  if (elNome)  elNome.textContent  = un.nome || 'Minha Unidade';
+  if (elEmail) elEmail.textContent = user.email;
+  if (elInfo)  elInfo.style.display  = '';
+  if (elSair)  elSair.style.display  = '';
+
+  _mostrarTela('inicial');
+}
+
+/* ── Observa mudanças de autenticação ── */
+onAuthStateChanged(_auth, async function(user) {
+  if (!user) {
+    _mostrarTela('login');
+    return;
+  }
+  try {
+    const snap = await getDoc(doc(_db, 'usuarios', user.uid));
+    if (!snap.exists()) {
+      /* Pré-preenche e-mail no campo de perfil */
+      const elEmail = document.getElementById('perfil-unidade-email');
+      if (elEmail && !elEmail.value) elEmail.value = user.email;
+      _mostrarTela('perfil');
+      return;
+    }
+    _aplicarPerfil(user, snap.data());
+  } catch(e) {
+    _mostrarTela('login');
+  }
+});
+
+/* ── Alterna entre Entrar e Cadastrar ── */
+window._loginModoAlternar = function(cadastrar) {
+  document.getElementById('login-modo-entrar').style.display    = cadastrar ? 'none' : '';
+  document.getElementById('login-modo-cadastrar').style.display = cadastrar ? '' : 'none';
+  document.getElementById('login-status-entrar').className      = 'login-status';
+  document.getElementById('login-status-cadastrar').className   = 'login-status';
+};
+
+function _loginStatus(elId, tipo, msg) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.className = 'login-status ' + tipo;
+  el.textContent = msg;
+}
+
+/* ── Entrar ── */
+window._loginEntrar = async function() {
+  const email = (document.getElementById('login-email')?.value || '').trim();
+  const senha = document.getElementById('login-senha')?.value || '';
+  if (!email || !senha) { _loginStatus('login-status-entrar','erro','Preencha e-mail e senha.'); return; }
+  _loginStatus('login-status-entrar','info','⏳ Entrando…');
+  try {
+    await signInWithEmailAndPassword(_auth, email, senha);
+    /* onAuthStateChanged cuida do restante */
+  } catch(e) {
+    const msgs = {
+      'auth/invalid-credential':   'E-mail ou senha incorretos.',
+      'auth/user-not-found':        'Usuário não encontrado.',
+      'auth/wrong-password':        'Senha incorreta.',
+      'auth/invalid-email':         'E-mail inválido.',
+      'auth/too-many-requests':     'Muitas tentativas. Aguarde alguns minutos.',
+    };
+    _loginStatus('login-status-entrar','erro', msgs[e.code] || 'Erro: ' + e.message);
+  }
+};
+
+/* ── Cadastrar ── */
+window._loginCadastrar = async function() {
+  const email = (document.getElementById('cad-email')?.value || '').trim();
+  const senha = document.getElementById('cad-senha')?.value || '';
+  const conf  = document.getElementById('cad-senha-conf')?.value || '';
+  if (!email)          { _loginStatus('login-status-cadastrar','erro','Informe seu e-mail.'); return; }
+  if (senha.length < 6){ _loginStatus('login-status-cadastrar','erro','A senha deve ter pelo menos 6 caracteres.'); return; }
+  if (senha !== conf)  { _loginStatus('login-status-cadastrar','erro','As senhas não coincidem.'); return; }
+  _loginStatus('login-status-cadastrar','info','⏳ Criando conta…');
+  try {
+    await createUserWithEmailAndPassword(_auth, email, senha);
+    /* onAuthStateChanged → sem perfil → vai para tela-perfil */
+  } catch(e) {
+    const msgs = {
+      'auth/email-already-in-use': 'Este e-mail já está cadastrado. Use "Já tenho conta".',
+      'auth/invalid-email':        'E-mail inválido.',
+      'auth/weak-password':        'Senha muito fraca (mínimo 6 caracteres).',
+    };
+    _loginStatus('login-status-cadastrar','erro', msgs[e.code] || 'Erro: ' + e.message);
+  }
+};
+
+/* ── Esqueci a senha ── */
+window._loginResetSenha = async function() {
+  const email = (document.getElementById('login-email')?.value || '').trim();
+  if (!email) { _loginStatus('login-status-entrar','erro','Digite seu e-mail antes de solicitar a redefinição.'); return; }
+  _loginStatus('login-status-entrar','info','⏳ Enviando e-mail de redefinição…');
+  try {
+    await sendPasswordResetEmail(_auth, email);
+    _loginStatus('login-status-entrar','ok','✅ E-mail de redefinição enviado. Verifique sua caixa de entrada.');
+  } catch(e) {
+    _loginStatus('login-status-entrar','erro','Não foi possível enviar: ' + e.message);
+  }
+};
+
+/* ── Sair ── */
+window._sairSistema = async function() {
+  if (!confirm('Deseja sair do sistema?')) return;
+  await signOut(_auth);
+  /* Limpa topo */
+  const elInfo = document.getElementById('topo-usuario-info');
+  const elSair = document.getElementById('btn-sair');
+  if (elInfo) elInfo.style.display = 'none';
+  if (elSair) elSair.style.display = 'none';
+};
+
+/* ── Salvar perfil da unidade ── */
+window._salvarPerfil = async function() {
+  const nome    = (document.getElementById('perfil-unidade-nome')?.value  || '').trim();
+  const emailUn = (document.getElementById('perfil-unidade-email')?.value || '').trim();
+  if (!nome)    { _loginStatus('perfil-status','erro','Informe o nome da unidade.'); return; }
+  if (!emailUn) { _loginStatus('perfil-status','erro','Informe o e-mail da unidade.'); return; }
+  _loginStatus('perfil-status','info','⏳ Salvando…');
+  try {
+    const user = _auth.currentUser;
+    if (!user) { _loginStatus('perfil-status','erro','Sessão expirada. Faça login novamente.'); return; }
+    const perfil = {
+      email:    user.email,
+      unidade:  {
+        nome:    nome,
+        email:   emailUn,
+        cidade:  (document.getElementById('perfil-cidade')?.value || '').trim(),
+        end:     (document.getElementById('perfil-end')?.value    || '').trim(),
+      },
+      diretor:  (document.getElementById('perfil-diretor')?.value || '').trim(),
+      criadoEm: serverTimestamp(),
+    };
+    await setDoc(doc(_db, 'usuarios', user.uid), perfil, { merge: true });
+    _aplicarPerfil(user, perfil);
+  } catch(e) {
+    _loginStatus('perfil-status','erro','Erro ao salvar: ' + e.message);
+  }
+};
+</script>
 
 </body>
 </html>
