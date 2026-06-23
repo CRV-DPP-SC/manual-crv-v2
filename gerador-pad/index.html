@@ -506,6 +506,12 @@
           <option value="">Carregando advogados…</option>
         </select>
       </div>
+      <!-- Aviso cadastro incompleto -->
+      <div id="portal-aviso-email" style="display:none;background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.81rem;color:#92400e;align-items:center;gap:10px;">
+        <span style="font-size:1.1rem;">⚠️</span>
+        <span style="flex:1;"><strong>Cadastro incompleto.</strong> Verificar e atualizar advogado — e-mail não cadastrado, link não poderá ser enviado por e-mail.</span>
+        <button onclick="_irParaAdvogados();_fecharModalPortal();" style="padding:4px 10px;background:#92400e;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">Atualizar</button>
+      </div>
       <div class="pad-cad-status" id="portal-status"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;">
         <button onclick="_fecharModalPortal()" class="pad-rel-btn-vol">Cancelar</button>
@@ -1346,6 +1352,15 @@ window._confirmarSalvarPortal = async function() {
   _portalAdvDados.nome  = opt ? (opt.dataset.nome  || '') : '';
   _portalAdvDados.email = opt ? (opt.dataset.email || '') : '';
   _portalAdvDados.oab   = oab;
+
+  /* Avisa se e-mail não cadastrado */
+  if (!_portalAdvDados.email) {
+    var aviso = document.getElementById('portal-aviso-email');
+    if (aviso) aviso.style.display = '';
+  } else {
+    var aviso = document.getElementById('portal-aviso-email');
+    if (aviso) aviso.style.display = 'none';
+  }
 
   _setStatus('info', 'Gerando link de acesso…');
 
