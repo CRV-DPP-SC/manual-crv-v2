@@ -5,7 +5,7 @@
 import { initializeApp, getApps }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, getDocs, deleteDoc,
-         collection, query, where, orderBy, serverTimestamp }
+         collection, query, where, orderBy, limit, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
@@ -211,10 +211,42 @@ window.PadFirestore = {
     return snap.data().textoExtraido || '';
   },
 
-  /* Lista todos os advogados */
+  /* Busca advogados por prefixo de nome ou OAB (máx. 40 resultados) */
+  buscarAdvogados: async function(termo) {
+    const t = (termo || '').trim();
+    if (!t) return [];
+    const tUp  = t.toUpperCase();
+    const makeQ = (campo, val) => query(
+      collection(_db, 'advogados'),
+      where(campo, '>=', val), where(campo, '<=', val + ''),
+      limit(40)
+    );
+    const [snapNome, snapOab] = await Promise.all([
+      getDocs(makeQ('nome', tUp)),
+      getDocs(makeQ('oab',  tUp)),
+    ]);
+    const mapa = {};
+    [...snapNome.docs, ...snapOab.docs].forEach(d => { mapa[d.id] = { id: d.id, ...d.data() }; });
+    return Object.values(mapa).slice(0, 40);
+  },
+
+  /* Lista todos os advogados (legado — uso interno) */
   listarAdvogados: async function() {
-    const snap = await getDocs(collection(_db, 'advogados'));
+    const snap = await getDocs(query(collection(_db, 'advogados'), limit(500)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  /* Gera novo token de acesso para um PAD já salvo (sem re-salvar o PAD) */
+  gerarLinkParaPad: async function(padId, oabKey) {
+    const token = _gerarToken();
+    await setDoc(doc(_db, 'pad_links', token), {
+      padId:       String(padId),
+      advogadoOAB: _oabKey(oabKey),
+      criado:      serverTimestamp(),
+    });
+    const base = window.location.href.replace(/\/[^/]*$/, '');
+    const link = base + '/portal-advogado.html?token=' + token;
+    return { token, link };
   },
 
   /* Busca PADs vinculados a um advogado (pela OAB key) */

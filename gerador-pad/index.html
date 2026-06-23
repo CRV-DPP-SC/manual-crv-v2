@@ -47,9 +47,10 @@
       grid-template-columns: 1fr 1fr;
       gap: 20px;
     }
-    .pad-ini-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-    @media(max-width:700px){ .pad-ini-grid-3 { grid-template-columns: 1fr 1fr; } }
-    @media(max-width:520px){ .pad-ini-grid, .pad-ini-grid-3 { grid-template-columns: 1fr; } }
+    @media(max-width:520px){ .pad-ini-grid { grid-template-columns: 1fr; } }
+    .pad-ini-card.card-portal { border-color: #7c3aed; }
+    .pad-ini-card.card-portal:hover { border-color: #6d28d9; box-shadow: 0 6px 20px rgba(124,58,237,.18); }
+    .pad-ini-badge-portal { background: #7c3aed; }
     .pad-ini-card {
       display: flex; flex-direction: column; align-items: center;
       gap: 12px; padding: 32px 24px;
@@ -280,7 +281,7 @@
       <h2>📋 Gerador de PAD</h2>
       <p>Procedimento Administrativo Disciplinar</p>
     </div>
-    <div class="pad-ini-grid pad-ini-grid-3">
+    <div class="pad-ini-grid">
       <button class="pad-ini-card card-cadastrar" onclick="_irParaCadastro()">
         <span class="pad-ini-icon">📝</span>
         <span class="pad-ini-nome">Cadastrar PAD</span>
@@ -293,11 +294,17 @@
         <span class="pad-ini-sub">Consultar e retomar PADs já cadastrados</span>
         <span class="pad-ini-badge pad-ini-badge-rel">Histórico</span>
       </button>
-      <button class="pad-ini-card card-advogado" onclick="_irParaAdvogados()">
+      <button class="pad-ini-card card-portal" onclick="_irParaPortalDefesa()">
         <span class="pad-ini-icon">⚖️</span>
         <span class="pad-ini-nome">Portal da Defesa</span>
-        <span class="pad-ini-sub">Cadastrar defensores e enviar dossiê ao advogado</span>
-        <span class="pad-ini-badge pad-ini-badge-adv">Portal</span>
+        <span class="pad-ini-sub">PADs da unidade disponibilizados ao advogado via link</span>
+        <span class="pad-ini-badge pad-ini-badge-portal">Links</span>
+      </button>
+      <button class="pad-ini-card card-advogado" onclick="_irParaAdvogados()">
+        <span class="pad-ini-icon">👨‍⚖️</span>
+        <span class="pad-ini-nome">Advogados</span>
+        <span class="pad-ini-sub">Buscar, cadastrar e gerenciar advogados e defensores</span>
+        <span class="pad-ini-badge pad-ini-badge-adv">Cadastro</span>
       </button>
     </div>
   </div>
@@ -419,13 +426,76 @@
   </div>
 </div>
 
+<!-- ════════════ TELA PORTAL DA DEFESA ════════════ -->
+<div id="tela-portal-defesa" class="pad-tela">
+  <div class="pad-rel-header">
+    <span class="pad-rel-titulo">⚖️ Portal da Defesa</span>
+    <div class="pad-rel-acoes">
+      <button class="pad-rel-btn-vol" onclick="_irParaInicial()">← Voltar</button>
+    </div>
+  </div>
+  <div class="pad-rel-corpo">
+    <div id="portal-defesa-info" style="font-size:.8rem;color:#78716c;padding:8px 0 12px;">...</div>
+    <div id="portal-defesa-lista"><div class="pad-rel-vazio">⏳ Carregando PADs…</div></div>
+  </div>
+</div>
+
+<!-- Mini-modal: gerar link para advogado (Portal da Defesa) -->
+<div id="modalGerarLinkBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;max-width:480px;width:95%;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#fff;font-size:.95rem;font-weight:800;">🔗 Enviar PAD ao Advogado</div>
+        <div style="color:#ddd6fe;font-size:.75rem;margin-top:2px;" id="gerar-link-pad-titulo"></div>
+      </div>
+      <button onclick="_fecharModalGerarLink()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1rem;width:28px;height:28px;border-radius:6px;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px;" id="gerar-link-passo1">
+      <label style="display:block;font-size:.75rem;font-weight:700;color:#7c3aed;text-transform:uppercase;margin-bottom:6px;">Buscar advogado</label>
+      <input type="text" id="gerar-link-busca" placeholder="Digite nome ou OAB (mín. 3 letras)…"
+        style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.9rem;font-family:inherit;"
+        oninput="_buscarAdvParaLink(this.value)">
+      <div id="gerar-link-resultados" style="margin-top:8px;max-height:220px;overflow-y:auto;"></div>
+      <div id="gerar-link-selecionado" style="display:none;margin-top:10px;padding:10px 13px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:8px;font-size:.85rem;color:#4c1d95;"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="_fecharModalGerarLink()" class="pad-rel-btn-vol">Cancelar</button>
+        <button id="gerar-link-btn" onclick="_confirmarGerarLink()" disabled
+          style="padding:8px 20px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;opacity:.5;">
+          🔗 Gerar Link
+        </button>
+      </div>
+    </div>
+    <div id="gerar-link-passo2" style="display:none;padding:20px;">
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:16px;margin-bottom:14px;">
+        <div style="font-size:.75rem;font-weight:700;color:#166534;text-transform:uppercase;margin-bottom:8px;">✅ Link gerado!</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="gerar-link-input" readonly
+            style="flex:1;padding:8px 10px;border:1.5px solid #86efac;border-radius:6px;font-size:.72rem;color:#166534;background:#fff;font-family:monospace;">
+          <button onclick="_copiarGerarLink()"
+            style="padding:8px 12px;background:#166534;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">📋 Copiar</button>
+        </div>
+      </div>
+      <button id="gerar-link-email-btn" onclick="_emailGerarLink()"
+        style="width:100%;padding:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;">
+        ✉️ Abrir E-mail com o Link Preenchido
+      </button>
+      <div style="text-align:center;">
+        <button onclick="_fecharModalGerarLink()" class="pad-rel-btn-vol">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════ TELA ADVOGADOS ════════════ -->
 <div id="tela-advogados" class="pad-tela">
   <div class="pad-adv-wrap">
     <div class="pad-adv-header">
       <button class="pad-cad-back" onclick="_irParaInicial()">← Voltar</button>
-      <span class="pad-cad-titulo">👨‍⚖️ Advogados Cadastrados</span>
-      <button class="pad-rel-btn-cad" onclick="_abrirFormAdvogado()">+ Cadastrar Advogado</button>
+      <span class="pad-cad-titulo">👨‍⚖️ Advogados</span>
+      <input type="text" id="adv-busca" placeholder="🔍 Buscar por nome ou OAB…"
+        style="flex:1;min-width:180px;max-width:320px;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.85rem;font-family:inherit;"
+        oninput="_buscarAdvogados(this.value)">
+      <button class="pad-rel-btn-cad" onclick="_abrirFormAdvogado()">+ Novo</button>
     </div>
 
     <!-- Formulário de cadastro/edição (oculto por padrão) -->
@@ -473,7 +543,7 @@
 
     <!-- Lista de advogados -->
     <div id="adv-lista-wrap" class="pad-rel-corpo">
-      <div class="pad-rel-vazio" id="adv-lista-vazio">Carregando…</div>
+      <div class="pad-rel-vazio" id="adv-lista-vazio">🔍 Digite ao menos 3 caracteres para buscar.</div>
       <table class="pad-rel-tabela" id="adv-tabela" style="display:none;">
         <thead>
           <tr>
@@ -709,7 +779,7 @@
 var _telaAtual = 'inicial';
 
 function _mostrarTela(id) {
-  ['tela-inicial','tela-cadastro','tela-relacao','tela-advogados'].forEach(function(t) {
+  ['tela-inicial','tela-cadastro','tela-relacao','tela-advogados','tela-portal-defesa'].forEach(function(t) {
     var el = document.getElementById(t);
     if (el) { el.style.display = 'none'; el.classList.remove('ativa'); }
   });
@@ -1155,7 +1225,174 @@ window._relExcluir = function(padId, fsId) {
 ══════════════════════════════════════════════ */
 window._irParaAdvogados = function() {
   _mostrarTela('advogados');
-  _carregarListaAdvogados();
+  var busca = document.getElementById('adv-busca');
+  if (busca) busca.value = '';
+  var vazio = document.getElementById('adv-lista-vazio');
+  if (vazio) { vazio.style.display = ''; vazio.textContent = '🔍 Digite ao menos 3 caracteres para buscar.'; }
+  var tabela = document.getElementById('adv-tabela');
+  if (tabela) tabela.style.display = 'none';
+};
+
+/* ── Portal da Defesa ── */
+window._irParaPortalDefesa = function() {
+  _mostrarTela('portal-defesa');
+  _carregarPortalDefesa();
+};
+
+function _carregarPortalDefesa() {
+  var listaEl = document.getElementById('portal-defesa-lista');
+  var infoEl  = document.getElementById('portal-defesa-info');
+  if (!listaEl) return;
+  listaEl.innerHTML = '<div class="pad-rel-vazio">⏳ Carregando PADs…</div>';
+
+  var emailUn = (Estado.get().unidade && Estado.get().unidade.email)
+                || localStorage.getItem('crv_ori_email') || '';
+
+  function _renderPortalDefesa(lista) {
+    if (infoEl) infoEl.textContent = lista.length + ' PAD(s) registrado(s)';
+    if (!lista.length) {
+      listaEl.innerHTML = '<div class="pad-rel-vazio">Nenhum PAD cadastrado ainda.</div>';
+      return;
+    }
+    listaEl.innerHTML = '<table class="pad-rel-tabela"><thead><tr>'
+      + '<th>Nº PAD</th><th>Incidentado</th><th>IPEN</th><th>Instauração</th><th>Status</th><th></th>'
+      + '</tr></thead><tbody>'
+      + lista.map(function(it) {
+          var padId = String(it.padId || it._fsId || '');
+          var numPad = _esc(it.numPad || '—');
+          var statusBadge = it.status === 'concluido'
+            ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">✅ Concluído</span>'
+            : '<span style="background:#fef3c7;color:#92400e;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">⏳ Em andamento</span>';
+          var itJson = JSON.stringify({ padId: padId, numPad: it.numPad || '', nome: it.nome || '', unidade: (Estado.get().unidade || {}) });
+          return '<tr>'
+            + '<td><strong>' + numPad + '</strong></td>'
+            + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
+            + '<td>' + _esc(it.ipen || '—') + '</td>'
+            + '<td>' + _esc(it.dataInst || '—') + '</td>'
+            + '<td>' + statusBadge + '</td>'
+            + '<td><button class="pad-rel-btn-abrir" style="background:#7c3aed;color:#fff;border:none;" onclick="_abrirModalGerarLink(' + itJson + ')">🔗 Enviar ao Advogado</button></td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table>';
+  }
+
+  if (emailUn && window.PadFirestore) {
+    window.PadFirestore.carregarRelacao(emailUn).then(function(lista) {
+      var local = _histCarregar();
+      var fsIds = lista.map(function(e) { return String(e.padId); });
+      local.forEach(function(loc) { if (!fsIds.includes(String(loc.padId))) lista.push(loc); });
+      _renderPortalDefesa(lista);
+    }).catch(function() { _renderPortalDefesa(_histCarregar()); });
+  } else {
+    _renderPortalDefesa(_histCarregar());
+  }
+}
+
+/* ── Modal Gerar Link (Portal da Defesa) ── */
+var _gerarLinkPadAtual = null;
+var _gerarLinkAdvAtual = null;
+
+window._abrirModalGerarLink = function(it) {
+  if (typeof it === 'string') it = JSON.parse(it);
+  _gerarLinkPadAtual = it;
+  _gerarLinkAdvAtual = null;
+  var titulo = document.getElementById('gerar-link-pad-titulo');
+  if (titulo) titulo.textContent = 'PAD Nº ' + (it.numPad || it.padId) + ' — ' + (it.nome || '');
+  var passo1 = document.getElementById('gerar-link-passo1');
+  var passo2 = document.getElementById('gerar-link-passo2');
+  if (passo1) passo1.style.display = '';
+  if (passo2) passo2.style.display = 'none';
+  var busca = document.getElementById('gerar-link-busca');
+  if (busca) busca.value = '';
+  var res = document.getElementById('gerar-link-resultados');
+  if (res) res.innerHTML = '';
+  var sel = document.getElementById('gerar-link-selecionado');
+  if (sel) sel.style.display = 'none';
+  var btn = document.getElementById('gerar-link-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  document.getElementById('modalGerarLinkBg').style.display = 'flex';
+};
+
+window._fecharModalGerarLink = function() {
+  document.getElementById('modalGerarLinkBg').style.display = 'none';
+};
+
+var _buscarAdvLinkTimer = null;
+window._buscarAdvParaLink = function(termo) {
+  clearTimeout(_buscarAdvLinkTimer);
+  var res = document.getElementById('gerar-link-resultados');
+  if (!termo || termo.length < 3) {
+    if (res) res.innerHTML = '';
+    return;
+  }
+  if (res) res.innerHTML = '<div style="padding:8px;font-size:.8rem;color:#78716c;">⏳ Buscando…</div>';
+  _buscarAdvLinkTimer = setTimeout(function() {
+    if (!window.PadFirestore) return;
+    window.PadFirestore.buscarAdvogados(termo).then(function(lista) {
+      if (!res) return;
+      if (!lista.length) { res.innerHTML = '<div style="padding:8px;font-size:.8rem;color:#78716c;">Nenhum resultado.</div>'; return; }
+      res.innerHTML = lista.map(function(adv) {
+        var advJson = JSON.stringify({ id: adv.id, nome: adv.nome, oab: adv.oab, email: adv.email || '' });
+        return '<div onclick="_selecionarAdvParaLink(' + advJson.replace(/"/g,'&quot;') + ')" '
+          + 'style="padding:8px 10px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:.84rem;" '
+          + 'onmouseover="this.style.background=\'#f5f3ff\'" onmouseout="this.style.background=\'\'">'
+          + '<strong>' + _esc(adv.nome) + '</strong>'
+          + '<span style="font-size:.75rem;color:#78716c;margin-left:8px;">' + _esc(adv.oab || 'Defensor') + '</span>'
+          + (adv.email ? '<span style="font-size:.72rem;color:#a8a29e;margin-left:6px;">' + _esc(adv.email) + '</span>' : '<span style="font-size:.72rem;color:#dc2626;margin-left:6px;">⚠️ sem e-mail</span>')
+          + '</div>';
+      }).join('');
+    }).catch(function() { if (res) res.innerHTML = '<div style="padding:8px;font-size:.8rem;color:#dc2626;">Erro na busca.</div>'; });
+  }, 350);
+};
+
+window._selecionarAdvParaLink = function(adv) {
+  if (typeof adv === 'string') adv = JSON.parse(adv);
+  _gerarLinkAdvAtual = adv;
+  var res = document.getElementById('gerar-link-resultados');
+  if (res) res.innerHTML = '';
+  var busca = document.getElementById('gerar-link-busca');
+  if (busca) busca.value = adv.nome;
+  var sel = document.getElementById('gerar-link-selecionado');
+  if (sel) { sel.style.display = ''; sel.innerHTML = '✅ <strong>' + _esc(adv.nome) + '</strong> — ' + _esc(adv.oab || 'Defensor Público'); }
+  var btn = document.getElementById('gerar-link-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+};
+
+window._confirmarGerarLink = async function() {
+  if (!_gerarLinkPadAtual || !_gerarLinkAdvAtual) return;
+  var btn = document.getElementById('gerar-link-btn');
+  if (btn) btn.disabled = true;
+  try {
+    var resultado = await window.PadFirestore.gerarLinkParaPad(_gerarLinkPadAtual.padId, _gerarLinkAdvAtual.id || _gerarLinkAdvAtual.oab);
+    var inp = document.getElementById('gerar-link-input');
+    if (inp) inp.value = resultado.link;
+    document.getElementById('gerar-link-passo1').style.display = 'none';
+    document.getElementById('gerar-link-passo2').style.display = '';
+  } catch(e) {
+    _toast('Erro ao gerar link: ' + (e.message || 'tente novamente.'));
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+};
+
+window._copiarGerarLink = function() {
+  var inp = document.getElementById('gerar-link-input');
+  if (!inp) return;
+  inp.select(); inp.setSelectionRange(0, 9999);
+  try { document.execCommand('copy'); _toast('Link copiado!'); } catch(_) {
+    navigator.clipboard && navigator.clipboard.writeText(inp.value).then(function() { _toast('Link copiado!'); });
+  }
+};
+
+window._emailGerarLink = function() {
+  var inp  = document.getElementById('gerar-link-input');
+  var link = inp ? inp.value : '';
+  var pad  = _gerarLinkPadAtual || {};
+  var adv  = _gerarLinkAdvAtual || {};
+  var nome = adv.nome || 'Advogado(a)';
+  var email = adv.email || '';
+  var assunto = encodeURIComponent('Acesso ao PAD Nº ' + (pad.numPad || '') + ' — Portal da Defesa');
+  var corpo   = encodeURIComponent('Prezado(a) ' + nome + ',\n\nO PAD Nº ' + (pad.numPad || '') + ', referente ao(à) interno(a) ' + (pad.nome || '') + ', foi disponibilizado para consulta.\n\nLink de acesso exclusivo:\n' + link + '\n\nAtenciosamente,\n' + ((Estado.get().unidade && Estado.get().unidade.nome) || 'Unidade Prisional'));
+  window.location.href = 'mailto:' + email + '?subject=' + assunto + '&body=' + corpo;
 };
 
 /* Tipo do advogado no formulário */
@@ -1223,26 +1460,46 @@ window._excluirAdvogado = function(oabKey, nome) {
   );
 };
 
-function _carregarListaAdvogados() {
+var _buscaAdvTimer = null;
+window._buscarAdvogados = function(termo) {
+  clearTimeout(_buscaAdvTimer);
   var vazio  = document.getElementById('adv-lista-vazio');
   var tabela = document.getElementById('adv-tabela');
   var tbody  = document.getElementById('adv-tabela-body');
-  if (!window.PadFirestore) {
-    if (vazio) vazio.textContent = 'Módulo Firebase não carregado. Tente novamente.';
+  if (!termo || termo.length < 3) {
+    if (tabela) tabela.style.display = 'none';
+    if (vazio) { vazio.style.display = ''; vazio.textContent = '🔍 Digite ao menos 3 caracteres para buscar.'; }
     return;
   }
-  if (vazio) { vazio.style.display = ''; vazio.textContent = 'Carregando…'; }
+  if (vazio) { vazio.style.display = ''; vazio.textContent = '⏳ Buscando…'; }
   if (tabela) tabela.style.display = 'none';
+  _buscaAdvTimer = setTimeout(function() {
+    if (!window.PadFirestore) { if (vazio) vazio.textContent = 'Firebase não disponível.'; return; }
+    window.PadFirestore.buscarAdvogados(termo).then(function(lista) {
+      _renderListaAdvogados(lista, vazio, tabela, tbody);
+    }).catch(function(e) {
+      if (vazio) { vazio.style.display = ''; vazio.textContent = 'Erro: ' + e.message; }
+    });
+  }, 400);
+};
 
-  window.PadFirestore.listarAdvogados().then(function(lista) {
-    if (!lista.length) {
-      if (vazio) vazio.textContent = 'Nenhum advogado/defensor cadastrado ainda.';
-      return;
-    }
-    if (vazio) vazio.style.display = 'none';
-    if (tabela) tabela.style.display = '';
-    if (tbody) {
-      tbody.innerHTML = lista.map(function(adv) {
+function _recarregarBuscaAtual() {
+  var busca = document.getElementById('adv-busca');
+  if (busca && busca.value.length >= 3) _buscarAdvogados(busca.value);
+}
+
+function _carregarListaAdvogados() { _recarregarBuscaAtual(); }
+
+function _renderListaAdvogados(lista, vazio, tabela, tbody) {
+  if (!lista.length) {
+    if (vazio) { vazio.style.display = ''; vazio.textContent = 'Nenhum resultado encontrado.'; }
+    if (tabela) tabela.style.display = 'none';
+    return;
+  }
+  if (vazio) vazio.style.display = 'none';
+  if (tabela) tabela.style.display = '';
+  if (tbody) {
+    tbody.innerHTML = lista.map(function(adv) {
         var tipoBadge = adv.tipo === 'defensoria'
           ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">🏛️ Defensor</span>'
           : '<span style="background:#dbeafe;color:#1d4ed8;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">👨‍⚖️ Advogado</span>';
@@ -1271,10 +1528,7 @@ function _carregarListaAdvogados() {
           + '</div></td>'
           + '</tr>';
       }).join('');
-    }
-  }).catch(function(e) {
-    if (vazio) { vazio.style.display = ''; vazio.textContent = 'Erro ao carregar: ' + e.message; }
-  });
+  }
 }
 
 window._abrirPadsAdv = function(oabKey, nome, oab) {
