@@ -622,28 +622,8 @@ window.abrirGuiaOficios = function () {
 window.fecharGuiaOficios = function () { document.getElementById('modal-guia')?.classList.remove('aberto'); };
 
 /* Dados de unidade passados pelo Painel ao abrir o PAD */
-window._padUnidadeAtual = null;
-window._padSetUnidade = function(unidade) {
-  window._padUnidadeAtual = unidade || null;
-};
-
 window.abrirGeradorPAD = function () {
-  /* Resolve a unidade do usuário logado para pré-popular cabeçalho/rodapé */
-  if (usuarioAtual && !window._padUnidadeAtual) {
-    var e = (usuarioAtual.email || '').toLowerCase();
-    /* Tenta derivar o e-mail base da unidade pelo padrão DIR/CPEN */
-    var emailBase = e
-      .replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
-      .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
-    /* Para usuários comuns (e-mail particular), usa o vínculo gravado no login */
-    if (emailBase === e) {
-      emailBase = localStorage.getItem('crv_ori_email') || '';
-    }
-    if (emailBase && window.UNIDADES) {
-      window._padUnidadeAtual = window.UNIDADES.find(function(u) { return u.email === emailBase; }) || null;
-    }
-  }
-  _abrirFerramenta('gerador-pad/index.html', '📋 Gerador de PAD');
+  window.open('https://sepen-dpp.github.io/PAD/', '_blank');
 };
 
 window.abrirPainelUnidade = function () {
