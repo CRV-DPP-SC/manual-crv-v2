@@ -296,7 +296,7 @@
       </button>
       <button class="pad-ini-card card-portal" onclick="_irParaPortalDefesa()">
         <span class="pad-ini-icon">⚖️</span>
-        <span class="pad-ini-nome">Portal da Defesa</span>
+        <span class="pad-ini-nome">Andamento do PAD</span>
         <span class="pad-ini-sub">PADs da unidade disponibilizados ao advogado via link</span>
         <span class="pad-ini-badge pad-ini-badge-portal">Links</span>
       </button>
@@ -429,7 +429,7 @@
 <!-- ════════════ TELA PORTAL DA DEFESA ════════════ -->
 <div id="tela-portal-defesa" class="pad-tela">
   <div class="pad-rel-header">
-    <span class="pad-rel-titulo">⚖️ Portal da Defesa</span>
+    <span class="pad-rel-titulo">⚖️ Andamento do PAD</span>
     <div class="pad-rel-acoes">
       <button class="pad-rel-btn-vol" onclick="_irParaInicial()">← Voltar</button>
     </div>
@@ -440,7 +440,7 @@
   </div>
 </div>
 
-<!-- Mini-modal: gerar link para advogado (Portal da Defesa) -->
+<!-- Mini-modal: gerar link para advogado (Andamento do PAD) -->
 <div id="modalGerarLinkBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;max-width:480px;width:95%;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;">
     <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
@@ -572,23 +572,31 @@
 
     <!-- Passo 1: selecionar advogado -->
     <div id="portal-passo1" style="padding:20px;">
-      <div class="pad-cad-campo" style="margin-bottom:16px;">
-        <label style="display:block;font-size:.75rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:6px;">Advogado vinculado</label>
-        <select id="portal-adv-select" style="width:100%;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.9rem;font-family:inherit;color:#1c1917;">
-          <option value="">Carregando advogados…</option>
-        </select>
+      <!-- Advogado pré-selecionado (vindo do formulário) -->
+      <div id="portal-adv-presel" style="display:none;margin-bottom:14px;padding:10px 14px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:8px;font-size:.85rem;color:#4c1d95;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#7c3aed;margin-bottom:4px;">Advogado vinculado no formulário</div>
+        <div id="portal-adv-presel-nome"></div>
+        <button onclick="_portal_limparPresel()" style="margin-top:6px;background:none;border:none;color:#7c3aed;font-size:.75rem;cursor:pointer;padding:0;text-decoration:underline;">Trocar advogado</button>
       </div>
+      <!-- Busca de advogado -->
+      <div id="portal-adv-busca-wrap">
+        <label style="display:block;font-size:.75rem;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:6px;">Buscar advogado</label>
+        <input type="text" id="portal-adv-busca" placeholder="Digite nome ou OAB (mín. 3 letras)…"
+          style="width:100%;box-sizing:border-box;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.9rem;font-family:inherit;"
+          oninput="_portal_buscarAdv(this.value)">
+        <div id="portal-adv-resultados" style="max-height:180px;overflow-y:auto;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;display:none;"></div>
+      </div>
+      <!-- Selecionado via busca -->
+      <div id="portal-adv-selecionado" style="display:none;margin-top:10px;padding:10px 13px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;font-size:.85rem;color:#166534;"></div>
       <!-- Aviso cadastro incompleto -->
-      <div id="portal-aviso-email" style="display:none;background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.81rem;color:#92400e;align-items:center;gap:10px;">
-        <span style="font-size:1.1rem;">⚠️</span>
-        <span style="flex:1;"><strong>Cadastro incompleto.</strong> Verificar e atualizar advogado — e-mail não cadastrado, link não poderá ser enviado por e-mail.</span>
-        <button onclick="_irParaAdvogados();_fecharModalPortal();" style="padding:4px 10px;background:#92400e;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">Atualizar</button>
+      <div id="portal-aviso-email" style="display:none;background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:.81rem;color:#92400e;">
+        ⚠️ <strong>Cadastro incompleto</strong> — e-mail não cadastrado. Link não poderá ser enviado por e-mail.
+        <button onclick="_irParaAdvogados();_fecharModalPortal();" style="display:block;margin-top:4px;padding:3px 10px;background:#92400e;color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;">Ir para Advogados</button>
       </div>
-      <div class="pad-cad-status" id="portal-status"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <div class="pad-cad-status" id="portal-status" style="margin-top:10px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
         <button onclick="_fecharModalPortal()" class="pad-rel-btn-vol">Cancelar</button>
-        <button onclick="_confirmarSalvarPortal()"
-          style="padding:8px 20px;background:linear-gradient(135deg,#ea580c,#c2410c);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
+        <button id="portal-btn-gerar" onclick="_confirmarSalvarPortal()" disabled style="opacity:.5;padding:8px 20px;background:linear-gradient(135deg,#ea580c,#c2410c);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;">
           ☁️ Gerar Link de Acesso
         </button>
       </div>
@@ -863,6 +871,15 @@ window._iniciarNovoFormulario = function() {
         window.PadFirestore.salvarRelacao(_emailUn, _entrada).catch(function() {});
       }
     }
+
+    /* Salva i-PEN como primeira peça do dossiê (ordem 0) */
+    if (window.PadFirestore && window._iPenHtmlContent) {
+      window.PadFirestore.salvarPeca(
+        window._padIdAtual, 'ipen', 0,
+        'i-PEN (Cadastro Inicial)',
+        window._iPenHtmlContent
+      ).catch(function() {});
+    }
   }
 
   /* Abre modal de advogado */
@@ -1014,6 +1031,15 @@ function _initUploadIntake() {
           : '✓ PDF processado. Verifique os campos abaixo.';
       }
       _toast('Dados do i-PEN preenchidos automaticamente!');
+
+      /* Guarda HTML do i-PEN para salvar como primeira peça do dossiê */
+      window._iPenHtmlContent = '<div style="font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;white-space:pre-wrap;">'
+        + '<h3 style="margin-bottom:12px;">i-PEN — Cadastro Inicial</h3>'
+        + '<p><strong>Arquivo:</strong> ' + (file.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>'
+        + '<hr style="margin:12px 0">'
+        + '<div>' + texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+        + '</div>';
+      window._iPenTextoExtraido = texto;
     });
   }
 }
@@ -1070,9 +1096,15 @@ function _relMontarTabela(listaFull, filtro, infoEl, listaEl) {
         var artLabel = _LABEL_ARTIGO[it.artigo] || it.artigo || '—';
         var padId = it.padId ? String(it.padId) : '';
         var fsId  = it._fsId || padId;
-        var statusBadge = it.status === 'concluido'
-          ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">✅ Concluído</span>'
-          : '<span style="background:#fef3c7;color:#92400e;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">⏳ Em andamento</span>';
+        var st = it.status || 'andamento';
+        var statusBadge = '<select onchange="_alterarStatusPad(' + JSON.stringify(fsId) + ',this.value)" '
+          + 'style="font-size:.72rem;font-weight:700;padding:3px 6px;border-radius:8px;border:none;cursor:pointer;'
+          + (st==='concluido' ? 'background:#dcfce7;color:#166534;' : st==='arquivado' ? 'background:#f1f5f9;color:#475569;' : 'background:#fef3c7;color:#92400e;')
+          + '">'
+          + '<option value="andamento"'  + (st==='andamento'  ?' selected':'')+'>⏳ Em andamento</option>'
+          + '<option value="concluido"'  + (st==='concluido'  ?' selected':'')+'>✅ Concluído</option>'
+          + '<option value="arquivado"'  + (st==='arquivado'  ?' selected':'')+'>📁 Arquivado</option>'
+          + '</select>';
         return '<tr>'
           + '<td>' + _esc(it.numPad || '—') + '</td>'
           + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
@@ -1173,6 +1205,25 @@ window._fecharModalConfirma = function() {
   if (bg) bg.style.display = 'none';
 };
 
+window._alterarStatusPad = function(fsId, novoStatus) {
+  /* Atualiza cor do select imediatamente */
+  var sel = document.querySelector('select[onchange*="' + fsId + '"]');
+  if (sel) {
+    var cores = { concluido:'background:#dcfce7;color:#166534;', arquivado:'background:#f1f5f9;color:#475569;', andamento:'background:#fef3c7;color:#92400e;' };
+    sel.style.cssText = 'font-size:.72rem;font-weight:700;padding:3px 6px;border-radius:8px;border:none;cursor:pointer;' + (cores[novoStatus] || cores.andamento);
+  }
+  /* Persiste no Firestore */
+  if (window.PadFirestore) {
+    window.PadFirestore.atualizarStatusRelacao(fsId, novoStatus).catch(function() {});
+  }
+  /* Atualiza localStorage */
+  try {
+    var hist = JSON.parse(localStorage.getItem('pad_historico') || '[]');
+    hist.forEach(function(e) { if (String(e.padId) === String(fsId) || String(e._fsId) === String(fsId)) e.status = novoStatus; });
+    localStorage.setItem('pad_historico', JSON.stringify(hist));
+  } catch(e) {}
+};
+
 window._relExcluir = function(padId, fsId) {
   var lista = _histCarregar();
   var local = lista.find(function(e) { return String(e.padId) === String(padId); });
@@ -1233,7 +1284,7 @@ window._irParaAdvogados = function() {
   if (tabela) tabela.style.display = 'none';
 };
 
-/* ── Portal da Defesa ── */
+/* ── Andamento do PAD ── */
 window._irParaPortalDefesa = function() {
   _mostrarTela('portal-defesa');
   _carregarPortalDefesa();
@@ -1288,7 +1339,7 @@ function _carregarPortalDefesa() {
   }
 }
 
-/* ── Modal Gerar Link (Portal da Defesa) ── */
+/* ── Modal Gerar Link (Andamento do PAD) ── */
 var _gerarLinkPadAtual = null;
 var _gerarLinkAdvAtual = null;
 
@@ -1390,7 +1441,7 @@ window._emailGerarLink = function() {
   var adv  = _gerarLinkAdvAtual || {};
   var nome = adv.nome || 'Advogado(a)';
   var email = adv.email || '';
-  var assunto = encodeURIComponent('Acesso ao PAD Nº ' + (pad.numPad || '') + ' — Portal da Defesa');
+  var assunto = encodeURIComponent('Acesso ao PAD Nº ' + (pad.numPad || '') + ' — Andamento do PAD');
   var corpo   = encodeURIComponent('Prezado(a) ' + nome + ',\n\nO PAD Nº ' + (pad.numPad || '') + ', referente ao(à) interno(a) ' + (pad.nome || '') + ', foi disponibilizado para consulta.\n\nLink de acesso exclusivo:\n' + link + '\n\nAtenciosamente,\n' + ((Estado.get().unidade && Estado.get().unidade.nome) || 'Unidade Prisional'));
   window.location.href = 'mailto:' + email + '?subject=' + assunto + '&body=' + corpo;
 };
@@ -1621,32 +1672,114 @@ window._salvarAdvogado = async function() {
 };
 
 /* ── Modal Salvar no Portal ── */
+/* Dados do advogado selecionado no modal do portal */
+var _portalAdvSelecionado = null;
+
 window.abrirModalSalvarPortal = function() {
   var el = document.getElementById('pad-preview-wrap');
   if (!el || !el.innerHTML.trim()) { _toast('Gere o documento antes de salvar.'); return; }
 
-  var bg = document.getElementById('modalPortalBg');
-  if (bg) bg.style.display = 'flex';
+  /* Reset */
+  _portalAdvSelecionado = null;
+  var bg  = document.getElementById('modalPortalBg');
+  var st  = document.getElementById('portal-status');
+  var p1  = document.getElementById('portal-passo1');
+  var p2  = document.getElementById('portal-passo2');
+  var res = document.getElementById('portal-adv-resultados');
+  var sel = document.getElementById('portal-adv-selecionado');
+  var aviso = document.getElementById('portal-aviso-email');
+  var btn = document.getElementById('portal-btn-gerar');
+  if (st)    { st.className = 'pad-cad-status'; st.textContent = ''; }
+  if (p1)    p1.style.display = '';
+  if (p2)    p2.style.display = 'none';
+  if (res)   { res.innerHTML = ''; res.style.display = 'none'; }
+  if (sel)   sel.style.display = 'none';
+  if (aviso) aviso.style.display = 'none';
+  if (btn)   { btn.disabled = true; btn.style.opacity = '.5'; }
+  if (bg)    bg.style.display = 'flex';
 
-  var sel = document.getElementById('portal-adv-select');
-  if (sel) sel.innerHTML = '<option value="">Carregando advogados…</option>';
+  /* Verifica se advogado já foi vinculado no formulário */
+  var s    = Estado.get();
+  var defesa = s.defesa || {};
+  var preNome = defesa.advNome || '';
+  var preOab  = defesa.advOab  || '';
+  var preEmail= defesa.advEmail|| '';
+  var preId   = defesa.advId   || preOab || '';
 
-  var st = document.getElementById('portal-status');
-  if (st) { st.className = 'pad-cad-status'; st.textContent = ''; }
+  var preselDiv  = document.getElementById('portal-adv-presel');
+  var preselNome = document.getElementById('portal-adv-presel-nome');
+  var buscaWrap  = document.getElementById('portal-adv-busca-wrap');
+  var buscaInp   = document.getElementById('portal-adv-busca');
 
-  if (!window.PadFirestore) return;
-  window.PadFirestore.listarAdvogados().then(function(lista) {
-    if (!sel) return;
-    if (!lista.length) {
-      sel.innerHTML = '<option value="">Nenhum advogado cadastrado</option>';
-      return;
-    }
-    sel.innerHTML = '<option value="">Selecione o advogado…</option>'
-      + lista.map(function(adv) {
-          return '<option value="' + _esc(adv.oab) + '" data-nome="' + _esc(adv.nome) + '" data-email="' + _esc(adv.email || '') + '">'
-            + _esc(adv.nome) + ' — OAB ' + _esc(adv.oab) + (adv.email ? ' (' + _esc(adv.email) + ')' : '') + '</option>';
-        }).join('');
-  });
+  if (preNome) {
+    /* Pré-seleciona o advogado do formulário */
+    _portalAdvSelecionado = { id: preId, nome: preNome, oab: preOab, email: preEmail };
+    if (preselNome) preselNome.textContent = preNome + (preOab ? ' — OAB ' + preOab : '');
+    if (preselDiv)  preselDiv.style.display  = '';
+    if (buscaWrap)  buscaWrap.style.display  = 'none';
+    if (!preEmail && aviso) aviso.style.display = 'block';
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  } else {
+    if (preselDiv) preselDiv.style.display = 'none';
+    if (buscaWrap) buscaWrap.style.display = '';
+    if (buscaInp)  buscaInp.value = '';
+  }
+};
+
+window._portal_limparPresel = function() {
+  _portalAdvSelecionado = null;
+  var preselDiv = document.getElementById('portal-adv-presel');
+  var buscaWrap = document.getElementById('portal-adv-busca-wrap');
+  var buscaInp  = document.getElementById('portal-adv-busca');
+  var aviso     = document.getElementById('portal-aviso-email');
+  var btn       = document.getElementById('portal-btn-gerar');
+  if (preselDiv) preselDiv.style.display = 'none';
+  if (buscaWrap) buscaWrap.style.display = '';
+  if (buscaInp)  { buscaInp.value = ''; buscaInp.focus(); }
+  if (aviso)     aviso.style.display = 'none';
+  if (btn)       { btn.disabled = true; btn.style.opacity = '.5'; }
+};
+
+var _portalBuscaTimer = null;
+window._portal_buscarAdv = function(termo) {
+  clearTimeout(_portalBuscaTimer);
+  var res = document.getElementById('portal-adv-resultados');
+  var btn = document.getElementById('portal-btn-gerar');
+  _portalAdvSelecionado = null;
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  document.getElementById('portal-adv-selecionado').style.display = 'none';
+  if (!termo || termo.length < 3) { if (res) res.style.display = 'none'; return; }
+  if (res) { res.style.display = ''; res.innerHTML = '<div style="padding:8px;font-size:.8rem;color:#78716c;">⏳ Buscando…</div>'; }
+  _portalBuscaTimer = setTimeout(function() {
+    if (!window.PadFirestore) return;
+    window.PadFirestore.buscarAdvogados(termo).then(function(lista) {
+      if (!res) return;
+      if (!lista.length) { res.innerHTML = '<div style="padding:8px;font-size:.8rem;color:#78716c;">Nenhum resultado.</div>'; return; }
+      res.innerHTML = lista.map(function(adv) {
+        var j = JSON.stringify({ id: adv.id, nome: adv.nome, oab: adv.oab||'', email: adv.email||'' }).replace(/"/g,'&quot;');
+        return '<div onclick="_portal_selecionarAdv(' + j + ')" style="padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:.84rem;" onmouseover="this.style.background=\'#fef3c7\'" onmouseout="this.style.background=\'\'">'
+          + '<strong>' + _esc(adv.nome) + '</strong>'
+          + '<span style="font-size:.75rem;color:#78716c;margin-left:8px;">' + _esc(adv.oab || 'Defensor') + '</span>'
+          + (adv.email ? '' : '<span style="font-size:.72rem;color:#dc2626;margin-left:6px;">⚠️ sem e-mail</span>')
+          + '</div>';
+      }).join('');
+    }).catch(function() { if (res) res.innerHTML = '<div style="padding:8px;font-size:.8rem;color:#dc2626;">Erro na busca.</div>'; });
+  }, 350);
+};
+
+window._portal_selecionarAdv = function(adv) {
+  if (typeof adv === 'string') adv = JSON.parse(adv);
+  _portalAdvSelecionado = adv;
+  var res   = document.getElementById('portal-adv-resultados');
+  var sel   = document.getElementById('portal-adv-selecionado');
+  var inp   = document.getElementById('portal-adv-busca');
+  var aviso = document.getElementById('portal-aviso-email');
+  var btn   = document.getElementById('portal-btn-gerar');
+  if (res)   { res.innerHTML = ''; res.style.display = 'none'; }
+  if (inp)   inp.value = adv.nome;
+  if (sel)   { sel.style.display = ''; sel.innerHTML = '✅ <strong>' + _esc(adv.nome) + '</strong> — ' + _esc(adv.oab || 'Defensor Público'); }
+  if (aviso) aviso.style.display = adv.email ? 'none' : 'block';
+  if (btn)   { btn.disabled = false; btn.style.opacity = '1'; }
 };
 
 window._fecharModalPortal = function() {
@@ -1663,33 +1796,18 @@ window._fecharModalPortal = function() {
 var _portalAdvDados = { nome: '', email: '', oab: '', link: '' };
 
 window._confirmarSalvarPortal = async function() {
-  var sel = document.getElementById('portal-adv-select');
-  var oab = sel ? sel.value : '';
   var st  = document.getElementById('portal-status');
-
   function _setStatus(tipo, msg) {
-    if (!st) return;
-    st.className = 'pad-cad-status ' + tipo;
-    st.textContent = msg;
+    if (!st) return; st.className = 'pad-cad-status ' + tipo; st.textContent = msg;
   }
 
-  if (!oab) return _setStatus('erro', 'Selecione um advogado.');
+  var adv = _portalAdvSelecionado;
+  if (!adv) return _setStatus('erro', 'Selecione um advogado.');
   if (!window.PadFirestore) return _setStatus('erro', 'Firebase não carregado. Aguarde.');
 
-  /* Recupera dados do advogado selecionado */
-  var opt = sel.querySelector('option[value="' + oab.replace(/"/g, '') + '"]');
-  _portalAdvDados.nome  = opt ? (opt.dataset.nome  || '') : '';
-  _portalAdvDados.email = opt ? (opt.dataset.email || '') : '';
-  _portalAdvDados.oab   = oab;
-
-  /* Avisa se e-mail não cadastrado */
-  if (!_portalAdvDados.email) {
-    var aviso = document.getElementById('portal-aviso-email');
-    if (aviso) aviso.style.display = '';
-  } else {
-    var aviso = document.getElementById('portal-aviso-email');
-    if (aviso) aviso.style.display = 'none';
-  }
+  _portalAdvDados.nome  = adv.nome  || '';
+  _portalAdvDados.email = adv.email || '';
+  _portalAdvDados.oab   = adv.oab   || adv.id || '';
 
   _setStatus('info', 'Gerando link de acesso…');
 
@@ -1698,7 +1816,7 @@ window._confirmarSalvarPortal = async function() {
   var estado  = Estado.get();
 
   try {
-    var resultado = await window.PadFirestore.salvarPad(estado, htmlDoc, oab);
+    var resultado = await window.PadFirestore.salvarPad(estado, htmlDoc, _portalAdvDados.oab);
     salvarNoHistorico(window._padIdAtual);
     _portalAdvDados.link = resultado.link;
 
@@ -1733,7 +1851,7 @@ window._abrirEmailPortal = function() {
   var email  = _portalAdvDados.email || '';
   var link   = _portalAdvDados.link  || '';
 
-  var assunto = encodeURIComponent('Acesso ao PAD Nº ' + numPad + ' — Portal da Defesa');
+  var assunto = encodeURIComponent('Acesso ao PAD Nº ' + numPad + ' — Andamento do PAD');
   var corpo   = encodeURIComponent(
     'Prezado(a) ' + nome + ',\n\n'
     + 'Informamos que o Procedimento Administrativo Disciplinar (PAD) Nº ' + numPad

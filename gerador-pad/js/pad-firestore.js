@@ -1,5 +1,5 @@
-/* ============================================================
-   PAD-FIRESTORE.JS — Integração Firebase para o Gerador de PAD
+﻿/* ============================================================
+   PAD-FIRESTORE.JS â€” IntegraÃ§Ã£o Firebase para o Gerador de PAD
    ============================================================ */
 
 import { initializeApp, getApps }
@@ -22,12 +22,12 @@ const _CFG = {
 const _app  = getApps().length ? getApps()[0] : initializeApp(_CFG);
 const _db   = getFirestore(_app);
 
-/* Login anônimo apenas se não houver sessão institucional já ativa */
+/* Login anÃ´nimo apenas se nÃ£o houver sessÃ£o institucional jÃ¡ ativa */
 onAuthStateChanged(getAuth(_app), function(user) {
   if (!user) signInAnonymously(getAuth(_app)).catch(() => {});
 });
 
-/* ── Utilitários ── */
+/* â”€â”€ UtilitÃ¡rios â”€â”€ */
 function _oabKey(oab) {
   return (oab || '').replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
 }
@@ -36,17 +36,17 @@ function _padKey(numPad) {
   return (numPad || Date.now().toString()).replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now();
 }
 
-/* Gera token aleatório para o link do advogado */
+/* Gera token aleatÃ³rio para o link do advogado */
 function _gerarToken() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
 }
 
-/* ──────────────────────────────────────────
-   API pública
-────────────────────────────────────────── */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   API pÃºblica
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 window.PadFirestore = {
 
-  /* Salva o PAD e gera link único para o advogado.
+  /* Salva o PAD e gera link Ãºnico para o advogado.
      Retorna { padId, token, link } */
   salvarPad: async function(estado, htmlDocumento, advogadoOAB) {
     const s   = estado;
@@ -72,7 +72,7 @@ window.PadFirestore = {
       ts:              serverTimestamp(),
     });
 
-    /* Gera token de acesso único para o advogado */
+    /* Gera token de acesso Ãºnico para o advogado */
     const token = _gerarToken();
     await setDoc(doc(_db, 'pad_links', token), {
       padId,
@@ -113,7 +113,7 @@ window.PadFirestore = {
     return oabKey;
   },
 
-  /* Atualiza campos de um advogado já cadastrado */
+  /* Atualiza campos de um advogado jÃ¡ cadastrado */
   atualizarAdvogado: async function(oabKey, dados) {
     await setDoc(doc(_db, 'advogados', oabKey), {
       nome:         dados.nome     || '',
@@ -130,9 +130,9 @@ window.PadFirestore = {
     await deleteDoc(doc(_db, 'advogados', oabKey));
   },
 
-  /* ── PEÇAS DO DOSSIÊ ── */
+  /* â”€â”€ PEÃ‡AS DO DOSSIÃŠ â”€â”€ */
 
-  /* Salva uma peça do PAD no portal */
+  /* Salva uma peÃ§a do PAD no portal */
   salvarPeca: async function(padId, tipo, ordem, label, htmlContent) {
     const docId = String(padId) + '_' + tipo;
     await setDoc(doc(_db, 'pads_pecas', docId), {
@@ -146,7 +146,7 @@ window.PadFirestore = {
     return docId;
   },
 
-  /* Busca todas as peças de um PAD, ordenadas */
+  /* Busca todas as peÃ§as de um PAD, ordenadas */
   buscarPecasDoPad: async function(padId) {
     const q    = query(
       collection(_db, 'pads_pecas'),
@@ -157,9 +157,9 @@ window.PadFirestore = {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  /* ── RELAÇÃO DE PADs DA UNIDADE ── */
+  /* â”€â”€ RELAÃ‡ÃƒO DE PADs DA UNIDADE â”€â”€ */
 
-  /* Salva / atualiza entrada na relação */
+  /* Salva / atualiza entrada na relaÃ§Ã£o */
   salvarRelacao: async function(emailUnidade, entrada) {
     if (!emailUnidade) return;
     const fsId = String(entrada.padId || Date.now());
@@ -173,7 +173,7 @@ window.PadFirestore = {
     return fsId;
   },
 
-  /* Carrega relação ordenada por criação (mais recente primeiro) */
+  /* Carrega relaÃ§Ã£o ordenada por criaÃ§Ã£o (mais recente primeiro) */
   carregarRelacao: async function(emailUnidade) {
     if (!emailUnidade) return [];
     const q    = query(
@@ -185,18 +185,23 @@ window.PadFirestore = {
     return snap.docs.map(d => ({ ...d.data(), _fsId: d.id }));
   },
 
-  /* Exclusão permanente */
+  /* Atualiza status de um PAD na relaÃ§Ã£o */
+  atualizarStatusRelacao: async function(fsId, status) {
+    await setDoc(doc(_db, 'pads_relacao', fsId), { status, tsAtual: serverTimestamp() }, { merge: true });
+  },
+
+  /* ExclusÃ£o permanente */
   excluirRelacao: async function(fsId) {
     await deleteDoc(doc(_db, 'pads_relacao', fsId));
   },
 
-  /* Salva Manifestação da Defesa enviada pelo advogado no portal */
+  /* Salva ManifestaÃ§Ã£o da Defesa enviada pelo advogado no portal */
   salvarManifDefesaPortal: async function(padId, htmlContent, textoExtraido) {
     await setDoc(doc(_db, 'pads_pecas', String(padId) + '_manif_defesa'), {
       padId:         String(padId),
       tipo:          'manif_defesa',
       ordem:         7,
-      label:         '7. Manifestação da Defesa',
+      label:         '7. ManifestaÃ§Ã£o da Defesa',
       htmlContent:   htmlContent   || '',
       textoExtraido: textoExtraido || '',
       savedAt:       serverTimestamp(),
@@ -204,14 +209,14 @@ window.PadFirestore = {
     }, { merge: true });
   },
 
-  /* Busca texto extraído de uma peça específica */
+  /* Busca texto extraÃ­do de uma peÃ§a especÃ­fica */
   buscarTextoPeca: async function(padId, tipo) {
     const snap = await getDoc(doc(_db, 'pads_pecas', String(padId) + '_' + tipo));
     if (!snap.exists()) return '';
     return snap.data().textoExtraido || '';
   },
 
-  /* Busca advogados por prefixo de nome ou OAB (máx. 40 resultados) */
+  /* Busca advogados por prefixo de nome ou OAB (mÃ¡x. 40 resultados) */
   buscarAdvogados: async function(termo) {
     const t = (termo || '').trim();
     if (!t) return [];
@@ -230,13 +235,13 @@ window.PadFirestore = {
     return Object.values(mapa).slice(0, 40);
   },
 
-  /* Lista todos os advogados (legado — uso interno) */
+  /* Lista todos os advogados (legado â€” uso interno) */
   listarAdvogados: async function() {
     const snap = await getDocs(query(collection(_db, 'advogados'), limit(500)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  /* Gera novo token de acesso para um PAD já salvo (sem re-salvar o PAD) */
+  /* Gera novo token de acesso para um PAD jÃ¡ salvo (sem re-salvar o PAD) */
   gerarLinkParaPad: async function(padId, oabKey) {
     const token = _gerarToken();
     await setDoc(doc(_db, 'pad_links', token), {
@@ -259,7 +264,7 @@ window.PadFirestore = {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
-  /* Vincula número do PAD ao advogado */
+  /* Vincula nÃºmero do PAD ao advogado */
   vincularPadAoAdvogado: async function(oabKey, numPad) {
     const ref  = doc(_db, 'advogados', oabKey);
     const snap = await getDoc(ref);
@@ -280,4 +285,5 @@ window.PadFirestore = {
   },
 };
 
-console.log('[PadFirestore] módulo carregado.');
+console.log('[PadFirestore] mÃ³dulo carregado.');
+

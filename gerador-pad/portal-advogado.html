@@ -272,34 +272,73 @@ async function _init() {
   }
 }
 
+/* Ordem canônica de todos os documentos esperados no dossiê */
+const _DOCS_ORDEM = [
+  { cod: 'ipen',        label: 'i-PEN (Cadastro Inicial)',   ordem: 0  },
+  { cod: 'portaria',    label: '1. Portaria de Instauração', ordem: 1  },
+  { cod: 'doc_inicial', label: '2. Documentação Inicial',    ordem: 2  },
+  { cod: 'termo_cient', label: '3. Termo de Cientificação',  ordem: 3  },
+  { cod: 'oitivas_test',label: '4. Oitiva de Testemunhas',   ordem: 4  },
+  { cod: 'oitiva_inc',  label: '5. Declarações do Apenado',  ordem: 5  },
+  { cod: 'manifestacao',label: '6. Manifestação do Conselho',ordem: 6  },
+  { cod: 'manif_defesa',label: '7. Manifestação da Defesa',  ordem: 7  },
+  { cod: 'decisao',     label: '8. Decisão da Direção',      ordem: 8  },
+  { cod: 'oficio_juiz', label: '9. Ofício ao Juiz',          ordem: 9  },
+];
+
 function _renderPecas() {
   const lista = document.getElementById('pecas-lista');
   const btnDossie = document.getElementById('btn-dossie-completo');
-  if (!_pecas.length) {
-    lista.innerHTML = '<div class="dossie-vazio">📭 Nenhum documento disponível ainda.<br>Os documentos aparecem aqui conforme são produzidos pela unidade.</div>';
-    return;
-  }
-  btnDossie.style.display = '';
-  lista.innerHTML = _pecas.map((p, i) => {
-    const data = p.savedAt?.seconds
-      ? new Date(p.savedAt.seconds * 1000).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
-      : '—';
-    return `<div class="peca-card">
-      <div class="peca-num">${_icon(p.tipo)}</div>
-      <div class="peca-info">
-        <div class="peca-label">${_esc(p.label || p.tipo)}</div>
-        <div class="peca-data">Salvo em: ${data}</div>
-      </div>
-      <div class="peca-acoes">
-        <button class="btn-ver" onclick="_abrirPeca(${i})">👁 Ver</button>
-        <button class="btn-dl"  onclick="_baixarPeca(${i})">📥 PDF</button>
-      </div>
-    </div>`;
+
+  /* Indexa peças existentes por tipo */
+  const mapa = {};
+  _pecas.forEach(p => { mapa[p.tipo] = p; });
+
+  const temAlguma = _pecas.length > 0;
+  if (temAlguma) btnDossie.style.display = '';
+
+  lista.innerHTML = _DOCS_ORDEM.map(def => {
+    const p = mapa[def.cod];
+    if (p) {
+      const data = p.savedAt?.seconds
+        ? new Date(p.savedAt.seconds * 1000).toLocaleDateString('pt-BR',
+            { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+        : '—';
+      const idx = _pecas.indexOf(p);
+      return `<div class="peca-card">
+        <div class="peca-num">${_icon(def.cod)}</div>
+        <div class="peca-info">
+          <div class="peca-label">${_esc(def.label)}</div>
+          <div class="peca-data">Salvo em: ${data}</div>
+        </div>
+        <div class="peca-acoes">
+          <button class="btn-ver" onclick="_abrirPeca(${idx})">👁 Ver</button>
+          <button class="btn-dl"  onclick="_baixarPeca(${idx})">📥 PDF</button>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="peca-card" style="opacity:.45;filter:grayscale(1);">
+        <div class="peca-num" style="font-size:1.4rem;color:#aaa;">⏳</div>
+        <div class="peca-info">
+          <div class="peca-label" style="color:#aaa;">${_esc(def.label)}</div>
+          <div class="peca-data" style="color:#bbb;">Aguardando produção</div>
+        </div>
+        <div class="peca-acoes">
+          <button class="btn-ver" disabled style="opacity:.35;cursor:default;">👁 Ver</button>
+          <button class="btn-dl"  disabled style="opacity:.35;cursor:default;">📥 PDF</button>
+        </div>
+      </div>`;
+    }
   }).join('');
+
+  if (!temAlguma) {
+    lista.innerHTML = '<div class="dossie-vazio">📭 Nenhum documento disponível ainda.<br>Os documentos aparecem aqui conforme são produzidos pela unidade.</div>'
+      + lista.innerHTML;
+  }
 }
 
 function _icon(tipo) {
-  const icons = { portaria:'📋', doc_inicial:'📂', termo_cient:'📄', oitivas_test:'🧑‍💼', oitiva_inc:'👤', manifestacao:'📝', manif_defesa:'⚖️', decisao:'⚖️', oficio_juiz:'📨' };
+  const icons = { ipen:'📄', portaria:'📋', doc_inicial:'📂', termo_cient:'📄', oitivas_test:'🧑‍💼', oitiva_inc:'👤', manifestacao:'📝', manif_defesa:'⚖️', decisao:'⚖️', oficio_juiz:'📨' };
   return icons[tipo] || '📄';
 }
 

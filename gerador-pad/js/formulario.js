@@ -1072,6 +1072,20 @@ var FormularioCtrl = (function() {
     Estado.setNested('manifDefesa.nomeAnexo', file.name);
     _render();
     _toast('Documento da defesa anexado!');
+
+    /* Salva no Firestore como peca do dossiê */
+    var padId = window._padIdAtual;
+    if (!padId || !window.PadFirestore) return;
+    _extrairTextoPdf(file).then(function(texto) {
+      var htmlContent = '<div style="font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;white-space:pre-wrap;">'
+        + '<h3 style="margin-bottom:12px;">Manifestação da Defesa</h3>'
+        + '<p><strong>Arquivo:</strong> ' + file.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p>'
+        + (texto
+            ? '<hr style="margin:12px 0"><div>' + texto.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>'
+            : '<p style="color:#92400e;margin-top:12px;">⚠️ Texto não extraível (documento digitalizado).</p>')
+        + '</div>';
+      window.PadFirestore.salvarManifDefesaPortal(padId, htmlContent, texto).catch(function(){});
+    });
   }
 
   /* ── Mic: Manifestação da Defesa ── */
