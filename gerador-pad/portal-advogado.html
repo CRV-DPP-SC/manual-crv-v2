@@ -109,6 +109,35 @@
       font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; color:#111;
     }
 
+    /* Tela de senha */
+    #tela-senha { display:none; }
+    #tela-senha.ativa { display:block; }
+    .senha-card {
+      background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.10);
+      padding:36px 32px; width:100%; max-width:400px; margin:0 auto;
+    }
+    .senha-icone { font-size:2.8rem; margin-bottom:12px; text-align:center; }
+    .senha-titulo { font-size:1rem; font-weight:800; color:#3b1f0a; margin-bottom:6px; text-align:center; }
+    .senha-sub { font-size:.83rem; color:#78716c; line-height:1.5; margin-bottom:22px; text-align:center; }
+    .senha-campo { margin-bottom:14px; }
+    .senha-campo label { display:block; font-size:.75rem; font-weight:700; color:#3b1f0a; text-transform:uppercase; margin-bottom:5px; }
+    .senha-campo input {
+      width:100%; padding:11px 14px; border:1.5px solid #e5e7eb; border-radius:8px;
+      font-size:.92rem; font-family:inherit; transition:border-color .15s;
+    }
+    .senha-campo input:focus { outline:none; border-color:#f97316; }
+    .senha-btn {
+      width:100%; padding:13px; background:linear-gradient(135deg,#3b1f0a,#6b3a1f);
+      color:#fff; border:none; border-radius:9px; font-size:.95rem; font-weight:800;
+      cursor:pointer; font-family:inherit; margin-top:6px; transition:opacity .15s;
+    }
+    .senha-btn:hover { opacity:.88; }
+    .senha-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .senha-status { margin-top:12px; font-size:.82rem; padding:10px 14px; border-radius:8px; display:none; }
+    .senha-status.erro { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; display:block; }
+    .senha-status.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; display:block; }
+    .senha-dica { margin-top:16px; font-size:.76rem; color:#a8a29e; text-align:center; }
+
     @media(max-width:600px) {
       .topo { padding:10px 16px; }
       .dossie-corpo { padding:16px; }
@@ -133,6 +162,32 @@
     <div class="icone">⏳</div>
     <h2>Carregando dossiê…</h2>
     <p>Aguarde enquanto buscamos os documentos do PAD.</p>
+  </div>
+</div>
+
+<!-- Senha -->
+<div id="tela-senha" class="tela-centro">
+  <div class="senha-card">
+    <div class="senha-icone" id="senha-icone">🔑</div>
+    <div class="senha-titulo" id="senha-titulo">Criar senha de acesso</div>
+    <div class="senha-sub"   id="senha-sub">Para sua segurança, defina uma senha para acessar os documentos deste PAD. Você precisará dela sempre que usar este link.</div>
+
+    <div class="senha-campo" id="campo-nova-senha">
+      <label>Nova senha</label>
+      <input type="password" id="inp-senha-nova" placeholder="Mínimo 6 caracteres" oninput="_senhaValidar()">
+    </div>
+    <div class="senha-campo" id="campo-confirmar-senha">
+      <label>Confirmar senha</label>
+      <input type="password" id="inp-senha-conf" placeholder="Repita a senha" oninput="_senhaValidar()">
+    </div>
+    <div class="senha-campo" id="campo-senha-atual" style="display:none;">
+      <label>Senha</label>
+      <input type="password" id="inp-senha-atual" placeholder="Digite sua senha">
+    </div>
+
+    <button class="senha-btn" id="btn-senha-acao" onclick="_senhaAcao()">Criar senha e acessar</button>
+    <div class="senha-status" id="senha-status"></div>
+    <div class="senha-dica" id="senha-dica">Esqueceu a senha? Contate a unidade prisional para redefini-la.</div>
   </div>
 </div>
 
@@ -200,8 +255,10 @@
 <script type="module">
 import { initializeApp, getApps }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, getDocs, serverTimestamp }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, orderBy, getDocs, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getAuth, signInAnonymously }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 
 const _CFG = {
   apiKey:"AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
@@ -212,21 +269,33 @@ const _CFG = {
   appId:"1:513539683551:web:2fdcdd236f0c37853ae56a",
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(_CFG);
-const db  = getFirestore(app);
+const app  = getApps().length ? getApps()[0] : initializeApp(_CFG);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
-let _padAtual  = null;
-let _pecas     = [];
-let _pecaAtual = null;
+let _padAtual   = null;
+let _pecas      = [];
+let _pecaAtual  = null;
+let _oabKey     = null;   // OAB do advogado vinculado ao link
+let _modoCriar  = true;   // true = criar senha, false = entrar com senha
+
+/* SHA-256 via Web Crypto */
+async function _sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
 function _mostrar(id) {
-  ['tela-carregando','tela-erro','tela-dossie','tela-viz'].forEach(t => {
+  ['tela-carregando','tela-erro','tela-senha','tela-dossie','tela-viz'].forEach(t => {
     const el = document.getElementById(t);
     if (!el) return;
     el.style.display = 'none'; el.classList.remove('ativa');
   });
   const el = document.getElementById(id);
-  if (el) { el.style.display = (id === 'tela-dossie' || id === 'tela-viz') ? 'flex' : ''; el.classList.add('ativa'); }
+  if (el) {
+    el.style.display = (id === 'tela-dossie' || id === 'tela-viz') ? 'flex' : '';
+    el.classList.add('ativa');
+  }
 }
 
 function _erro(titulo, msg) {
@@ -235,16 +304,27 @@ function _erro(titulo, msg) {
   _mostrar('tela-erro');
 }
 
+function _mostrarDossie() {
+  _renderPecas();
+  _mostrar('tela-dossie');
+}
+
 async function _init() {
+  /* Auth anônimo para leitura no Firestore */
+  try {
+    if (!auth.currentUser) await signInAnonymously(auth);
+  } catch(_) {}
+
   const params = new URLSearchParams(window.location.search);
   const token  = params.get('token');
   if (!token) { _erro('Link inválido', 'Nenhum token encontrado. Verifique o e-mail recebido.'); return; }
 
   try {
-    /* Resolve token → padId */
+    /* Resolve token → padId + oabKey */
     const linkSnap = await getDoc(doc(db, 'pad_links', token));
     if (!linkSnap.exists()) { _erro('Link não encontrado', 'Link inválido ou removido. Contate a unidade.'); return; }
-    const { padId } = linkSnap.data();
+    const { padId, advogadoOAB } = linkSnap.data();
+    _oabKey = advogadoOAB || null;
 
     /* Carrega metadados do PAD */
     const padSnap = await getDoc(doc(db, 'pads_gerados', padId));
@@ -264,13 +344,100 @@ async function _init() {
     const snap = await getDocs(q);
     _pecas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    _renderPecas();
-    _mostrar('tela-dossie');
+    /* Verifica se já foi autenticado nesta sessão */
+    if (_oabKey && sessionStorage.getItem('pad_auth_' + _oabKey) === '1') {
+      _mostrarDossie(); return;
+    }
+
+    /* Se não há OAB vinculado, libera direto (link sem advogado associado) */
+    if (!_oabKey) { _mostrarDossie(); return; }
+
+    /* Verifica se há senha cadastrada */
+    const authSnap = await getDoc(doc(db, 'advogado_auth', _oabKey));
+    if (authSnap.exists()) {
+      _mostrarFormSenha(false); // entrar
+    } else {
+      _mostrarFormSenha(true);  // criar
+    }
 
   } catch(e) {
     _erro('Erro ao carregar', 'Não foi possível carregar o dossiê: ' + e.message);
   }
 }
+
+function _mostrarFormSenha(criar) {
+  _modoCriar = criar;
+  document.getElementById('senha-icone').textContent   = criar ? '🔑' : '🔒';
+  document.getElementById('senha-titulo').textContent  = criar ? 'Crie sua senha de acesso' : 'Acesso ao dossiê';
+  document.getElementById('senha-sub').textContent     = criar
+    ? 'Para sua segurança, defina uma senha para acessar os documentos deste PAD. Você precisará dela sempre que usar este link.'
+    : 'Digite sua senha para acessar os documentos.';
+  document.getElementById('campo-nova-senha').style.display    = criar ? '' : 'none';
+  document.getElementById('campo-confirmar-senha').style.display = criar ? '' : 'none';
+  document.getElementById('campo-senha-atual').style.display   = criar ? 'none' : '';
+  document.getElementById('btn-senha-acao').textContent = criar ? 'Criar senha e acessar' : 'Acessar';
+  document.getElementById('senha-status').className    = 'senha-status';
+  document.getElementById('senha-dica').style.display  = criar ? 'none' : '';
+  if (criar) { document.getElementById('inp-senha-nova').focus(); }
+  else        { document.getElementById('inp-senha-atual').focus(); }
+  _mostrar('tela-senha');
+}
+
+window._senhaValidar = function() {
+  const btn  = document.getElementById('btn-senha-acao');
+  if (!_modoCriar) { btn.disabled = false; return; }
+  const nova  = document.getElementById('inp-senha-nova').value;
+  const conf  = document.getElementById('inp-senha-conf').value;
+  btn.disabled = nova.length < 6 || conf !== nova;
+};
+
+window._senhaAcao = async function() {
+  const btn = document.getElementById('btn-senha-acao');
+  const st  = document.getElementById('senha-status');
+  btn.disabled = true;
+  st.className = 'senha-status info'; st.textContent = '⏳ Verificando…';
+
+  try {
+    if (_modoCriar) {
+      const nova = document.getElementById('inp-senha-nova').value;
+      const conf = document.getElementById('inp-senha-conf').value;
+      if (nova.length < 6)    { _senhaErro('A senha deve ter pelo menos 6 caracteres.'); return; }
+      if (nova !== conf)       { _senhaErro('As senhas não coincidem.'); return; }
+      const hash = await _sha256(nova);
+      await setDoc(doc(db, 'advogado_auth', _oabKey), { senhaHash: hash, criadoEm: serverTimestamp() });
+      sessionStorage.setItem('pad_auth_' + _oabKey, '1');
+      _mostrarDossie();
+    } else {
+      const atual = document.getElementById('inp-senha-atual').value;
+      if (!atual) { _senhaErro('Digite sua senha.'); return; }
+      const hash     = await _sha256(atual);
+      const authSnap = await getDoc(doc(db, 'advogado_auth', _oabKey));
+      if (!authSnap.exists() || authSnap.data().senhaHash !== hash) {
+        _senhaErro('Senha incorreta. Tente novamente ou contate a unidade.');
+        return;
+      }
+      sessionStorage.setItem('pad_auth_' + _oabKey, '1');
+      _mostrarDossie();
+    }
+  } catch(e) {
+    _senhaErro('Erro: ' + e.message);
+  }
+};
+
+function _senhaErro(msg) {
+  const btn = document.getElementById('btn-senha-acao');
+  const st  = document.getElementById('senha-status');
+  st.className = 'senha-status erro'; st.textContent = '❌ ' + msg;
+  btn.disabled = false;
+}
+
+/* Enter nas teclas de senha dispara a ação */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('tela-senha')?.classList.contains('ativa')) {
+    const btn = document.getElementById('btn-senha-acao');
+    if (!btn.disabled) btn.click();
+  }
+});
 
 /* Ordem canônica de todos os documentos esperados no dossiê */
 const _DOCS_ORDEM = [

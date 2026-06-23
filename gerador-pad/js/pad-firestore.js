@@ -274,6 +274,27 @@ window.PadFirestore = {
     await setDoc(ref, { padsVinculados: lista }, { merge: true });
   },
 
+  /* ── AUTENTICAÇÃO DO ADVOGADO ── */
+
+  /* Cria ou redefine a senha do advogado (hash SHA-256 calculado no browser) */
+  criarSenhaAdvogado: async function(oabKey, senhaHash) {
+    await setDoc(doc(_db, 'advogado_auth', oabKey), {
+      senhaHash,
+      criadoEm: serverTimestamp(),
+    });
+  },
+
+  /* Retorna o hash armazenado ou null se não há senha cadastrada */
+  buscarSenhaAdvogado: async function(oabKey) {
+    const snap = await getDoc(doc(_db, 'advogado_auth', oabKey));
+    return snap.exists() ? snap.data().senhaHash : null;
+  },
+
+  /* Remove a senha — próximo acesso exigirá criar nova */
+  resetarSenhaAdvogado: async function(oabKey) {
+    await deleteDoc(doc(_db, 'advogado_auth', oabKey));
+  },
+
   /* Busca PAD pelo token do link */
   buscarPadPorToken: async function(token) {
     const linkSnap = await getDoc(doc(_db, 'pad_links', token));

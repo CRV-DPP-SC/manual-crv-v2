@@ -1309,19 +1309,30 @@ function _carregarPortalDefesa() {
       + '<th>Nº PAD</th><th>Incidentado</th><th>IPEN</th><th>Instauração</th><th>Status</th><th></th>'
       + '</tr></thead><tbody>'
       + lista.map(function(it) {
-          var padId = String(it.padId || it._fsId || '');
+          var padId  = String(it.padId || it._fsId || '');
           var numPad = _esc(it.numPad || '—');
           var statusBadge = it.status === 'concluido'
             ? '<span style="background:#dcfce7;color:#166534;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">✅ Concluído</span>'
             : '<span style="background:#fef3c7;color:#92400e;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;">⏳ Em andamento</span>';
-          var itJson = JSON.stringify({ padId: padId, numPad: it.numPad || '', nome: it.nome || '', unidade: (Estado.get().unidade || {}) });
+          var itJson   = JSON.stringify({ padId: padId, numPad: it.numPad || '', nome: it.nome || '', unidade: (Estado.get().unidade || {}) });
+          /* OAB key para reset de senha */
+          var advOab   = (it.estado && it.estado.defesa && it.estado.defesa.advOab) || it.advogadoOAB || '';
+          var oabKey   = advOab.replace(/[^a-zA-Z0-9]/g,'_').toUpperCase();
+          var btnReset = oabKey
+            ? '<button class="pad-rel-btn-abrir" style="background:#dc2626;color:#fff;border:none;margin-left:4px;" '
+                + 'onclick="_resetarSenhaAdv(\'' + oabKey.replace(/'/g,"\\'") + '\',\'' + _esc(it.nome||'').replace(/'/g,"\\'") + '\')" '
+                + 'title="Resetar senha do advogado">🔑 Resetar Senha</button>'
+            : '';
           return '<tr>'
             + '<td><strong>' + numPad + '</strong></td>'
             + '<td class="nome">' + _esc(it.nome || '—') + '</td>'
             + '<td>' + _esc(it.ipen || '—') + '</td>'
             + '<td>' + _esc(it.dataInst || '—') + '</td>'
             + '<td>' + statusBadge + '</td>'
-            + '<td><button class="pad-rel-btn-abrir" style="background:#7c3aed;color:#fff;border:none;" onclick="_abrirModalGerarLink(' + itJson + ')">🔗 Enviar ao Advogado</button></td>'
+            + '<td style="white-space:nowrap;">'
+              + '<button class="pad-rel-btn-abrir" style="background:#7c3aed;color:#fff;border:none;" onclick="_abrirModalGerarLink(' + itJson + ')">🔗 Enviar ao Advogado</button>'
+              + btnReset
+            + '</td>'
             + '</tr>';
         }).join('')
       + '</tbody></table>';
@@ -1338,6 +1349,15 @@ function _carregarPortalDefesa() {
     _renderPortalDefesa(_histCarregar());
   }
 }
+
+/* ── Resetar senha do advogado ── */
+window._resetarSenhaAdv = function(oabKey, nomeInc) {
+  if (!window.PadFirestore) { _toast('Firebase não carregado.'); return; }
+  if (!confirm('Resetar a senha do advogado vinculado ao PAD de "' + (nomeInc || oabKey) + '"?\n\nNa próxima vez que ele acessar o link, será solicitado criar uma nova senha.')) return;
+  window.PadFirestore.resetarSenhaAdvogado(oabKey)
+    .then(function() { _toast('✅ Senha resetada. O advogado precisará criar uma nova senha ao acessar.'); })
+    .catch(function(e) { _toast('Erro ao resetar: ' + e.message); });
+};
 
 /* ── Modal Gerar Link (Andamento do PAD) ── */
 var _gerarLinkPadAtual = null;
