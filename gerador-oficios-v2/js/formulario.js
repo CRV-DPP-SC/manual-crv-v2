@@ -13,7 +13,8 @@ var FormularioCtrl = (function() {
       + _card('emergencial', '🚨', 'Emergencial', 'Art. 21, I')
       + _card('mandado', '🏛', 'Mandado de Comarca', 'Art. 21, III')
       + _card('pernoite', '🔄', 'Pernoite', 'Art. 21, III')
-      + _card('adequacao', '⚖', 'Adequação da Capacidade', 'Art. 21, III')
+      + _card('adequacao', '⚖', 'Transferências Ordinárias', 'Art. 21, III', 'Transferências do dia a dia')
+      + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Determinadas pelo DPP e/ou CRV')
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
       + _card('prisaocivil', '⚖', 'Prisão Civil', 'Especializada')
       + _card('comunicacao', '📨', 'Comunicação', 'Art. 16')
@@ -21,19 +22,20 @@ var FormularioCtrl = (function() {
       + '</div>';
   }
 
-  function _card(mod, icon, nome, artigo) {
+  function _card(mod, icon, nome, artigo, obs) {
     return '<div class="mod-card" onclick="FormularioCtrl.selecionarMod(\'' + mod + '\')">'
       + '<div class="card-icon">' + icon + '</div>'
       + '<div class="card-nome">' + nome + '</div>'
       + '<div class="card-artigo">' + artigo + '</div>'
+      + (obs ? '<div class="card-obs">' + obs + '</div>' : '')
       + '</div>';
   }
 
   /* ── Seleciona modalidade ── */
   function selecionarMod(mod) {
-    /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV */
+    /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV (padrão fixo) */
     var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : 'Senhor(a) Coordenador(a),';
-    Estado.setMany({ mod: mod, sub: null, sau: sauInicial });
+    Estado.setMany({ mod: mod, sub: null, sau: sauInicial, desp: 'Respeitosamente,' });
     _renderizarFormulario();
   }
 
@@ -78,7 +80,8 @@ var FormularioCtrl = (function() {
   function _headerMod(s) {
     var nomes = {
       emergencial:'Transferência Emergencial', mandado:'Mandado de Comarca',
-      pernoite:'Pernoite', adequacao:'Adequação da Capacidade',
+      pernoite:'Pernoite', adequacao:'Transferências Ordinárias',
+      ajuste_lotacional:'Ajuste Lotacional',
       permuta:'Permuta entre Unidades', prisaocivil:'Prisão Civil',
       comunicacao:'Comunicação de Transferência', resumo_ipen:'Resumo Sintético IPEN',
     };
@@ -101,10 +104,10 @@ var FormularioCtrl = (function() {
   /* ── Seção: Subtipo ── */
   function _secaoSubtipo(s) {
     var mod = s.mod;
-    if (!['emergencial','adequacao','comunicacao'].includes(mod)) return '';
+    if (!['emergencial','adequacao','ajuste_lotacional','comunicacao'].includes(mod)) return '';
     var opts = [];
     if (mod === 'emergencial') opts = [['com_pad','📋 Com PAD — falta grave'],['sem_pad','⚠ Sem PAD — risco à integridade']];
-    if (mod === 'adequacao')   opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime']];
+    if (mod === 'adequacao' || mod === 'ajuste_lotacional') opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime']];
     if (mod === 'comunicacao') opts = [['saida','🚀 Saída — preso saiu desta unidade'],['entrada','🏠 Entrada — preso chegou nesta unidade']];
 
     var chips = opts.map(function(o) {
@@ -117,7 +120,7 @@ var FormularioCtrl = (function() {
   /* ── Seção: Reeducando(s) ── */
   function _secaoReeducando(s) {
     var mod = s.mod;
-    var comRegime  = ['emergencial','mandado','adequacao','permuta'].includes(mod);
+    var comRegime  = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta'].includes(mod);
     var semRegime  = ['pernoite','prisaocivil','comunicacao','resumo_ipen'].includes(mod);
     var isPlural   = s.numero === 'P';
 
@@ -289,7 +292,7 @@ var FormularioCtrl = (function() {
       html += _textarea('razPernoite', 'Razão do pernoite', s.razPernoite, 'Ex.: Audiência judicial na comarca de destino', true);
       ok = !!s.razPernoite;
     }
-    else if (mod === 'adequacao') {
+    else if (mod === 'adequacao' || mod === 'ajuste_lotacional') {
       html += _textarea('motTransf', 'Motivo da transferência', s.motTransf, 'Ex.: Necessidade de ajuste/equalização de vagas', true);
       html += _textarea('motIndicacao', 'Critério de escolha/indicação', s.motIndicacao, 'Ex.: Pena mais alta dentre os custodiados', true);
       ok = !!s.motTransf && !!s.motIndicacao;
@@ -411,27 +414,12 @@ var FormularioCtrl = (function() {
     return _secao('bpi', 'BPI — Boletim Penal Informativo', html, ok ? '✓' : (s.bpi ? '⚠' : '○'), false);
   }
 
-  /* ── Seção: Formatação (número, saudação, fechamento) ── */
+  /* ── Seção: Formatação (número do ofício) ──
+     Saudação e fechamento não são mais escolhidos pelo usuário: usam padrão fixo
+     "Senhor(a) Coordenador(a)," / "Respeitosamente," (exceto Comunicação, que usa
+     "Senhor(a) Juiz(a),"), definido em selecionarMod(). ── */
   function _secaoFormatacao(s) {
-    var forcaSau = s.mod === 'comunicacao';
-    var html = '';
-
-    if (!forcaSau) {
-      html += '<div class="campo-label">Saudação</div>'
-        + '<div class="chip-group">'
-        + _chip('sau','Senhor(a) Coordenador(a),','Coordenador(a)', s.sau === 'Senhor(a) Coordenador(a),', true)
-        + _chip('sau','Senhor(a) Juiz(a),','Juiz(a)', s.sau === 'Senhor(a) Juiz(a),', true)
-        + _chip('sau','Senhor(a) Diretor(a),','Diretor(a)', s.sau === 'Senhor(a) Diretor(a),', true)
-        + _chip('sau','Senhor(a) Superintendente,','Superintendente', s.sau === 'Senhor(a) Superintendente,', true)
-        + '</div>';
-    }
-
-    html += '<div class="campo-label">Fechamento</div>'
-      + '<div class="chip-group">'
-      + _chip('desp','Atenciosamente,','Atenciosamente', s.desp === 'Atenciosamente,', true)
-      + _chip('desp','Respeitosamente,','Respeitosamente', s.desp === 'Respeitosamente,', true)
-      + '</div>'
-      + '<div class="campo-label" style="margin-top:10px">Número do ofício</div>'
+    var html = '<div class="campo-label">Número do ofício</div>'
       + '<div class="chip-group">'
       + _chip('numOficioToggle','nao','Sem número', s.numOficio === '', true)
       + _chip('numOficioToggle','sim','Com número', s.numOficio !== null && s.numOficio !== '', true)
@@ -442,8 +430,7 @@ var FormularioCtrl = (function() {
       html += '<input id="inp-numOficio" class="inp-campo" value="' + _esc(s.numOficio || '') + '" placeholder="' + _esc(sugestao || 'Ex.: Ofício nº 043/2026/DPP') + '">';
     }
 
-    var ok = (!!s.sau || forcaSau) && !!s.desp;
-    return _secao('formatacao', 'Número e formatação', html, ok ? (s.numOficio !== null ? '✓' : '○') : '○', false);
+    return _secao('formatacao', 'Número e formatação', html, s.numOficio !== null ? '✓' : '○', false);
   }
 
   /* ── Helpers de UI ── */

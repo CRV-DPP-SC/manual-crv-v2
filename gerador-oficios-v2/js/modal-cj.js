@@ -3,7 +3,7 @@
    ============================================================ */
 
 var CJ = { presos: [], selecionados: [], ofHtmls: [], paginaAtual: 0 };
-var MODS_COM_JUD = ['emergencial', 'mandado', 'adequacao', 'permuta', 'prisaocivil'];
+var MODS_COM_JUD = ['emergencial', 'mandado', 'adequacao', 'ajuste_lotacional', 'permuta', 'prisaocivil'];
 
 function _presosDoOficio() {
   var s = Estado.get();

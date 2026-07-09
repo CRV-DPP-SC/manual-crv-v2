@@ -198,8 +198,10 @@ function gerarCorpo(s) {
     }
   }
 
-  /* ── ADEQUAÇÃO ── */
-  else if (s.mod === 'adequacao') {
+  /* ── ADEQUAÇÃO (Transferências Ordinárias) / AJUSTE LOTACIONAL ──
+     TODO: "ajuste_lotacional" usa temporariamente o mesmo texto de "adequacao"
+     até definirmos a redação própria desse novo módulo. ── */
+  else if (s.mod === 'adequacao' || s.mod === 'ajuste_lotacional') {
     var tm = {
       pontual: 'adequação da capacidade de ocupação',
       regime:  'adequação decorrente de alteração de regime de cumprimento de pena',
@@ -371,7 +373,8 @@ function gerarTextoResumo(s) {
     emergencial: 'transferência emergencial, amparado no art. 21, inciso I',
     mandado:     'transferência por mandado de comarca diversa, amparado no art. 21, inciso III',
     pernoite:    'pernoite, amparado no art. 21, inciso III',
-    adequacao:   'transferência por adequação da capacidade, amparado no art. 21, inciso III',
+    adequacao:   'transferência ordinária, amparado no art. 21, inciso III',
+    ajuste_lotacional: 'transferência por ajuste lotacional, determinada pelo DPP e/ou CRV, amparado no art. 21, inciso III',
     permuta:     'permuta entre unidades, amparado no art. 21, inciso III',
     prisaocivil: 'transferência de preso civil, modalidade especializada',
     comunicacao: 'comunicação de transferência, nos termos do art. 16',
@@ -383,7 +386,7 @@ function gerarTextoResumo(s) {
   if (s.mod === 'emergencial')  { motivo = s.sit || 'situação emergencial'; criterio = 'transferência emergencial, sem critério eletivo de escolha'; }
   else if (s.mod === 'mandado') { motivo = 'cumprimento de Mandado de Prisão expedido pelo(a) ' + s.juizo; criterio = 'competência jurisdicional'; }
   else if (s.mod === 'pernoite'){ motivo = s.razPernoite || 'necessidade de pernoite'; criterio = 'necessidade operacional'; }
-  else if (s.mod === 'adequacao'){ motivo = s.motTransf || 'adequação da capacidade de ocupação'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
+  else if (s.mod === 'adequacao' || s.mod === 'ajuste_lotacional'){ motivo = s.motTransf || 'adequação da capacidade de ocupação'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
   else if (s.mod === 'permuta') { motivo = s.motTransfPermuta || 'equalização de vagas'; criterio = s.motPermuta || 'critério de gestão'; }
   else if (s.mod === 'prisaocivil') { motivo = 'natureza da prisão civil e necessidade de unidade especializada'; criterio = 'modalidade de custódia'; }
   else if (s.mod === 'comunicacao') { motivo = s.motComun || 'transferência autorizada pela CRV/DPP'; criterio = 'N/A'; }

@@ -61,8 +61,6 @@ function _contarPendencias(s) {
   if (!s.mod) return 0;
   if (!s.ori) n++;
   if (!s.des) n++;
-  if (!s.sau && s.mod !== 'resumo_ipen' && s.mod !== 'comunicacao') n++;
-  if (!s.desp && s.mod !== 'resumo_ipen') n++;
 
   if (s.numero === 'P') {
     if (!s.reed || s.reed.length === 0) n++;
@@ -78,7 +76,7 @@ function _contarPendencias(s) {
   if (s.mod === 'comunicacao' && !s.motComun)    n++;
   if (s.mod === 'comunicacao' && !s.nomejuiz)    n++;
 
-  var MODS_COM_BPI = ['emergencial','mandado','adequacao','permuta','prisaocivil'];
+  var MODS_COM_BPI = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta','prisaocivil'];
   if (MODS_COM_BPI.indexOf(s.mod) >= 0 && !s.bpi) n++;
   if (s.bpi === 'nao_atualizado' && !s.bpiMotivo) n++;
 
