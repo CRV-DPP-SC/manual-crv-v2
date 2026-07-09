@@ -196,14 +196,12 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise pedido de pernoite ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', na unidade de ' + nDes + ', em razão de ' + razP + '.',
         'Foi realizado contato prévio com a gestão da unidade de destino, que subscreve o presente expediente.',
-        textoCriterioNaoPunitivo(s),
         TXT_DESFECHO_PLEITO,
       ];
     } else {
       ps = [
         'Encaminho para análise pedido de pernoite ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', na unidade de ' + nDes + ', em razão de ' + razP + '.',
         'Foi realizado contato prévio com a gestão da unidade de destino, que subscreve o presente expediente.',
-        textoCriterioNaoPunitivo(s),
         TXT_DESFECHO_PLEITO,
       ];
     }
