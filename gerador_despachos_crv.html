@@ -142,6 +142,8 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="III"      onclick="selMod('III')"><div class="rd"><div class="rdi"></div></div><div class="rl">Art. 21, inciso III<small>Adequação da capacidade de ocupação</small></div></div>
           <div class="ri" data-v="PERMUTA"  onclick="selMod('PERMUTA')"><div class="rd"><div class="rdi"></div></div><div class="rl">Permuta<small>Transferência em permuta entre unidades</small></div></div>
           <div class="ri" data-v="PERNOITE" onclick="selMod('PERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Pernoite<small>Medida excepcional administrativa</small></div></div>
+          <div class="ri" data-v="MANDADO"  onclick="selMod('MANDADO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Mandado de Prisão de Comarca Diversa<small>Cumprimento de mandado expedido por outra comarca</small></div></div>
+          <div class="ri" data-v="CIVIL"    onclick="selMod('CIVIL')"><div class="rd"><div class="rdi"></div></div><div class="rl">Prisão Civil<small>Modalidade especializada — preso(a) civil</small></div></div>
           <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
         </div>
       </div>
@@ -468,6 +470,52 @@ function gerar(){
            'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas:',
            lm||'   • (nenhuma pendência especificada)',
            'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central.\n\n'+PC].join('\n\n')};
+  }
+
+  // MANDADO DE PRISÃO DE COMARCA DIVERSA
+  if(m==='MANDADO'){
+    var sub='Mandado de Prisão de Comarca Diversa — Art. 21, inciso III';
+    if(r==='def') return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão do cumprimento de Mandado de Prisão de comarca diversa, com fundamento no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026, e no art. 24 da Portaria Normativa nº 2.189/2025 do Departamento de Polícia Penal.',
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com os referidos dispositivos, estando atendidos os requisitos formais e materiais exigidos para a modalidade requerida, e por ser a unidade de destino responsável pela circunscrição da autoridade judiciária expedidora do mandado.',
+           PCOM, PHIG].join('\n\n')
+    };
+    var lm=motLista();
+    if(r==='ind') return {badge:'❌ INDEFERIDO',bc:'bind',subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão de cumprimento de Mandado de Prisão de comarca diversa, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise da documentação encaminhada, esta Central decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas na instrução do expediente:',
+           lm||'   • (nenhum motivo especificado)',
+           'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+PC].join('\n\n')};
+    return {badge:'🔄 DEVOLVIDO PARA RETIFICAÇÃO',bc:'bdev',subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão de cumprimento de Mandado de Prisão de comarca diversa, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas na instrução do processo:',
+           lm||'   • (nenhuma pendência especificada)',
+           'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central, devendo observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV.\n\n'+PC].join('\n\n')};
+  }
+
+  // PRISÃO CIVIL
+  if(m==='CIVIL'){
+    var sub='Prisão Civil — Modalidade Especializada';
+    if(r==='def') return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de transferência de preso(a) civil, submetido à apreciação desta Central de Regulação de Vagas.',
+           'A prisão civil constitui modalidade de privação de liberdade distinta da prisão penal, de caráter não sancionatório, mas coercitivo, destinada ao cumprimento de obrigação legal, sendo imprescindível que a pessoa privada de liberdade sob essa modalidade seja custodiada em unidade prisional com estrutura adequada e especializada para tanto.',
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com a natureza específica da medida e por estarem atendidos os requisitos formais e materiais exigidos.',
+           'Efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
+           PHIG].join('\n\n')
+    };
+    var lm=motLista();
+    if(r==='ind') return {badge:'❌ INDEFERIDO',bc:'bind',subtit:sub,
+      txt:['Trata-se de pedido de transferência de preso(a) civil, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise da documentação encaminhada, esta Central decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas na instrução do expediente:',
+           lm||'   • (nenhum motivo especificado)',
+           'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+PC].join('\n\n')};
+    return {badge:'🔄 DEVOLVIDO PARA RETIFICAÇÃO',bc:'bdev',subtit:sub,
+      txt:['Trata-se de pedido de transferência de preso(a) civil, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas na instrução do processo:',
+           lm||'   • (nenhuma pendência especificada)',
+           'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central, devendo observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV.\n\n'+PC].join('\n\n')};
   }
 
   // I, II, III
