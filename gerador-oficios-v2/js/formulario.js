@@ -11,13 +11,13 @@ var FormularioCtrl = (function() {
       '<div class="form-intro">Que tipo de ofício você precisa gerar?</div>'
       + '<div class="cards-grid">'
       + _card('emergencial', '🚨', 'Emergencial', 'Art. 21, I')
-      + _card('mandado', '🏛', 'Mandado de Comarca', 'Art. 21, III')
+      + _card('mandado', '🏛', 'Mandado de Prisão de Comarca Diversa', 'Art. 21, III')
       + _card('pernoite', '🔄', 'Pernoite', 'Art. 21, III')
       + _card('adequacao', '⚖', 'Transferências Ordinárias', 'Art. 21, III', 'Transferências do dia a dia')
       + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Determinadas pelo DPP e/ou CRV')
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
       + _card('prisaocivil', '⚖', 'Prisão Civil', 'Especializada')
-      + _card('comunicacao', '📨', 'Comunicação', 'Art. 16')
+      + _card('comunicacao', '📨', 'Ofício de Comunicação', 'Art. 16', 'Ofícios de comunicação ao Poder Judiciário - Ingresso e saída de reeducandos')
       + _card('resumo_ipen', '📄', 'Resumo Sintético IPEN', 'Art. 21, I / III', 'Sem ofício')
       + '</div>';
   }
