@@ -32,7 +32,7 @@ function _atualizarBarraAcoes(s) {
 
   /* Visibilidade dos novos botões */
   var temMod = !!(s.mod);
-  if (btnResumo)  btnResumo.style.display  = (temMod && s.mod !== 'resumo_ipen') ? '' : 'none';
+  if (btnResumo)  btnResumo.style.display  = temMod ? '' : 'none';
   if (btnAssinar) btnAssinar.style.display = (temMod && s.mod !== 'resumo_ipen' && s.mod !== 'comunicacao') ? '' : 'none';
 
   if (!s.mod) {
@@ -60,7 +60,7 @@ function _contarPendencias(s) {
   var n = 0;
   if (!s.mod) return 0;
   if (!s.ori) n++;
-  if (!s.des && s.mod !== 'resumo_ipen') n++;
+  if (!s.des) n++;
   if (!s.sau && s.mod !== 'resumo_ipen' && s.mod !== 'comunicacao') n++;
   if (!s.desp && s.mod !== 'resumo_ipen') n++;
 

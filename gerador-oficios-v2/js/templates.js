@@ -375,6 +375,7 @@ function gerarTextoResumo(s) {
     permuta:     'permuta entre unidades, amparado no art. 21, inciso III',
     prisaocivil: 'transferência de preso civil, modalidade especializada',
     comunicacao: 'comunicação de transferência, nos termos do art. 16',
+    resumo_ipen: 'transferência, com resumo sintético administrativo (sem ofício)',
   };
   var artMod = modLabels[s.mod] || 'transferência';
   var motivo = '', criterio = '';
@@ -386,13 +387,14 @@ function gerarTextoResumo(s) {
   else if (s.mod === 'permuta') { motivo = s.motTransfPermuta || 'equalização de vagas'; criterio = s.motPermuta || 'critério de gestão'; }
   else if (s.mod === 'prisaocivil') { motivo = 'natureza da prisão civil e necessidade de unidade especializada'; criterio = 'modalidade de custódia'; }
   else if (s.mod === 'comunicacao') { motivo = s.motComun || 'transferência autorizada pela CRV/DPP'; criterio = 'N/A'; }
+  else if (s.mod === 'resumo_ipen') { motivo = s.motTransf || 'adequação da situação do(a) custodiado(a)'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
 
   var isMultiReed = s.reed && s.reed.length > 1;
   var ori = s.ori ? s.ori.n : '[origem]';
-  var des = s.des ? s.des.n : '[destino]';
+  var destinoClause = s.des ? (', com transferência solicitada para o(a) ' + s.des.n) : '';
   var nomeRef = isMultiReed ? 'reeducando(a)' : (s.nome || '[nome]') + ' (IPEN nº ' + (s.ipen || '[ipen]') + ')';
   var sit  = !isMultiReed && s.regime   ? ' Situação penal: ' + s.regime + '.' : '';
   var aloc = !isMultiReed && s.alocacao ? ' Característica de alocação: ' + s.alocacao + '.' : '';
 
-  return 'Trata-se de pedido de ' + artMod + ', envolvendo ' + nomeRef + ', custodiado(a) no(a) ' + ori + ', com transferência solicitada para o(a) ' + des + '.' + sit + aloc + ' O motivo da transferência é: ' + motivo + '. O critério de escolha/indicação do(a) apenado(a) foi: ' + criterio + '.';
+  return 'Trata-se de pedido de ' + artMod + ', envolvendo ' + nomeRef + ', custodiado(a) no(a) ' + ori + destinoClause + '.' + sit + aloc + ' O motivo da transferência é: ' + motivo + '. O critério de escolha/indicação do(a) apenado(a) foi: ' + criterio + '.';
 }

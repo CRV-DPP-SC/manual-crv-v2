@@ -176,7 +176,7 @@ var FormularioCtrl = (function() {
     var cabHtml = '<div class="reed-list-cab">'
       + '<span>Nome completo</span>'
       + '<span>IPEN</span>'
-      + (comRegime ? '<span>Regime</span><span>Alocação</span>' : '')
+      + (comRegime ? '<span>Regime</span><span>Característica</span>' : '')
       + (comSaude  ? '<span>Saúde</span>' : '')
       + '<span></span>'
       + '</div>';
@@ -195,6 +195,7 @@ var FormularioCtrl = (function() {
       + cabHtml
       + '<div id="reed-rows">' + linhas + '</div>'
       + '<button class="btn-add-reed" onclick="FormularioCtrl.adicionarReed()">+ Adicionar reeducando</button>'
+      + (comRegime ? '<div class="campo-hint">💡 "Característica" corresponde ao campo "Característica de Alocação" exibido na transferência de 1 preso.</div>' : '')
       + '</div>';
   }
 
@@ -209,7 +210,7 @@ var FormularioCtrl = (function() {
   function _selectAloc(i, val) {
     var opts = ['Convívio','Seguro','SEGURO','Não informado'];
     return '<select class="sel-reed" data-ri="' + i + '" data-rf="alocacao">'
-      + '<option value="">Alocação</option>'
+      + '<option value="">Característica</option>'
       + opts.map(function(o) { return '<option' + (val === o ? ' selected' : '') + '>' + o + '</option>'; }).join('')
       + '</select>';
   }
@@ -217,8 +218,8 @@ var FormularioCtrl = (function() {
   /* ── Seção: Unidades ── */
   function _secaoUnidades(s) {
     var html = _btnUnidade('ori', 'Origem', s.ori)
-      + (s.mod !== 'resumo_ipen' ? _btnUnidade('des', 'Destino', s.des) : '');
-    var ok = s.ori && (s.mod === 'resumo_ipen' || s.des);
+      + _btnUnidade('des', 'Destino', s.des);
+    var ok = s.ori && s.des;
     return _secao('unidades', 'Unidades', html, ok ? '✓' : (s.ori || s.des ? '⚠' : '○'), false);
   }
 
@@ -329,7 +330,7 @@ var FormularioCtrl = (function() {
   }
   function _selectAlocPD(i, val) {
     return '<select class="sel-reed" data-pdi="' + i + '" data-pdf="alocacao">'
-      + '<option value="">Alocação</option>'
+      + '<option value="">Característica</option>'
       + ['Convívio','Seguro','SEGURO','Não informado'].map(function(o) {
           return '<option' + (val === o ? ' selected' : '') + '>' + o + '</option>';
         }).join('')
