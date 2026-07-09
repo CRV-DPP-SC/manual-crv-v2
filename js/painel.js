@@ -26,7 +26,8 @@ const db   = getFirestore(app);
 const EMAILS_CRV = [
   'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
   'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com'
+  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com',
+  'crv@pp.sc.gov.br'
 ];
 
 // ── ESTADO ──

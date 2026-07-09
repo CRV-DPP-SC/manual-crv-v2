@@ -32,7 +32,8 @@ const EMAILS_CRV = [
   'jessicaveiga9@gmail.com',
   'day.sestren88@gmail.com',
   'sepen@pp.sc.gov.br',
-  'leilakfarias@gmail.com'
+  'leilakfarias@gmail.com',
+  'crv@pp.sc.gov.br'
 ];
 const SENHA_TEMPORARIA = '12345crv';
 let usuarioAtual = null;

@@ -29,7 +29,8 @@ const ONESIGNAL_APP_ID = 'd8932eb7-fa75-4f11-b0a2-68974e0afe42';
 const EMAILS_CRV = [
   'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
   'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com'
+  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com',
+  'crv@pp.sc.gov.br'
 ];
 
 function _podeSinalizar(email) {
