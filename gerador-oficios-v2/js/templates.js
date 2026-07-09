@@ -378,12 +378,12 @@ function gerarTextoResumo(s) {
     permuta:     'permuta entre unidades, amparado no art. 21, inciso III',
     prisaocivil: 'transferência de preso civil, modalidade especializada',
     comunicacao: 'comunicação de transferência, nos termos do art. 16',
-    resumo_ipen: 'transferência, com resumo sintético administrativo (sem ofício)',
+    resumo_ipen: 'transferência',
   };
   var artMod = modLabels[s.mod] || 'transferência';
   if (s.mod === 'resumo_ipen') {
-    if (s.sub === 'art1')      artMod = 'transferência emergencial, amparada no art. 21, inciso I, com resumo sintético administrativo (sem ofício)';
-    else if (s.sub === 'art3') artMod = 'transferência, amparada no art. 21, inciso III, com resumo sintético administrativo (sem ofício)';
+    if (s.sub === 'art1')      artMod = 'transferência emergencial, amparada no art. 21, inciso I';
+    else if (s.sub === 'art3') artMod = 'transferência, amparada no art. 21, inciso III';
   }
   var motivo = '', criterio = '';
 

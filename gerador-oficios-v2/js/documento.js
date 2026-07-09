@@ -125,11 +125,14 @@ function rod(s) {
 function montarOficio(s) {
   if (!s || !s.mod) return '';
 
-  /* resumo_ipen não gera ofício */
+  /* resumo_ipen não gera ofício — mostra a pré-visualização do texto do resumo */
   if (s.mod === 'resumo_ipen') {
-    return '<div class="preview-placeholder" style="padding:2rem;">'
-      + '<p>Este modo gera apenas o <strong>Resumo Sintético IPEN</strong>.<br>'
-      + 'Preencha os campos e clique em <strong>📄 Resumo IPEN</strong> para visualizar e copiar o texto.</p>'
+    return '<div style="padding:2rem;">'
+      + '<div style="background:#fff;border:1px solid var(--borda);border-radius:8px;padding:1.5rem;max-width:700px;margin:0 auto;">'
+        + '<div style="font-size:.75rem;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px;">📄 Pré-visualização do Resumo Sintético</div>'
+        + '<p style="font-size:.9rem;line-height:1.7;text-align:justify;color:var(--texto);">' + _esc(gerarTextoResumo(s)) + '</p>'
+      + '</div>'
+      + '<p style="text-align:center;font-size:.8rem;color:#888;margin-top:14px;">Este modo não gera ofício. Clique em <strong>📄 Resumo IPEN</strong> para copiar o texto.</p>'
       + '</div>';
   }
 
