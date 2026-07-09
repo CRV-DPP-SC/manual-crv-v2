@@ -334,7 +334,7 @@ img { max-width: 100%; display: block; }
   border: none;
   border-radius: 6px;
   font-family: inherit;
-  font-size: .78rem;
+  font-size: .875rem;
   font-weight: 600;
   color: rgba(255,255,255,.75);
   cursor: pointer;
@@ -358,7 +358,7 @@ img { max-width: 100%; display: block; }
   border: none;
   border-radius: 5px;
   font-family: inherit;
-  font-size: .74rem;
+  font-size: .875rem;
   color: rgba(255,255,255,.6);
   cursor: pointer;
   text-align: left;
@@ -370,6 +370,9 @@ img { max-width: 100%; display: block; }
   margin-bottom: 1px;
 }
 .nav-sub-item:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+.nav-sub-item-destaque { color: var(--azul-300); font-weight: 600; }
+.nav-sub-item-destaque:hover { color: var(--azul-100); }
 
 .sidebar-rodape {
   margin-top: auto;
