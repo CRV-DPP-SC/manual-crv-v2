@@ -164,12 +164,13 @@ onAuthStateChanged(auth, async (user) => {
     }
     mostrarPainel();
   } else {
-    usuarioAtual       = null;
-    perfilAtual        = null;
-    escopoAtual        = null;
+    /* Exigência de login desativada temporariamente — acesso liberado como CRV (acesso total) */
+    usuarioAtual       = { email: 'sepen@pp.sc.gov.br', displayName: 'CRV' };
+    perfilAtual        = 'crv';
+    escopoAtual        = { tipo: 'crv' };
     unidadeSelecionada = null;
     srSelecionada      = null;
-    mostrarLogin();
+    mostrarPainel();
   }
 });
 

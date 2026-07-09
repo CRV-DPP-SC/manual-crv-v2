@@ -67,7 +67,8 @@ function _mostrarTopbarVisitante() {
   const btnS = document.getElementById('sidebar-btn-senha');
   if (btnS) btnS.style.display = 'none';
   _mostrarSubMenuCRV(false);
-  _mostrarSubMenuPainel(false);
+  /* Submenu de Ferramentas (Gerador de Ofícios/PAD) liberado sem login — bypass temporário */
+  _mostrarSubMenuPainel(true);
 }
 
 function _iniciaisPerfil(email) {
@@ -186,9 +187,7 @@ onAuthStateChanged(auth, (user) => {
     if (info) info.textContent = 'Conectado como: ' + (user.email || '');
   } else {
     _mostrarTopbarVisitante();
-    setTimeout(() => {
-      if (!auth.currentUser) _abrirModal('modal-login');
-    }, 800);
+    /* Popup automático de login desativado temporariamente — reativar quando o Painel entrar no ar */
   }
 });
 
