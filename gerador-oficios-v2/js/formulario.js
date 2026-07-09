@@ -327,6 +327,7 @@ var FormularioCtrl = (function() {
   function _secaoPermutaDes(s) {
     var lista = s.permutaDes || [];
     var html = '<div class="campo-label">Presos indicados pela unidade de destino (opcional)</div>'
+      + _textarea('motPermutaDes', 'Critério de escolha/indicação — Unidade de Destino', s.motPermutaDes, 'Ex.: Perfil compatível, pena similar', false)
       + '<div id="permuta-des-list">'
       + lista.map(function(r, i) {
           return '<div class="reed-row" id="pdes-row-' + i + '">'

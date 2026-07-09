@@ -249,8 +249,9 @@ function gerarCorpo(s) {
 
   /* ── PERMUTA ── */
   else if (s.mod === 'permuta') {
-    var motPerm  = s.motTransfPermuta ? fld(s.motTransfPermuta) : ph('motivo da permuta');
-    var critPerm = s.motPermuta ? fld(s.motPermuta) : ph('critério de escolha');
+    var motPerm    = s.motTransfPermuta ? fld(s.motTransfPermuta) : ph('motivo da permuta');
+    var critPerm   = s.motPermuta ? fld(s.motPermuta) : ph('critério de escolha');
+    var critPermDes = s.motPermutaDes ? fld(s.motPermutaDes) : ph('critério de escolha — destino');
     var pDesPerm = '';
     var temDes   = s.permutaDes && s.permutaDes.length > 0;
     var desUnico = temDes && s.permutaDes.length === 1;
@@ -259,9 +260,9 @@ function gerarCorpo(s) {
 
     if (desUnico) {
       var pd = s.permutaDes[0];
-      pDesPerm = 'Em contrapartida, a ' + nDes + ' encaminhará o(a) reeducando(a) ' + fld(pd.nome ? pd.nome.toUpperCase() : ph('Nome')) + ', IPEN nº ' + fld(pd.ipen || ph('IPEN')) + ', situação penal: ' + fld(pd.regime || ph('regime')) + ', característica de alocação: ' + fld(pd.alocacao || ph('alocação')) + ', pelo mesmo motivo: ' + motPerm + '.';
+      pDesPerm = 'Em contrapartida, a ' + nDes + ' encaminhará o(a) reeducando(a) ' + fld(pd.nome ? pd.nome.toUpperCase() : ph('Nome')) + ', IPEN nº ' + fld(pd.ipen || ph('IPEN')) + ', situação penal: ' + fld(pd.regime || ph('regime')) + ', característica de alocação: ' + fld(pd.alocacao || ph('alocação')) + ', com base no seguinte critério de escolha/indicação: ' + critPermDes + '.';
     } else if (desMulti) {
-      pDesPerm = 'Em contrapartida, a ' + nDes + ' encaminhará os(as) reeducandos(as) relacionados(as) no <strong>Anexo ' + numAneII + '</strong> deste ofício, pelo mesmo motivo: ' + motPerm + '.';
+      pDesPerm = 'Em contrapartida, a ' + nDes + ' encaminhará os(as) reeducandos(as) relacionados(as) no <strong>Anexo ' + numAneII + '</strong> deste ofício, com base no seguinte critério de escolha/indicação: ' + critPermDes + '.';
     }
 
     if (isMulti) {
