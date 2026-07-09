@@ -142,7 +142,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="III"      onclick="selMod('III')"><div class="rd"><div class="rdi"></div></div><div class="rl">Art. 21, inciso III<small>Adequação da capacidade de ocupação</small></div></div>
           <div class="ri" data-v="PERMUTA"  onclick="selMod('PERMUTA')"><div class="rd"><div class="rdi"></div></div><div class="rl">Permuta<small>Transferência em permuta entre unidades</small></div></div>
           <div class="ri" data-v="PERNOITE" onclick="selMod('PERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Pernoite<small>Medida excepcional administrativa</small></div></div>
-          <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2025 — texto fixo, sem etapas adicionais</small></div></div>
+          <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
         </div>
       </div>
     </div>
@@ -170,9 +170,20 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
       </div>
     </div>
 
-    <!-- 4. PRAZO -->
+    <!-- 4. PAD (Emergencial) -->
+    <div class="sec off" id="s4pad">
+      <div class="sec-head"><div class="sec-num">4</div>Procedimento Administrativo Disciplinar (PAD)</div>
+      <div class="sec-body">
+        <div class="rg" id="gPad">
+          <div class="ri" data-v="com_pad" onclick="selPad('com_pad')"><div class="rd"><div class="rdi"></div></div><div class="rl">📋 Com PAD<small>Falta grave — isolamento preventivo</small></div></div>
+          <div class="ri" data-v="sem_pad" onclick="selPad('sem_pad')"><div class="rd"><div class="rdi"></div></div><div class="rl">⚠ Sem PAD<small>Risco à integridade, sem falta grave</small></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. PRAZO -->
     <div class="sec off" id="s4">
-      <div class="sec-head"><div class="sec-num">4</div>Prazo para efetivação</div>
+      <div class="sec-head"><div class="sec-num">5</div>Prazo para efetivação</div>
       <div class="sec-body">
         <div class="rg h" id="gPrazo">
           <div class="ri" data-v="24 horas" onclick="selPrazo('24 horas')"><div class="rd"><div class="rdi"></div></div><div class="rl">24 horas</div></div>
@@ -184,9 +195,9 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
       </div>
     </div>
 
-    <!-- 5. FINALIDADE -->
+    <!-- 6. FINALIDADE -->
     <div class="sec off" id="s5">
-      <div class="sec-head"><div class="sec-num">5</div>Finalidade do pernoite</div>
+      <div class="sec-head"><div class="sec-num">6</div>Finalidade do pernoite</div>
       <div class="sec-body">
         <div class="rg" id="gFin">
           <div class="ri" data-v="comparecimento em audiência"    onclick="selFin('comparecimento em audiência')"><div class="rd"><div class="rdi"></div></div><div class="rl">⚖️ Audiência</div></div>
@@ -198,18 +209,18 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
       </div>
     </div>
 
-    <!-- 6. SGPe -->
+    <!-- 7. SGPe -->
     <div class="sec off" id="s6">
-      <div class="sec-head"><div class="sec-num">6</div>Nº do Processo SGPe</div>
+      <div class="sec-head"><div class="sec-num">7</div>Nº do Processo SGPe</div>
       <div class="sec-body">
         <label class="inp-label">Número do processo referenciado</label>
         <input id="iSgpe" class="inp" type="text" placeholder="Ex.: SEJURI 123456/2026" oninput="S.sgpe=this.value;render()">
       </div>
     </div>
 
-    <!-- 7. MOTIVOS -->
+    <!-- 8. MOTIVOS -->
     <div class="sec off" id="s7">
-      <div class="sec-head"><div class="sec-num">7</div><span id="tMot">Motivos</span></div>
+      <div class="sec-head"><div class="sec-num">8</div><span id="tMot">Motivos</span></div>
       <div class="sec-body">
 
         <!-- Fluxo -->
@@ -274,6 +285,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
 // ── ESTADO ────────────────────────────────────────────────────
 var S = {
   mod:null, sub:null, res:null,
+  pad:null,
   prazo:null, prazoCustom:'',
   fin:null, finCustom:'', sgpe:'',
   mot:{ fluxo:false, ass:{ori_dir:false,des_dir:false,ori_sr:false,des_sr:false}, doc:{bpi:false,saude:false,mandado:false,despacho:false,outros:false}, docOutros:'' }
@@ -284,9 +296,9 @@ var DOC = { bpi:'BPI — Boletim Penal Informativo', saude:'Formulário de Saúd
 
 // ── SELEÇÃO ───────────────────────────────────────────────────
 function selMod(v){
-  S.mod=v; S.sub=null; S.res=null; S.prazo=null; S.prazoCustom=''; S.fin=null; S.finCustom=''; S.sgpe='';
+  S.mod=v; S.sub=null; S.res=null; S.pad=null; S.prazo=null; S.prazoCustom=''; S.fin=null; S.finCustom=''; S.sgpe='';
   resetMot();
-  rg('gSub',null); rg('gRes',null); rg('gPrazo',null); rg('gFin',null);
+  rg('gSub',null); rg('gRes',null); rg('gPad',null); rg('gPrazo',null); rg('gFin',null);
   g('iPrazo').style.display='none'; g('iPrazo').value='';
   g('iFin').style.display='none'; g('iFin').value='';
   g('iSgpe').value='';
@@ -295,15 +307,16 @@ function selMod(v){
 }
 function selSub(v){ S.sub=v; rg('gSub',v); render(); }
 function selRes(v){
-  S.res=v; S.prazo=null; S.prazoCustom=''; S.fin=null; S.finCustom=''; S.sgpe='';
+  S.res=v; S.pad=null; S.prazo=null; S.prazoCustom=''; S.fin=null; S.finCustom=''; S.sgpe='';
   resetMot();
   rg('gRes',v, v==='def'?'sel-v':v==='ind'?'sel-r':'sel-a');
-  rg('gPrazo',null); rg('gFin',null);
+  rg('gPad',null); rg('gPrazo',null); rg('gFin',null);
   g('iPrazo').style.display='none'; g('iPrazo').value='';
   g('iFin').style.display='none'; g('iFin').value='';
   g('iSgpe').value='';
   ui(); render();
 }
+function selPad(v){ S.pad=v; rg('gPad',v); render(); }
 function selPrazo(v){
   S.prazo=v; S.prazoCustom='';
   rg('gPrazo',v);
@@ -364,6 +377,7 @@ function ui(){
   var dv=g('rDev');
   if(m==='PERMUTA'){ dv.classList.add('dis'); if(r==='dev'){S.res=null;rg('gRes',null);r=null;} }
   else{ dv.classList.remove('dis'); }
+  sec('s4pad', m==='I' && r==='def');
   sec('s4', m==='I' && r==='def');
   sec('s5', m==='PERNOITE' && r==='def');
   sec('s6', m==='PERNOITE' && r==='def' && S.fin==='__transferencia');
@@ -385,6 +399,8 @@ function g(id){ return document.getElementById(id); }
 var PC='Eventuais dúvidas poderão ser esclarecidas pelo telefone/WhatsApp do plantão: (48) 3665-7330, disponível 24 horas, ou no site desta CRV: https://crv-dpp-sc.github.io/manual/ (menus "Hipóteses", "Fluxo Operacional" e "Documentos").';
 var PCOM='Após a efetivação da transferência, os estabelecimentos penais deverão comunicar ao Juízo competente no prazo máximo de 24 (vinte e quatro) horas em dias úteis, ou no primeiro dia útil seguinte caso a movimentação ocorra em fim de semana ou feriado, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
 var PHIG='A unidade prisional de origem deverá encaminhar, no momento da remoção, os itens de higiene pessoal e os uniformes fornecidos ao reeducando.';
+var PAD_SEM='Ressalta-se que, não havendo instauração de Procedimento Administrativo Disciplinar (PAD), não poderá haver suspensão ou restrição dos direitos previstos no art. 41 da Lei de Execução Penal, especialmente os incisos V, X e XV, os quais somente poderão ser suspensos ou restringidos mediante ato motivado do Juízo da Execução, conforme dispõe o art. 41, § 1º, da referida Lei.';
+var PAD_COM='Havendo instauração de Procedimento Administrativo Disciplinar (PAD), o(a) reeducando(a) poderá ser mantido(a) em cela de isolamento pelo prazo de até 10 (dez) dias. Caso o PAD seja concluído dentro desse prazo e julgado procedente, o isolamento poderá ser complementado por até mais 20 (vinte) dias.';
 var INC={'I':'art. 21, inciso I (gerenciamento de crises ou emergências)','II':'art. 21, inciso II (pedido da pessoa privada de liberdade ou familiar)','III':'art. 21, inciso III (adequação da capacidade de ocupação)'};
 
 function motLista(){
@@ -403,8 +419,8 @@ function gerar(){
   // PROC
   if(m==='PROC') return {
     badge:'❌ INDEFERIDO', bc:'bind',
-    subtit:'Inobservância de Procedimentos — Reunião de 05/05/2025',
-    txt:'Indefere-se o pedido por inobservância das regras estabelecidas e convencionadas em reunião realizada em 05 de maio de 2025, notadamente a obrigatoriedade de elaboração do ofício por meio do Gerador disponível no site desta CRV (https://crv-dpp-sc.github.io/manual/) e do preenchimento do campo "Observação" com o texto do Resumo Sintético gerado ao final do ofício, o qual reúne todas as informações da transferência.\n\nNovo pedido poderá ser formulado com a observância integral dos referidos procedimentos.'
+    subtit:'Inobservância de Procedimentos — Reunião de 05/05/2026',
+    txt:'Indefere-se o pedido por inobservância das regras estabelecidas e convencionadas em reunião realizada em 05 de maio de 2026, notadamente a obrigatoriedade de elaboração do ofício por meio do Gerador disponível no site desta CRV (https://crv-dpp-sc.github.io/manual/) e do preenchimento do campo "Observação" com o texto do Resumo Sintético gerado ao final do ofício, o qual reúne todas as informações da transferência.\n\nNovo pedido poderá ser formulado com a observância integral dos referidos procedimentos.'
   };
 
   if(!r) return null;
@@ -459,10 +475,13 @@ function gerar(){
   var sub='Resolução Conjunta Interinstitucional n. 01/2026 — '+linc;
   if(r==='def'){
     var prz=S.prazo==='__outro'?S.prazoCustom:S.prazo;
-    if(m==='I' && !prz) return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:null};
+    if(m==='I' && (!prz || !S.pad)) return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:null};
     var pp=['Trata-se de pedido de transferência administrativa enquadrado no '+linc+', da Resolução Conjunta Interinstitucional n. 01/2026.',
             'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, estando atendidos os requisitos formais e materiais exigidos para a modalidade requerida.'];
-    if(m==='I') pp.push('Por se tratar de situação emergencial, a transferência deverá ser efetivada no prazo máximo de '+prz+', contados da ciência do presente despacho.');
+    if(m==='I'){
+      pp.push('Por se tratar de situação emergencial, a transferência deverá ser efetivada no prazo máximo de '+prz+', contados da ciência do presente despacho.');
+      pp.push(S.pad==='com_pad'?PAD_COM:PAD_SEM);
+    }
     pp.push(PCOM); pp.push(PHIG);
     return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:pp.join('\n\n')};
   }
@@ -545,8 +564,8 @@ function baixarDoc(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);toast('📄 Download iniciado!');
 }
 function limpar(){
-  S={mod:null,sub:null,res:null,prazo:null,prazoCustom:'',fin:null,finCustom:'',sgpe:'',mot:{fluxo:false,ass:{ori_dir:false,des_dir:false,ori_sr:false,des_sr:false},doc:{bpi:false,saude:false,mandado:false,despacho:false,outros:false},docOutros:''}};
-  ['gMod','gSub','gRes','gPrazo','gFin'].forEach(function(id){rg(id,null);});
+  S={mod:null,sub:null,res:null,pad:null,prazo:null,prazoCustom:'',fin:null,finCustom:'',sgpe:'',mot:{fluxo:false,ass:{ori_dir:false,des_dir:false,ori_sr:false,des_sr:false},doc:{bpi:false,saude:false,mandado:false,despacho:false,outros:false},docOutros:''}};
+  ['gMod','gSub','gRes','gPad','gPrazo','gFin'].forEach(function(id){rg(id,null);});
   g('iPrazo').style.display='none';g('iPrazo').value='';
   g('iFin').style.display='none';g('iFin').value='';
   g('iSgpe').value='';
@@ -558,7 +577,7 @@ function toast(m){
 }
 
 // BOOT
-['s2','s3','s4','s5','s6','s7'].forEach(function(id){ g(id).style.display='none'; });
+['s2','s3','s4pad','s4','s5','s6','s7'].forEach(function(id){ g(id).style.display='none'; });
 ui();render();
 </script>
 </body>
