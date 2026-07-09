@@ -117,7 +117,7 @@ function gerarAnexoTabela(reed, numAnexo, tituloExtra, saudeOpcao, temRegime, no
 function gerarCorpo(s) {
   var ps = [];
 
-  if (!s.mod) return p(ph('Selecione o tipo de ofício para visualizar o documento.'));
+  if (!s.mod) return [p(ph('Selecione o tipo de ofício para visualizar o documento.'))];
 
   var o = s.ori, d = s.des;
   var isMulti = s.numero === 'P' && s.reed && s.reed.length > 0;
@@ -358,10 +358,13 @@ function gerarCorpo(s) {
 
   /* ── RESUMO IPEN (não gera ofício — tela mostra mensagem) ── */
   else if (s.mod === 'resumo_ipen') {
-    return p('Este modo gera apenas o Resumo Sintético — não há ofício a visualizar. Preencha os campos e clique em <strong>Resumo IPEN</strong>.');
+    return [p('Este modo gera apenas o Resumo Sintético — não há ofício a visualizar. Preencha os campos e clique em <strong>Resumo IPEN</strong>.')];
   }
 
-  return ps.map(p).join(lb(1));
+  /* Retorna um array de parágrafos (um por bloco) — cada um vira uma <tr>
+     própria em montarOficio(), para que a quebra de página aconteça sempre
+     entre parágrafos, nunca no meio de um bloco de texto único. */
+  return ps.map(p);
 }
 
 /* ── Injeta parágrafos de saúde antes do último parágrafo ── */

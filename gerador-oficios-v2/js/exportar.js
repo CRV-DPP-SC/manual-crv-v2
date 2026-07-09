@@ -14,14 +14,17 @@ function getCSS() {
       'header,footer,.ofc-no-print,.page-break-preview{display:none!important}',
       '.ofc-placeholder{display:none}',
       '#oficio{min-height:0!important;border:none!important;box-shadow:none!important}',
-      /* Tabela: ocupa 100% da altura da página para ancorar rodapé no final */
-      '.ofc-table{width:100%;height:100%}',
+      /* Tabela: ocupa a largura da página; altura fica natural — o <tfoot>
+         já repete nativamente ao final de cada página impressa */
+      '.ofc-table{width:100%}',
       '.ofc-hcell,.ofc-fcell,.ofc-bcell{border:none!important}',
       /* Cabeçalho e rodapé: padding via célula */
       '.ofc-hcell{padding:0.3cm 0 0.2cm 0}.ofc-cab img{height:36pt!important}',
       '.ofc-fcell{padding:0.15cm 0 0.2cm 0}',
-      /* Corpo: padding superior leve */
-      '.ofc-bcell{padding:0.3cm 0 0 0;vertical-align:top}',
+      /* Corpo: sem padding entre blocos — cada bloco é sua própria linha;
+         só a primeira ganha o respiro em relação ao cabeçalho */
+      '.ofc-bcell{padding:0;vertical-align:top}',
+      '.ofc-bcell-primeira{padding-top:0.3cm}',
       '.oficio-corpo{padding:0}',
       /* Espaços em branco */
       '.lb{height:11pt!important;line-height:11pt!important}',

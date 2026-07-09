@@ -136,9 +136,28 @@ function montarOficio(s) {
       + '</div>';
   }
 
-  var corpo  = gerarCorpo(s);
-  var ec     = s.mod === 'comunicacao';
-  var anexos = _gerarAnexos(s);
+  var corpoPs = gerarCorpo(s);
+  var ec      = s.mod === 'comunicacao';
+  var anexos  = _gerarAnexos(s);
+
+  /* Cada bloco do corpo vira uma <tr> própria — a quebra de página do
+     navegador cai sempre ENTRE linhas (bem suportado), nunca no meio de
+     uma única célula gigante (que é onde o cabeçalho "pulava" para o
+     meio do texto na 2ª página). O último parágrafo do corpo leva o
+     espaçamento maior (lb(4)) que antes ficava depois do bloco inteiro. */
+  var blocos = [numData(s) + lb(4), '<div class="ofc-sau">' + (s.sau || ph('Saudação')) + '</div>' + lb(4)]
+    .concat(corpoPs.map(function(par, i) {
+      return par + (i === corpoPs.length - 1 ? lb(4) : lb(1));
+    }))
+    .concat([
+      '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>' + lb(5),
+      blocoAss(s) + lb(4),
+      ec ? dJuizo(s) : dCRV(),
+    ]);
+
+  var linhas = blocos.map(function(conteudo, i) {
+    return '<tr><td class="ofc-bcell' + (i === 0 ? ' ofc-bcell-primeira' : '') + '">' + conteudo + '</td></tr>';
+  }).join('');
 
   return '<div id="oficio">'
     + '<table class="ofc-table">'
@@ -146,17 +165,8 @@ function montarOficio(s) {
       + '<thead><tr><td class="ofc-hcell">' + cab(s) + '</td></tr></thead>'
       /* ── Rodapé — repete em cada página ── */
       + '<tfoot><tr><td class="ofc-fcell">' + rod(s) + '</td></tr></tfoot>'
-      /* ── Corpo ── */
-      + '<tbody><tr><td class="ofc-bcell">'
-        + '<div class="oficio-corpo">'
-        + numData(s) + lb(4)
-        + '<div class="ofc-sau">' + (s.sau || ph('Saudação')) + '</div>' + lb(4)
-        + corpo + lb(4)
-        + '<div class="ofc-desp">' + (s.desp || ph('Fechamento')) + '</div>' + lb(5)
-        + blocoAss(s) + lb(4)
-        + (ec ? dJuizo(s) : dCRV())
-        + '</div>'
-      + '</td></tr></tbody>'
+      /* ── Corpo — uma linha por bloco ── */
+      + '<tbody>' + linhas + '</tbody>'
     + '</table>'
     + anexos
     + '</div>';

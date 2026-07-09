@@ -318,10 +318,14 @@
     padding: 0.15cm 0 0.2cm 0;
   }
 
-  /* Corpo: apenas padding inferior (rodapé cuida do fundo) */
+  /* Corpo: sem padding entre blocos — cada bloco é sua própria linha */
   .ofc-bcell {
-    padding: 0.3cm 0 0 0;
+    padding: 0;
     vertical-align: top;
+  }
+  /* Só a primeira linha do corpo ganha o respiro em relação ao cabeçalho */
+  .ofc-bcell-primeira {
+    padding-top: 0.3cm;
   }
 
   /* Corpo do ofício: sem padding extra */
