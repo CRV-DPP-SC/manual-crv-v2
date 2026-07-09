@@ -400,7 +400,7 @@ var PC='Eventuais dúvidas poderão ser esclarecidas pelo telefone/WhatsApp do p
 var PCOM='Após a efetivação da transferência, os estabelecimentos penais deverão comunicar ao Juízo competente no prazo máximo de 24 (vinte e quatro) horas em dias úteis, ou no primeiro dia útil seguinte caso a movimentação ocorra em fim de semana ou feriado, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
 var PHIG='A unidade prisional de origem deverá encaminhar, no momento da remoção, os itens de higiene pessoal e os uniformes fornecidos ao reeducando.';
 var PAD_SEM='Ressalta-se que, não havendo instauração de Procedimento Administrativo Disciplinar (PAD), não poderá haver suspensão ou restrição dos direitos previstos no art. 41 da Lei de Execução Penal, especialmente os incisos V, X e XV, os quais somente poderão ser suspensos ou restringidos mediante ato motivado do Juízo da Execução, conforme dispõe o art. 41, § 1º, da referida Lei.';
-var PAD_COM='Havendo instauração de Procedimento Administrativo Disciplinar (PAD), o(a) reeducando(a) poderá ser mantido(a) em cela de isolamento pelo prazo de até 10 (dez) dias. Caso o PAD seja concluído dentro desse prazo e julgado procedente, o isolamento poderá ser complementado por até mais 20 (vinte) dias.';
+var PAD_COM='Ressalta-se que, havendo instauração de Procedimento Administrativo Disciplinar (PAD), o(a) reeducando(a) poderá ser mantido(a) em cela de isolamento pelo prazo de até 10 (dez) dias. Caso o PAD seja concluído dentro desse prazo e julgado procedente, o isolamento poderá ser complementado por até mais 20 (vinte) dias.';
 var INC={'I':'art. 21, inciso I (gerenciamento de crises ou emergências)','II':'art. 21, inciso II (pedido da pessoa privada de liberdade ou familiar)','III':'art. 21, inciso III (adequação da capacidade de ocupação)'};
 
 function motLista(){
@@ -479,8 +479,8 @@ function gerar(){
     var pp=['Trata-se de pedido de transferência administrativa enquadrado no '+linc+', da Resolução Conjunta Interinstitucional n. 01/2026.',
             'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, estando atendidos os requisitos formais e materiais exigidos para a modalidade requerida.'];
     if(m==='I'){
-      pp.push('Por se tratar de situação emergencial, a transferência deverá ser efetivada no prazo máximo de '+prz+', contados da ciência do presente despacho.');
       pp.push(S.pad==='com_pad'?PAD_COM:PAD_SEM);
+      pp.push('Por se tratar de situação emergencial, a transferência deverá ser efetivada no prazo máximo de '+prz+', contados da ciência do presente despacho.');
     }
     pp.push(PCOM); pp.push(PHIG);
     return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:pp.join('\n\n')};
