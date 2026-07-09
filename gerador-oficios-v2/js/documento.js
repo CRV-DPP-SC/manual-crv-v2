@@ -46,6 +46,18 @@ function ass(nome, cargo, unidade, ultimo) {
 /* ── Bloco de assinaturas completo ── */
 function blocoAss(s) {
   var o = s.ori, d = s.des, lista = [];
+
+  /* Comunicação: assina apenas a unidade comunicante (saída = origem; entrada = destino) */
+  if (s.mod === 'comunicacao') {
+    var comunicante = s.sub === 'entrada' ? d : o;
+    lista.push(comunicante
+      ? {n: comunicante.dir || '', cg: comunicante.cg || 'Diretor(a)', un: comunicante.n}
+      : {n: ph('Nome do Diretor(a)'), cg: 'Diretor(a)', un: ph('Unidade Comunicante')});
+    return lista.map(function(a, i) {
+      return ass(a.n, a.cg, a.un, i === lista.length - 1);
+    }).join('');
+  }
+
   if (o) lista.push({n: o.dir || '', cg: o.cg || 'Diretor(a)', un: o.n});
   if (s.dd && d) lista.push({n: d.dir || '', cg: d.cg || 'Diretor(a)', un: d.n});
   if (s.sro && o) {

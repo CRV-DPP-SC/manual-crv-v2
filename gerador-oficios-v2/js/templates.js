@@ -309,13 +309,13 @@ function gerarCorpo(s) {
     if (s.sub === 'saida') {
       if (isMulti) {
         ps = [
-          'Comunica-se a Vossa Excelência que os(as) custodiados(as) relacionados(as) no Anexo I deste ofício foram transferidos(as) desta unidade — ' + nOri + ' — para ' + nDes + ', em ' + (d ? fld(d.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.',
+          'Comunica-se a Vossa Excelência que os(as) custodiados(as) relacionados(as) no Anexo I deste ofício foram transferidos(as) desta unidade — ' + nOri + ' — para ' + nDes + ', em ' + (d ? fld(d.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + '.',
           'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motC + '.',
           'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.',
         ];
       } else {
         ps = [
-          'Comunica-se a Vossa Excelência que ' + cust(s) + ' ' + nomePreso + ', IPEN nº ' + ipenPreso + ', ' + foi(s) + ' ' + transf(s) + ' desta unidade — ' + nOri + ' — para ' + nDes + ', em ' + (d ? fld(d.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.',
+          'Comunica-se a Vossa Excelência que ' + cust(s) + ' ' + nomePreso + ', IPEN nº ' + ipenPreso + ', ' + foi(s) + ' ' + transf(s) + ' desta unidade — ' + nOri + ' — para ' + nDes + ', em ' + (d ? fld(d.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + '.',
           'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motC + '.',
           'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.',
         ];
@@ -323,13 +323,13 @@ function gerarCorpo(s) {
     } else { /* entrada */
       if (isMulti) {
         ps = [
-          'Comunica-se a Vossa Excelência que os(as) custodiados(as) relacionados(as) no Anexo I deste ofício ingressaram nesta unidade — ' + nDes + ' —, oriundos(as) de ' + nOri + ', em ' + (o ? fld(o.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.',
+          'Comunica-se a Vossa Excelência que os(as) custodiados(as) relacionados(as) no Anexo I deste ofício ingressaram nesta unidade — ' + nDes + ' —, oriundos(as) de ' + nOri + ', em ' + (o ? fld(o.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + '.',
           'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motC + '.',
           'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.',
         ];
       } else {
         ps = [
-          'Comunica-se a Vossa Excelência que ' + cust(s) + ' ' + nomePreso + ', IPEN nº ' + ipenPreso + ', ingressou nesta unidade — ' + nDes + ' —, oriundo(a) de ' + nOri + ', em ' + (o ? fld(o.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.',
+          'Comunica-se a Vossa Excelência que ' + cust(s) + ' ' + nomePreso + ', IPEN nº ' + ipenPreso + ', ingressou nesta unidade — ' + nDes + ' —, oriundo(a) de ' + nOri + ', em ' + (o ? fld(o.c + '/SC') : ph('Cidade/SC')) + ', em ' + data + '.',
           'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motC + '.',
           'Ficamos à disposição de Vossa Excelência para quaisquer esclarecimentos.',
         ];

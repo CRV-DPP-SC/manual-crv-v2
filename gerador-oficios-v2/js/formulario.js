@@ -403,7 +403,7 @@ var FormularioCtrl = (function() {
 
   /* ── Seção: BPI ── */
   function _secaoBPI(s) {
-    if (s.mod === 'pernoite') return '';
+    if (s.mod === 'pernoite' || s.mod === 'comunicacao') return '';
     var html = '<div class="chip-group" style="flex-direction:column;align-items:flex-start;">'
       + _chip('bpi','atualizado','✓ BPI atualizado no i-PEN', s.bpi === 'atualizado', true)
       + _chip('bpi','nao_atualizado','⚠ BPI não atualizado', s.bpi === 'nao_atualizado', true)

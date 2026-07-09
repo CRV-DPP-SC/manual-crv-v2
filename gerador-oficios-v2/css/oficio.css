@@ -20,14 +20,21 @@
   max-width: 21cm;
   margin: 0 auto;
   padding: 0;
-  min-height: 27cm;
 }
 
-/* ── Tabela principal — ocupa toda a largura ── */
+/* ── Tabela principal — ocupa toda a largura ──
+   Na tela, simula uma folha A4 (min-height) e serve de referência
+   para o rodapé ficar fixo ao final dela (position:absolute). Na
+   impressão, isso é desfeito: o <tfoot> repete nativamente em cada
+   página impressa. ── */
 .ofc-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+}
+.ofc-table:not(.ofc-table-anexo) {
+  position: relative;
+  min-height: 27cm;
 }
 
 /* Células da tabela sem borda nem padding extra */
@@ -207,11 +214,15 @@
 .ofc-lista li { margin-bottom: 2pt; }
 .ofc-lista-wrap { margin: 0; padding: 0; }
 
-/* ── Rodapé (tela: abaixo do conteúdo; print: position:fixed) ── */
+/* ── Rodapé (tela: fixo ao final da folha; print: repete nativamente via tfoot) ── */
 .ofc-rodape {
   margin-top: 0.5cm;
-  padding: 6px 0 10px;
+  padding: 6px 1.5cm 10px;
   font-family: Arial, sans-serif;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .rod-info {
@@ -279,9 +290,14 @@
     box-shadow: none !important;
   }
 
-  /* Tabela: ocupa a página inteira */
+  /* Tabela: ocupa a página inteira; desfaz o "quadro" de tela —
+     o <tfoot> repete nativamente ao final de cada página impressa */
   .ofc-table {
     width: 100%;
+  }
+  .ofc-table:not(.ofc-table-anexo) {
+    position: static !important;
+    min-height: 0 !important;
   }
 
   /* Células: sem borda */
@@ -293,7 +309,11 @@
   }
   .ofc-cab img { height: 36pt !important; }
 
-  /* Rodapé: padding adequado */
+  /* Rodapé: volta ao fluxo normal da tabela (impressão repete por página) */
+  .ofc-rodape {
+    position: static !important;
+    padding: 0.15cm 0 0.2cm 0;
+  }
   .ofc-fcell {
     padding: 0.15cm 0 0.2cm 0;
   }
