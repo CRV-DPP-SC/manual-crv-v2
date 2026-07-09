@@ -3,11 +3,18 @@
    Funções puras: recebem estado (s) e retornam string HTML.
    ============================================================ */
 
+/* ── Critério de escolha — não punitivo (aplicável a todas as modalidades de transferência) ── */
+function textoCriterioNaoPunitivo(s) {
+  var doReed  = doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas');
+  var sujReed = reed(s);
+  return 'No tocante à escolha ' + doReed + ', registra-se que esta pautou-se em critérios técnicos, objetivos e impessoais, nos termos do art. 16, §§ 3º e 4º, da Resolução Conjunta Interinstitucional n.º 1/2026 e da Circular n.º 002/2026/PPSC/CRV, em anexo, sendo a indicação de responsabilidade exclusiva desta Direção. Nesse sentido, cumpre esclarecer que a presente movimentação não possui caráter punitivo, disciplinar ou de retaliação, em conformidade com o art. 22 da referida Resolução, tampouco decorre de reincidência de transferências, uma vez que ' + sujReed + ' não ' + foi(s) + ' ' + gng(s,'submetido','submetida','submetidos','submetidas') + ' a qualquer outra movimentação nos últimos 30 (trinta) dias, em observância à vedação prevista no art. 16, § 4º, da mesma Resolução.';
+}
+
 /* ── BPI ── */
 function textoBPI(s, sufixo) {
   sufixo = sufixo || '';
   if (s.bpi === 'atualizado') {
-    return 'Para subsidiar a análise, informo a devida atualização do Boletim Penal Informativo — BPI no sistema i-PEN' + sufixo + '.';
+    return 'Para subsidiar a análise, informo ainda a devida atualização do Boletim Penal Informativo — BPI no sistema i-PEN' + sufixo + '.';
   }
   if (s.bpi === 'nao_atualizado') {
     return 'Informa-se que o Boletim Penal Informativo — BPI não se encontra devidamente atualizado no sistema i-PEN, em razão de ' + fld(s.bpiMotivo || ph('motivo')) + '. Compromete-se esta unidade com a atualização em prazo breve' + sufixo + '.';
@@ -21,7 +28,7 @@ function textoBPI(s, sufixo) {
 /* ── Saúde ── */
 function textoSaudeOficio(s, isPlural) {
   if (s.saudeOpcao === 'formulario') {
-    return ['Formulário de Saúde em anexo.'];
+    return ['No tocante à saúde, destaco que segue anexo o respectivo Formulário de Saúde ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + '.'];
   }
   if (s.saudeOpcao === 'sem_profissional') {
     return [isPlural
@@ -128,6 +135,7 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise pedido de transferência ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', em razão do cumprimento de Mandado de Prisão expedido pelo(a) ' + juizo + '.',
         'A transferência ampara-se no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026, e no art. 24 da Portaria Normativa nº 2.189/2025 do Departamento de Polícia Penal, sendo ' + nDes + ' a unidade responsável pela circunscrição da autoridade judiciária expedidora.',
+        textoCriterioNaoPunitivo(s),
         textoBPI(s),
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_PLURAL,
@@ -136,6 +144,7 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise pedido de transferência ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', em razão do cumprimento de Mandado de Prisão expedido pelo(a) ' + juizo + '.',
         'A transferência ampara-se no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026, e no art. 24 da Portaria Normativa nº 2.189/2025 do Departamento de Polícia Penal, sendo ' + nDes + ' a unidade responsável pela circunscrição da autoridade judiciária expedidora.',
+        textoCriterioNaoPunitivo(s),
         textoBPI(s),
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_SINGULAR,
@@ -161,8 +170,9 @@ function gerarCorpo(s) {
         'Encaminho para análise urgente pedido de transferência excepcional ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', em razão de situação emergencial identificada pelas equipes deste estabelecimento penal.',
         'A solicitação fundamenta-se no art. 21, inciso I, da Resolução Conjunta Interinstitucional n. 01/2026, em razão de ' + sit + ', o que torna inviável a permanência dos(as) reeducandos(as) nesta unidade.',
       ].concat(padTxt).concat([
+        textoCriterioNaoPunitivo(s),
         textoBPI(s),
-        'Efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
         TXT_CONTATOS_SUBSCREVEM,
         TXT_DESFECHO_PLURAL_CELERE,
       ]);
@@ -171,8 +181,9 @@ function gerarCorpo(s) {
         'Encaminho para análise urgente pedido de transferência excepcional ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', em razão de situação emergencial identificada pelas equipes deste estabelecimento penal.',
         'A solicitação fundamenta-se no art. 21, inciso I, da Resolução Conjunta Interinstitucional n. 01/2026, em razão de ' + sit + ', o que torna inviável a permanência ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ' nesta unidade.',
       ].concat(padTxt).concat([
+        textoCriterioNaoPunitivo(s),
         textoBPI(s),
-        'Efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
         TXT_CONTATOS_SUBSCREVEM,
         TXT_DESFECHO_SINGULAR_CELERE,
       ]);
@@ -187,12 +198,14 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise pedido de pernoite ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', na unidade de ' + nDes + ', em razão de ' + razP + '.',
         'Foi realizado contato prévio com a gestão da unidade de destino, que subscreve o presente expediente.',
+        textoCriterioNaoPunitivo(s),
         TXT_DESFECHO_PLEITO,
       ];
     } else {
       ps = [
         'Encaminho para análise pedido de pernoite ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', na unidade de ' + nDes + ', em razão de ' + razP + '.',
         'Foi realizado contato prévio com a gestão da unidade de destino, que subscreve o presente expediente.',
+        textoCriterioNaoPunitivo(s),
         TXT_DESFECHO_PLEITO,
       ];
     }
@@ -215,9 +228,10 @@ function gerarCorpo(s) {
         'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento na ' + fundamento + '.',
         'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
         'A transferência justifica-se pela ' + motAdec + '.',
-        'O critério utilizado para a escolha dos(as) reeducandos(as) para a presente transferência foi: ' + critAdec + '.',
+        textoCriterioNaoPunitivo(s),
+        'Com relação ao critério utilizado para a escolha dos(as) reeducandos(as), informa-se: ' + critAdec + '.',
         textoBPI(s),
-        'Efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_PLURAL,
       ];
@@ -226,9 +240,10 @@ function gerarCorpo(s) {
         'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento na ' + fundamento + '.',
         'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
         'A transferência justifica-se pela ' + motAdec + '.',
-        'O critério utilizado para a escolha ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ' para a presente transferência foi: ' + critAdec + '.',
+        textoCriterioNaoPunitivo(s),
+        'Com relação ao critério utilizado para a escolha ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ', informa-se: ' + critAdec + '.',
         textoBPI(s),
-        'Efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_SINGULAR,
       ];
@@ -257,18 +272,20 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise dessa Central de Regulação de Vagas pedido de permuta entre a ' + nOri + ' e a ' + nDes + ', envolvendo os(as) reeducandos(as) relacionados(as) no Anexo I deste ofício, nos termos do art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026.',
         'A medida visa à ' + motPerm + '.',
-        'O critério utilizado para a escolha dos(as) reeducandos(as) para a presente permuta foi: ' + critPerm + '.',
+        textoCriterioNaoPunitivo(s),
+        'Com relação ao critério utilizado para a escolha dos(as) reeducandos(as), informa-se: ' + critPerm + '.',
       ];
     } else {
       ps = [
         'Encaminho para análise dessa Central de Regulação de Vagas pedido de permuta entre a ' + nOri + ' e a ' + nDes + ', envolvendo ' + nomeRef + ', nos termos do art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026.',
         'A medida visa à ' + motPerm + '.',
-        'O critério utilizado para a escolha ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ' para a presente permuta foi: ' + critPerm + '.',
+        textoCriterioNaoPunitivo(s),
+        'Com relação ao critério utilizado para a escolha ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ', informa-se: ' + critPerm + '.',
       ];
     }
     if (pDesPerm) ps.push(pDesPerm);
     ps.push(textoBPI(s));
-    ps.push('Efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.');
+    ps.push('Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.');
     ps.push(TXT_CONTATOS_ANUEM);
     ps = _injetarSaude(s, ps, isMulti, true);
     ps.push(TXT_DESFECHO_PERMUTA);
@@ -284,8 +301,9 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise e deliberação da Central de Regulação de Vagas — CRV/DPP pedido de transferência dos(as) presos(as) civis relacionados(as) no Anexo I deste ofício, atualmente custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', unidade prisional com estrutura adequada para o recebimento e custódia de presos civis.',
         'A presente solicitação fundamenta-se na natureza específica da prisão civil, modalidade de privação de liberdade distinta da prisão penal, cujo caráter não é sancionatório, mas coercitivo, visando ao cumprimento de obrigação legal. Nessa perspectiva, é imprescindível que as pessoas privadas de liberdade sob essa modalidade sejam custodiadas em unidade prisional adequada e especializada para tanto.',
+        textoCriterioNaoPunitivo(s),
         bpiCivil,
-        'Efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_CIVIL_PLURAL,
       ];
@@ -293,8 +311,9 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise e deliberação da Central de Regulação de Vagas — CRV/DPP pedido de transferência ' + doA(s) + ' ' + gng(s,'preso','presa','presos','presas') + ' civil ' + nomePreso + ', IPEN Nº ' + ipenPreso + ', atualmente ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', unidade prisional com estrutura adequada para o recebimento e custódia de preso(a) civil.',
         'A presente solicitação fundamenta-se na natureza específica da prisão civil, modalidade de privação de liberdade distinta da prisão penal, cujo caráter não é sancionatório, mas coercitivo, visando ao cumprimento de obrigação legal. Nessa perspectiva, é imprescindível que a pessoa privada de liberdade sob essa modalidade seja custodiada em unidade prisional adequada e especializada para tanto.',
+        textoCriterioNaoPunitivo(s),
         bpiCivil,
-        'Efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_CIVIL_SINGULAR,
       ];

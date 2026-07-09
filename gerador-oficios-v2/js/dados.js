@@ -94,13 +94,13 @@ const FALTAS = [
 
 /* ── Constantes de texto institucional ── */
 const TXT_CONTATOS_ANUEM =
-  'Foram realizados contatos prévios com o(a) Diretor(a) da unidade de destino e o(s) respectivo(s) Superintendente(s) Regional(is), que anuem ao presente expediente.';
+  'No que concerne à articulação prévia, foram realizados contatos com o(a) Diretor(a) da unidade de destino e o(s) respectivo(s) Superintendente(s) Regional(is), que anuem ao presente expediente.';
 
 const TXT_CONTATOS_SUBSCREVEM =
-  'Foram realizados contatos prévios com o(a) Diretor(a) da unidade de destino e o(s) respectivo(s) Superintendente(s) Regional(is), que subscrevem o presente expediente.';
+  'No que concerne à articulação prévia, foram realizados contatos com o(a) Diretor(a) da unidade de destino e o(s) respectivo(s) Superintendente(s) Regional(is), que subscrevem o presente expediente.';
 
 const TXT_CONTATOS_PERMUTA =
-  'Foram realizados contatos prévios com os entes envolvidos, quais sejam, o(a) Diretor(a) da Unidade Prisional de destino e o(s) respectivo(s) Superintendente(s) Regional(is), que subscrevem ou anuem ao presente expediente.';
+  'No que concerne à articulação prévia, foram realizados contatos com os entes envolvidos, quais sejam, o(a) Diretor(a) da Unidade Prisional de destino e o(s) respectivo(s) Superintendente(s) Regional(is), que subscrevem ou anuem ao presente expediente.';
 
 const TXT_DESFECHO_PLURAL          = 'Diante do exposto, solicita-se a análise e deliberação da Central de Regulação de Vagas quanto à viabilidade das transferências.';
 const TXT_DESFECHO_SINGULAR        = 'Diante do exposto, solicita-se a análise e deliberação da Central de Regulação de Vagas quanto à viabilidade da transferência.';
