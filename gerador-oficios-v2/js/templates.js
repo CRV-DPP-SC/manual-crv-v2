@@ -381,6 +381,10 @@ function gerarTextoResumo(s) {
     resumo_ipen: 'transferência, com resumo sintético administrativo (sem ofício)',
   };
   var artMod = modLabels[s.mod] || 'transferência';
+  if (s.mod === 'resumo_ipen') {
+    if (s.sub === 'art1')      artMod = 'transferência emergencial, amparada no art. 21, inciso I, com resumo sintético administrativo (sem ofício)';
+    else if (s.sub === 'art3') artMod = 'transferência, amparada no art. 21, inciso III, com resumo sintético administrativo (sem ofício)';
+  }
   var motivo = '', criterio = '';
 
   if (s.mod === 'emergencial')  { motivo = s.sit || 'situação emergencial'; criterio = 'transferência emergencial, sem critério eletivo de escolha'; }

@@ -18,7 +18,7 @@ var FormularioCtrl = (function() {
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
       + _card('prisaocivil', '⚖', 'Prisão Civil', 'Especializada')
       + _card('comunicacao', '📨', 'Comunicação', 'Art. 16')
-      + _card('resumo_ipen', '📄', 'Resumo Sintético IPEN', 'Sem ofício')
+      + _card('resumo_ipen', '📄', 'Resumo Sintético IPEN', 'Art. 21, I / III', 'Sem ofício')
       + '</div>';
   }
 
@@ -104,17 +104,19 @@ var FormularioCtrl = (function() {
   /* ── Seção: Subtipo ── */
   function _secaoSubtipo(s) {
     var mod = s.mod;
-    if (!['emergencial','adequacao','ajuste_lotacional','comunicacao'].includes(mod)) return '';
+    if (!['emergencial','adequacao','ajuste_lotacional','comunicacao','resumo_ipen'].includes(mod)) return '';
     var opts = [];
     if (mod === 'emergencial') opts = [['com_pad','📋 Com PAD — falta grave'],['sem_pad','⚠ Sem PAD — risco à integridade']];
     if (mod === 'adequacao' || mod === 'ajuste_lotacional') opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime']];
     if (mod === 'comunicacao') opts = [['saida','🚀 Saída — preso saiu desta unidade'],['entrada','🏠 Entrada — preso chegou nesta unidade']];
+    if (mod === 'resumo_ipen') opts = [['art1','🚨 Art. 21, I — Emergencial'],['art3','⚖ Art. 21, III — Demais hipóteses']];
 
+    var titulo = mod === 'resumo_ipen' ? 'Hipótese de Transferência' : 'Subtipo';
     var chips = opts.map(function(o) {
       return '<button class="chip' + (s.sub === o[0] ? ' sel' : '') + '" data-field="sub" data-val="' + o[0] + '">' + o[1] + '</button>';
     }).join('');
 
-    return _secao('sub', 'Subtipo', chips, s.sub ? '✓' : '○', !s.sub);
+    return _secao('sub', titulo, chips, s.sub ? '✓' : '○', !s.sub);
   }
 
   /* ── Seção: Reeducando(s) ── */
