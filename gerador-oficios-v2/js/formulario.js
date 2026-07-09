@@ -209,8 +209,8 @@ var FormularioCtrl = (function() {
 
   var ALOC_OPTS = [
     { v: 'Convívio',     icon: '👥' },
-    { v: 'Seguro',       icon: '🛡' },
-    { v: 'SEGURO',       icon: '🛡' },
+    { v: 'Seguro',       icon: '🛡️' },
+    { v: 'SEGURO',       icon: '🛡️', style: 'color:#dc2626;font-weight:700;' },
     { v: 'Não informado',icon: '❓' },
   ];
   function _alocClass(val) {
@@ -224,7 +224,7 @@ var FormularioCtrl = (function() {
     return '<select class="sel-reed sel-aloc ' + _alocClass(val) + '" ' + attrs + '>'
       + '<option value="">Característica</option>'
       + ALOC_OPTS.map(function(o) {
-          return '<option value="' + o.v + '"' + (val === o.v ? ' selected' : '') + '>' + o.icon + ' ' + o.v + '</option>';
+          return '<option value="' + o.v + '"' + (val === o.v ? ' selected' : '') + (o.style ? ' style="' + o.style + '"' : '') + '>' + o.icon + ' ' + o.v + '</option>';
         }).join('')
       + '</select>';
   }
