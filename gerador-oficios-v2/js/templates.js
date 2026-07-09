@@ -135,7 +135,6 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise pedido de transferência ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', em razão do cumprimento de Mandado de Prisão expedido pelo(a) ' + juizo + '.',
         'A transferência ampara-se no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026, e no art. 24 da Portaria Normativa nº 2.189/2025 do Departamento de Polícia Penal, sendo ' + nDes + ' a unidade responsável pela circunscrição da autoridade judiciária expedidora.',
-        textoCriterioNaoPunitivo(s),
         textoBPI(s),
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_PLURAL,
@@ -144,7 +143,6 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise pedido de transferência ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', em razão do cumprimento de Mandado de Prisão expedido pelo(a) ' + juizo + '.',
         'A transferência ampara-se no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026, e no art. 24 da Portaria Normativa nº 2.189/2025 do Departamento de Polícia Penal, sendo ' + nDes + ' a unidade responsável pela circunscrição da autoridade judiciária expedidora.',
-        textoCriterioNaoPunitivo(s),
         textoBPI(s),
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_SINGULAR,
@@ -301,7 +299,6 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise e deliberação da Central de Regulação de Vagas — CRV/DPP pedido de transferência dos(as) presos(as) civis relacionados(as) no Anexo I deste ofício, atualmente custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', unidade prisional com estrutura adequada para o recebimento e custódia de presos civis.',
         'A presente solicitação fundamenta-se na natureza específica da prisão civil, modalidade de privação de liberdade distinta da prisão penal, cujo caráter não é sancionatório, mas coercitivo, visando ao cumprimento de obrigação legal. Nessa perspectiva, é imprescindível que as pessoas privadas de liberdade sob essa modalidade sejam custodiadas em unidade prisional adequada e especializada para tanto.',
-        textoCriterioNaoPunitivo(s),
         bpiCivil,
         'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
         TXT_CONTATOS_ANUEM,
@@ -311,7 +308,6 @@ function gerarCorpo(s) {
       ps = [
         'Encaminho para análise e deliberação da Central de Regulação de Vagas — CRV/DPP pedido de transferência ' + doA(s) + ' ' + gng(s,'preso','presa','presos','presas') + ' civil ' + nomePreso + ', IPEN Nº ' + ipenPreso + ', atualmente ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', unidade prisional com estrutura adequada para o recebimento e custódia de preso(a) civil.',
         'A presente solicitação fundamenta-se na natureza específica da prisão civil, modalidade de privação de liberdade distinta da prisão penal, cujo caráter não é sancionatório, mas coercitivo, visando ao cumprimento de obrigação legal. Nessa perspectiva, é imprescindível que a pessoa privada de liberdade sob essa modalidade seja custodiada em unidade prisional adequada e especializada para tanto.',
-        textoCriterioNaoPunitivo(s),
         bpiCivil,
         'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
         TXT_CONTATOS_ANUEM,
