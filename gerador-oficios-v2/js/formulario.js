@@ -207,12 +207,29 @@ var FormularioCtrl = (function() {
       + '</select>';
   }
 
-  function _selectAloc(i, val) {
-    var opts = ['Convívio','Seguro','SEGURO','Não informado'];
-    return '<select class="sel-reed" data-ri="' + i + '" data-rf="alocacao">'
+  var ALOC_OPTS = [
+    { v: 'Convívio',     icon: '👥' },
+    { v: 'Seguro',       icon: '🛡' },
+    { v: 'SEGURO',       icon: '🛡' },
+    { v: 'Não informado',icon: '❓' },
+  ];
+  function _alocClass(val) {
+    if (val === 'Convívio')      return 'aloc-convivio';
+    if (val === 'Seguro')        return 'aloc-seguro';
+    if (val === 'SEGURO')        return 'aloc-perigo';
+    if (val === 'Não informado') return 'aloc-nao';
+    return '';
+  }
+  function _selectAlocHtml(attrs, val) {
+    return '<select class="sel-reed sel-aloc ' + _alocClass(val) + '" ' + attrs + '>'
       + '<option value="">Característica</option>'
-      + opts.map(function(o) { return '<option' + (val === o ? ' selected' : '') + '>' + o + '</option>'; }).join('')
+      + ALOC_OPTS.map(function(o) {
+          return '<option value="' + o.v + '"' + (val === o.v ? ' selected' : '') + '>' + o.icon + ' ' + o.v + '</option>';
+        }).join('')
       + '</select>';
+  }
+  function _selectAloc(i, val) {
+    return _selectAlocHtml('data-ri="' + i + '" data-rf="alocacao"', val);
   }
 
   /* ── Seção: Unidades ── */
@@ -329,12 +346,7 @@ var FormularioCtrl = (function() {
       + '</select>';
   }
   function _selectAlocPD(i, val) {
-    return '<select class="sel-reed" data-pdi="' + i + '" data-pdf="alocacao">'
-      + '<option value="">Característica</option>'
-      + ['Convívio','Seguro','SEGURO','Não informado'].map(function(o) {
-          return '<option' + (val === o ? ' selected' : '') + '>' + o + '</option>';
-        }).join('')
-      + '</select>';
+    return _selectAlocHtml('data-pdi="' + i + '" data-pdf="alocacao"', val);
   }
 
   /* ── Seção: Saúde ── */
@@ -563,6 +575,9 @@ var FormularioCtrl = (function() {
         var rf = this.dataset.rf;
         var reed = Estado.get('reed');
         if (reed[ri]) { reed[ri][rf] = this.value; Estado.set('reed', reed); }
+        if (this.classList.contains('sel-aloc')) {
+          this.className = 'sel-reed sel-aloc ' + _alocClass(this.value);
+        }
       });
     });
 
@@ -581,6 +596,9 @@ var FormularioCtrl = (function() {
         var pf = this.dataset.pdf;
         var pd = Estado.get('permutaDes');
         if (pd[pi]) { pd[pi][pf] = this.value; Estado.set('permutaDes', pd); }
+        if (this.classList.contains('sel-aloc')) {
+          this.className = 'sel-reed sel-aloc ' + _alocClass(this.value);
+        }
       });
     });
   }

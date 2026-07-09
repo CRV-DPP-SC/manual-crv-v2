@@ -317,6 +317,17 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
   background: #fff;
   width: 100%;
 }
+
+/* ── Destaque de cor no select de Característica (mesma lógica dos chips) ── */
+.sel-aloc.aloc-convivio, .sel-aloc.aloc-seguro {
+  border-color: var(--azul); background: #eaf1fb; color: var(--azul); font-weight: 700;
+}
+.sel-aloc.aloc-perigo {
+  border-color: #dc2626; background: #fef2f2; color: #dc2626; font-weight: 700;
+}
+.sel-aloc.aloc-nao {
+  border-color: #999; background: #f1f5f9; color: #555; font-weight: 700;
+}
 .sel-reed:focus { outline: none; border-color: var(--azul3); }
 
 .btn-reed-del {
