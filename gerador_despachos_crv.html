@@ -140,6 +140,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="I"        onclick="selMod('I')"><div class="rd"><div class="rdi"></div></div><div class="rl">Art. 21, inciso I<small>Emergencial — gerenciamento de crises</small></div></div>
           <div class="ri" data-v="II"       onclick="selMod('II')"><div class="rd"><div class="rdi"></div></div><div class="rl">Art. 21, inciso II<small>Pedido da pessoa privada de liberdade ou familiar</small></div></div>
           <div class="ri" data-v="III"      onclick="selMod('III')"><div class="rd"><div class="rdi"></div></div><div class="rl">Art. 21, inciso III<small>Adequação da capacidade de ocupação</small></div></div>
+          <div class="ri" data-v="AJUSTE"   onclick="selMod('AJUSTE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Ajuste Lotacional<small>Transferências determinadas pelo DPP/CRV</small></div></div>
           <div class="ri" data-v="PERMUTA"  onclick="selMod('PERMUTA')"><div class="rd"><div class="rdi"></div></div><div class="rl">Permuta<small>Transferência em permuta entre unidades</small></div></div>
           <div class="ri" data-v="PERNOITE" onclick="selMod('PERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Pernoite<small>Medida excepcional administrativa</small></div></div>
           <div class="ri" data-v="MANDADO"  onclick="selMod('MANDADO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Mandado de Prisão de Comarca Diversa<small>Cumprimento de mandado expedido por outra comarca</small></div></div>
@@ -536,6 +537,30 @@ function gerar(){
            'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+PC].join('\n\n')};
     return {badge:'🔄 DEVOLVIDO PARA RETIFICAÇÃO',bc:'bdev',subtit:sub,
       txt:['Trata-se de pedido de transferência em razão de retorno de saída temporária em unidade diversa da de origem, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas na instrução do processo:',
+           lm||'   • (nenhuma pendência especificada)',
+           'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central, devendo observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV.\n\n'+PC].join('\n\n')};
+  }
+
+  // AJUSTE LOTACIONAL
+  var TXT_MOTIVO_AJUSTE='O motivo da transferência se dá em razão da evidência, por parte do DPP/CRV, da necessidade de ajuste/equalização de vagas, levando em consideração as particularidades das unidades prisionais envolvidas.';
+  if(m==='AJUSTE'){
+    var sub='Ajuste Lotacional — Art. 21, inciso III';
+    if(r==='def') return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de transferência por ajuste lotacional, com fundamento no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026.',
+           TXT_MOTIVO_AJUSTE,
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, estando atendidos os requisitos formais e materiais exigidos.',
+           PCOM, PHIG].join('\n\n')
+    };
+    var lm=motLista();
+    if(r==='ind') return {badge:'❌ INDEFERIDO',bc:'bind',subtit:sub,
+      txt:['Trata-se de pedido de transferência por ajuste lotacional, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise da documentação encaminhada, esta Central decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas na instrução do expediente:',
+           lm||'   • (nenhum motivo especificado)',
+           'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+PC].join('\n\n')};
+    return {badge:'🔄 DEVOLVIDO PARA RETIFICAÇÃO',bc:'bdev',subtit:sub,
+      txt:['Trata-se de pedido de transferência por ajuste lotacional, submetido à apreciação desta Central de Regulação de Vagas.',
            'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas na instrução do processo:',
            lm||'   • (nenhuma pendência especificada)',
            'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central, devendo observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV.\n\n'+PC].join('\n\n')};
