@@ -207,10 +207,8 @@ function gerarCorpo(s) {
     }
   }
 
-  /* ── ADEQUAÇÃO (Transferências Ordinárias) / AJUSTE LOTACIONAL ──
-     TODO: "ajuste_lotacional" usa temporariamente o mesmo texto de "adequacao"
-     até definirmos a redação própria desse novo módulo. ── */
-  else if (s.mod === 'adequacao' || s.mod === 'ajuste_lotacional') {
+  /* ── ADEQUAÇÃO (Transferências Ordinárias) ── */
+  else if (s.mod === 'adequacao') {
     var tm = {
       pontual: 'adequação da capacidade de ocupação',
       regime:  'adequação decorrente de alteração de regime de cumprimento de pena',
@@ -238,6 +236,44 @@ function gerarCorpo(s) {
         'A transferência justifica-se pela ' + motAdec + '.',
         textoCriterioNaoPunitivo(s),
         'Com relação ao critério utilizado para a escolha ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ', informa-se: ' + critAdec + '.',
+        textoBPI(s),
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+        TXT_CONTATOS_ANUEM,
+        TXT_DESFECHO_SINGULAR,
+      ];
+    }
+    ps = _injetarSaude(s, ps, isMulti, false);
+  }
+
+  /* ── AJUSTE LOTACIONAL ── Motivo é texto padrão fixo (DPP/CRV); só pede o critério de escolha. */
+  else if (s.mod === 'ajuste_lotacional') {
+    var tmAj = {
+      pontual: 'adequação da capacidade de ocupação',
+      regime:  'adequação decorrente de alteração de regime de cumprimento de pena',
+    };
+    var critAjuste = s.motIndicacao ? fld(s.motIndicacao) : ph('critério de escolha');
+    var fundamentoAj = tmAj[s.sub] || 'adequação da capacidade de ocupação';
+    var motivoFixoAjuste = 'O motivo da transferência se dá em razão da evidência, por parte do DPP/CRV, da necessidade de ajuste/equalização de vagas, levando em consideração as particularidades das unidades prisionais envolvidas.';
+
+    if (isMulti) {
+      ps = [
+        'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento na ' + fundamentoAj + '.',
+        'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
+        motivoFixoAjuste,
+        textoCriterioNaoPunitivo(s),
+        'Com relação ao critério utilizado para a escolha dos(as) reeducandos(as), informa-se: ' + critAjuste + '.',
+        textoBPI(s),
+        'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+        TXT_CONTATOS_ANUEM,
+        TXT_DESFECHO_PLURAL,
+      ];
+    } else {
+      ps = [
+        'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento na ' + fundamentoAj + '.',
+        'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
+        motivoFixoAjuste,
+        textoCriterioNaoPunitivo(s),
+        'Com relação ao critério utilizado para a escolha ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ', informa-se: ' + critAjuste + '.',
         textoBPI(s),
         'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
         TXT_CONTATOS_ANUEM,
@@ -424,7 +460,8 @@ function gerarTextoResumo(s) {
   if (s.mod === 'emergencial')  { motivo = s.sit || 'situação emergencial'; criterio = 'transferência emergencial, sem critério eletivo de escolha'; }
   else if (s.mod === 'mandado') { motivo = 'cumprimento de Mandado de Prisão expedido pelo(a) ' + s.juizo; criterio = 'competência jurisdicional'; }
   else if (s.mod === 'pernoite'){ motivo = s.razPernoite || 'necessidade de pernoite'; criterio = 'necessidade operacional'; }
-  else if (s.mod === 'adequacao' || s.mod === 'ajuste_lotacional'){ motivo = s.motTransf || 'adequação da capacidade de ocupação'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
+  else if (s.mod === 'adequacao'){ motivo = s.motTransf || 'adequação da capacidade de ocupação'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
+  else if (s.mod === 'ajuste_lotacional'){ motivo = 'necessidade de ajuste/equalização de vagas, evidenciada pelo DPP/CRV, considerando as particularidades das unidades envolvidas'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
   else if (s.mod === 'permuta') { motivo = s.motTransfPermuta || 'equalização de vagas'; criterio = s.motPermuta || 'critério de gestão'; }
   else if (s.mod === 'retorno_saida_temporaria') { motivo = 'retorno de saída temporária em unidade diversa da de origem'; criterio = 'N/A — transferência ao local de origem, sem critério eletivo de escolha'; }
   else if (s.mod === 'prisaocivil') { motivo = 'natureza da prisão civil e necessidade de unidade especializada'; criterio = 'modalidade de custódia'; }

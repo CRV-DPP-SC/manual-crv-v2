@@ -14,7 +14,7 @@ var FormularioCtrl = (function() {
       + _card('mandado', '🏛', 'Mandado de Prisão de Comarca Diversa', 'Art. 21, III')
       + _card('pernoite', '🔄', 'Pernoite', 'Art. 21, III')
       + _card('adequacao', '⚖', 'Transferências Ordinárias', 'Art. 21, III', 'Transferências do dia a dia')
-      + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Determinadas pelo DPP e/ou CRV')
+      + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Utilizar este modelo quando tratar-se de transferências determinadas pelo DPP/CRV')
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
       + _card('retorno_saida_temporaria', '↩️', 'Retorno de Saída Temporária - Unidade Diversa', 'Art. 21, III', 'Reeducando que se apresentou em unidade diversa da origem, ao término da saída temporária')
       + _card('prisaocivil', '⚖', 'Prisão Civil', 'Especializada')
@@ -300,10 +300,15 @@ var FormularioCtrl = (function() {
       html += _textarea('razPernoite', 'Razão do pernoite', s.razPernoite, 'Ex.: Audiência judicial na comarca de destino', true);
       ok = !!s.razPernoite;
     }
-    else if (mod === 'adequacao' || mod === 'ajuste_lotacional') {
+    else if (mod === 'adequacao') {
       html += _textarea('motTransf', 'Motivo da transferência', s.motTransf, 'Ex.: Necessidade de ajuste/equalização de vagas', true);
       html += _textarea('motIndicacao', 'Critério de escolha/indicação', s.motIndicacao, 'Ex.: Pena mais alta dentre os custodiados', true);
       ok = !!s.motTransf && !!s.motIndicacao;
+    }
+    else if (mod === 'ajuste_lotacional') {
+      /* Motivo é texto padrão fixo (definido pelo DPP/CRV) — só pede o critério de escolha */
+      html += _textarea('motIndicacao', 'Critério de escolha/indicação', s.motIndicacao, 'Ex.: Pena mais alta dentre os custodiados', true);
+      ok = !!s.motIndicacao;
     }
     else if (mod === 'permuta') {
       html += _textarea('motTransfPermuta', 'Motivo da permuta', s.motTransfPermuta, 'Ex.: Equalização da ocupação entre as unidades', true);
