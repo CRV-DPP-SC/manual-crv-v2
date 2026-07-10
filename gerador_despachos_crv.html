@@ -144,6 +144,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="PERNOITE" onclick="selMod('PERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Pernoite<small>Medida excepcional administrativa</small></div></div>
           <div class="ri" data-v="MANDADO"  onclick="selMod('MANDADO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Mandado de Prisão de Comarca Diversa<small>Cumprimento de mandado expedido por outra comarca</small></div></div>
           <div class="ri" data-v="CIVIL"    onclick="selMod('CIVIL')"><div class="rd"><div class="rdi"></div></div><div class="rl">Prisão Civil<small>Modalidade especializada — preso(a) civil</small></div></div>
+          <div class="ri" data-v="RETORNO"  onclick="selMod('RETORNO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Saída Temporária - Unidade Diversa<small>Reeducando que se apresentou em unidade diversa da origem</small></div></div>
           <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
         </div>
       </div>
@@ -513,6 +514,28 @@ function gerar(){
            'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+PC].join('\n\n')};
     return {badge:'🔄 DEVOLVIDO PARA RETIFICAÇÃO',bc:'bdev',subtit:sub,
       txt:['Trata-se de pedido de transferência de preso(a) civil, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas na instrução do processo:',
+           lm||'   • (nenhuma pendência especificada)',
+           'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central, devendo observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV.\n\n'+PC].join('\n\n')};
+  }
+
+  // RETORNO DE SAÍDA TEMPORÁRIA — UNIDADE DIVERSA
+  if(m==='RETORNO'){
+    var sub='Retorno de Saída Temporária - Unidade Diversa — Art. 21, inciso III';
+    if(r==='def') return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão do retorno de saída temporária em unidade prisional diversa da de origem, com fundamento no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026.',
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, estando atendidos os requisitos formais e materiais exigidos, tratando-se de mera correção do local de custódia ao término do benefício.',
+           PCOM, PHIG].join('\n\n')
+    };
+    var lm=motLista();
+    if(r==='ind') return {badge:'❌ INDEFERIDO',bc:'bind',subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão de retorno de saída temporária em unidade diversa da de origem, submetido à apreciação desta Central de Regulação de Vagas.',
+           'Após análise da documentação encaminhada, esta Central decide pelo indeferimento do pedido, em razão das seguintes irregularidades identificadas na instrução do expediente:',
+           lm||'   • (nenhum motivo especificado)',
+           'Diante das irregularidades constatadas, o pedido não atende aos requisitos legais e procedimentais exigidos para a sua aprovação. O interessado poderá, se entender cabível, formular novo pedido devidamente instruído, observando integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta Central.\n\n'+PC].join('\n\n')};
+    return {badge:'🔄 DEVOLVIDO PARA RETIFICAÇÃO',bc:'bdev',subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão de retorno de saída temporária em unidade diversa da de origem, submetido à apreciação desta Central de Regulação de Vagas.',
            'Após análise preliminar da documentação encaminhada, esta Central decide pela devolução do expediente para retificação, em razão das seguintes pendências identificadas na instrução do processo:',
            lm||'   • (nenhuma pendência especificada)',
            'Após a regularização das pendências apontadas, o pedido poderá ser novamente submetido à apreciação desta Central, devendo observar integralmente o fluxo estabelecido pela Resolução Conjunta Interinstitucional n. 01/2026 e pelas normativas internas desta CRV.\n\n'+PC].join('\n\n')};
