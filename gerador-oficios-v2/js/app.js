@@ -109,7 +109,7 @@ async function abrirModalAssinaturas() {
 
   var modNomes = { emergencial:'Transferência Emergencial', mandado:'Mandado de Comarca',
     pernoite:'Pernoite', adequacao:'Transferências Ordinárias', ajuste_lotacional:'Ajuste Lotacional',
-    permuta:'Permuta', prisaocivil:'Prisão Civil' };
+    permuta:'Permuta', retorno_saida_temporaria:'Retorno de Saída Temporária', prisaocivil:'Prisão Civil' };
   var titulo = modNomes[s.mod] || 'Ofício';
   if (s.ori) titulo += ' — ' + s.ori.n;
   if (s.des) titulo += ' → ' + s.des.n;

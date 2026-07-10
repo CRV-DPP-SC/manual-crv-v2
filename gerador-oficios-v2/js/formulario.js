@@ -16,6 +16,7 @@ var FormularioCtrl = (function() {
       + _card('adequacao', '⚖', 'Transferências Ordinárias', 'Art. 21, III', 'Transferências do dia a dia')
       + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Determinadas pelo DPP e/ou CRV')
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
+      + _card('retorno_saida_temporaria', '↩️', 'Retorno de Saída Temporária - Unidade Diversa', 'Art. 21, III', 'Reeducando que se apresentou em unidade diversa da origem, ao término da saída temporária')
       + _card('prisaocivil', '⚖', 'Prisão Civil', 'Especializada')
       + _card('comunicacao', '📨', 'Ofício de Comunicação', 'Art. 16', 'Ofícios de comunicação ao Poder Judiciário - Ingresso e saída de reeducandos')
       + _card('resumo_ipen', '📄', 'Resumo Sintético IPEN', 'Art. 21, I / III', 'Sem ofício')
@@ -35,7 +36,10 @@ var FormularioCtrl = (function() {
   function selecionarMod(mod) {
     /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV (padrão fixo) */
     var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : 'Senhor(a) Coordenador(a),';
-    Estado.setMany({ mod: mod, sub: null, sau: sauInicial, desp: 'Respeitosamente,' });
+    var patch = { mod: mod, sub: null, sau: sauInicial, desp: 'Respeitosamente,' };
+    /* Retorno de Saída Temporária — só admite 1 reeducando por vez */
+    if (mod === 'retorno_saida_temporaria') patch.numero = 'S';
+    Estado.setMany(patch);
     _renderizarFormulario();
   }
 
@@ -83,6 +87,7 @@ var FormularioCtrl = (function() {
       pernoite:'Pernoite', adequacao:'Transferências Ordinárias',
       ajuste_lotacional:'Ajuste Lotacional',
       permuta:'Permuta entre Unidades', prisaocivil:'Prisão Civil',
+      retorno_saida_temporaria:'Retorno de Saída Temporária - Unidade Diversa',
       comunicacao:'Comunicação de Transferência', resumo_ipen:'Resumo Sintético IPEN',
     };
     var sub = '';
@@ -122,15 +127,16 @@ var FormularioCtrl = (function() {
   /* ── Seção: Reeducando(s) ── */
   function _secaoReeducando(s) {
     var mod = s.mod;
-    var comRegime  = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta'].includes(mod);
+    var semNumero  = mod === 'retorno_saida_temporaria'; /* só admite 1 reeducando por vez */
+    var comRegime  = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta','retorno_saida_temporaria'].includes(mod);
     var semRegime  = ['pernoite','prisaocivil','comunicacao','resumo_ipen'].includes(mod);
-    var isPlural   = s.numero === 'P';
+    var isPlural   = !semNumero && s.numero === 'P';
 
     var generoChips = '<div class="chip-group">'
       + _chip('genero','M','Masculino', s.genero === 'M')
       + _chip('genero','F','Feminino', s.genero === 'F')
       + '</div>';
-    var numeroChips = '<div class="chip-group">'
+    var numeroChips = semNumero ? '' : '<div class="chip-group">'
       + _chip('numero','S','1 preso', s.numero === 'S')
       + _chip('numero','P','Mais de um', s.numero === 'P')
       + '</div>';

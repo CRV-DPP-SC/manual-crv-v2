@@ -288,6 +288,22 @@ function gerarCorpo(s) {
     ps.push(TXT_DESFECHO_PERMUTA);
   }
 
+  /* ── RETORNO DE SAÍDA TEMPORÁRIA — UNIDADE DIVERSA ──
+     Só admite 1 reeducando por vez; sem parágrafo de critério/não-punitivo
+     (não há escolha discricionária — é a correção pontual de um local). ── */
+  else if (s.mod === 'retorno_saida_temporaria') {
+    ps = [
+      'Encaminho para análise dessa Central de Regulação de Vagas pedido de transferência ' + nomeRef + ', ' + custAdj(s) + ' no(a) ' + nOri + ', para o(a) ' + nDes + ', com fundamento no retorno de saída temporária em unidade diversa da de origem.',
+      'A solicitação ampara-se na Resolução Conjunta Interinstitucional n. 01/2026, especialmente em seu art. 21, inciso III.',
+      (s.genero === 'F' ? 'A reeducanda ' : 'O reeducando ') + (s.nome ? fld(s.nome) : ph('Nome')) + ', que estava usufruindo de saída temporária, ao término do benefício, apresentou-se em Unidade Prisional diversa, razão pela qual requer-se a transferência ao local de origem.',
+      textoBPI(s),
+      'Quanto aos trâmites decorrentes, efetivada a remoção, o Juízo competente será comunicado no prazo legal de até 24 horas.',
+      TXT_CONTATOS_ANUEM,
+      TXT_DESFECHO_SINGULAR,
+    ];
+    ps = _injetarSaude(s, ps, false, false);
+  }
+
   /* ── PRISÃO CIVIL ── */
   else if (s.mod === 'prisaocivil') {
     var bpiCivil = textoBPI(s,
@@ -393,6 +409,7 @@ function gerarTextoResumo(s) {
     adequacao:   'transferência ordinária, amparado no art. 21, inciso III',
     ajuste_lotacional: 'transferência por ajuste lotacional, determinada pelo DPP e/ou CRV, amparado no art. 21, inciso III',
     permuta:     'permuta entre unidades, amparado no art. 21, inciso III',
+    retorno_saida_temporaria: 'retorno de saída temporária em unidade diversa da de origem, amparado no art. 21, inciso III',
     prisaocivil: 'transferência de preso civil, modalidade especializada',
     comunicacao: 'comunicação de transferência, nos termos do art. 16',
     resumo_ipen: 'transferência',
@@ -409,6 +426,7 @@ function gerarTextoResumo(s) {
   else if (s.mod === 'pernoite'){ motivo = s.razPernoite || 'necessidade de pernoite'; criterio = 'necessidade operacional'; }
   else if (s.mod === 'adequacao' || s.mod === 'ajuste_lotacional'){ motivo = s.motTransf || 'adequação da capacidade de ocupação'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }
   else if (s.mod === 'permuta') { motivo = s.motTransfPermuta || 'equalização de vagas'; criterio = s.motPermuta || 'critério de gestão'; }
+  else if (s.mod === 'retorno_saida_temporaria') { motivo = 'retorno de saída temporária em unidade diversa da de origem'; criterio = 'N/A — transferência ao local de origem, sem critério eletivo de escolha'; }
   else if (s.mod === 'prisaocivil') { motivo = 'natureza da prisão civil e necessidade de unidade especializada'; criterio = 'modalidade de custódia'; }
   else if (s.mod === 'comunicacao') { motivo = s.motComun || 'transferência autorizada pela CRV/DPP'; criterio = 'N/A'; }
   else if (s.mod === 'resumo_ipen') { motivo = s.motTransf || 'adequação da situação do(a) custodiado(a)'; criterio = s.motIndicacao || 'critério de gestão de vagas'; }

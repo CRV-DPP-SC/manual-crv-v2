@@ -76,7 +76,7 @@ function _contarPendencias(s) {
   if (s.mod === 'comunicacao' && !s.motComun)    n++;
   if (s.mod === 'comunicacao' && !s.nomejuiz)    n++;
 
-  var MODS_COM_BPI = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta','prisaocivil'];
+  var MODS_COM_BPI = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta','retorno_saida_temporaria','prisaocivil'];
   if (MODS_COM_BPI.indexOf(s.mod) >= 0 && !s.bpi) n++;
   if (s.bpi === 'nao_atualizado' && !s.bpiMotivo) n++;
 

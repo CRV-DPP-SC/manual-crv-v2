@@ -7,7 +7,7 @@ var _MODAL_LABEL = {
   emergencial:'Emergencial', mandado:'Mandado de Comarca',
   pernoite:'Pernoite', adequacao:'Transferências Ordinárias',
   ajuste_lotacional:'Ajuste Lotacional',
-  permuta:'Permuta', prisaocivil:'Prisão Civil',
+  permuta:'Permuta', retorno_saida_temporaria:'Retorno de Saída Temporária', prisaocivil:'Prisão Civil',
   comunicacao:'Comunicação', resumo_ipen:'Resumo IPEN',
 };
 
