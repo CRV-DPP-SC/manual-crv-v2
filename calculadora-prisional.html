@@ -137,7 +137,7 @@
   </div>
 
   <!-- QUADRO 4: RESUMO -->
-  <div class="card">
+  <div class="card" id="card-resumo">
     <div class="card-title">Resumo — Vagas e Recolhidos</div>
     <div class="vagas-resumo">
       <div class="vaga-stat"><span class="vaga-stat-label">Vagas Masculino</span><span class="vaga-stat-val" id="rs_tv_m">21.869</span></div>
@@ -194,6 +194,7 @@
       <button onclick="abrirSeletor('texto')">📋 Copiar Texto</button>
       <button onclick="abrirSeletor('pdf')">📄 Baixar PDF</button>
       <button onclick="abrirSeletor('doc')">📝 Baixar DOC</button>
+      <button onclick="baixarImagemResumo()">🖼️ Baixar Imagem do Resumo (PDF)</button>
     </div>
   </div>
 
@@ -249,6 +250,7 @@
 
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 var REG    = ['pr','fe','se','ab','ms','ni'];
 var REG_NOME = {pr:'Provisório',fe:'Fechado',se:'Semiaberto',ab:'Aberto',ms:'Medida de Segurança',ni:'Não Informado'};
@@ -337,12 +339,12 @@ function getSel(){
 /* ── BUILD TEXTO — Boletim CRV (Copiar Texto) ── */
 function buildTexto(sel,intro){
   var L=[];
-  if(intro){L.push(intro,'');}
 
   L.push('BOLETIM PLANTÃO CRV - '+getDate(),'');
+  if(intro){L.push(intro,'');}
 
   // Vagas existentes
-  L.push('VAGAS EXISTENTES (Com base no Relatório 1.4 do iPEN)');
+  L.push(intro?'VAGAS EXISTENTES':'VAGAS EXISTENTES (Com base no Relatório 1.4 do iPEN)');
   var tvM = sel.masc ? TV.m : 0;
   var tvF = sel.fem  ? TV.f : 0;
   var tvT = tvM + tvF;
@@ -398,8 +400,8 @@ function executarAcao(){
   var sel=getSel();
   if(_acao==='texto'||_acao==='plantao_inicio'||_acao==='plantao_termino'){
     var intro=null,titulo='Relatório do Sistema Prisional';
-    if(_acao==='plantao_inicio'){intro='Iniciamos o plantão com o seguinte quantitativo lotacional:';titulo='Texto de Início de Plantão';}
-    if(_acao==='plantao_termino'){intro='Finalizamos o plantão sem alterações e com o seguinte quantitativo lotacional:';titulo='Texto de Término de Plantão';}
+    if(_acao==='plantao_inicio'){intro='Iniciamos o plantão sem pendências, sem alterações e com o seguinte quantitativo lotacional (Com base no Relatório 1.4 do iPEN):';titulo='Texto de Início de Plantão';}
+    if(_acao==='plantao_termino'){intro='Finalizamos o plantão sem pendências, sem alterações e com o seguinte quantitativo lotacional (Com base no Relatório 1.4 do iPEN):';titulo='Texto de Término de Plantão';}
     var txt=buildTexto(sel,intro);
     document.getElementById('resultado-titulo').textContent=titulo;
     document.getElementById('resultado-texto').textContent=txt;
@@ -561,6 +563,27 @@ function gerarDOC(sel){
   var blob=new Blob([html],{type:'application/msword'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='relatorio-prisional.doc';a.click();
   showToast('✓ DOC gerado!');
+}
+
+/* ── IMAGEM DO RESUMO (captura idêntica ao card exibido) ── */
+function baixarImagemResumo(){
+  if(!window.html2canvas){showToast('html2canvas não carregou.');return}
+  if(!window.jspdf){showToast('jsPDF não carregou.');return}
+  var el=document.getElementById('card-resumo');
+  html2canvas(el,{scale:2,backgroundColor:'#ffffff'}).then(function(canvas){
+    var img=canvas.toDataURL('image/png');
+    var jsPDF=window.jspdf.jsPDF;
+    var doc=new jsPDF({unit:'mm',format:'a4'});
+    var pageW=210,pageH=297,margin=15,topY=20;
+    var imgW=pageW-margin*2;
+    var imgH=imgW*canvas.height/canvas.width;
+    var maxH=pageH-topY-margin;
+    if(imgH>maxH){imgH=maxH;imgW=imgH*canvas.width/canvas.height;}
+    var x=(pageW-imgW)/2;
+    doc.addImage(img,'PNG',x,topY,imgW,imgH);
+    doc.save('resumo-vagas-recolhidos.pdf');
+    showToast('✓ PDF gerado!');
+  }).catch(function(){showToast('Erro ao gerar imagem.');});
 }
 
 // Inicializar
