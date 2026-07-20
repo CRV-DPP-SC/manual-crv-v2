@@ -1,0 +1,12 @@
+{
+  "name": "crv-notificacoes-bot",
+  "private": true,
+  "description": "Roda periodicamente via GitHub Actions: verifica novos cadastros/solicitações no Firestore e dispara push pelo OneSignal.",
+  "main": "enviar-notificacoes.js",
+  "scripts": {
+    "start": "node enviar-notificacoes.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
