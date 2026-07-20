@@ -41,12 +41,14 @@ function _podeSinalizar(email) {
     || /^.+cpen@pp\.sc\.gov\.br$/.test(e);
 }
 
-// Retorna o email-base da unidade para DIR/CPEN (ex: pr18@pp.sc.gov.br)
-// Retorna null para outros perfis
+// Retorna a tag de unidade usada pelo OneSignal — pr18@pp.sc.gov.br para
+// DIR/CPEN, ou o próprio e-mail (ex: sr01@pp.sc.gov.br) para Superintendente.
+// Retorna null para outros perfis.
 function _getEmailUnidade(email) {
   const e = (email || '').toLowerCase();
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))  return e.replace(/dir@pp\.sc\.gov\.br$/,  '@pp.sc.gov.br');
   if (/^.+cpen@pp\.sc\.gov\.br$/.test(e)) return e.replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
+  if (/^sr0[1-8]@pp\.sc\.gov\.br$/.test(e)) return e;
   return null;
 }
 
