@@ -90,14 +90,11 @@ async function main() {
   const estadoSnap = await estadoRef.get();
   const agora = admin.firestore.Timestamp.now();
 
-  if (!estadoSnap.exists) {
-    // Primeira execução: só marca o ponto de partida, não reenvia pendências antigas.
-    await estadoRef.set({ ultimaVerificacao: agora });
-    console.log('Primeira execução — marcando ponto de partida, nada a notificar ainda.');
-    return;
-  }
-
-  const desde = estadoSnap.data().ultimaVerificacao;
+  // Primeira execução: olha as últimas 24h (não o histórico todo), pra não
+  // reenviar pendências muito antigas mas ainda pegar algo recente/de teste.
+  const desde = estadoSnap.exists
+    ? estadoSnap.data().ultimaVerificacao
+    : admin.firestore.Timestamp.fromMillis(agora.toMillis() - 24 * 60 * 60 * 1000);
   await Promise.all([
     processarCadastros(desde),
     processarSolicitacoes(desde),
