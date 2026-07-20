@@ -32,6 +32,31 @@ const app  = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
+/*
+ * Sincroniza diretor(a)/contato/endereço das unidades com o Firestore
+ * (mesma fonte usada pelo editor "Atualizar Unidades" do site principal),
+ * mantendo o array estático de dados.js como respaldo caso o Firestore
+ * não esteja disponível. Faz merge in-place em UNS, então getUns() já
+ * reflete os dados atualizados a partir daqui.
+ */
+(async function _sincronizarUnidadesV2() {
+  try {
+    const snap = await getDoc(doc(db, 'unidades_config', 'principal'));
+    if (!snap.exists() || typeof UNS === 'undefined') return;
+    const remotas = snap.data().unidades || [];
+    remotas.forEach(function (ru) {
+      var alvo = UNS.find(function (u) { return u.em === ru.email; });
+      if (alvo) {
+        alvo.n   = ru.nome    || alvo.n;
+        alvo.c   = ru.cidade  || alvo.c;
+        alvo.dir = ru.diretor || alvo.dir;
+        alvo.tel = ru.tel     || alvo.tel;
+        alvo.e   = ru.end     || alvo.e;
+      }
+    });
+  } catch (_) { /* Firestore indisponível — mantém os dados estáticos de dados.js */ }
+})();
+
 /* Resolve unidade a partir do e-mail institucional ou Firestore */
 async function _resolverUnidade(user) {
   const e = (user.email || '').toLowerCase();
