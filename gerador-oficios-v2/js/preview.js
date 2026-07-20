@@ -26,14 +26,12 @@ function _atualizarBarraAcoes(s) {
   var btnDoc    = document.getElementById('btnDoc');
   var btnPdf    = document.getElementById('btnPdf');
   var btnResumo = document.getElementById('btnResumo');
-  var btnAssinar= document.getElementById('btnAssinar');
 
   if (!aviso) return;
 
   /* Visibilidade dos novos botões */
   var temMod = !!(s.mod);
   if (btnResumo)  btnResumo.style.display  = temMod ? '' : 'none';
-  if (btnAssinar) btnAssinar.style.display = (temMod && s.mod !== 'resumo_ipen' && s.mod !== 'comunicacao') ? '' : 'none';
 
   if (!s.mod) {
     aviso.textContent = '';
