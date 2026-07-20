@@ -709,7 +709,6 @@ window.mostrarLandingGrupos = function() {
     { id: 'transferencias', icon: '📋', titulo: 'Transferências',     sub: 'Anuências, solicitações e histórico', cor: 'var(--azul-600)', badge: nPend },
     ...(['dir','cpen'].includes(perfilAtual) || modoLeitura() ? [
       { id: 'acesso',      icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed', badge: nAcessos },
-      { id: 'ferramentas', icon: '🛠️', titulo: 'Ferramentas',        sub: 'Geradores e recursos da unidade',     cor: '#b45309', badge: '' },
     ] : []),
   ];
 
@@ -788,9 +787,7 @@ window._mostrarSubGrupo = function(grupoId) {
     const nPend = badge && badge.style.display !== 'none' ? badge.textContent : '';
     const itens = [
       { aba: 'pendentes', icon: '✍️', titulo: 'Assinaturas Pendentes', sub: 'Documentos aguardando sua anuência', badge: nPend },
-      { aba: 'minhas',    icon: '📤', titulo: 'Solicitar Assinatura',   sub: 'Criar nova solicitação de anuência' },
       { aba: 'historico', icon: '📂', titulo: 'Histórico',              sub: 'Pedidos realizados' },
-      { aba: 'cancelados',icon: '🚫', titulo: 'Cancelados',             sub: 'Solicitações canceladas' },
     ];
     corpo.innerHTML = `
     <div style="padding:24px 32px 40px;">
