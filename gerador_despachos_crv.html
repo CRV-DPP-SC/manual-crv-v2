@@ -149,6 +149,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="COMPLEXO" onclick="selMod('COMPLEXO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Transferência dentro do Mesmo Complexo Prisional<small>Movimentação entre unidades do mesmo complexo</small></div></div>
           <div class="ri" data-v="RETMD"    onclick="selMod('RETMD')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de MD<small>Retorno à unidade de origem após transferência provisória (Medida Disciplinar)</small></div></div>
           <div class="ri" data-v="REGIME"   onclick="selMod('REGIME')"><div class="rd"><div class="rdi"></div></div><div class="rl">Alteração do Regime<small>Transferência decorrente de decisão judicial de progressão/regressão de regime</small></div></div>
+          <div class="ri" data-v="CONVIVIO" onclick="selMod('CONVIVIO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Falta de Convívio na Unidade de Origem<small>Dificuldade de convívio entre o(a) reeducando(a) e demais colegas de cárcere</small></div></div>
           <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
         </div>
       </div>
@@ -390,6 +391,17 @@ function gerar(){
       badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
       txt:['Trata-se de pedido de transferência em razão de decisão judicial que determinou a alteração do regime prisional do(a) reeducando(a), com fundamento no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026.',
            'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com a decisão judicial proferida, sendo necessária a remoção para unidade prisional compatível com o novo regime fixado.',
+           PCOM, PHIG].join('\n\n')
+    };
+  }
+
+  // FALTA DE CONVÍVIO NA UNIDADE DE ORIGEM
+  if(m==='CONVIVIO'){
+    var sub='Falta de Convívio na Unidade de Origem — Art. 21, inciso III';
+    return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de transferência, com fundamento no art. 21, inciso III, da Resolução Conjunta Interinstitucional n. 01/2026, em razão da alegada ausência de condições adequadas de convívio entre o(a) reeducando(a) e os demais custodiados. Segundo informações da Direção da unidade prisional de origem, foram constatadas dificuldades de relacionamento com os demais colegas de cárcere, circunstância que justifica a transferência pleiteada.',
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, sendo a transferência necessária para preservar a integridade do(a) reeducando(a), bem como manter a estabilidade da unidade prisional solicitante.',
            PCOM, PHIG].join('\n\n')
     };
   }
