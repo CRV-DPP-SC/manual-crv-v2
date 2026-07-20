@@ -173,13 +173,7 @@ onAuthStateChanged(auth, async (user) => {
     }
     mostrarPainel();
   } else {
-    /* Exigência de login desativada temporariamente — acesso liberado como CRV (acesso total) */
-    usuarioAtual       = { email: 'sepen@pp.sc.gov.br', displayName: 'CRV' };
-    perfilAtual        = 'crv';
-    escopoAtual        = { tipo: 'crv' };
-    unidadeSelecionada = null;
-    srSelecionada      = null;
-    mostrarPainel();
+    mostrarLogin();
   }
 });
 
@@ -706,26 +700,26 @@ window.mostrarLandingGrupos = function() {
 
   const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
 
+  const badgePend = document.getElementById('p-badge-pendentes');
+  const nPend = badgePend && badgePend.style.display !== 'none' ? badgePend.textContent : '';
+  const badgeAc = document.getElementById('p-badge-acessos');
+  const nAcessos = badgeAc && badgeAc.style.display !== 'none' ? badgeAc.textContent : '';
+
   const grupos = [
-    { id: 'transferencias', icon: '📋', titulo: 'Transferências',     sub: 'Anuências, solicitações e histórico', cor: 'var(--azul-600)' },
+    { id: 'transferencias', icon: '📋', titulo: 'Transferências',     sub: 'Anuências, solicitações e histórico', cor: 'var(--azul-600)', badge: nPend },
     ...(['dir','cpen'].includes(perfilAtual) || modoLeitura() ? [
-      { id: 'acesso',      icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed'         },
-      { id: 'ferramentas', icon: '🛠️', titulo: 'Ferramentas',        sub: 'Geradores e recursos da unidade',     cor: '#b45309'         },
+      { id: 'acesso',      icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed', badge: nAcessos },
+      { id: 'ferramentas', icon: '🛠️', titulo: 'Ferramentas',        sub: 'Geradores e recursos da unidade',     cor: '#b45309', badge: '' },
     ] : []),
   ];
-
-  const badge = document.getElementById('p-badge-pendentes');
-  const nPend = badge && badge.style.display !== 'none' ? badge.textContent : '';
 
   corpo.innerHTML = `
   <div style="padding:28px 32px 40px;">
     ${unNome ? `<p style="font-size:.78rem;color:var(--txt-3);margin:0 0 20px;">📍 ${unNome}</p>` : ''}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;max-width:760px;">
       ${grupos.map(g => {
-        const extra = (g.id === 'transferencias' && nPend)
-          ? `<span class="p-sub-card-badge" style="margin-left:auto;">${nPend}</span>` : '';
-        return `<button class="p-grupo-card" onclick="_mostrarSubGrupo('${g.id}')" style="--grupo-cor:${g.cor};"
-          onmouseover="this.style.borderColor='${g.cor}'" onmouseout="this.style.borderColor='var(--border)'">
+        const extra = g.badge ? `<span class="p-grupo-badge">${g.badge}</span>` : '';
+        return `<button class="p-grupo-card" onclick="_mostrarSubGrupo('${g.id}')" style="--grupo-cor:${g.cor};">
           <span class="p-grupo-icon">${g.icon}</span>
           <div class="p-grupo-corpo">
             <div class="p-grupo-titulo">${g.titulo} ${extra}</div>
@@ -1486,18 +1480,7 @@ async function mostrarDashboard() {
   const corpo = document.getElementById('p-corpo');
   corpo.className = 'dashboard-mode';
 
-  // CRV sem SR selecionada: tela de navegação
-  if (perfilAtual === 'crv' && !srSelecionada) {
-    corpo.innerHTML = `
-      <div class="p-empty-nav">
-        <img src="img/brasao.png" alt="" class="p-empty-brasao">
-        <p class="p-empty-titulo">Painel da Unidade Prisional</p>
-        <p class="p-empty-sub">Selecione uma Superintendência Regional ou unidade prisional no menu acima.</p>
-      </div>`;
-    return;
-  }
-
-  // CRV com SR selecionada OU perfil super: painel de números da circunscrição
+  // CRV sem SR selecionada: visão geral do estado (antes ficava vazia, sem nenhum número)
   corpo.innerHTML = '<div class="p-loading" style="padding:32px;">Carregando painel…</div>';
   _dashFiltro = { sr: '', un: '', cat: '' };
   try {
@@ -1508,7 +1491,11 @@ async function mostrarDashboard() {
       s._cat = getCategoria(s);
       _dashDocs.push(s);
     });
-    _renderDashSR(corpo);
+    if (perfilAtual === 'crv' && !srSelecionada) {
+      _renderDashCRV(corpo);
+    } else {
+      _renderDashSR(corpo);
+    }
   } catch (e) {
     corpo.innerHTML = `<div style="padding:32px;color:var(--vermelho);">Erro ao carregar: ${escHtml(e.message)}</div>`;
   }
@@ -2111,10 +2098,12 @@ async function carregarAbaAcessos(el) {
 
       const cpfFmt = r.cpf ? r.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
       const nascFmt = r.dataNascimento || '—';
+      const iniciais = (r.nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
       return `
       <div class="p-card p-card-compact" id="acard-${r.id}">
         <div class="p-card-row" onclick="pAccToggle('${r.id}')">
           <input type="checkbox" class="p-card-check" data-ctx="acc" onchange="selAccToggle('${r.id}')" onclick="event.stopPropagation()" title="Selecionar">
+          <span class="p-card-avatar">${iniciais}</span>
           <span class="p-status ${info.classe}" style="flex-shrink:0;">${info.label}</span>
           <span class="p-card-titulo-row" style="cursor:pointer;">${escHtml(r.nome || '—')}</span>
           <span class="p-card-meta-row">${escHtml(r.nomeUnidade || '—')} · ${dataCad}</span>
