@@ -643,7 +643,7 @@ tbody td {
 
 @media print {
   .cab-header, .cab-tabs, .form-actions, .historico-filtros, .relatorio-header .btn,
-  .cab-tab, .btn-sair { display: none !important; }
+  .cab-tab, .btn-sair, .col-acoes { display: none !important; }
   .cab-panel { display: block !important; }
   body { background: white; }
   .resumo-card, .historico-table-wrap { box-shadow: none; border: 1px solid #ccc; }
@@ -796,13 +796,6 @@ tbody td {
           <label>Membro *</label>
           <select id="dep-membro">
             <option value="">Selecione o membro</option>
-            <option>Rodrigo</option>
-            <option>Bruna</option>
-            <option>Ricardo</option>
-            <option>Day</option>
-            <option>Juliana</option>
-            <option>Jessica</option>
-            <option>Ivana</option>
           </select>
         </div>
         <div class="form-group">
@@ -849,13 +842,6 @@ tbody td {
           <label>Responsável pela compra *</label>
           <select id="cmp-membro">
             <option value="">Quem foi às compras?</option>
-            <option>Rodrigo</option>
-            <option>Bruna</option>
-            <option>Ricardo</option>
-            <option>Day</option>
-            <option>Juliana</option>
-            <option>Jessica</option>
-            <option>Ivana</option>
           </select>
         </div>
         <div class="form-group">
@@ -907,8 +893,6 @@ tbody td {
       </select>
       <select id="filtro-membro" onchange="filtrarHistorico()">
         <option value="">Todos os membros</option>
-        <option>Rodrigo</option><option>Bruna</option><option>Ricardo</option>
-        <option>Day</option><option>Juliana</option><option>Jessica</option><option>Ivana</option>
       </select>
       <input type="month" id="filtro-mes" onchange="filtrarHistorico()" placeholder="Mês" />
       <button class="btn btn-outline btn-sm" onclick="limparFiltros()">✕ Limpar filtros</button>
@@ -925,11 +909,12 @@ tbody td {
             <th>Anexo</th>
             <th>Registrado por</th>
             <th>Data/Hora</th>
+            <th class="col-acoes">Ações</th>
           </tr>
         </thead>
         <tbody id="historico-tbody">
           <tr>
-            <td colspan="8">
+            <td colspan="9">
               <div class="historico-vazio">
                 <div class="historico-vazio-icon">📂</div>
                 <p>Nenhum lançamento encontrado.</p>
@@ -1001,13 +986,28 @@ tbody td {
         <label>Responsável pelo Caixa</label>
         <select id="cfg-responsavel">
           <option value="">Selecione</option>
-          <option>Rodrigo</option><option>Bruna</option><option>Ricardo</option>
-          <option>Day</option><option>Juliana</option><option>Jessica</option><option>Ivana</option>
         </select>
       </div>
       <div class="form-actions">
         <button class="btn btn-success" onclick="salvarConfig()">💾 Salvar Configurações</button>
       </div>
+    </div>
+
+    <div class="config-card" style="margin-top:1.5rem;">
+      <h2 class="section-title">Pessoas Cadastradas</h2>
+      <div class="config-info">
+        ℹ️ Inclua ou remova pessoas do grupo. Remover uma pessoa não apaga o histórico de lançamentos já registrados em nome dela.
+      </div>
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Nome da nova pessoa</label>
+          <input type="text" id="cfg-novo-membro" placeholder="Ex: Fernanda" onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarMembro();}" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <button class="btn btn-primary" style="width:100%;" onclick="adicionarMembro()">➕ Incluir</button>
+        </div>
+      </div>
+      <div id="membrosConfigLista" style="margin-top:1.25rem;display:flex;flex-direction:column;gap:.5rem;"></div>
     </div>
   </section>
 
@@ -1034,7 +1034,7 @@ tbody td {
 import { initializeApp }         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, addDoc, collection,
-         query, orderBy, onSnapshot, updateDoc, serverTimestamp, getDocs, where }
+         query, orderBy, onSnapshot, updateDoc, deleteDoc, serverTimestamp, getDocs, where }
          from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL }
          from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
@@ -1066,7 +1066,7 @@ let anexoURL  = { dep: null, cmp: null };
 let todosLancamentos = [];
 let config = { valorMensal: 0, responsavel: '' };
 
-const MEMBROS = ['Rodrigo','Bruna','Ricardo','Day','Juliana','Jessica','Ivana'];
+let MEMBROS = ['Rodrigo','Bruna','Ricardo','Day','Juliana','Jessica','Ivana'];
 const CORES   = ['bg-azul','bg-verde','bg-ouro','bg-roxo','bg-rosa','bg-teal','bg-laranja'];
 
 // ============================================================
@@ -1094,10 +1094,15 @@ async function carregarConfig() {
     if (snap.exists()) {
       config = snap.data();
       document.getElementById('cfg-valor-mensal').value = config.valorMensal || '';
-      document.getElementById('cfg-responsavel').value  = config.responsavel || '';
-      atualizarPainel();
+      if (Array.isArray(config.membros) && config.membros.length) {
+        MEMBROS = config.membros;
+      }
     }
   } catch(e) { console.warn('Config não encontrada, usando padrão.'); }
+  popularSelectsMembros();
+  document.getElementById('cfg-responsavel').value = config.responsavel || '';
+  renderMembrosConfigList();
+  atualizarPainel();
 }
 
 window.salvarConfig = async function() {
@@ -1106,7 +1111,7 @@ window.salvarConfig = async function() {
   if (!val || val <= 0) { toast('Informe um valor mensal válido.','aviso'); return; }
   try {
     await setDoc(doc(db, 'caixinha_config', 'principal'), {
-      valorMensal: val, responsavel: resp,
+      valorMensal: val, responsavel: resp, membros: MEMBROS,
       atualizadoPor: usuarioAtual.email, atualizadoEm: serverTimestamp()
     });
     config.valorMensal = val;
@@ -1114,6 +1119,82 @@ window.salvarConfig = async function() {
     atualizarPainel();
     toast('✅ Configurações salvas!', 'sucesso');
   } catch(e) { toast('Erro ao salvar: ' + e.message, 'erro'); }
+};
+
+// ============================================================
+// GERENCIAR PESSOAS (incluir / excluir membros)
+// ============================================================
+function popularSelectsMembros() {
+  const selects = [
+    { id: 'dep-membro',    placeholder: 'Selecione o membro' },
+    { id: 'cmp-membro',    placeholder: 'Quem foi às compras?' },
+    { id: 'filtro-membro', placeholder: 'Todos os membros' },
+    { id: 'cfg-responsavel', placeholder: 'Selecione' }
+  ];
+  selects.forEach(({ id, placeholder }) => {
+    const sel = document.getElementById(id);
+    const valorAtual = sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>` +
+      MEMBROS.map(nome => `<option>${nome}</option>`).join('');
+    if (MEMBROS.includes(valorAtual)) sel.value = valorAtual;
+  });
+}
+
+function renderMembrosConfigList() {
+  const wrap = document.getElementById('membrosConfigLista');
+  if (!MEMBROS.length) {
+    wrap.innerHTML = `<p style="color:var(--cinza-4);font-size:.85rem;">Nenhuma pessoa cadastrada.</p>`;
+    return;
+  }
+  wrap.innerHTML = MEMBROS.map(nome => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--cinza-7);border-radius:8px;padding:.55rem .9rem;">
+      <span style="font-weight:600;font-size:.88rem;color:var(--cinza-1);">${nome}</span>
+      <button class="btn-remover-anexo" onclick="removerMembro('${nome.replace(/'/g,"\\'")}')" title="Excluir pessoa">🗑️ Excluir</button>
+    </div>`).join('');
+}
+
+window.adicionarMembro = async function() {
+  const input = document.getElementById('cfg-novo-membro');
+  const nome = input.value.trim();
+  if (!nome) { toast('Informe o nome da pessoa.', 'aviso'); return; }
+  if (MEMBROS.some(m => m.toLowerCase() === nome.toLowerCase())) {
+    toast('Essa pessoa já está cadastrada.', 'aviso');
+    return;
+  }
+  MEMBROS = [...MEMBROS, nome];
+  try {
+    await setDoc(doc(db, 'caixinha_config', 'principal'), {
+      valorMensal: config.valorMensal || 0, responsavel: config.responsavel || '', membros: MEMBROS,
+      atualizadoPor: usuarioAtual.email, atualizadoEm: serverTimestamp()
+    }, { merge: true });
+    input.value = '';
+    popularSelectsMembros();
+    renderMembrosConfigList();
+    atualizarPainel();
+    toast('✅ Pessoa incluída!', 'sucesso');
+  } catch(e) {
+    MEMBROS = MEMBROS.filter(m => m !== nome);
+    toast('Erro ao incluir: ' + e.message, 'erro');
+  }
+};
+
+window.removerMembro = async function(nome) {
+  if (!confirm(`Excluir "${nome}" do grupo? O histórico de lançamentos dessa pessoa será mantido.`)) return;
+  const anterior = MEMBROS;
+  MEMBROS = MEMBROS.filter(m => m !== nome);
+  try {
+    await setDoc(doc(db, 'caixinha_config', 'principal'), {
+      valorMensal: config.valorMensal || 0, responsavel: config.responsavel || '', membros: MEMBROS,
+      atualizadoPor: usuarioAtual.email, atualizadoEm: serverTimestamp()
+    }, { merge: true });
+    popularSelectsMembros();
+    renderMembrosConfigList();
+    atualizarPainel();
+    toast('✅ Pessoa excluída.', 'sucesso');
+  } catch(e) {
+    MEMBROS = anterior;
+    toast('Erro ao excluir: ' + e.message, 'erro');
+  }
 };
 
 // ============================================================
@@ -1170,7 +1251,7 @@ function atualizarPainel() {
 
     grid.innerHTML += `
       <div class="membro-card">
-        <div class="membro-avatar ${CORES[i]}">${nome.charAt(0)}</div>
+        <div class="membro-avatar ${CORES[i % CORES.length]}">${nome.charAt(0)}</div>
         <div class="membro-nome">${nome}</div>
         <span class="membro-status ${statusCls}">${statusTxt}</span>
         ${meta ? `<div class="membro-valor">${fmt(totalPago)} / ${fmt(meta)}</div>` : ''}
@@ -1376,7 +1457,7 @@ window.limparFiltros = function() {
 function renderHistorico(lista, tbodyId) {
   const tbody = document.getElementById(tbodyId);
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="historico-vazio">
+    tbody.innerHTML = `<tr><td colspan="9"><div class="historico-vazio">
       <div class="historico-vazio-icon">📂</div>
       <p>Nenhum lançamento encontrado.</p>
     </div></td></tr>`;
@@ -1396,9 +1477,25 @@ function renderHistorico(lista, tbodyId) {
         <td>${l.urlAnexo ? `<a class="btn-ver-anexo" href="${l.urlAnexo}" target="_blank">Ver 📎</a>` : '<span style="color:var(--cinza-4);font-size:.8rem;">—</span>'}</td>
         <td class="td-auditoria">${l.registradoPor || '—'}</td>
         <td class="td-auditoria">${dataTS.toLocaleString('pt-BR')}</td>
+        <td class="col-acoes"><button class="btn-remover-anexo" onclick="excluirLancamento('${l.id}')" title="Excluir lançamento">🗑️</button></td>
       </tr>`;
   }).join('');
 }
+
+// ============================================================
+// EXCLUIR LANÇAMENTO
+// ============================================================
+window.excluirLancamento = async function(id) {
+  const l = todosLancamentos.find(x => x.id === id);
+  const desc = l ? `${l.tipo === 'deposito' ? 'Depósito' : 'Compra'} de ${l.membro || '—'} (${fmt(l.valor)})` : 'este lançamento';
+  if (!confirm(`Excluir ${desc}? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await deleteDoc(doc(db, 'caixinha_lancamentos', id));
+    toast('✅ Lançamento excluído.', 'sucesso');
+  } catch(e) {
+    toast('Erro ao excluir: ' + e.message, 'erro');
+  }
+};
 
 // ============================================================
 // RELATÓRIO
