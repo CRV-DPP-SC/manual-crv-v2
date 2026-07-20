@@ -587,14 +587,6 @@ window.abrirCaixinha = function () {
 };
 window.fecharCaixinha = function () { document.getElementById('modal-caixinha')?.classList.remove('aberto'); };
 
-window.abrirUSMControle = function () {
-  const m = document.getElementById('modal-usm');
-  const f = document.getElementById('usm-iframe');
-  if (f && !f.src.includes('USM')) f.src = 'USM_controle.html';
-  if (m) m.classList.add('aberto');
-};
-window.fecharUSMControle = function () { document.getElementById('modal-usm')?.classList.remove('aberto'); };
-
 window.abrirCalculadora = function () {
   const m = document.getElementById('modal-calculadora');
   const f = document.getElementById('calc-iframe');
@@ -848,13 +840,6 @@ function _htmlConteudoRestrito() {
       <div class="restrito-card-icon">🏛️</div>
       <div class="restrito-card-titulo">Sistemas — Estado</div>
       <div class="restrito-card-sub" style="color:#6ee7b7;">SIGRHPORTAL · iPEN · SGPe</div>
-    </div>
-    <div class="restrito-card" onclick="abrirUSMControle()"
-      style="background:#0d1117;border:2px solid #3b82f6;">
-      <span class="restrito-card-badge" style="background:#3b82f6;color:#fff;">TEMPO REAL</span>
-      <div class="restrito-card-icon">🔐</div>
-      <div class="restrito-card-titulo" style="color:#3b82f6;">USM — Controle</div>
-      <div class="restrito-card-sub" style="color:#6b7280;">Controle de presos — Seg. Máxima</div>
     </div>
   </div>
   <div style="margin-top:8px;margin-bottom:20px;">
