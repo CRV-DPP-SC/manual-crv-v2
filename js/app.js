@@ -8,13 +8,37 @@
 let UNIDADES = [];
 let SR_INFO  = {};
 
-// ── CARREGA DADOS DAS UNIDADES ──
+// ── CARREGA DADOS DAS UNIDADES (Firestore, com fallback pro JSON estático) ──
+async function _buscarUnidadesFirestore() {
+  try {
+    const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js');
+    const { getFirestore, doc, getDoc }       = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
+    const firebaseConfig = {
+      apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
+      authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
+      projectId:         "crv-dpp-sc-v2",
+      storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
+      messagingSenderId: "513539683551",
+      appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
+    };
+    const fbApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db    = getFirestore(fbApp);
+    const snap  = await getDoc(doc(db, 'unidades_config', 'principal'));
+    return snap.exists() ? snap.data() : null;
+  } catch (_) {
+    return null; // sem acesso ao Firestore agora — usa o JSON estático
+  }
+}
+
 async function carregarDadosUnidades() {
   const container = document.getElementById('unidades-container');
   try {
-    const res = await fetch('data/unidades.json');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const dados = await res.json();
+    let dados = await _buscarUnidadesFirestore();
+    if (!dados) {
+      const res = await fetch('data/unidades.json');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      dados = await res.json();
+    }
     UNIDADES = dados.unidades;
     SR_INFO  = dados.sr;
     // Expõe globalmente para o firebase.js (Gerador de Ofícios usa SR_INFO e UNIDADES)

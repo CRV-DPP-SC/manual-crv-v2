@@ -186,11 +186,15 @@ onAuthStateChanged(auth, (user) => {
     _mostrarTopbarUsuario(user);
     const info = document.getElementById('restrito-usuario-info');
     if (info) info.textContent = 'Conectado como: ' + (user.email || '');
+    _sincronizarUnidadesFirestore();
   } else {
     _mostrarTopbarVisitante();
     /* Popup automático de login desativado temporariamente — reativar quando o Painel entrar no ar */
   }
 });
+
+/* Também tenta sincronizar para visitantes, caso as regras do Firestore permitam leitura pública */
+_sincronizarUnidadesFirestore();
 
 // ══════════════════════════════════════════════
 // ÁREA RESTRITA
@@ -634,18 +638,27 @@ window.abrirPainelUnidade = function () {
 window.fecharPainelUnidade = function () { document.getElementById('modal-painel')?.classList.remove('aberto'); };
 
 // ══════════════════════════════════════════════
-// EDITOR DE UNIDADES (admin)
+// EDITOR DE UNIDADES (usuários com acesso total — área restrita)
 // ══════════════════════════════════════════════
-const EMAILS_ADMIN_UNIDADES = ['rodrigo.l.pastore@gmail.com'];
-
 window.abrirEditorUnidades = async function () {
-  if (!usuarioAtual || !EMAILS_ADMIN_UNIDADES.includes(usuarioAtual.email)) {
-    showToast('Acesso restrito ao administrador do sistema.'); return;
+  if (!usuarioAtual || !EMAILS_CRV.includes(usuarioAtual.email)) {
+    showToast('Acesso restrito aos usuários com acesso total (área restrita).'); return;
   }
   _abrirModal('modal-editor-unidades');
   const lista = document.getElementById('editor-unidades-lista');
+  const busca = document.getElementById('editor-unidades-busca');
+  if (busca) busca.value = '';
   if (!lista) return;
   lista.innerHTML = '<p style="color:var(--txt-3);font-size:.85rem;padding:12px;">Carregando…</p>';
+
+  try {
+    const snap = await getDoc(doc(db, 'unidades_config', 'principal'));
+    if (snap.exists()) {
+      window.UNIDADES = snap.data().unidades;
+      window.SR_INFO  = snap.data().sr;
+    }
+  } catch (_) { /* sem acesso ao Firestore agora — segue com os dados já carregados */ }
+
   const unidades = window.UNIDADES || [];
   if (!unidades.length) {
     lista.innerHTML = '<p style="color:#b91c1c;padding:12px;">Nenhuma unidade carregada. Recarregue a página.</p>'; return;
@@ -671,7 +684,7 @@ window.abrirEditorUnidades = async function () {
     const items  = grupos[sr];
     const srInfo = window.SR_INFO?.[sr] || {};
     return `
-    <details style="margin-bottom:10px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;" open>
+    <details class="ed-grupo" data-sr-grupo="${sr}" style="margin-bottom:10px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;">
       <summary style="cursor:pointer;padding:10px 14px;background:#e2e8f0;font-weight:700;font-size:.83rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
         <span>🏛️ ${srLabels[sr]}</span>
         <span style="font-size:.72rem;font-weight:400;color:#64748b;">${items.length} unidade(s)</span>
@@ -693,7 +706,7 @@ window.abrirEditorUnidades = async function () {
 
         <!-- Unidades (cada uma colapsável) -->
         ${items.map(({ u, idx }) => `
-        <details style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+        <details class="ed-unidade" data-idx="${idx}" data-busca="${(u.nome+' '+u.cidade+' '+(u.diretor||'')).toLowerCase().replace(/"/g,'&quot;')}" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
           <summary style="cursor:pointer;padding:8px 12px;background:#f1f5f9;font-weight:600;font-size:.82rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
             <span>${u.nome}</span>
             <span style="font-size:.72rem;font-weight:400;color:#94a3b8;">${u.cidade}</span>
@@ -719,7 +732,22 @@ window.abrirEditorUnidades = async function () {
   }).join('');
 };
 
-window.salvarEdicaoUnidades = function () {
+window.filtrarEditorUnidades = function () {
+  const termo = (document.getElementById('editor-unidades-busca')?.value || '').trim().toLowerCase();
+  document.querySelectorAll('#editor-unidades-lista .ed-grupo').forEach(grupo => {
+    let algumVisivel = false;
+    grupo.querySelectorAll('.ed-unidade').forEach(det => {
+      const bate = !termo || det.dataset.busca.includes(termo);
+      det.style.display = bate ? '' : 'none';
+      det.open = !!termo && bate;
+      if (bate) algumVisivel = true;
+    });
+    grupo.style.display = algumVisivel ? '' : 'none';
+    grupo.open = !!termo && algumVisivel;
+  });
+};
+
+window.salvarEdicaoUnidades = async function () {
   document.querySelectorAll('#editor-unidades-lista input[data-idx]').forEach(input => {
     const idx = parseInt(input.dataset.idx), campo = input.dataset.campo;
     if (window.UNIDADES?.[idx]) window.UNIDADES[idx][campo] = input.value;
@@ -728,20 +756,30 @@ window.salvarEdicaoUnidades = function () {
     const sr = input.dataset.sr, campo = input.dataset.campoSr;
     if (window.SR_INFO?.[sr]) window.SR_INFO[sr][campo] = input.value;
   });
-  if (typeof renderizarUnidades === 'function') renderizarUnidades();
-  _downloadJSON({ sr: window.SR_INFO, unidades: window.UNIDADES }, 'unidades.json');
-  showToast('Atualizado! Faça upload do unidades.json no repositório.');
-  _fecharModal('modal-editor-unidades');
+  try {
+    await setDoc(doc(db, 'unidades_config', 'principal'), {
+      sr: window.SR_INFO, unidades: window.UNIDADES,
+      atualizadoPor: usuarioAtual?.email || '', atualizadoEm: serverTimestamp()
+    });
+    if (typeof renderizarUnidades === 'function') renderizarUnidades();
+    showToast('✅ Unidades atualizadas! Já vale para todo mundo.');
+    _fecharModal('modal-editor-unidades');
+  } catch (e) {
+    showToast('Erro ao salvar: ' + e.message);
+  }
 };
 
 window.fecharEditorUnidades = function () { _fecharModal('modal-editor-unidades'); };
 
-function _downloadJSON(obj, nome) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = nome; a.click();
-  URL.revokeObjectURL(url);
+async function _sincronizarUnidadesFirestore() {
+  try {
+    const snap = await getDoc(doc(db, 'unidades_config', 'principal'));
+    if (snap.exists()) {
+      window.UNIDADES = snap.data().unidades;
+      window.SR_INFO  = snap.data().sr;
+      if (typeof window.renderizarUnidades === 'function') window.renderizarUnidades();
+    }
+  } catch (_) { /* Firestore indisponível — mantém os dados do JSON estático */ }
 }
 
 // ══════════════════════════════════════════════

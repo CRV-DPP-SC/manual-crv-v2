@@ -40,8 +40,16 @@ let unidadeSelecionada  = null; // null = próprio painel | objeto unidade = mod
 let srSelecionada       = null; // null = sem filtro SR | 'SR01' etc = CRV visualizando SR
 let _pendenciasUnsub    = null; // unsubscribe do listener onSnapshot de pendências
 
-// ── CARREGA JSON ──
+// ── CARREGA DADOS DAS UNIDADES (Firestore, com fallback pro JSON estático) ──
 async function carregarDados() {
+  try {
+    const snap = await getDoc(doc(db, 'unidades_config', 'principal'));
+    if (snap.exists()) {
+      UNIDADES = snap.data().unidades;
+      SR_INFO  = snap.data().sr;
+      return;
+    }
+  } catch (_) { /* sem acesso ainda (ex: antes do login) — usa o JSON estático */ }
   const res   = await fetch('data/unidades.json');
   const dados = await res.json();
   UNIDADES = dados.unidades;
