@@ -1,8 +1,9 @@
 name: Notificações push (CRV)
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # Disparado externamente (cron-job.org) via workflow_dispatch — o agendamento
+  # nativo do GitHub Actions ("schedule") não é confiável para intervalos curtos
+  # (ficamos com atrasos de até ~2h entre execuções na prática).
   workflow_dispatch: {}
 
 jobs:
