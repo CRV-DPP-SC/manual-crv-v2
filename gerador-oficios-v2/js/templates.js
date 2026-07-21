@@ -364,8 +364,8 @@ function gerarCorpo(s) {
         TXT_CONTATOS_ANUEM,
         TXT_DESFECHO_CIVIL_SINGULAR,
       ];
-      ps = _injetarSaude(s, ps, false, false);
     }
+    ps = _injetarSaude(s, ps, isMulti, false);
   }
 
   /* ── COMUNICAÇÃO ── */

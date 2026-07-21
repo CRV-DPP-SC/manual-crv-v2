@@ -29,12 +29,12 @@ function reedFld(s, nome, ipen) {
 
 /* ── Formatação de texto do ofício ── */
 function fld(t) {
-  return '<span class="ofc-campo">' + (t || '') + '</span>';
+  return '<span class="ofc-campo">' + _esc(t) + '</span>';
 }
 
 /* Placeholder para campos não preenchidos no preview */
 function ph(texto) {
-  return '<span class="ofc-placeholder">‹' + texto + '›</span>';
+  return '<span class="ofc-placeholder">‹' + _esc(texto) + '›</span>';
 }
 
 /* Linha em branco no documento (11pt de altura) */

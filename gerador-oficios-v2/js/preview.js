@@ -75,6 +75,10 @@ function _contarPendencias(s) {
   if (s.mod === 'comunicacao' && !s.dataTrans)   n++;
   if (s.mod === 'comunicacao' && !s.motComun)    n++;
   if (s.mod === 'comunicacao' && !s.nomejuiz)    n++;
+  if ((s.mod === 'adequacao' || s.mod === 'resumo_ipen') && !s.motTransf)    n++;
+  if ((s.mod === 'adequacao' || s.mod === 'ajuste_lotacional' || s.mod === 'resumo_ipen') && !s.motIndicacao) n++;
+  if (s.mod === 'permuta' && !s.motTransfPermuta) n++;
+  if (s.mod === 'permuta' && !s.motPermuta)       n++;
 
   var MODS_COM_BPI = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta','retorno_saida_temporaria','prisaocivil'];
   if (MODS_COM_BPI.indexOf(s.mod) >= 0 && !s.bpi) n++;

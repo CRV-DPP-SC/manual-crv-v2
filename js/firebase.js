@@ -502,18 +502,8 @@ window.fazerCadastro = async function () {
       motivoRecusa:  null,
     });
 
-    // Notifica CPEN/DIR via push (Cloudflare Worker → OneSignal)
-    try {
-      fetch('https://crv-notif.crv-a72.workers.dev/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emailUnidade,
-          nomeUser:    nome,
-          nomeUnidade: unidade.nome,
-        }),
-      });
-    } catch (_) {}
+    // Notificação de novo cadastro pendente é enviada pelo notificacoes-bot
+    // (verifica o Firestore a cada minuto e dispara via OneSignal).
 
     // Desloga imediatamente — acesso liberado apenas após aprovação do CPEN
     await signOut(auth);
