@@ -272,9 +272,6 @@ function _montarOficioCJ(cfg) {
 
   /* Processo no anexo (múltiplos presos): adiciona coluna extra */
   if (cfg.presos.length > 1 && cfg.numProc) {
-    anexoHTML = anexoHTML.replace(
-      '<div class="dest-l">', '' // não afeta — apenas marcador
-    );
     /* Redefine o anexo com coluna de processo */
     var presosComProc = cfg.presos.map(function(pr) {
       return {nome: pr.nome, ipen: pr.ipen, processo: cfg.numProc};

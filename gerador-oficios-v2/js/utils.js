@@ -14,13 +14,10 @@ function gng(s, ms, fs, mp, fp) {
 function art(s)      { return gng(s,'o','a','os','as'); }
 function reed(s)     { return art(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas'); }
 function cust(s)     { return art(s) + ' ' + gng(s,'custodiado','custodiada','custodiados','custodiadas'); }
-function pres(s)     { return art(s) + ' ' + gng(s,'preso','presa','presos','presas'); }
 function foi(s)      { return gn(s,'foi','foram'); }
-function esta(s)     { return gn(s,'está','estão'); }
 function transf(s)   { return gng(s,'transferido','transferida','transferidos','transferidas'); }
 function custAdj(s)  { return gng(s,'custodiado','custodiada','custodiados','custodiadas'); }
 function doA(s)      { return g(s,'do','da') + (s.numero === 'P' ? 's' : ''); }
-function adj(s, ms, fs, mp, fp) { return gng(s, ms, fs, mp, fp); }
 
 function reedFld(s, nome, ipen) {
   if (!s.genero) return 'o(a) reeducando(a) ' + fld(nome) + ', IPEN Nº ' + fld(ipen);

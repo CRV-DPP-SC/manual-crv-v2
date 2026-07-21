@@ -571,40 +571,6 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
 .um-section-label { font-size: .68rem; font-weight: 700; color: #999; text-transform: uppercase; padding: 8px 18px 4px; letter-spacing: .05em; }
 .um-vazio { padding: 20px; text-align: center; color: #aaa; font-size: .85rem; }
 
-/* ── Modal Histórico ── */
-#mhistBg .modal { width: min(96vw, 680px); }
-
-.mhist-lista { flex: 1; overflow-y: auto; padding: 6px 0; }
-.mhist-vazio { padding: 40px 20px; text-align: center; color: #999; font-size: .88rem; }
-.mhist-item {
-  padding: 12px 18px; border-bottom: 1px solid #edf0f7;
-  display: flex; justify-content: space-between; align-items: center; gap: 10px;
-}
-.mhist-item:last-child { border-bottom: none; }
-.mhist-info { flex: 1; min-width: 0; }
-.mhist-titulo { font-size: .86rem; font-weight: 700; color: var(--azul); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mhist-sub { font-size: .73rem; color: #777; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mhist-acoes { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-.mhist-btn {
-  padding: 5px 11px; border-radius: 6px; font-size: .75rem; font-weight: 700;
-  cursor: pointer; border: 1.5px solid var(--borda); background: #fff;
-  color: var(--azul); font-family: inherit; white-space: nowrap;
-}
-.mhist-btn:hover { background: #edf3ff; }
-.mhist-btn-reusar { border-color: var(--verde); color: var(--verde); }
-.mhist-btn-reusar:hover { background: #f0fdf4; }
-.mhist-del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; padding: 4px 6px; border-radius: 6px; }
-.mhist-del:hover { color: #dc2626; }
-.mhist-foot { padding: 10px 18px; border-top: 1px solid var(--borda); display: flex; justify-content: space-between; align-items: center; }
-.mhist-foot-info { font-size: .73rem; color: #999; }
-.mhist-limpar { padding: 6px 13px; border: 2px solid #dc2626; border-radius: 8px; background: #fff; color: #dc2626; font-size: .75rem; font-weight: 700; cursor: pointer; font-family: inherit; }
-.mhist-limpar:hover { background: #dc2626; color: #fff; }
-
-/* Modal view do histórico */
-#mhistViewBg .modal { width: min(97vw, 820px); max-height: 93vh; }
-#mhistViewBg .modal-body { background: var(--cinza); }
-#histOficioPreview { background: #fff; border: 1px solid #bbb; border-radius: 4px; padding: 1.5cm; max-width: 21cm; margin: 0 auto; font-family: Arial, sans-serif; font-size: 11pt; }
-
 /* ── Modal CJ ── */
 #mcjBg .modal { width: min(97vw, 700px); }
 

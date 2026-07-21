@@ -201,12 +201,8 @@ function mostrarPainel() {
   renderizarCabecalhoPainel();
   if ((perfilAtual === 'crv' || perfilAtual === 'super') && !modoLeitura()) {
     mostrarDashboard();
-  } else if (_ehNavCartoes()) {
-    mostrarLandingGrupos();
   } else {
-    document.querySelector('.p-abas').style.display = '';
-    document.getElementById('p-corpo').className = '';
-    carregarAba('pendentes');
+    mostrarLandingGrupos();
   }
   /* Listener em tempo real de pendências para DIR/SR/CPEN */
   if (['dir', 'super', 'cpen'].includes(perfilAtual)) {
@@ -328,11 +324,6 @@ function _mostrarModalAcessosPendentes(lista) {
     </div>`;
   document.getElementById('p-modal-pendencias').style.display = 'flex';
 }
-
-/* Cancela listener de acessos no logout (em fazerLogoutPainel) */
-window._cancelarListenerAcessos = function () {
-  if (_acessosUnsub) { _acessosUnsub(); _acessosUnsub = null; }
-};
 
 /* ── Modal de pendências no login ── */
 async function _verificarPendenciasLogin() {
@@ -744,43 +735,6 @@ window._mostrarSubGrupo = function(grupoId) {
 
   const backBtn = `<button class="p-bc-btn" onclick="mostrarLandingGrupos()" style="display:flex;align-items:center;gap:5px;margin-bottom:20px;font-size:.82rem;">← Voltar</button>`;
 
-  /* ── FERRAMENTAS ── */
-  if (grupoId === 'ferramentas') {
-    const isCpen = perfilAtual === 'cpen';
-    const padCard = isCpen ? `
-      <button class="p-sub-card" onclick="_abrirPADdoPainel()"
-        style="border-color:#f97316;"
-        onmouseover="this.style.background='#fff8f3';this.style.borderColor='#ea580c';"
-        onmouseout="this.style.background='var(--bg-card)';this.style.borderColor='#f97316';">
-        <span class="p-sub-card-icon">📋</span>
-        <span class="p-sub-card-titulo" style="color:#9a3412;">Gerador de PAD</span>
-        <span class="p-sub-card-sub">Procedimento Administrativo Disciplinar</span>
-      </button>` : '';
-
-    const toolCards = [
-      { icon: '⚙️', titulo: 'Gerador de Ofícios', sub: 'Elaborar ofícios com formatação oficial',    onclick: `window.parent.abrirGeradorOficios && window.parent.abrirGeradorOficios()` },
-      { icon: '📄', titulo: 'Guia — Gerador de Ofícios', sub: 'Instruções de uso do gerador',        onclick: `window.parent.abrirGuiaOficios && window.parent.abrirGuiaOficios()` },
-      { icon: '🌐', titulo: 'Portal de Transferências ↗', sub: 'ppsc.com.br — pedidos voluntários',   onclick: `window.open('https://ppsc.com.br','_blank')` },
-      { icon: '🏛️', titulo: 'Unidades Prisionais', sub: 'Contatos e dados das unidades',             onclick: `window.parent.navegarPara && window.parent.navegarPara('unidades')` },
-      { icon: '📚', titulo: 'Legislação', sub: 'Base normativa aplicável',                            onclick: `window.parent.navegarPara && window.parent.navegarPara('legislacao')` },
-    ].map(t => `<button class="p-sub-card" onclick="${t.onclick}">
-        <span class="p-sub-card-icon">${t.icon}</span>
-        <span class="p-sub-card-titulo">${t.titulo}</span>
-        <span class="p-sub-card-sub">${t.sub}</span>
-      </button>`).join('');
-
-    corpo.innerHTML = `
-    <div style="padding:24px 32px 40px;">
-      ${backBtn}
-      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">🛠️ Ferramentas</h2>
-      ${unNome ? `<p style="font-size:.75rem;color:var(--txt-3);margin:0 0 20px;">📍 ${unNome}</p>` : '<div style="height:16px;"></div>'}
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:760px;">
-        ${padCard}${toolCards}
-      </div>
-    </div>`;
-    return;
-  }
-
   /* ── TRANSFERÊNCIAS ── */
   if (grupoId === 'transferencias') {
     const badge = document.getElementById('p-badge-pendentes');
@@ -835,15 +789,10 @@ window._mostrarSubGrupo = function(grupoId) {
 // ABAS
 // ══════════════════════════════════════════════
 window.carregarAba = async function (aba) {
-  /* Modo cartões: rastreia grupo e aba para breadcrumb */
-  if (_ehNavCartoes()) {
-    _abaAtiva   = aba;
-    _grupoAtivo = _GRUPO_DE_ABA[aba] || _grupoAtivo;
-    _atualizarBreadcrumb();
-  } else {
-    document.querySelectorAll('.p-aba-btn')
-      .forEach(b => b.classList.toggle('ativa', b.dataset.aba === aba));
-  }
+  /* Rastreia grupo e aba para breadcrumb (navegação em cartões) */
+  _abaAtiva   = aba;
+  _grupoAtivo = _GRUPO_DE_ABA[aba] || _grupoAtivo;
+  _atualizarBreadcrumb();
 
   /* Limpa seleções ao trocar de aba */
   _selSols.clear(); _selAcess.clear();
@@ -854,8 +803,6 @@ window.carregarAba = async function (aba) {
 
   // Abas com lógica própria
   if (aba === 'acessos')     { await carregarAbaAcessos(corpo);     return; }
-  if (aba === 'manual')      { carregarAbaManual(corpo);             return; }
-  if (aba === 'ferramentas') { carregarAbaFerramentas(corpo);        return; }
 
   const unids = unidadesVisiveis().map(u => u.email);
   if (!unids.length) {
@@ -2247,233 +2194,6 @@ function mostrarErro(msg) {
   const el = document.getElementById('p-erro-global');
   if (el) { el.textContent = msg; el.style.display = 'block'; }
 }
-
-// ── ABA MANUAL ──
-function carregarAbaManual(el) {
-  el.innerHTML = `
-  <div style="padding:16px 24px 32px;">
-    <div style="margin-bottom:20px;">
-      <h2 style="font-size:1.1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">📖 Manual Operacional — CRV</h2>
-      <p style="font-size:.82rem;color:var(--txt-3);margin:0;">Procedimentos da Res. Conjunta nº 1/2026 · ${escopoAtual?.n || escopoAtual?.nome || ''}</p>
-    </div>
-
-    <!-- Hipóteses -->
-    <div style="margin-bottom:10px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt-3);">📌 Hipóteses de Transferência</div>
-    <div style="margin-bottom:8px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:.83rem;color:#92400e;">
-      ⚠️ O pedido que não se enquadre em nenhuma das hipóteses abaixo será <strong>indeferido de plano</strong> pela CRV.
-    </div>
-    <div class="p-accordion" style="margin-bottom:24px;">
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🚨 &nbsp;I — Segurança / Emergência (Art. 21, I)<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p>A transferência em caráter emergencial somente será admitida quando houver <strong>risco atual, concreto e relevante</strong>, devidamente demonstrado pela unidade solicitante.</p>
-          <p style="margin-top:8px;">A transferência possui natureza <strong>administrativa e não punitiva</strong>.</p>
-          <div style="border-left:4px solid #dc2626;padding:.5rem 1rem;margin:10px 0;background:rgba(220,38,38,.06);border-radius:0 4px 4px 0;font-size:.86rem;">
-            Abrange situações de instabilidade interna, conflitos, risco à ordem da unidade, risco à integridade física do reeducando ou de terceiros, ameaças, motins, rebeliões.
-          </div>
-          <p style="font-size:.86rem;"><strong>Assinaturas obrigatórias:</strong> Diretor de Origem + Diretor de Destino + Superintendente(s) Regional(is).</p>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🔄 &nbsp;II — Pedido Voluntário (Art. 21, II)<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p>Para solicitações por pedido do preso, familiar ou advogado, acesse o <strong>Portal da Polícia Penal de SC</strong>: <a href="https://ppsc.com.br" target="_blank" rel="noopener" style="font-weight:700;">ppsc.com.br ↗</a>. Envios de memorandos diretamente à CRV serão indeferidos.</p>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">⚖️ &nbsp;III — Adequação da Capacidade de Ocupação (Art. 21, III)<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p>Redistribuição administrativa destinada à adequação da capacidade de ocupação das unidades prisionais.</p>
-          <ul style="margin:.75rem 0 0 1.25rem;list-style:disc;font-size:.87rem;line-height:2.1;">
-            <li><strong>Larga escala / complexo:</strong> Transferência rotineira dentro do mesmo Complexo;</li>
-            <li><strong>Pontual:</strong> Transferência individual por perfil específico;</li>
-            <li><strong>Alteração de Regime:</strong> Transferência para unidade adequada em razão de progressão, regressão ou prisão provisória.</li>
-          </ul>
-          <p style="margin-top:8px;font-size:.86rem;"><strong>Metas — Plano Pena Justa:</strong> 130% (1º ano) → 120% (2º ano) → 100% (3º ano).</p>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🏛️ &nbsp;IV — Mandado de Prisão de Comarca Diversa<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p>Preso capturado em comarca diversa daquela que expediu a ordem de prisão, devendo ser transferido para a unidade responsável pela circunscrição da autoridade judiciária expedidora.</p>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🌙 &nbsp;V — Pernoite<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p>Necessidade de permanência temporária do custodiado em unidade diversa da sua por motivo fundamentado.</p>
-          <p style="margin-top:8px;font-size:.86rem;">📋 Não é necessário ofício via SGPe — basta cadastro no i-PEN com menção ao contato prévio com o Diretor ou Chefe de Segurança da unidade de destino.</p>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🔒 &nbsp;VI — Unidade de Segurança Máxima / RDD<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p>Inclusão de preso de alta periculosidade na USM, mediante decisão judicial de RDD e deliberação da Comissão Deliberativa do DPP.</p>
-          <ul style="margin:.75rem 0 0 1.25rem;list-style:disc;font-size:.87rem;line-height:2.1;">
-            <li>A gestão local somente pode solicitar o RDD ao Judiciário <strong>após autorização expressa do DPP</strong>;</li>
-            <li>Com o RDD deferido, o processo é encaminhado à CRV para cadastro no sistema.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fluxo Operacional -->
-    <div style="margin-bottom:10px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt-3);">🔄 Fluxo Operacional</div>
-    <div style="margin-bottom:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:.83rem;color:#991b1b;">
-      🚨 <strong>Emergenciais — Ligue imediatamente para a CRV: (48) 3665-7330</strong>
-    </div>
-    <div class="p-accordion" style="margin-bottom:24px;">
-      ${[
-        ['1','Unidade de Origem','Identificação da hipótese e elaboração do Ofício','Identificar a hipótese e elaborar o ofício endereçado à CRV.'],
-        ['2','Unidade de Origem','Processo SGPe — único e permanente','Cada unidade deve possuir um processo SGPe único e permanente para coleta de assinaturas.'],
-        ['3','','Assinaturas obrigatórias','Diretor de Origem + Diretor de Destino + Superintendente(s) Regional(is).'],
-        ['4','Superintendência(s) Regional(is)','Anuência do(s) Superintendente(s)','SR de origem sempre obrigatória. Se envolver outra SR, a de destino também deve anuir.'],
-        ['5','','Materialização dos Documentos no SGPe','Selecionar as peças e executar a materialização, gerando um único PDF consolidado.'],
-        ['6','','Cadastro no i-PEN','Cadastrar o pedido no i-PEN anexando o PDF materializado.'],
-        ['7','CRV','Análise e deliberação pela CRV','A CRV recebe, analisa e delibera: deferir, indeferir ou devolver para saneamento.'],
-        ['8','Unidade Prisional','Execução + Comunicação ao Judiciário','Após autorização: efetivação e comunicação ao Juízo competente em até 24 horas.'],
-      ].map(([n, ator, titulo, desc]) => `
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">
-          <span style="background:var(--azul-500);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;margin-right:8px;flex-shrink:0;">${n}</span>
-          ${ator ? `<span style="font-size:.75rem;color:var(--txt-3);margin-right:6px;">[${ator}]</span>` : ''}${titulo}
-          <span class="p-acc-seta">▼</span>
-        </div>
-        <div class="p-acc-body" style="display:none;font-size:.87rem;color:var(--txt-2);padding:10px 16px;">${desc}</div>
-      </div>`).join('')}
-    </div>
-
-    <!-- Documentos -->
-    <div style="margin-bottom:10px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt-3);">📂 Documentos Necessários</div>
-    <div class="p-accordion">
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🚨 Segurança / Emergência — Checklist<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <p style="font-size:.83rem;font-weight:700;color:#dc2626;margin-bottom:.5rem;">Com PAD</p>
-          <ul style="list-style:none;font-size:.875rem;line-height:2.3;margin-bottom:1rem;">
-            <li>☐ <strong>Ofício</strong> — Modelo A (Com PAD); Art. 21, I da Res. nº 1/2026</li>
-            <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino + Superintendente(s)</li>
-          </ul>
-          <p style="font-size:.83rem;font-weight:700;color:var(--azul-500);margin-bottom:.5rem;">Sem PAD</p>
-          <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
-            <li>☐ <strong>Ofício</strong> — Modelo B (Sem PAD); Art. 21, I da Res. nº 1/2026</li>
-            <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino + Superintendente(s)</li>
-          </ul>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">⚖️ Adequação da Capacidade de Ocupação — Checklist<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
-            <li>☐ <strong>Ofício</strong> — Art. 21, III da Res. nº 1/2026</li>
-            <li>☐ <strong>Lista dos presos indicados</strong> — nome, IPEN, regime, perfil</li>
-            <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino (+ SR se unidades distintas)</li>
-          </ul>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🏛️ Mandado de Prisão de Comarca Diversa — Checklist<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
-            <li>☐ <strong>Ofício da Direção</strong> — Art. 21, III da Res. nº 1/2026</li>
-            <li>☐ <strong>Cópia do Mandado de Prisão</strong></li>
-            <li>☐ <strong>Assinaturas:</strong> Diretor Origem + Diretor Destino</li>
-          </ul>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🌙 Pernoite — Checklist<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
-            <li>☐ <strong>Pedido cadastrado no i-PEN</strong> com fundamentação</li>
-            <li>☐ <strong>Menção expressa</strong> de contato prévio com o Diretor de destino</li>
-          </ul>
-        </div>
-      </div>
-      <div class="p-acc-item">
-        <div class="p-acc-header" onclick="pAccToggleManual(this)">🔒 Segurança Máxima / RDD — Checklist<span class="p-acc-seta">▼</span></div>
-        <div class="p-acc-body" style="display:none;">
-          <ul style="list-style:none;font-size:.875rem;line-height:2.3;">
-            <li>☐ <strong>Autorização expressa do DPP</strong> — Comissão Deliberativa da USM</li>
-            <li>☐ <strong>Ofício de solicitação de RDD</strong> ao juízo competente</li>
-            <li>☐ <strong>Decisão judicial</strong> que determina a inclusão em RDD</li>
-            <li>☐ <strong>BO, PAD, Relatórios</strong> e demais documentos pertinentes</li>
-            <li>☐ <strong>Assinaturas:</strong> Diretor + Superintendente Regional de origem</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <style>
-    .p-acc-item { border:1px solid var(--border); border-radius:8px; margin-bottom:6px; overflow:hidden; }
-    .p-acc-header { display:flex; align-items:center; padding:12px 16px; font-size:.88rem; font-weight:600; cursor:pointer; background:var(--surface); color:var(--txt-1); gap:4px; }
-    .p-acc-header:hover { background:var(--surface-2); }
-    .p-acc-seta { margin-left:auto; font-size:.7rem; color:var(--txt-3); transition:transform .2s; }
-    .p-acc-body { padding:12px 16px; font-size:.86rem; color:var(--txt-2); line-height:1.6; border-top:1px solid var(--border); background:var(--bg); }
-  </style>`;
-}
-
-window.pAccToggleManual = function(header) {
-  const body = header.nextElementSibling;
-  const aberto = body.style.display !== 'none';
-  body.style.display = aberto ? 'none' : 'block';
-  const seta = header.querySelector('.p-acc-seta');
-  if (seta) seta.style.transform = aberto ? '' : 'rotate(180deg)';
-};
-
-// ── ABA FERRAMENTAS ──
-function carregarAbaFerramentas(el) {
-  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
-  const cardPAD = perfilAtual === 'cpen' ? `
-      <button onclick="_abrirPADdoPainel()" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:2px solid #f97316;border-radius:10px;background:#fff8f3;cursor:pointer;text-align:left;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='#ffedd5'" onmouseout="this.style.background='#fff8f3'">
-        <span style="font-size:1.4rem;">📋</span>
-        <span style="font-size:.9rem;font-weight:700;color:#9a3412;">Gerador de PAD</span>
-        <span style="font-size:.78rem;color:#c2410c;">Procedimento Administrativo Disciplinar</span>
-      </button>` : '';
-  el.innerHTML = `
-  <div style="padding:16px 24px 32px;">
-    <div style="margin-bottom:20px;">
-      <h2 style="font-size:1.1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">🛠️ Ferramentas</h2>
-      <p style="font-size:.82rem;color:var(--txt-3);margin:0;">${unNome ? 'Unidade: ' + unNome : 'Central de Regulação de Vagas'}</p>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
-      <button onclick="window.parent.abrirGeradorOficios && window.parent.abrirGeradorOficios()" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
-        <span style="font-size:1.4rem;">⚙️</span>
-        <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Gerador de Ofícios</span>
-        <span style="font-size:.78rem;color:var(--txt-3);">Elaborar ofícios com formatação oficial</span>
-      </button>
-      <button onclick="window.parent.abrirGuiaOficios && window.parent.abrirGuiaOficios()" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
-        <span style="font-size:1.4rem;">📄</span>
-        <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Guia — Gerador de Ofícios</span>
-        <span style="font-size:.78rem;color:var(--txt-3);">Instruções de uso do gerador</span>
-      </button>${cardPAD}
-      <a href="https://ppsc.com.br" target="_blank" rel="noopener" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);text-decoration:none;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
-        <span style="font-size:1.4rem;">🌐</span>
-        <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Portal de Transferências ↗</span>
-        <span style="font-size:.78rem;color:var(--txt-3);">ppsc.com.br — pedidos voluntários</span>
-      </a>
-      <button onclick="window.parent.navegarPara && window.parent.navegarPara('unidades')" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
-        <span style="font-size:1.4rem;">🏛️</span>
-        <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Unidades Prisionais</span>
-        <span style="font-size:.78rem;color:var(--txt-3);">Contatos e dados das unidades</span>
-      </button>
-      <button onclick="window.parent.navegarPara && window.parent.navegarPara('legislacao')" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
-        <span style="font-size:1.4rem;">📚</span>
-        <span style="font-size:.9rem;font-weight:700;color:var(--txt-1);">Legislação</span>
-        <span style="font-size:.78rem;color:var(--txt-3);">Base normativa aplicável</span>
-      </button>
-    </div>
-  </div>`;
-}
-
-/* Abre o Gerador de PAD a partir do Painel, passando dados da unidade para o pai */
-window._abrirPADdoPainel = function() {
-  if (window.parent && window.parent._padSetUnidade) {
-    window.parent._padSetUnidade(escopoAtual?.unidade || null);
-  }
-  window.parent.abrirGeradorPAD && window.parent.abrirGeradorPAD();
-};
 
 // ── INIT ──
 // (dados já carregados via dadosPromise antes do onAuthStateChanged)

@@ -612,13 +612,6 @@ window.abrirGeradorPAD = function () {
   window.open('https://sepen-dpp.github.io/PAD/', '_blank');
 };
 
-window.abrirPainelUnidade = function () {
-  const f = document.getElementById('painel-iframe');
-  if (f && !f.src.includes('painel')) f.src = 'painel.html';
-  document.getElementById('modal-painel')?.classList.add('aberto');
-};
-window.fecharPainelUnidade = function () { document.getElementById('modal-painel')?.classList.remove('aberto'); };
-
 // ══════════════════════════════════════════════
 // EDITOR DE UNIDADES (usuários com acesso total — área restrita)
 // ══════════════════════════════════════════════

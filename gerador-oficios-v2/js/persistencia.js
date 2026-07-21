@@ -10,47 +10,9 @@ function _prefsSalvar(k, v) {
   try { localStorage.setItem('crv_prefs', JSON.stringify(p)); } catch(e) {}
 }
 
-function _unsOvCarregar() {
-  try { return JSON.parse(localStorage.getItem('crv_uns_overrides') || '{}'); } catch(e) { return {}; }
-}
-function _unsOvSalvar(ov) {
-  try { localStorage.setItem('crv_uns_overrides', JSON.stringify(ov)); } catch(e) { _toast('Não foi possível salvar.'); }
-}
-
-/* Retorna array de unidades com overrides aplicados */
+/* Retorna array de unidades (dados oficiais, já sincronizados com o Firestore por firebase-v2.js) */
 function getUns() {
-  var ov = _unsOvCarregar();
-  return UNS.map(function(u, i) { return ov[i] ? Object.assign({}, u, ov[i]) : u; });
-}
-
-/* Salva override de uma unidade e atualiza o estado se ela estiver em uso */
-function salvarUnidade(i, dados) {
-  var ov = _unsOvCarregar();
-  ov[i] = dados;
-  _unsOvSalvar(ov);
-  _toast('Dados salvos com sucesso!');
-  var s = Estado.get();
-  if (s.ori && UNS.indexOf(UNS.find(function(u){ return u.em === (s.ori && s.ori.em); })) === i) {
-    Estado.set('ori', getUns()[i]);
-  }
-  if (s.des && UNS.indexOf(UNS.find(function(u){ return u.em === (s.des && s.des.em); })) === i) {
-    Estado.set('des', getUns()[i]);
-  }
-}
-
-/* Restaura unidade ao padrão original */
-function restaurarUnidade(i) {
-  var ov = _unsOvCarregar();
-  delete ov[i];
-  _unsOvSalvar(ov);
-  _toast('Dados restaurados ao padrão.');
-  var s = Estado.get();
-  if (s.ori && UNS.indexOf(UNS.find(function(u){ return u.em === (s.ori && s.ori.em); })) === i) {
-    Estado.set('ori', getUns()[i]);
-  }
-  if (s.des && UNS.indexOf(UNS.find(function(u){ return u.em === (s.des && s.des.em); })) === i) {
-    Estado.set('des', getUns()[i]);
-  }
+  return UNS.slice();
 }
 
 /* Próximo número de ofício sugerido */

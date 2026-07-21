@@ -270,7 +270,7 @@ function toggleTema() {
   const btn = document.querySelector('.btn-tema');
   if (btn) btn.textContent = novo === 'escuro' ? '☀️' : '🌙';
   /* Propaga tema para iframes embarcados */
-  ['painel-embed-iframe','gerador-iframe','guia-iframe','crv-tool-iframe'].forEach(fid => {
+  ['painel-embed-iframe','gerador-iframe','guia-iframe','crv-tool-iframe','caixinha-iframe','calc-iframe','viagens-iframe'].forEach(fid => {
     const fr = document.getElementById(fid);
     try { if (fr?.contentWindow) fr.contentWindow.postMessage({ crvTema: novo }, '*'); } catch(_) {}
   });

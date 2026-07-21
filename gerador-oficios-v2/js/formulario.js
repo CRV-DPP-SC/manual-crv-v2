@@ -148,7 +148,7 @@ var FormularioCtrl = (function() {
       camposHtml += _campo('nome', 'Nome completo', 'text', s.nome, 'Ex.: João da Silva Santos', true);
       camposHtml += _campo('ipen', 'IPEN', 'text', s.ipen, 'Ex.: 123456', true);
       if (!semRegime) {
-        camposHtml += _secaoSitPenal(s, null);
+        camposHtml += _secaoSitPenal(s);
       }
     } else {
       /* Plural */
@@ -159,23 +159,22 @@ var FormularioCtrl = (function() {
     return _secao('reed', 'Reeducando(s)', camposHtml, ok ? '✓' : (s.nome || s.ipen || (s.reed && s.reed.length > 0) ? '⚠' : '○'), false);
   }
 
-  function _secaoSitPenal(s, idx) {
-    var sufixo = idx !== null ? '_' + idx : '';
-    var reg    = idx !== null ? (s.reed && s.reed[idx] ? s.reed[idx].regime : '') : s.regime;
-    var aloc   = idx !== null ? (s.reed && s.reed[idx] ? s.reed[idx].alocacao : '') : s.alocacao;
+  function _secaoSitPenal(s) {
+    var reg  = s.regime;
+    var aloc = s.alocacao;
     return '<div class="sit-penal-wrap">'
       + '<div class="campo-label">Situação Penal</div>'
       + '<div class="chip-group">'
-      + _chip('regime' + sufixo, 'Provisório', '⚓ Provisório', reg === 'Provisório', true, idx)
-      + _chip('regime' + sufixo, 'Fechado',    '🔒 Fechado',    reg === 'Fechado',    true, idx)
-      + _chip('regime' + sufixo, 'Semiaberto', '🔓 Semiaberto', reg === 'Semiaberto', true, idx)
+      + _chip('regime', 'Provisório', '⚓ Provisório', reg === 'Provisório', true)
+      + _chip('regime', 'Fechado',    '🔒 Fechado',    reg === 'Fechado',    true)
+      + _chip('regime', 'Semiaberto', '🔓 Semiaberto', reg === 'Semiaberto', true)
       + '</div>'
       + '<div class="campo-label">Característica de Alocação</div>'
       + '<div class="chip-group">'
-      + _chip('alocacao' + sufixo, 'Convívio',      '👥 Convívio',     aloc === 'Convívio',      true, idx)
-      + _chip('alocacao' + sufixo, 'Seguro',         '🛡 Seguro',        aloc === 'Seguro',         true, idx)
-      + _chip('alocacao' + sufixo, 'SEGURO',         '🛡 SEGURO',        aloc === 'SEGURO',         true, idx, true)
-      + _chip('alocacao' + sufixo, 'Não informado',  '❓ Não informado', aloc === 'Não informado',  true, idx)
+      + _chip('alocacao', 'Convívio',      '👥 Convívio',     aloc === 'Convívio',      true)
+      + _chip('alocacao', 'Seguro',         '🛡 Seguro',        aloc === 'Seguro',         true)
+      + _chip('alocacao', 'SEGURO',         '🛡 SEGURO',        aloc === 'SEGURO',         true, undefined, true)
+      + _chip('alocacao', 'Não informado',  '❓ Não informado', aloc === 'Não informado',  true)
       + '</div>'
       + '</div>';
   }
@@ -463,9 +462,8 @@ var FormularioCtrl = (function() {
   }
 
   function _chip(field, val, label, sel, wrap, idx, perigo) {
-    var fieldAttr = idx !== null && idx !== undefined ? field : field;
     return '<button class="chip' + (sel ? ' sel' : '') + (perigo ? ' perigo' : '') + '"'
-      + ' data-field="' + fieldAttr + '" data-val="' + _esc(val) + '"'
+      + ' data-field="' + field + '" data-val="' + _esc(val) + '"'
       + (idx !== null && idx !== undefined ? ' data-idx="' + idx + '"' : '')
       + '>' + label + '</button>';
   }
@@ -810,20 +808,4 @@ function _toggleSecao(id) {
   var aberto = corpo.style.display !== 'none';
   corpo.style.display = aberto ? 'none' : '';
   if (chev) chev.textContent = aberto ? '▸' : '▾';
-}
-
-/* Colapsa todas as seções exceto a primeira visível (para notebook/mobile) */
-function _colapsarSecoes() {
-  var isMobile = window.innerWidth <= 1100;
-  if (!isMobile) return;
-  var primeiraNaoColapsada = true;
-  document.querySelectorAll('.form-secao').forEach(function(sec) {
-    var id = sec.id.replace('sec-', '');
-    var corpo = document.getElementById('corpo-' + id);
-    var chev  = document.getElementById('chev-' + id);
-    if (!corpo) return;
-    if (primeiraNaoColapsada) { primeiraNaoColapsada = false; return; }
-    corpo.style.display = 'none';
-    if (chev) chev.textContent = '▸';
-  });
 }

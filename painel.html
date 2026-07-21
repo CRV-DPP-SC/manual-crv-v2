@@ -159,41 +159,6 @@
     }
     .p-banner-leitura.visivel { display: block; }
 
-    /* ── ABAS ── */
-    .p-abas {
-      display: flex; align-items: stretch; gap: 0;
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      padding: 0 32px;
-      flex-wrap: wrap;
-    }
-    .p-aba-grupo {
-      display: flex; align-items: stretch; gap: 0;
-      position: relative;
-    }
-    .p-aba-grupo + .p-aba-grupo {
-      border-left: 1px solid var(--border);
-      margin-left: 4px;
-      padding-left: 4px;
-    }
-    .p-aba-grupo-label {
-      position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
-      font-size: .6rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: var(--txt-3); white-space: nowrap;
-      pointer-events: none;
-    }
-    .p-aba-btn {
-      padding: 20px 16px 10px;
-      font-size: .875rem; font-weight: 500;
-      color: var(--txt-3); background: none; border: none;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      transition: color var(--transition), border-color var(--transition);
-      white-space: nowrap;
-    }
-    .p-aba-btn:hover { color: var(--txt-1); }
-    .p-aba-btn.ativa { color: var(--azul-500); border-bottom-color: var(--azul-500); font-weight: 600; }
-
     /* ── CORPO ── */
     #p-corpo { padding: 28px 32px; max-width: 900px; }
     @media(max-width:600px){ #p-corpo { padding: 20px 16px; } }
@@ -620,38 +585,10 @@
   <!-- Banner modo leitura -->
   <div id="p-banner-leitura" class="p-banner-leitura"></div>
 
-  <!-- Abas -->
-  <div class="p-abas">
-    <!-- Grupo: Transferências -->
-    <div class="p-aba-grupo">
-      <span class="p-aba-grupo-label">Transferências</span>
-      <button class="p-aba-btn ativa" data-aba="pendentes" onclick="carregarAba('pendentes')">
-        Assinaturas Pendentes <span id="p-badge-pendentes" style="display:none;background:#dc2626;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
-      </button>
-      <button class="p-aba-btn" data-aba="minhas" onclick="carregarAba('minhas')">
-        Solicitação de Assinaturas
-      </button>
-      <button class="p-aba-btn" data-aba="historico" onclick="carregarAba('historico')">
-        Histórico de Pedidos
-      </button>
-      <button class="p-aba-btn" data-aba="cancelados" onclick="carregarAba('cancelados')">
-        Solicitações Canceladas
-      </button>
-    </div>
-    <!-- Grupo: Acesso -->
-    <div class="p-aba-grupo">
-      <span class="p-aba-grupo-label">Acesso</span>
-      <button class="p-aba-btn" data-aba="acessos" id="tab-acessos" style="display:none;" onclick="carregarAba('acessos')">
-        Controle de Acesso/Usuários <span id="p-badge-acessos" style="display:none;background:#f59e0b;color:#fff;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:4px;vertical-align:middle;"></span>
-      </button>
-    </div>
-    <!-- Grupo: Ferramentas -->
-    <div class="p-aba-grupo">
-      <span class="p-aba-grupo-label">Ferramentas</span>
-      <button class="p-aba-btn" data-aba="ferramentas" id="tab-ferramentas" style="display:none;" onclick="carregarAba('ferramentas')">
-        🛠️ Ferramentas
-      </button>
-    </div>
+  <!-- Contadores de pendência (lidos pela navegação em cartões) -->
+  <div class="p-abas" style="display:none;">
+    <span id="p-badge-pendentes" style="display:none;"></span>
+    <span id="p-badge-acessos" style="display:none;"></span>
   </div>
 
   <!-- Breadcrumb (navegação por cartões, dir/cpen) -->
@@ -790,8 +727,6 @@
   <button class="p-barra-btn-limpar" onclick="selLimpar()">✕ Desmarcar todos</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script type="module" src="js/painel.js?v=4"></script>
 </body>
 </html>
