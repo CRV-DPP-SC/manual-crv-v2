@@ -194,8 +194,6 @@ import { getAuth, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, getDocs, collection }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getStorage, ref, getDownloadURL }
-  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
@@ -210,12 +208,11 @@ const firebaseConfig = {
 const app     = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth    = getAuth(app);
 const db      = getFirestore(app);
-const storage = getStorage(app);
 
 /*
  * Mesma allowlist de js/firebase.js (EMAILS_CRV). Duplicada aqui como
- * camada extra de defesa no cliente — a proteção real está nas regras
- * do Firestore/Storage, que devem usar a mesma lista.
+ * camada extra de defesa no cliente — a proteção real está na regra
+ * do Firestore (beneficios_respostas), que deve usar a mesma lista.
  */
 const EMAILS_CRV = [
   'rodrigo.l.pastore@gmail.com',
@@ -416,7 +413,7 @@ function renderDetalhe(container, resposta){
       (r.anexos || []).forEach(anexo => {
         const btn = el('button', 'anexo-btn', '⬇ ' + (anexo.nome || 'anexo'));
         btn.type = 'button';
-        btn.addEventListener('click', () => baixarAnexo(anexo.caminho, btn));
+        btn.addEventListener('click', () => window.open(anexo.driveUrl, '_blank', 'noopener'));
         anexosWrap.appendChild(btn);
       });
       card.appendChild(anexosWrap);
@@ -434,21 +431,6 @@ function spanLabel(label, value){
   return s;
 }
 
-async function baixarAnexo(caminho, btn){
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Abrindo...';
-  try {
-    const url = await getDownloadURL(ref(storage, caminho));
-    window.open(url, '_blank', 'noopener');
-  } catch (e) {
-    console.error('Erro ao baixar anexo:', e);
-    alert('Não foi possível baixar o anexo. Confirme que você está logado com um e-mail de acesso total do CRV.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-  }
-}
 </script>
 
 </body>

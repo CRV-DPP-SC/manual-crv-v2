@@ -588,8 +588,14 @@ import { initializeAppCheck, ReCaptchaV3Provider }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app-check.js";
 import { getFirestore, doc, getDoc, getDocs, collection, writeBatch, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes }
-  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
+/*
+ * Anexos vão para o Google Drive via Apps Script (não usamos Firebase
+ * Storage porque ele exige plano pago/cartão vinculado ao projeto).
+ * TODO: substituir pela URL de implantação do Apps Script (Etapa "Implantar
+ * como app da Web" — termina em "/exec").
+ */
+const APPS_SCRIPT_URL = 'COLOQUE_AQUI_A_URL_DO_APPS_SCRIPT';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
@@ -619,7 +625,33 @@ try {
 }
 
 const db = getFirestore(app);
-const storage = getStorage(app);
+
+// Converte um File em base64 puro (sem o prefixo "data:...;base64,")
+function fileParaBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Envia o arquivo pro Apps Script, que salva no Drive e devolve { fileId, url }
+async function enviarAnexoParaDrive(file, unidadeSlug, pergunta){
+  const conteudoBase64 = await fileParaBase64(file);
+  const resp = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      unidadeSlug, pergunta,
+      nome: file.name,
+      tipo: file.type || 'application/octet-stream',
+      conteudoBase64
+    })
+  });
+  const json = await resp.json();
+  if (!json.ok) throw new Error(json.erro || 'Falha ao enviar anexo ao Drive.');
+  return { nome: file.name, driveFileId: json.fileId, driveUrl: json.url };
+}
 
 // ---------- Construção do painel de unidades ----------
 const unidadeList = document.getElementById('unidadeList');
@@ -848,10 +880,6 @@ function markInvalid(key){
   if(el) el.classList.add('show');
 }
 
-function sanitizeNomeArquivo(nome){
-  return nome.replace(/\s+/g, '_');
-}
-
 document.getElementById('beneficiosForm').addEventListener('submit', async function(e){
   e.preventDefault();
   const statusMsg = document.getElementById('statusMsg');
@@ -955,9 +983,8 @@ document.getElementById('beneficiosForm').addEventListener('submit', async funct
         const anexos = [];
         for (const inp of anexoInputs){
           const file = inp.files[0];
-          const caminho = `beneficios_anexos/${slug}/q${n}/${Date.now()}_${sanitizeNomeArquivo(file.name)}`;
-          await uploadBytes(ref(storage, caminho), file);
-          anexos.push({ nome: file.name, caminho });
+          const anexo = await enviarAnexoParaDrive(file, slug, n);
+          anexos.push(anexo);
         }
         item.anexos = anexos;
       }
