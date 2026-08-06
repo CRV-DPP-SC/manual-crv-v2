@@ -107,6 +107,7 @@
           <button class="nav-sub-item" onclick="_abrirFerramenta('caixinha-controle.html','Caixinha do Setor')">☕ Caixinha do Setor</button>
           <button class="nav-sub-item" onclick="_abrirFerramenta('formulario-diarias-sc.html','Sistema de Diárias')">✈️ Sistema de Diárias</button>
           <button class="nav-sub-item" onclick="_abrirFerramenta('controle-viagens.html','Controle de Viagens')">🗺️ Controle de Viagens</button>
+          <button class="nav-sub-item" onclick="_abrirFerramenta('beneficios-relatorio.html','📋 Antecipação de Benefícios')">📋 Antecipação de Benefícios</button>
           <button class="nav-sub-item" onclick="abrirEditorUnidades()">✏️ Atualizar Unidades</button>
         </div>
 
@@ -883,6 +884,12 @@
         <div class="grupo-item-icon">✏️</div>
         <div class="grupo-item-titulo">Atualização — Unidades Prisionais</div>
         <div class="grupo-item-sub">Editar diretores, e-mails e telefones</div>
+      </div>
+      <div class="grupo-item" style="position:relative;" onclick="_abrirFerramenta('beneficios-relatorio.html','📋 Antecipação de Benefícios')">
+        <button type="button" class="grupo-item-link-btn" title="Copiar link do formulário público" onclick="event.stopPropagation();_copiarLinkBeneficios()">🔗</button>
+        <div class="grupo-item-icon">📋</div>
+        <div class="grupo-item-titulo">Antecipação de Benefícios</div>
+        <div class="grupo-item-sub">Respostas, compilado por SR/unidade e anexos</div>
       </div>
     </div>
   </div>

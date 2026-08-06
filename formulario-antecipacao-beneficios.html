@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informações — Antecipação de Benefícios | CRV/DPP</title>
+<style>
+  :root{
+    --navy:#0d2b45;
+    --navy-dark:#081b2d;
+    --green:#1b5e20;
+    --green-light:#e8f3e8;
+    --gold:#c9a227;
+    --red:#b3261e;
+    --red-light:#fbe9e7;
+    --gray-bg:#f4f6f8;
+    --border:#d7dee4;
+    --text:#1c2933;
+    --text-muted:#5b6b78;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Roboto, Arial, sans-serif;
+    background:var(--gray-bg);
+    color:var(--text);
+    line-height:1.5;
+  }
+  header.top{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-dark) 100%);
+    color:#fff;
+    padding:28px 20px;
+    border-bottom:4px solid var(--gold);
+  }
+  header.top .wrap{
+    max-width:840px;
+    margin:0 auto;
+  }
+  header.top .eyebrow{
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:12px;
+    color:var(--gold);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  header.top h1{
+    margin:0;
+    font-size:24px;
+    font-weight:700;
+  }
+  header.top p{
+    margin:8px 0 0;
+    font-size:14px;
+    color:#c9d6e0;
+  }
+  main{
+    max-width:840px;
+    margin:0 auto;
+    padding:24px 20px 80px;
+  }
+  .card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:22px 22px 26px;
+    margin-bottom:20px;
+    box-shadow:0 1px 2px rgba(13,43,69,.04);
+  }
+  .card h2{
+    font-size:16px;
+    margin:0 0 4px;
+    color:var(--navy);
+  }
+  .card .sub{
+    font-size:13px;
+    color:var(--text-muted);
+    margin:0 0 18px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    color:var(--text);
+    margin-bottom:6px;
+  }
+  label .req{color:var(--red); margin-left:2px;}
+  input[type="text"], input[type="email"], select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:14px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--text);
+  }
+  input:focus, select:focus, button:focus{
+    outline:2px solid var(--navy);
+    outline-offset:1px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+  }
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  @media (max-width:560px){
+    .grid2{grid-template-columns:1fr;}
+  }
+
+  /* Unidade dropdown */
+  .unidade-box{position:relative;}
+  .unidade-toggle{
+    width:100%;
+    text-align:left;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:#fff;
+    font-size:14px;
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    color:var(--text-muted);
+  }
+  .unidade-toggle.filled{color:var(--text); font-weight:600;}
+  .unidade-toggle .chev{transition:transform .15s ease; color:var(--text-muted); flex-shrink:0;}
+  .unidade-toggle.open .chev{transform:rotate(180deg);}
+  .unidade-panel{
+    display:none;
+    position:absolute;
+    z-index:20;
+    top:calc(100% + 6px);
+    left:0; right:0;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:8px;
+    box-shadow:0 8px 24px rgba(13,43,69,.14);
+    max-height:360px;
+    display:none;
+    flex-direction:column;
+  }
+  .unidade-panel.show{display:flex;}
+  .unidade-search{
+    padding:10px;
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .unidade-search input{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:13px;
+  }
+  .unidade-list{
+    overflow-y:auto;
+    padding:6px 0;
+  }
+  .sr-group .sr-head{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:9px 14px;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--navy);
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .sr-group .sr-head:hover{background:var(--gray-bg);}
+  .sr-group .sr-units{display:none;}
+  .sr-group.open .sr-units{display:block;}
+  .sr-group .sr-arrow{font-size:10px; transition:transform .15s ease; color:var(--text-muted);}
+  .sr-group.open .sr-arrow{transform:rotate(90deg);}
+  .unit-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:8px 14px 8px 24px;
+    font-size:13.5px;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .unit-item:hover, .unit-item.hl{background:var(--green-light); color:var(--green);}
+  .unit-item:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+    background:none;
+    color:var(--text-muted);
+  }
+  .unit-item:disabled:hover{background:none;}
+  .unit-item-tag{
+    flex-shrink:0;
+    font-size:10.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    color:var(--text-muted);
+    background:var(--gray-bg);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:2px 8px;
+  }
+  .no-results{padding:16px; text-align:center; color:var(--text-muted); font-size:13px;}
+  input[type="hidden"]{display:none;}
+
+  /* Question blocks */
+  .question{
+    border-top:1px solid var(--border);
+    padding-top:18px;
+    margin-top:18px;
+  }
+  .question:first-of-type{border-top:none; margin-top:0; padding-top:0;}
+  .question p.q-text{
+    font-size:14.5px;
+    font-weight:600;
+    margin:0 0 10px;
+    color:var(--text);
+  }
+  .yn{display:flex; gap:10px; margin-bottom:4px;}
+  .yn label.opt{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:10px 12px;
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--text-muted);
+    transition:.12s ease;
+  }
+  .yn input[type="radio"]{accent-color:var(--navy); margin:0;}
+  .yn label.opt.yes-opt.checked{border-color:var(--green); background:var(--green-light); color:var(--green);}
+  .yn label.opt.no-opt.checked{border-color:var(--red); background:var(--red-light); color:var(--red);}
+
+  .anexo-block{
+    display:none;
+    margin-top:14px;
+    padding:14px;
+    background:var(--gray-bg);
+    border:1px dashed var(--border);
+    border-radius:8px;
+  }
+  .anexo-block.show{display:block;}
+  .anexo-block p.hint{
+    font-size:13px;
+    color:var(--text-muted);
+    margin:0 0 12px;
+    font-style:italic;
+  }
+  .radio-row{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .radio-row label{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    font-size:13.5px;
+    font-weight:500;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:#fff;
+    cursor:pointer;
+  }
+  .radio-row input[type="radio"]{margin-top:2px; accent-color:var(--navy);}
+  .radio-row label.checked{border-color:var(--navy); background:#eef3f8;}
+  .file-field{display:none;}
+  .file-field.show{display:block;}
+  input[type="file"]{
+    width:100%;
+    font-size:13px;
+    padding:8px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:#fff;
+  }
+  .anexo-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .anexo-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .anexo-row input[type="file"]{flex:1;}
+  .anexo-row .remove-anexo{
+    flex-shrink:0;
+    width:30px;
+    height:30px;
+    border:1px solid var(--border);
+    background:#fff;
+    color:var(--red);
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+  }
+  .anexo-row .remove-anexo:hover{background:var(--red-light);}
+  .add-anexo-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:none;
+    border:1px dashed var(--navy);
+    color:var(--navy);
+    border-radius:6px;
+    padding:7px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    margin-bottom:4px;
+  }
+  .add-anexo-btn:hover{background:#eef3f8;}
+  .add-anexo-btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+    border-style:solid;
+  }
+  .anexo-count{
+    font-size:11.5px;
+    color:var(--text-muted);
+    margin:0 0 10px;
+  }
+
+  .submit-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    margin-top:6px;
+  }
+  button.submit-btn{
+    width:100%;
+    padding:14px;
+    background:var(--navy);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    letter-spacing:.02em;
+  }
+  button.submit-btn:hover{background:var(--navy-dark);}
+  button.submit-btn:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+  }
+  .status-msg{
+    font-size:13px;
+    text-align:center;
+  }
+  .status-msg.error{color:var(--red);}
+  .status-msg.success{color:var(--green); font-weight:600;}
+  .field-error{
+    font-size:12.5px;
+    color:var(--red);
+    margin-top:6px;
+    display:none;
+  }
+  .field-error.show{display:block;}
+  .invalid input[type="text"], .invalid input[type="email"], .invalid .unidade-toggle{
+    border-color:var(--red) !important;
+  }
+
+  /* Tela de confirmação (pós-envio) */
+  .obrigado-card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:40px 28px;
+    text-align:center;
+    box-shadow:0 1px 2px rgba(13,43,69,.04);
+  }
+  .obrigado-card .check{
+    font-size:40px;
+    margin-bottom:10px;
+  }
+  .obrigado-card h2{
+    color:var(--navy);
+    margin:0 0 8px;
+    font-size:19px;
+  }
+  .obrigado-card p{
+    color:var(--text-muted);
+    font-size:14px;
+    margin:0;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">CRV/DPP · Polícia Penal de Santa Catarina</div>
+    <h1>Informações — Antecipação de Benefícios</h1>
+    <p>Preenchimento obrigatório por unidade prisional. As informações abaixo subsidiam a análise da Central de Regulação de Vagas.</p>
+  </div>
+</header>
+
+<main id="mainWrap">
+  <form id="beneficiosForm" novalidate>
+
+    <!-- Identificação -->
+    <div class="card">
+      <h2>Identificação</h2>
+      <p class="sub">Dados da unidade prisional e do responsável pelo preenchimento.</p>
+
+      <div class="field">
+        <label for="unidadeToggle">Unidade Prisional <span class="req">*</span></label>
+        <div class="unidade-box">
+          <input type="hidden" id="unidadeValue" name="unidade" required>
+          <button type="button" class="unidade-toggle" id="unidadeToggle">
+            <span id="unidadeToggleLabel">Selecione a unidade prisional</span>
+            <span class="chev">▾</span>
+          </button>
+          <div class="unidade-panel" id="unidadePanel">
+            <div class="unidade-search">
+              <input type="text" id="unidadeSearch" placeholder="Digite para filtrar a unidade...">
+            </div>
+            <div class="unidade-list" id="unidadeList"></div>
+          </div>
+        </div>
+        <div class="field-error" id="err-unidade">Selecione a unidade prisional.</div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="respNome">Nome do responsável <span class="req">*</span></label>
+          <input type="text" id="respNome" name="respNome" required>
+          <div class="field-error" id="err-respNome">Informe o nome do responsável.</div>
+        </div>
+        <div class="field">
+          <label for="respMatricula">Matrícula <span class="req">*</span></label>
+          <input type="text" id="respMatricula" name="respMatricula" placeholder="Ex.: 123.456-7" required>
+          <div class="field-error" id="err-respMatricula">Informe a matrícula.</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="respEmail">E-mail <span class="req">*</span></label>
+          <input type="email" id="respEmail" name="respEmail" required>
+          <div class="field-error" id="err-respEmail">Informe um e-mail válido.</div>
+        </div>
+        <div class="field">
+          <label for="respFuncao">Função <span class="req">*</span></label>
+          <select id="respFuncao" name="respFuncao" required>
+            <option value="" disabled selected>Selecione a função</option>
+            <option value="Diretor">Diretor</option>
+            <option value="Chefe de Segurança">Chefe de Segurança</option>
+            <option value="Coordenador de Execução Penal">Coordenador de Execução Penal</option>
+          </select>
+          <div class="field-error" id="err-respFuncao">Selecione a função do responsável.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Perguntas -->
+    <div class="card">
+      <h2>Antecipação de Benefícios</h2>
+      <p class="sub">Responda cada item. Ao marcar "Sim", informe o anexo correspondente.</p>
+
+      <div class="question" data-q="1">
+        <p class="q-text">1) Antecipa do regime FECHADO para o SEMIABERTO?</p>
+        <div class="yn">
+          <label class="opt yes-opt"><input type="radio" name="q1" value="sim" required> Sim</label>
+          <label class="opt no-opt"><input type="radio" name="q1" value="nao"> Não</label>
+        </div>
+        <div class="field-error err-q" id="err-q1">Selecione Sim ou Não.</div>
+        <div class="anexo-block" id="anexo-1">
+          <div class="field">
+            <label for="meses1">Quantos meses de antecipação? <span class="req">*</span></label>
+            <input type="number" id="meses1" name="meses1" min="1" step="1" placeholder="Ex.: 6">
+            <div class="field-error" id="err-meses1">Informe a quantidade de meses.</div>
+          </div>
+          <div class="radio-row" id="portaria-1">
+            <label><input type="radio" name="portaria1" value="tem" required> Tem Portaria local regulamentando</label>
+            <label><input type="radio" name="portaria1" value="nao_tem" required> Não tem Portaria. A concessão do benefício é individual e fundamentada na própria Decisão</label>
+          </div>
+          <div class="field-error err-q" id="err-portaria1">Selecione uma das opções acima.</div>
+          <div class="file-field" id="file-1">
+            <label>Anexo(s) <span class="req">*</span></label>
+            <p class="anexo-count">Pelo menos 1 documento é obrigatório. É possível anexar até 5.</p>
+            <div class="anexo-list" id="anexoList1"></div>
+            <button type="button" class="add-anexo-btn" id="addAnexo1">+ Anexar outro documento</button>
+            <div class="field-error" id="err-anexoFile1">Anexe pelo menos um documento.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="question" data-q="2">
+        <p class="q-text">2) Antecipa do regime SEMIABERTO para o ABERTO?</p>
+        <div class="yn">
+          <label class="opt yes-opt"><input type="radio" name="q2" value="sim" required> Sim</label>
+          <label class="opt no-opt"><input type="radio" name="q2" value="nao"> Não</label>
+        </div>
+        <div class="field-error err-q" id="err-q2">Selecione Sim ou Não.</div>
+        <div class="anexo-block" id="anexo-2">
+          <div class="field">
+            <label for="meses2">Quantos meses de antecipação? <span class="req">*</span></label>
+            <input type="number" id="meses2" name="meses2" min="1" step="1" placeholder="Ex.: 6">
+            <div class="field-error" id="err-meses2">Informe a quantidade de meses.</div>
+          </div>
+          <div class="radio-row" id="portaria-2">
+            <label><input type="radio" name="portaria2" value="tem" required> Tem Portaria local regulamentando</label>
+            <label><input type="radio" name="portaria2" value="nao_tem" required> Não tem Portaria. A concessão do benefício é individual e fundamentada na própria Decisão</label>
+          </div>
+          <div class="field-error err-q" id="err-portaria2">Selecione uma das opções acima.</div>
+          <div class="file-field" id="file-2">
+            <label>Anexo(s) <span class="req">*</span></label>
+            <p class="anexo-count">Pelo menos 1 documento é obrigatório. É possível anexar até 5.</p>
+            <div class="anexo-list" id="anexoList2"></div>
+            <button type="button" class="add-anexo-btn" id="addAnexo2">+ Anexar outro documento</button>
+            <div class="field-error" id="err-anexoFile2">Anexe pelo menos um documento.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="question" data-q="3">
+        <p class="q-text">3) Antecipa LIVRAMENTO CONDICIONAL?</p>
+        <div class="yn">
+          <label class="opt yes-opt"><input type="radio" name="q3" value="sim" required> Sim</label>
+          <label class="opt no-opt"><input type="radio" name="q3" value="nao"> Não</label>
+        </div>
+        <div class="field-error err-q" id="err-q3">Selecione Sim ou Não.</div>
+        <div class="anexo-block" id="anexo-3">
+          <div class="field">
+            <label for="meses3">Quantos meses de antecipação? <span class="req">*</span></label>
+            <input type="number" id="meses3" name="meses3" min="1" step="1" placeholder="Ex.: 6">
+            <div class="field-error" id="err-meses3">Informe a quantidade de meses.</div>
+          </div>
+          <div class="radio-row" id="portaria-3">
+            <label><input type="radio" name="portaria3" value="tem" required> Tem Portaria local regulamentando</label>
+            <label><input type="radio" name="portaria3" value="nao_tem" required> Não tem Portaria. A concessão do benefício é individual e fundamentada na própria Decisão</label>
+          </div>
+          <div class="field-error err-q" id="err-portaria3">Selecione uma das opções acima.</div>
+          <div class="file-field" id="file-3">
+            <label>Anexo(s) <span class="req">*</span></label>
+            <p class="anexo-count">Pelo menos 1 documento é obrigatório. É possível anexar até 5.</p>
+            <div class="anexo-list" id="anexoList3"></div>
+            <button type="button" class="add-anexo-btn" id="addAnexo3">+ Anexar outro documento</button>
+            <div class="field-error" id="err-anexoFile3">Anexe pelo menos um documento.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-wrap">
+      <button type="submit" class="submit-btn" id="submitBtn">Enviar informações</button>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+  </form>
+</main>
+
+<script src="js/beneficios-dados.js"></script>
+<script type="module">
+import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { initializeAppCheck, ReCaptchaV3Provider }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app-check.js";
+import { getFirestore, doc, getDoc, getDocs, collection, writeBatch, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
+  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
+  projectId:         "crv-dpp-sc-v2",
+  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
+  messagingSenderId: "513539683551",
+  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
+};
+
+const app = initializeApp(firebaseConfig);
+
+/*
+ * App Check — proteção contra bots/spam na escrita pública.
+ * TODO: substituir 'COLOQUE_AQUI_A_SITE_KEY_DO_RECAPTCHA' pela site key
+ * gerada no Console do Firebase > App Check > reCAPTCHA v3, depois de
+ * registrar este app. Até lá, o formulário funciona normalmente (App
+ * Check só passa a bloquear de fato quando "Enforce" é ativado lá).
+ */
+try {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('COLOQUE_AQUI_A_SITE_KEY_DO_RECAPTCHA'),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch (e) {
+  console.warn('App Check não inicializado (site key pendente):', e);
+}
+
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ---------- Construção do painel de unidades ----------
+const unidadeList = document.getElementById('unidadeList');
+const unidadeSearch = document.getElementById('unidadeSearch');
+const unidadeToggle = document.getElementById('unidadeToggle');
+const unidadeToggleLabel = document.getElementById('unidadeToggleLabel');
+const unidadePanel = document.getElementById('unidadePanel');
+const unidadeValue = document.getElementById('unidadeValue');
+
+function normalize(str){
+  return str.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+}
+
+function buildUnidadeList(){
+  unidadeList.innerHTML = '';
+  SR_DATA.forEach(sr => {
+    const group = document.createElement('div');
+    group.className = 'sr-group';
+    group.dataset.sr = sr.id;
+
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'sr-head';
+    head.innerHTML = `<span>${sr.name}</span><span class="sr-arrow">▸</span>`;
+    head.addEventListener('click', () => {
+      group.classList.toggle('open');
+    });
+    group.appendChild(head);
+
+    const unitsWrap = document.createElement('div');
+    unitsWrap.className = 'sr-units';
+    sr.units.forEach(unit => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'unit-item';
+      btn.dataset.name = unit;
+      btn.dataset.sr = sr.name;
+      const label = document.createElement('span');
+      label.textContent = unit;
+      btn.appendChild(label);
+      btn.addEventListener('click', () => selectUnidade(unit));
+      unitsWrap.appendChild(btn);
+    });
+    group.appendChild(unitsWrap);
+    unidadeList.appendChild(group);
+  });
+}
+buildUnidadeList();
+
+// Marca no dropdown as unidades que já têm resposta registrada,
+// consultando a coleção pública 'beneficios_status' (sem conteúdo sensível).
+async function marcarUnidadesRespondidas(){
+  try {
+    const snap = await getDocs(collection(db, 'beneficios_status'));
+    const respondidas = new Set();
+    snap.forEach(d => respondidas.add(d.id));
+    document.querySelectorAll('.unit-item').forEach(btn => {
+      const slug = slugifyUnidade(btn.dataset.name);
+      if (respondidas.has(slug)){
+        btn.disabled = true;
+        btn.classList.add('unit-item-answered');
+        const tag = document.createElement('span');
+        tag.className = 'unit-item-tag';
+        tag.textContent = 'já respondida';
+        btn.appendChild(tag);
+      }
+    });
+  } catch (e) {
+    console.error('Erro ao carregar unidades já respondidas:', e);
+  }
+}
+marcarUnidadesRespondidas();
+
+function selectUnidade(name){
+  unidadeValue.value = name;
+  unidadeToggleLabel.textContent = name;
+  unidadeToggle.classList.add('filled');
+  closeUnidadePanel();
+  clearFieldError('unidade');
+}
+
+function openUnidadePanel(){
+  unidadePanel.classList.add('show');
+  unidadeToggle.classList.add('open');
+  unidadeSearch.value = '';
+  filterUnidades('');
+  setTimeout(() => unidadeSearch.focus(), 30);
+}
+function closeUnidadePanel(){
+  unidadePanel.classList.remove('show');
+  unidadeToggle.classList.remove('open');
+}
+unidadeToggle.addEventListener('click', () => {
+  unidadePanel.classList.contains('show') ? closeUnidadePanel() : openUnidadePanel();
+});
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.unidade-box')) closeUnidadePanel();
+});
+
+function filterUnidades(term){
+  const q = normalize(term.trim());
+  let anyVisible = false;
+  document.querySelectorAll('.sr-group').forEach(group => {
+    let groupHasMatch = false;
+    group.querySelectorAll('.unit-item').forEach(item => {
+      const match = q === '' || normalize(item.dataset.name).includes(q);
+      item.style.display = match ? 'flex' : 'none';
+      item.classList.toggle('hl', match && q !== '');
+      if(match) groupHasMatch = true;
+    });
+    group.style.display = groupHasMatch ? 'block' : 'none';
+    if(q !== '' && groupHasMatch){
+      group.classList.add('open');
+    } else if(q === ''){
+      group.classList.remove('open');
+    }
+    if(groupHasMatch) anyVisible = true;
+  });
+  let noRes = unidadeList.querySelector('.no-results');
+  if(!anyVisible){
+    if(!noRes){
+      noRes = document.createElement('div');
+      noRes.className = 'no-results';
+      noRes.textContent = 'Nenhuma unidade encontrada.';
+      unidadeList.appendChild(noRes);
+    }
+  } else if(noRes){
+    noRes.remove();
+  }
+}
+unidadeSearch.addEventListener('input', (e) => filterUnidades(e.target.value));
+
+// ---------- Perguntas Sim/Não com anexo condicional ----------
+[1,2,3].forEach(n => {
+  const yesRadio = document.querySelector(`input[name="q${n}"][value="sim"]`);
+  const noRadio = document.querySelector(`input[name="q${n}"][value="nao"]`);
+  const anexoBlock = document.getElementById(`anexo-${n}`);
+  const fileField = document.getElementById(`file-${n}`);
+  const mesesInput = document.getElementById(`meses${n}`);
+  const portariaRadios = document.querySelectorAll(`input[name="portaria${n}"]`);
+  const anexoList = document.getElementById(`anexoList${n}`);
+  const addAnexoBtn = document.getElementById(`addAnexo${n}`);
+  const MAX_ANEXOS = 5;
+
+  function anexoRows(){
+    return Array.from(anexoList.querySelectorAll('.anexo-row'));
+  }
+
+  function addAnexoRow(){
+    const rows = anexoRows();
+    if(rows.length >= MAX_ANEXOS) return;
+    const row = document.createElement('div');
+    row.className = 'anexo-row';
+    row.innerHTML = `<input type="file" name="anexoFile${n}[]">` +
+      (rows.length > 0 ? `<button type="button" class="remove-anexo" title="Remover">✕</button>` : '');
+    anexoList.appendChild(row);
+    const removeBtn = row.querySelector('.remove-anexo');
+    if(removeBtn){
+      removeBtn.addEventListener('click', () => {
+        row.remove();
+        updateAddBtnState();
+        clearFieldError(`anexoFile${n}`);
+      });
+    }
+    updateAddBtnState();
+  }
+
+  function resetAnexoRows(){
+    anexoList.innerHTML = '';
+    addAnexoRow();
+  }
+
+  function updateAddBtnState(){
+    const count = anexoRows().length;
+    addAnexoBtn.disabled = count >= MAX_ANEXOS;
+    addAnexoBtn.textContent = count >= MAX_ANEXOS ? 'Limite de 5 anexos atingido' : '+ Anexar outro documento';
+  }
+
+  addAnexoBtn.addEventListener('click', addAnexoRow);
+  resetAnexoRows();
+
+  function updateYnStyles(){
+    document.querySelectorAll(`input[name="q${n}"]`).forEach(r => {
+      r.closest('.opt').classList.toggle('checked', r.checked);
+    });
+  }
+
+  [yesRadio, noRadio].forEach(r => {
+    r.addEventListener('change', () => {
+      updateYnStyles();
+      clearFieldError(`q${n}`);
+      if(yesRadio.checked){
+        anexoBlock.classList.add('show');
+        mesesInput.required = true;
+      } else {
+        anexoBlock.classList.remove('show');
+        fileField.classList.remove('show');
+        mesesInput.required = false;
+        mesesInput.value = '';
+        resetAnexoRows();
+        portariaRadios.forEach(p => { p.checked = false; p.closest('label').classList.remove('checked'); });
+        clearFieldError(`portaria${n}`);
+        clearFieldError(`anexoFile${n}`);
+        clearFieldError(`meses${n}`);
+      }
+    });
+  });
+
+  portariaRadios.forEach(p => {
+    p.addEventListener('change', () => {
+      portariaRadios.forEach(pp => pp.closest('label').classList.toggle('checked', pp.checked));
+      fileField.classList.add('show');
+      clearFieldError(`portaria${n}`);
+    });
+  });
+});
+
+// ---------- Validação e envio ----------
+function clearFieldError(key){
+  const el = document.getElementById(`err-${key}`);
+  if(el) el.classList.remove('show');
+}
+
+function markInvalid(key){
+  const el = document.getElementById(`err-${key}`);
+  if(el) el.classList.add('show');
+}
+
+function sanitizeNomeArquivo(nome){
+  return nome.replace(/\s+/g, '_');
+}
+
+document.getElementById('beneficiosForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const statusMsg = document.getElementById('statusMsg');
+  const submitBtn = document.getElementById('submitBtn');
+  let valid = true;
+
+  // Unidade
+  if(!unidadeValue.value){
+    markInvalid('unidade');
+    valid = false;
+  } else {
+    clearFieldError('unidade');
+  }
+
+  // Campos de texto obrigatórios
+  ['respNome','respMatricula','respEmail','respFuncao'].forEach(id => {
+    const input = document.getElementById(id);
+    if(!input.value.trim()){
+      markInvalid(id);
+      valid = false;
+    } else {
+      clearFieldError(id);
+    }
+  });
+
+  // Perguntas
+  [1,2,3].forEach(n => {
+    const answered = document.querySelector(`input[name="q${n}"]:checked`);
+    if(!answered){
+      markInvalid(`q${n}`);
+      valid = false;
+      return;
+    }
+    clearFieldError(`q${n}`);
+    if(answered.value === 'sim'){
+      const mesesInput = document.getElementById(`meses${n}`);
+      if(!mesesInput.value || Number(mesesInput.value) < 1){
+        markInvalid(`meses${n}`);
+        valid = false;
+      } else {
+        clearFieldError(`meses${n}`);
+      }
+      const portaria = document.querySelector(`input[name="portaria${n}"]:checked`);
+      if(!portaria){
+        markInvalid(`portaria${n}`);
+        valid = false;
+      } else {
+        clearFieldError(`portaria${n}`);
+      }
+      const anexoInputs = document.querySelectorAll(`#anexoList${n} input[type="file"]`);
+      const hasFile = Array.from(anexoInputs).some(inp => inp.files && inp.files.length > 0);
+      if(!hasFile){
+        markInvalid(`anexoFile${n}`);
+        valid = false;
+      } else {
+        clearFieldError(`anexoFile${n}`);
+      }
+    }
+  });
+
+  if(!valid){
+    statusMsg.textContent = 'Verifique os campos destacados em vermelho.';
+    statusMsg.className = 'status-msg error';
+    const firstError = document.querySelector('.field-error.show');
+    if(firstError) firstError.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  const unidadeNome = unidadeValue.value;
+  const slug = slugifyUnidade(unidadeNome);
+  const srInfo = srDaUnidade(unidadeNome);
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Verificando disponibilidade...';
+  statusMsg.textContent = '';
+  statusMsg.className = 'status-msg';
+
+  try {
+    // Revalida no servidor (evita corrida entre carregar a página e enviar)
+    const statusSnap = await getDoc(doc(db, 'beneficios_status', slug));
+    if (statusSnap.exists()){
+      statusMsg.textContent = 'Esta unidade já foi respondida por outra pessoa. Atualize a página para ver a lista atualizada.';
+      statusMsg.className = 'status-msg error';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar informações';
+      marcarUnidadesRespondidas();
+      return;
+    }
+
+    // Upload dos anexos
+    submitBtn.textContent = 'Enviando anexos...';
+    const respostas = [];
+    for (const n of [1,2,3]){
+      const resp = document.querySelector(`input[name="q${n}"]:checked`).value;
+      const item = { pergunta: n, resposta: resp };
+      if (resp === 'sim'){
+        item.meses = Number(document.getElementById(`meses${n}`).value);
+        item.portaria = document.querySelector(`input[name="portaria${n}"]:checked`).value;
+        const anexoInputs = Array.from(document.querySelectorAll(`#anexoList${n} input[type="file"]`))
+          .filter(inp => inp.files && inp.files.length > 0);
+        const anexos = [];
+        for (const inp of anexoInputs){
+          const file = inp.files[0];
+          const caminho = `beneficios_anexos/${slug}/q${n}/${Date.now()}_${sanitizeNomeArquivo(file.name)}`;
+          await uploadBytes(ref(storage, caminho), file);
+          anexos.push({ nome: file.name, caminho });
+        }
+        item.anexos = anexos;
+      }
+      respostas.push(item);
+    }
+
+    // Grava os dois documentos em lote (a regra de segurança só permite
+    // 'create' se ainda não existirem — é isso que trava a unidade)
+    submitBtn.textContent = 'Salvando respostas...';
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'beneficios_respostas', slug), {
+      unidade: unidadeNome,
+      sr: srInfo ? srInfo.srName : null,
+      responsavel: {
+        nome: document.getElementById('respNome').value.trim(),
+        matricula: document.getElementById('respMatricula').value.trim(),
+        email: document.getElementById('respEmail').value.trim(),
+        funcao: document.getElementById('respFuncao').value.trim()
+      },
+      respostas,
+      enviadoEm: serverTimestamp()
+    });
+    batch.set(doc(db, 'beneficios_status', slug), {
+      unidade: unidadeNome,
+      sr: srInfo ? srInfo.srName : null,
+      respondida: true,
+      enviadoEm: serverTimestamp()
+    });
+    await batch.commit();
+
+    document.getElementById('mainWrap').innerHTML = `
+      <div class="obrigado-card">
+        <div class="check">✅</div>
+        <h2>Respostas enviadas com sucesso!</h2>
+        <p>Obrigado. As informações da unidade <strong>${unidadeNome}</strong> foram registradas e já estão disponíveis para a Central de Regulação de Vagas.</p>
+      </div>`;
+  } catch (err) {
+    console.error('Erro ao enviar formulário:', err);
+    let msg = 'Não foi possível enviar as informações. Tente novamente em instantes.';
+    if (err && err.code === 'permission-denied'){
+      msg = 'Esta unidade já foi respondida por outra pessoa (ou o envio não foi autorizado). Atualize a página e confira a lista de unidades.';
+    }
+    statusMsg.textContent = msg;
+    statusMsg.className = 'status-msg error';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Enviar informações';
+    marcarUnidadesRespondidas();
+  }
+});
+</script>
+
+</body>
+</html>
