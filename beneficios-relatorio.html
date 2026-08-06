@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório — Antecipação de Benefícios | CRV/DPP</title>
+<style>
+  :root{
+    --navy:#0d2b45;
+    --navy-dark:#081b2d;
+    --green:#1b5e20;
+    --green-light:#e8f3e8;
+    --gold:#c9a227;
+    --red:#b3261e;
+    --red-light:#fbe9e7;
+    --gray-bg:#f4f6f8;
+    --border:#d7dee4;
+    --text:#1c2933;
+    --text-muted:#5b6b78;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Roboto, Arial, sans-serif;
+    background:var(--gray-bg);
+    color:var(--text);
+    line-height:1.5;
+  }
+  header.top{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-dark) 100%);
+    color:#fff;
+    padding:22px 20px;
+    border-bottom:4px solid var(--gold);
+  }
+  header.top .wrap{
+    max-width:1040px;
+    margin:0 auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  header.top .eyebrow{
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:12px;
+    color:var(--gold);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  header.top h1{margin:0; font-size:21px; font-weight:700;}
+  .btn-refresh{
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.3);
+    color:#fff;
+    border-radius:6px;
+    padding:9px 14px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-refresh:hover{background:rgba(255,255,255,.2);}
+
+  main{max-width:1040px; margin:0 auto; padding:24px 20px 80px;}
+
+  .access-denied{
+    max-width:520px; margin:60px auto; text-align:center;
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+    padding:40px 28px;
+  }
+  .access-denied .icon{font-size:36px; margin-bottom:10px;}
+  .access-denied h2{color:var(--navy); margin:0 0 8px;}
+  .access-denied p{color:var(--text-muted); font-size:14px; margin:0;}
+
+  .resumo-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:14px;
+    margin-bottom:22px;
+  }
+  .resumo-card{
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; text-align:center;
+  }
+  .resumo-card .num{font-size:26px; font-weight:700; color:var(--navy);}
+  .resumo-card .lbl{font-size:12px; color:var(--text-muted); margin-top:2px;}
+  .resumo-card.ok .num{color:var(--green);}
+  .resumo-card.pend .num{color:var(--red);}
+
+  .sr-card{
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+    margin-bottom:14px; overflow:hidden;
+  }
+  .sr-head{
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; background:var(--gray-bg); border:none; cursor:pointer;
+    text-align:left;
+  }
+  .sr-head .titulo{font-weight:700; color:var(--navy); font-size:14px;}
+  .sr-head .stats{font-size:12px; color:var(--text-muted); margin-top:3px;}
+  .sr-head .arrow{font-size:11px; color:var(--text-muted); transition:transform .15s ease;}
+  .sr-card.open .arrow{transform:rotate(90deg);}
+  .sr-units{display:none; border-top:1px solid var(--border);}
+  .sr-card.open .sr-units{display:block;}
+
+  .unidade-row{border-bottom:1px solid var(--border);}
+  .unidade-row:last-child{border-bottom:none;}
+  .unidade-row-head{
+    width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:12px 18px; background:#fff; border:none; cursor:pointer; text-align:left;
+  }
+  .unidade-row-head:hover{background:var(--gray-bg);}
+  .unidade-row-head .nome{font-size:13.5px; font-weight:600; color:var(--text);}
+  .unidade-row-head .data{font-size:11.5px; color:var(--text-muted); margin-top:2px;}
+  .badge{
+    flex-shrink:0; font-size:10.5px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.02em; border-radius:20px; padding:3px 10px;
+  }
+  .badge.ok{background:var(--green-light); color:var(--green);}
+  .badge.pend{background:var(--red-light); color:var(--red);}
+
+  .unidade-detalhe{
+    display:none;
+    padding:6px 18px 18px;
+    background:var(--gray-bg);
+    border-top:1px dashed var(--border);
+  }
+  .unidade-detalhe.show{display:block;}
+  .detalhe-linha{
+    display:flex; flex-wrap:wrap; gap:6px 18px;
+    font-size:12.5px; color:var(--text-muted); margin:10px 0 4px;
+  }
+  .detalhe-linha b{color:var(--text);}
+
+  .pergunta-card{
+    background:#fff; border:1px solid var(--border); border-radius:6px;
+    padding:12px 14px; margin-top:10px;
+  }
+  .pergunta-card .q{font-size:13px; font-weight:600; color:var(--text); margin:0 0 4px;}
+  .pergunta-card .resp{font-size:12.5px; font-weight:700;}
+  .pergunta-card .resp.sim{color:var(--green);}
+  .pergunta-card .resp.nao{color:var(--text-muted);}
+  .pergunta-card .meta{font-size:12px; color:var(--text-muted); margin-top:4px;}
+
+  .anexo-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    background:#fff; border:1px solid var(--border); border-radius:6px;
+    padding:6px 10px; font-size:12px; font-weight:600; color:var(--navy);
+    cursor:pointer; margin:6px 6px 0 0;
+  }
+  .anexo-btn:hover{background:var(--gray-bg);}
+  .anexo-btn:disabled{opacity:.6; cursor:wait;}
+
+  .loading{text-align:center; color:var(--text-muted); font-size:13px; padding:30px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">CRV/DPP · Acesso restrito</div>
+      <h1>📋 Relatório — Antecipação de Benefícios</h1>
+    </div>
+    <button class="btn-refresh" id="btnRefresh">🔄 Atualizar</button>
+  </div>
+</header>
+
+<main>
+  <div class="access-denied" id="accessDenied" style="display:none;">
+    <div class="icon">🔒</div>
+    <h2>Acesso restrito</h2>
+    <p>Esta página só pode ser acessada por usuários com acesso total do CRV, logados no site principal.</p>
+  </div>
+
+  <div id="reportContent" style="display:none;">
+    <div class="resumo-grid" id="resumoGrid"></div>
+    <div id="gruposWrap"></div>
+  </div>
+
+  <div class="loading" id="loadingMsg">Carregando...</div>
+</main>
+
+<script src="js/beneficios-dados.js"></script>
+<script type="module">
+import { initializeApp, getApps, getApp }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getFirestore, getDocs, collection }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getStorage, ref, getDownloadURL }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
+  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
+  projectId:         "crv-dpp-sc-v2",
+  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
+  messagingSenderId: "513539683551",
+  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
+};
+
+/* Reaproveita a sessão de Auth do site principal (mesmo app default) */
+const app     = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const auth    = getAuth(app);
+const db      = getFirestore(app);
+const storage = getStorage(app);
+
+/*
+ * Mesma allowlist de js/firebase.js (EMAILS_CRV). Duplicada aqui como
+ * camada extra de defesa no cliente — a proteção real está nas regras
+ * do Firestore/Storage, que devem usar a mesma lista.
+ */
+const EMAILS_CRV = [
+  'rodrigo.l.pastore@gmail.com',
+  'ivana.schafer@gmail.com',
+  'brunawlongen@gmail.com',
+  'ricardobritomarques12@gmail.com',
+  'abeljuliana2012@gmail.com',
+  'jessicaveiga9@gmail.com',
+  'day.sestren88@gmail.com',
+  'sepen@pp.sc.gov.br',
+  'leilakfarias@gmail.com'
+];
+
+const accessDenied  = document.getElementById('accessDenied');
+const reportContent = document.getElementById('reportContent');
+const loadingMsg    = document.getElementById('loadingMsg');
+const resumoGrid    = document.getElementById('resumoGrid');
+const gruposWrap    = document.getElementById('gruposWrap');
+const btnRefresh    = document.getElementById('btnRefresh');
+
+const PERGUNTAS = {
+  1: 'Antecipa do regime FECHADO para o SEMIABERTO?',
+  2: 'Antecipa do regime SEMIABERTO para o ABERTO?',
+  3: 'Antecipa LIVRAMENTO CONDICIONAL?'
+};
+
+let usuarioAutorizado = false;
+
+onAuthStateChanged(auth, (user) => {
+  usuarioAutorizado = !!(user && EMAILS_CRV.includes((user.email || '').toLowerCase()));
+  loadingMsg.style.display = 'none';
+  if (usuarioAutorizado){
+    accessDenied.style.display = 'none';
+    reportContent.style.display = 'block';
+    carregarDados();
+  } else {
+    accessDenied.style.display = 'block';
+    reportContent.style.display = 'none';
+  }
+});
+
+btnRefresh.addEventListener('click', () => {
+  if (usuarioAutorizado) carregarDados();
+});
+
+function formatarDataHora(ts){
+  if (!ts) return '—';
+  const data = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
+  return data.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function el(tag, className, text){
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+async function carregarDados(){
+  gruposWrap.innerHTML = '';
+  resumoGrid.innerHTML = '';
+  loadingMsg.style.display = 'block';
+  loadingMsg.textContent = 'Carregando respostas...';
+
+  let respostasMap = new Map();
+  try {
+    const snap = await getDocs(collection(db, 'beneficios_respostas'));
+    snap.forEach(d => respostasMap.set(d.id, d.data()));
+  } catch (e) {
+    console.error('Erro ao carregar beneficios_respostas:', e);
+    loadingMsg.textContent = 'Erro ao carregar os dados. Verifique as permissões no Firestore.';
+    return;
+  }
+  loadingMsg.style.display = 'none';
+
+  let totalUnidades = 0, totalRespondidas = 0;
+  const contagemPerguntas = { 1:0, 2:0, 3:0 };
+
+  SR_DATA.forEach(sr => {
+    let srRespondidas = 0;
+    const srCard = el('div', 'sr-card');
+    const head = el('button', 'sr-head');
+    head.type = 'button';
+
+    const unitsWrap = el('div', 'sr-units');
+
+    sr.units.forEach(unidadeNome => {
+      totalUnidades++;
+      const slug = slugifyUnidade(unidadeNome);
+      const resposta = respostasMap.get(slug);
+      const respondida = !!resposta;
+      if (respondida){ srRespondidas++; totalRespondidas++; }
+
+      const row = el('div', 'unidade-row');
+      const rowHead = el('button', 'unidade-row-head');
+      rowHead.type = 'button';
+
+      const infoWrap = el('div');
+      infoWrap.appendChild(el('div', 'nome', unidadeNome));
+      infoWrap.appendChild(el('div', 'data', respondida ? ('Respondido em ' + formatarDataHora(resposta.enviadoEm)) : 'Ainda não preenchido'));
+      rowHead.appendChild(infoWrap);
+      rowHead.appendChild(el('span', 'badge ' + (respondida ? 'ok' : 'pend'), respondida ? 'Preenchido' : 'Não preenchido'));
+
+      const detalhe = el('div', 'unidade-detalhe');
+      if (respondida){
+        contarPerguntasSim(resposta, contagemPerguntas);
+        renderDetalhe(detalhe, resposta);
+        rowHead.addEventListener('click', () => detalhe.classList.toggle('show'));
+      } else {
+        detalhe.appendChild(el('p', null, 'Nenhuma resposta registrada para esta unidade até o momento.'));
+        rowHead.addEventListener('click', () => detalhe.classList.toggle('show'));
+      }
+
+      row.appendChild(rowHead);
+      row.appendChild(detalhe);
+      unitsWrap.appendChild(row);
+    });
+
+    head.innerHTML = '';
+    const headInfo = el('div');
+    headInfo.appendChild(el('div', 'titulo', sr.name));
+    headInfo.appendChild(el('div', 'stats', `${srRespondidas} de ${sr.units.length} unidades responderam`));
+    head.appendChild(headInfo);
+    head.appendChild(el('span', 'arrow', '▸'));
+    head.addEventListener('click', () => srCard.classList.toggle('open'));
+
+    srCard.appendChild(head);
+    srCard.appendChild(unitsWrap);
+    gruposWrap.appendChild(srCard);
+  });
+
+  renderResumo(totalUnidades, totalRespondidas, contagemPerguntas);
+}
+
+function contarPerguntasSim(resposta, contagem){
+  (resposta.respostas || []).forEach(r => {
+    if (r.resposta === 'sim' && contagem[r.pergunta] !== undefined) contagem[r.pergunta]++;
+  });
+}
+
+function renderResumo(total, respondidas, contagemPerguntas){
+  resumoGrid.innerHTML = '';
+  resumoGrid.appendChild(cardResumo(total, 'Unidades no estado'));
+  resumoGrid.appendChild(cardResumo(respondidas, 'Já preencheram', 'ok'));
+  resumoGrid.appendChild(cardResumo(total - respondidas, 'Ainda não preencheram', 'pend'));
+  [1,2,3].forEach(n => {
+    resumoGrid.appendChild(cardResumo(contagemPerguntas[n], `"Sim" na pergunta ${n}`));
+  });
+}
+
+function cardResumo(num, label, extraClass){
+  const card = el('div', 'resumo-card' + (extraClass ? ' ' + extraClass : ''));
+  card.appendChild(el('div', 'num', String(num)));
+  card.appendChild(el('div', 'lbl', label));
+  return card;
+}
+
+function renderDetalhe(container, resposta){
+  container.innerHTML = '';
+
+  const linha = el('div', 'detalhe-linha');
+  const resp = resposta.responsavel || {};
+  linha.appendChild(spanLabel('Responsável: ', resp.nome || '—'));
+  linha.appendChild(spanLabel('Matrícula: ', resp.matricula || '—'));
+  linha.appendChild(spanLabel('Função: ', resp.funcao || '—'));
+  linha.appendChild(spanLabel('E-mail: ', resp.email || '—'));
+  container.appendChild(linha);
+
+  (resposta.respostas || []).forEach(r => {
+    const card = el('div', 'pergunta-card');
+    card.appendChild(el('p', 'q', `${r.pergunta}) ${PERGUNTAS[r.pergunta] || ''}`));
+    const respEl = el('span', 'resp ' + (r.resposta === 'sim' ? 'sim' : 'nao'), r.resposta === 'sim' ? 'SIM' : 'NÃO');
+    card.appendChild(respEl);
+
+    if (r.resposta === 'sim'){
+      const meta = el('div', 'meta');
+      meta.textContent = `Antecipação de ${r.meses ?? '—'} mes(es) · ` +
+        (r.portaria === 'tem' ? 'Tem Portaria local regulamentando' : 'Sem Portaria — concessão individual fundamentada na Decisão');
+      card.appendChild(meta);
+
+      const anexosWrap = el('div');
+      (r.anexos || []).forEach(anexo => {
+        const btn = el('button', 'anexo-btn', '⬇ ' + (anexo.nome || 'anexo'));
+        btn.type = 'button';
+        btn.addEventListener('click', () => baixarAnexo(anexo.caminho, btn));
+        anexosWrap.appendChild(btn);
+      });
+      card.appendChild(anexosWrap);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+function spanLabel(label, value){
+  const s = el('span');
+  const b = el('b', null, label);
+  s.appendChild(b);
+  s.appendChild(document.createTextNode(value));
+  return s;
+}
+
+async function baixarAnexo(caminho, btn){
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Abrindo...';
+  try {
+    const url = await getDownloadURL(ref(storage, caminho));
+    window.open(url, '_blank', 'noopener');
+  } catch (e) {
+    console.error('Erro ao baixar anexo:', e);
+    alert('Não foi possível baixar o anexo. Confirme que você está logado com um e-mail de acesso total do CRV.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+</script>
+
+</body>
+</html>
