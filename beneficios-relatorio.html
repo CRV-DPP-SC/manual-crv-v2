@@ -154,6 +154,36 @@
   .anexo-btn:disabled{opacity:.6; cursor:wait;}
 
   .loading{text-align:center; color:var(--text-muted); font-size:13px; padding:30px;}
+
+  #tabelaWrap{display:none;}
+  .tabela-print-header{display:none;}
+  table.tabela-relatorio{
+    width:100%; border-collapse:collapse; background:#fff;
+    font-size:12.5px;
+  }
+  table.tabela-relatorio th, table.tabela-relatorio td{
+    border:1px solid var(--border); padding:8px 10px; text-align:left;
+  }
+  table.tabela-relatorio th{background:var(--gray-bg); color:var(--navy); font-weight:700;}
+  table.tabela-relatorio tr.tabela-row{cursor:pointer;}
+  table.tabela-relatorio tr.tabela-row:hover{background:var(--gray-bg);}
+  .resp-tag{font-weight:700; font-size:11.5px;}
+  .resp-tag.sim{color:var(--green);}
+  .resp-tag.nao{color:var(--text-muted);}
+  .resp-tag.pendente{color:var(--text-muted); font-style:italic;}
+  .tabela-detalhe-row td{background:var(--gray-bg); padding:0;}
+  .tabela-detalhe-content{padding:14px 18px;}
+
+  @media print{
+    header.top, .no-print, #resumoGrid, #gruposWrap, .tabela-detalhe-row{display:none !important;}
+    body{background:#fff;}
+    main{padding:0; max-width:100%;}
+    #tabelaWrap{display:block !important;}
+    .tabela-print-header{display:block !important; margin-bottom:14px;}
+    .tabela-print-header h2{margin:0 0 4px; font-size:16px;}
+    .tabela-print-header p{margin:0; font-size:11px; color:var(--text-muted);}
+    table.tabela-relatorio th, table.tabela-relatorio td{font-size:10.5px; padding:5px 6px;}
+  }
 </style>
 </head>
 <body>
@@ -166,6 +196,7 @@
     </div>
     <div style="display:flex; gap:8px;">
       <button class="btn-refresh" id="btnCopiarLink">🔗 Copiar link do formulário</button>
+      <button class="btn-refresh" id="btnGerarPlanilha">🖨️ Gerar Planilha/Relatório</button>
       <button class="btn-refresh" id="btnRefresh">🔄 Atualizar</button>
     </div>
   </div>
@@ -181,6 +212,26 @@
   <div id="reportContent" style="display:none;">
     <div class="resumo-grid" id="resumoGrid"></div>
     <div id="gruposWrap"></div>
+  </div>
+
+  <div id="tabelaWrap">
+    <div class="tabela-print-header">
+      <h2>Relatório — Antecipação de Benefícios</h2>
+      <p>Gerado em <span id="tabelaDataGeracao"></span> · CRV/DPP · Polícia Penal de Santa Catarina</p>
+    </div>
+    <table class="tabela-relatorio">
+      <thead>
+        <tr>
+          <th>Unidade Prisional</th>
+          <th>Cidade</th>
+          <th>Superintendência Regional</th>
+          <th>Antecipa: Fechado → Semiaberto</th>
+          <th>Antecipa: Semiaberto → Aberto</th>
+          <th>Antecipa: Livramento Condicional</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaBeneficiosBody"></tbody>
+    </table>
   </div>
 
   <div class="loading" id="loadingMsg">Carregando...</div>
@@ -274,6 +325,10 @@ document.getElementById('btnCopiarLink').addEventListener('click', () => {
   }
 });
 
+document.getElementById('btnGerarPlanilha').addEventListener('click', () => {
+  window.print();
+});
+
 function formatarDataHora(ts){
   if (!ts) return '—';
   const data = typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts);
@@ -361,6 +416,60 @@ async function carregarDados(){
   });
 
   renderResumo(totalUnidades, totalRespondidas, contagemPerguntas);
+  renderTabela(respostasMap);
+}
+
+function respTag(resposta, pergunta){
+  if (!resposta) return el('span', 'resp-tag pendente', 'Pendente');
+  const item = (resposta.respostas || []).find(r => r.pergunta === pergunta);
+  const valor = item ? item.resposta : null;
+  if (valor === 'sim') return el('span', 'resp-tag sim', 'Sim');
+  if (valor === 'nao') return el('span', 'resp-tag nao', 'Não');
+  return el('span', 'resp-tag pendente', 'Pendente');
+}
+
+function renderTabela(respostasMap){
+  const tbody = document.getElementById('tabelaBeneficiosBody');
+  tbody.innerHTML = '';
+  document.getElementById('tabelaDataGeracao').textContent =
+    new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  SR_DATA.forEach(sr => {
+    sr.units.forEach(unidadeNome => {
+      const slug = slugifyUnidade(unidadeNome);
+      const resposta = respostasMap.get(slug);
+
+      const tr = el('tr', 'tabela-row');
+      tr.appendChild(el('td', null, unidadeNome));
+      tr.appendChild(el('td', null, CIDADE_POR_UNIDADE[unidadeNome] || '—'));
+      tr.appendChild(el('td', null, sr.name));
+      [1,2,3].forEach(n => {
+        const td = el('td');
+        td.appendChild(respTag(resposta, n));
+        tr.appendChild(td);
+      });
+
+      const trDetalhe = el('tr', 'tabela-detalhe-row');
+      trDetalhe.style.display = 'none';
+      const tdDetalhe = el('td');
+      tdDetalhe.colSpan = 6;
+      const detalheContent = el('div', 'tabela-detalhe-content');
+      if (resposta){
+        renderDetalhe(detalheContent, resposta);
+      } else {
+        detalheContent.appendChild(el('p', null, 'Nenhuma resposta registrada para esta unidade até o momento.'));
+      }
+      tdDetalhe.appendChild(detalheContent);
+      trDetalhe.appendChild(tdDetalhe);
+
+      tr.addEventListener('click', () => {
+        trDetalhe.style.display = trDetalhe.style.display === 'none' ? 'table-row' : 'none';
+      });
+
+      tbody.appendChild(tr);
+      tbody.appendChild(trDetalhe);
+    });
+  });
 }
 
 function contarPerguntasSim(resposta, contagem){
