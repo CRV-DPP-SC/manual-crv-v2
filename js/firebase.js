@@ -820,19 +820,6 @@ window._abrirFerramenta = function(url, titulo) {
   window.navegarPara && navegarPara('crv-tool');
 };
 
-/* ── Copia o link público do formulário de Antecipação de Benefícios ── */
-window._copiarLinkBeneficios = function() {
-  const url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'formulario-antecipacao-beneficios.html';
-  const avisar = () => { window.showToast && showToast('🔗 Link copiado! Envie para as unidades responderem.'); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(avisar).catch(() => {
-      window.showToast && showToast('Não foi possível copiar automaticamente. Link: ' + url);
-    });
-  } else {
-    window.showToast && showToast('Copie manualmente: ' + url);
-  }
-};
-
 /* ── Toggle dos grupos do submenu lateral ── */
 window._sidebarToggle = function(subId, btn) {
   const sub = document.getElementById(subId);
