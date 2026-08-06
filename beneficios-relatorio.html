@@ -484,7 +484,7 @@ function renderResumo(total, respondidas, contagemPerguntas){
   resumoGrid.appendChild(cardResumo(respondidas, 'Já preencheram', 'ok'));
   resumoGrid.appendChild(cardResumo(total - respondidas, 'Ainda não preencheram', 'pend'));
   [1,2,3].forEach(n => {
-    resumoGrid.appendChild(cardResumo(contagemPerguntas[n], `"Sim" na pergunta ${n}`));
+    resumoGrid.appendChild(cardResumo(contagemPerguntas[n], `"Sim" — ${PERGUNTAS[n]}`));
   });
 }
 
