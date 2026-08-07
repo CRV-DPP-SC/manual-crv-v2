@@ -14,7 +14,6 @@ const SR_DATA = [
     'Presídio Regional de Biguaçu',
     'Presídio Masculino Regional de Florianópolis',
     'Presídio Feminino Regional de Florianópolis',
-    'Unidade de Monitoramento Eletrônico',
     'Colônia Agroindustrial de Palhoça'
   ]},
   { id:'sr02', name:'SR02 — Sul', units:[
@@ -109,7 +108,6 @@ const CIDADE_POR_UNIDADE = {
   'Presídio Regional de Biguaçu': 'Biguaçu',
   'Presídio Masculino Regional de Florianópolis': 'Florianópolis',
   'Presídio Feminino Regional de Florianópolis': 'Florianópolis',
-  'Unidade de Monitoramento Eletrônico': 'Florianópolis',
   'Colônia Agroindustrial de Palhoça': 'Palhoça',
   'Penitenciária Feminina de Criciúma': 'Criciúma',
   'Penitenciária Masculina de Tubarão': 'Tubarão',

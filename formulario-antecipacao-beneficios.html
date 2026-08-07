@@ -453,14 +453,14 @@
 
       <div class="grid2">
         <div class="field">
-          <label for="respNome">Nome do responsável <span class="req">*</span></label>
+          <label for="respNome">Nome do Responsável pelo preenchimento <span class="req">*</span></label>
           <input type="text" id="respNome" name="respNome" required>
           <div class="field-error" id="err-respNome">Informe o nome do responsável.</div>
         </div>
         <div class="field">
           <label for="respMatricula">Matrícula <span class="req">*</span></label>
-          <input type="text" id="respMatricula" name="respMatricula" placeholder="Ex.: 123.456-7" required>
-          <div class="field-error" id="err-respMatricula">Informe a matrícula.</div>
+          <input type="text" id="respMatricula" name="respMatricula" placeholder="Ex.: 123.456-7" maxlength="9" required>
+          <div class="field-error" id="err-respMatricula">Informe a matrícula no formato 123.456-7.</div>
         </div>
       </div>
 
@@ -784,6 +784,17 @@ function filterUnidades(term){
 }
 unidadeSearch.addEventListener('input', (e) => filterUnidades(e.target.value));
 
+// ---------- Máscara da matrícula (123.456-7) ----------
+function formatarMatricula(valor){
+  const digitos = valor.replace(/\D/g, '').slice(0, 7);
+  if (digitos.length <= 3) return digitos;
+  if (digitos.length <= 6) return digitos.slice(0,3) + '.' + digitos.slice(3);
+  return digitos.slice(0,3) + '.' + digitos.slice(3,6) + '-' + digitos.slice(6);
+}
+document.getElementById('respMatricula').addEventListener('input', (e) => {
+  e.target.value = formatarMatricula(e.target.value);
+});
+
 // ---------- Perguntas Sim/Não com anexo condicional ----------
 [1,2,3].forEach(n => {
   const yesRadio = document.querySelector(`input[name="q${n}"][value="sim"]`);
@@ -895,7 +906,7 @@ document.getElementById('beneficiosForm').addEventListener('submit', async funct
   }
 
   // Campos de texto obrigatórios
-  ['respNome','respMatricula','respEmail','respFuncao'].forEach(id => {
+  ['respNome','respEmail','respFuncao'].forEach(id => {
     const input = document.getElementById(id);
     if(!input.value.trim()){
       markInvalid(id);
@@ -904,6 +915,15 @@ document.getElementById('beneficiosForm').addEventListener('submit', async funct
       clearFieldError(id);
     }
   });
+
+  // Matrícula — formato 123.456-7
+  const matriculaInput = document.getElementById('respMatricula');
+  if(!/^\d{3}\.\d{3}-\d$/.test(matriculaInput.value.trim())){
+    markInvalid('respMatricula');
+    valid = false;
+  } else {
+    clearFieldError('respMatricula');
+  }
 
   // Perguntas
   [1,2,3].forEach(n => {
