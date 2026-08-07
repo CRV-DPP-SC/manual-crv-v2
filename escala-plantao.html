@@ -201,16 +201,17 @@
           <button type="button" class="btn" id="btnAfastamento">📋 Afastamento</button>
         </div>
       </div>
-      <div id="trocaAviso" style="display:none; background:#eef3f8; border:1px solid var(--navy); border-radius:6px; padding:10px 14px; margin-bottom:12px; font-size:13px; justify-content:space-between; align-items:center; gap:10px;">
-        <span id="trocaAvisoTexto"></span>
-        <button type="button" class="btn" id="btnCancelarTroca">Cancelar</button>
-      </div>
       <div class="cal-grid" id="calGrid"></div>
       <div class="legenda-letras">
         <span class="item"><span class="dot letra-a"></span> Plantão A</span>
         <span class="item"><span class="dot letra-b"></span> Plantão B</span>
         <span class="item"><span class="dot letra-c"></span> Plantão C</span>
         <span class="item"><span class="dot letra-d"></span> Plantão D</span>
+      </div>
+
+      <div style="margin-top:20px;">
+        <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">👥 Plantões do mês por servidor</h3>
+        <div id="contagemServidores" style="font-size:12.5px; color:var(--text-muted); display:flex; flex-direction:column; gap:3px;"></div>
       </div>
 
       <div style="margin-top:20px;">
@@ -398,6 +399,24 @@
   </div>
 </div>
 
+<!-- Modal: Troca (formulário) -->
+<div class="modal-overlay" id="modalTroca">
+  <div class="modal-box">
+    <div class="modal-head"><h3>🔄 Registrar Troca</h3><button type="button" class="modal-fechar" data-fechar="modalTroca">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Solicitante</label><select id="trocaSolicitante"></select></div>
+      <div class="field"><label>Plantão do Solicitante (Data)</label><input type="date" id="trocaDataSolicitante"></div>
+      <div class="field"><label>Solicitado</label><select id="trocaSolicitado"></select></div>
+      <div class="field"><label>Dia de Plantão do Solicitado, para compensação</label><input type="date" id="trocaDataSolicitado"></div>
+      <div class="field"><label>Motivo (opcional)</label><textarea id="trocaMotivo"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalTroca">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarTroca">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Movimentar/Trocar (drag-and-drop) -->
 <div class="modal-overlay" id="modalMovimentar">
   <div class="modal-box">
@@ -476,8 +495,6 @@ let servidores = [];
 let excecoes = [];
 let observacoes = [];
 let extras = [];
-let modoTroca = false;
-let trocaOrigem = null; // { servidorId, dataOrigem }
 let mesAtual = new Date().getMonth();
 let anoAtual = new Date().getFullYear();
 
@@ -539,27 +556,9 @@ document.querySelectorAll('.modal-overlay').forEach(ov => {
 function abrirModal(id){ document.getElementById(id).classList.add('show'); }
 function fecharModal(id){ document.getElementById(id).classList.remove('show'); }
 
-// ---------- Modo Troca (seleção por clique no calendário) ----------
-function ativarModoTroca(){
-  if (modoTroca){ desativarModoTroca(); return; }
-  modoTroca = true;
-  trocaOrigem = null;
-  document.getElementById('btnTroca').classList.add('primary');
-  document.getElementById('trocaAvisoTexto').textContent = 'Clique no nome de quem sai do plantão, em qualquer dia do calendário.';
-  document.getElementById('trocaAviso').style.display = 'flex';
-}
-function desativarModoTroca(){
-  modoTroca = false;
-  trocaOrigem = null;
-  document.getElementById('btnTroca').classList.remove('primary');
-  document.getElementById('trocaAviso').style.display = 'none';
-}
-document.getElementById('btnCancelarTroca').addEventListener('click', desativarModoTroca);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modoTroca) desativarModoTroca(); });
-
 function preencherSelectsServidores(){
   const opcoes = servidores.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
-  ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor'].forEach(id => {
+  ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor','trocaSolicitante','trocaSolicitado'].forEach(id => {
     document.getElementById(id).innerHTML = opcoes;
   });
   document.getElementById('obsServidor').innerHTML = '<option value="">—</option>' + opcoes;
@@ -569,7 +568,7 @@ function preencherSelectsServidores(){
   // (ex.: pedir pro colega marcar um extra pra si). Vale pra todas as ações.
   const eu = servidores.find(s => (s.email || '').toLowerCase() === (usuarioEmail || '').toLowerCase());
   if (eu){
-    ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor'].forEach(id => {
+    ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor','trocaSolicitante'].forEach(id => {
       document.getElementById(id).value = eu.id;
     });
   }
@@ -654,10 +653,13 @@ function renderCalendario(){
     grid.appendChild(vazio);
   }
 
+  const contagemOrdinarios = {};
+
   for (let dia = 1; dia <= totalDias; dia++){
     const data = new Date(anoAtual, mesAtual, dia);
     const letra = escalaLetraDoDia(data);
     const { finalIds, removidosDoBase, adicionadosExtras } = servidoresNoDia(data);
+    finalIds.forEach(id => { contagemOrdinarios[id] = (contagemOrdinarios[id] || 0) + 1; });
 
     const cel = document.createElement('div');
     cel.className = 'cal-day';
@@ -681,13 +683,6 @@ function renderCalendario(){
       nome.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', JSON.stringify({ servidorId: id, dataOrigem: escalaFormatarData(data) }));
       });
-      nome.addEventListener('click', (e) => {
-        if (!modoTroca || trocaOrigem) return;
-        e.stopPropagation();
-        trocaOrigem = { servidorId: id, dataOrigem: escalaFormatarData(data) };
-        document.getElementById('trocaAvisoTexto').textContent =
-          `Agora clique no dia em que ${nomeServidor(id)} vai passar a trabalhar (a compensação).`;
-      });
       cel.appendChild(nome);
     });
     removidosDoBase.forEach(({ id, tipo, motivo }) => {
@@ -704,18 +699,7 @@ function renderCalendario(){
       cel.appendChild(item);
     });
 
-    cel.addEventListener('click', () => {
-      if (modoTroca){
-        if (!trocaOrigem) return; // ainda não escolheu quem sai
-        const dataDestino = escalaFormatarData(data);
-        if (dataDestino === trocaOrigem.dataOrigem) return;
-        const { servidorId, dataOrigem } = trocaOrigem;
-        desativarModoTroca();
-        abrirModalMovimentar(servidorId, dataOrigem, dataDestino);
-        return;
-      }
-      abrirDetalheDia(data);
-    });
+    cel.addEventListener('click', () => abrirDetalheDia(data));
 
     cel.addEventListener('dragover', (e) => { e.preventDefault(); cel.style.borderColor = 'var(--navy)'; cel.style.borderStyle = 'dashed'; });
     cel.addEventListener('dragleave', () => { cel.style.borderColor = ''; cel.style.borderStyle = ''; });
@@ -734,7 +718,29 @@ function renderCalendario(){
     grid.appendChild(cel);
   }
 
+  renderContagemServidores(contagemOrdinarios);
   renderAfastamentosDoMes();
+}
+
+function renderContagemServidores(contagemOrdinarios){
+  const container = document.getElementById('contagemServidores');
+  container.innerHTML = '';
+
+  const inicioMes = escalaFormatarData(new Date(anoAtual, mesAtual, 1));
+  const fimMes = escalaFormatarData(new Date(anoAtual, mesAtual + 1, 0));
+
+  servidores.forEach(s => {
+    const ordinarios = contagemOrdinarios[s.id] || 0;
+    const extrasDoServidor = extras.filter(ex => ex.servidorId === s.id && ex.data >= inicioMes && ex.data <= fimMes);
+    const linha = document.createElement('div');
+    let texto = `${s.nome.split(' ')[0]}: ${String(ordinarios).padStart(2,'0')} plantões ordinários`;
+    texto += ` + ${String(extrasDoServidor.length).padStart(2,'0')} extra${extrasDoServidor.length === 1 ? '' : 's'}`;
+    if (extrasDoServidor.length){
+      texto += ` (${extrasDoServidor.map(ex => ex.data.slice(-2) + '/' + ex.data.slice(5,7)).join(', ')})`;
+    }
+    linha.textContent = texto;
+    container.appendChild(linha);
+  });
 }
 
 function formatarDataBr(dataStr){
@@ -969,8 +975,35 @@ document.getElementById('btnSalvarExtra').addEventListener('click', async () => 
   await carregarTudo();
 });
 
-// ---------- Ações: Troca (clique no calendário) / Folga / Ausência / Afastamento ----------
-document.getElementById('btnTroca').addEventListener('click', ativarModoTroca);
+// ---------- Ações: Troca / Folga / Ausência / Afastamento ----------
+document.getElementById('btnTroca').addEventListener('click', () => {
+  document.getElementById('trocaSolicitante').value = '';
+  document.getElementById('trocaDataSolicitante').value = '';
+  document.getElementById('trocaSolicitado').value = '';
+  document.getElementById('trocaDataSolicitado').value = '';
+  document.getElementById('trocaMotivo').value = '';
+  abrirModal('modalTroca');
+});
+
+document.getElementById('btnSalvarTroca').addEventListener('click', async () => {
+  const servidorA = document.getElementById('trocaSolicitante').value;
+  const dataA = document.getElementById('trocaDataSolicitante').value;
+  const servidorB = document.getElementById('trocaSolicitado').value;
+  const dataB = document.getElementById('trocaDataSolicitado').value;
+  const motivo = document.getElementById('trocaMotivo').value.trim();
+  if (!servidorA || !dataA || !servidorB || !dataB) return alert('Preencha solicitante, solicitado e as duas datas.');
+  if (servidorA === servidorB) return alert('Selecione servidores diferentes para solicitante e solicitado.');
+  await addDoc(collection(db, 'escala_excecoes'), {
+    tipo: 'trocaDias', servidorA, dataA, servidorB, dataB, motivo,
+    criadoPor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  await addDoc(collection(db, 'escala_observacoes'), {
+    texto: `Troca de dias: ${nomeServidor(servidorA)} (${formatarDataBr(dataA)}) ↔ ${nomeServidor(servidorB)} (${formatarDataBr(dataB)}). ${motivo || ''}`.trim(),
+    servidorId: servidorA, data: dataA, autor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  fecharModal('modalTroca');
+  await carregarTudo();
+});
 
 document.getElementById('btnFolga').addEventListener('click', () => {
   document.getElementById('folgaMotivoTipo').value = '8º plantão';
