@@ -495,8 +495,14 @@ let servidores = [];
 let excecoes = [];
 let observacoes = [];
 let extras = [];
+
+const MES_MINIMO = { ano: 2026, mes: 7 }; // agosto/2026 (0-indexado) — marco inicial da escala
 let mesAtual = new Date().getMonth();
 let anoAtual = new Date().getFullYear();
+if (anoAtual < MES_MINIMO.ano || (anoAtual === MES_MINIMO.ano && mesAtual < MES_MINIMO.mes)){
+  mesAtual = MES_MINIMO.mes;
+  anoAtual = MES_MINIMO.ano;
+}
 
 /*
  * Em teste — liberado só pro Rodrigo por enquanto. Quando abrir pro resto
@@ -634,6 +640,11 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 
 function renderCalendario(){
   document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} ${anoAtual}`;
+  const noMinimo = (anoAtual === MES_MINIMO.ano && mesAtual === MES_MINIMO.mes);
+  const btnMesAnterior = document.getElementById('mesAnterior');
+  btnMesAnterior.disabled = noMinimo;
+  btnMesAnterior.style.opacity = noMinimo ? '.4' : '1';
+  btnMesAnterior.style.cursor = noMinimo ? 'not-allowed' : 'pointer';
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
   DOW.forEach(d => {
@@ -946,6 +957,7 @@ function abrirModalMovimentar(servidorId, dataOrigem, dataDestino){
 }
 
 document.getElementById('mesAnterior').addEventListener('click', () => {
+  if (anoAtual === MES_MINIMO.ano && mesAtual === MES_MINIMO.mes) return; // não existe escala antes de agosto/2026
   mesAtual--; if (mesAtual < 0){ mesAtual = 11; anoAtual--; }
   renderCalendario();
 });
