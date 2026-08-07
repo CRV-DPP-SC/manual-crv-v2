@@ -148,6 +148,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="RETORNO"  onclick="selMod('RETORNO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Saída Temporária - Unidade Diversa<small>Reeducando que se apresentou em unidade diversa da origem</small></div></div>
           <div class="ri" data-v="COMPLEXO" onclick="selMod('COMPLEXO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Transferência dentro do Mesmo Complexo Prisional<small>Movimentação entre unidades do mesmo complexo</small></div></div>
           <div class="ri" data-v="RETMD"    onclick="selMod('RETMD')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de MD<small>Retorno à unidade de origem após transferência provisória (Medida Disciplinar)</small></div></div>
+          <div class="ri" data-v="RETPERNOITE" onclick="selMod('RETPERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Pernoite<small>Retorno à unidade de origem após consulta médica e pernoite em unidade diversa</small></div></div>
           <div class="ri" data-v="REGIME"   onclick="selMod('REGIME')"><div class="rd"><div class="rdi"></div></div><div class="rl">Alteração do Regime<small>Transferência decorrente de decisão judicial de progressão/regressão de regime</small></div></div>
           <div class="ri" data-v="CONVIVIO" onclick="selMod('CONVIVIO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Falta de Convívio na Unidade de Origem<small>Dificuldade de convívio entre o(a) reeducando(a) e demais colegas de cárcere</small></div></div>
           <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
@@ -381,6 +382,18 @@ function gerar(){
       txt:['Trata-se de pedido de transferência em razão do retorno do(a) reeducando(a) à unidade prisional de origem, após o término da transferência provisória anteriormente deferida.',
            'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o encerramento do período de cumprimento da medida disciplinar, tratando-se de mera recondução do(a) reeducando(a) à unidade de origem.',
            PCOM, PHIG].join('\n\n')
+    };
+  }
+
+  // RETORNO DE PERNOITE (após consulta médica/pernoite em unidade diversa)
+  if(m==='RETPERNOITE'){
+    var sub='Retorno de Pernoite — Art. 21, inciso III';
+    return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de transferência em razão do retorno do(a) reeducando(a) à unidade prisional de origem, após a realização de consulta médica e o término do pernoite autorizado em unidade diversa.',
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por se tratar de mera recondução do(a) reeducando(a) à unidade prisional de origem, em decorrência do encerramento da finalidade que motivou a transferência provisória.',
+           PCOM,
+           'A unidade prisional que recebeu provisoriamente o(a) reeducando(a) deverá encaminhá-lo(a) à unidade de origem juntamente com seus pertences pessoais, itens de higiene e uniformes eventualmente utilizados durante o período de permanência.'].join('\n\n')
     };
   }
 
