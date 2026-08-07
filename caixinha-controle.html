@@ -1036,8 +1036,38 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, doc, getDoc, setDoc, addDoc, collection,
          query, orderBy, onSnapshot, updateDoc, deleteDoc, serverTimestamp, getDocs, where }
          from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL }
-         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+/*
+ * Anexos vão para o Google Drive via Apps Script (mesmo endpoint usado
+ * no formulário de Antecipação de Benefícios) — não usamos Firebase
+ * Storage porque ele exige plano pago/cartão vinculado ao projeto.
+ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnmN9XVSxUwIB3p-6FLcOb64Qd59NHDiCErAKjeig3SmYE1NjpfNsFnDHm-SH6MN0K6g/exec';
+
+function fileParaBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function enviarAnexoParaDrive(file, subpasta){
+  const conteudoBase64 = await fileParaBase64(file);
+  const resp = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      pasta: 'Anexos CRV - Caixinha do Setor',
+      unidadeSlug: subpasta,
+      nome: file.name,
+      tipo: file.type || 'application/octet-stream',
+      conteudoBase64
+    })
+  });
+  const json = await resp.json();
+  if (!json.ok) throw new Error(json.erro || 'Falha ao enviar anexo ao Drive.');
+  return json.url;
+}
 
 // ============================================================
 // CONFIG FIREBASE (mesmo projeto do site)
@@ -1051,10 +1081,9 @@ const firebaseConfig = {
   appId:             "1:707080008192:web:64f44c65629c0fc5941ee5"
 };
 
-const app     = initializeApp(firebaseConfig);
-const auth    = getAuth(app);
-const db      = getFirestore(app);
-const storage = getStorage(app);
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
 // ============================================================
 // ESTADO GLOBAL
@@ -1369,12 +1398,10 @@ window.confirmarLancamento = async function() {
   try {
     let urlAnexo = null;
 
-    // Upload do anexo se houver
+    // Upload do anexo se houver (Google Drive via Apps Script)
     if (anexoFile[prefixo]) {
-      const nomeArq = Date.now() + '_' + anexoFile[prefixo].name;
-      const storageRef = ref(storage, `caixinha_anexos/${nomeArq}`);
-      await uploadBytes(storageRef, anexoFile[prefixo]);
-      urlAnexo = await getDownloadURL(storageRef);
+      const subpasta = new Date().toISOString().slice(0,7); // ex.: "2026-08"
+      urlAnexo = await enviarAnexoParaDrive(anexoFile[prefixo], subpasta);
     }
 
     await addDoc(collection(db,'caixinha_lancamentos'), {
