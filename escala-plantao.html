@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escala de Plantão | CRV/DPP</title>
+<style>
+  :root{
+    --navy:#0d2b45;
+    --navy-dark:#081b2d;
+    --gold:#c9a227;
+    --gray-bg:#f4f6f8;
+    --border:#d7dee4;
+    --text:#1c2933;
+    --text-muted:#5b6b78;
+    --radius:8px;
+    --plantao-a:#3b82f6;
+    --plantao-b:#22c55e;
+    --plantao-c:#f97316;
+    --plantao-d:#a855f7;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Segoe UI", Roboto, Arial, sans-serif;
+    background:var(--gray-bg);
+    color:var(--text);
+    line-height:1.5;
+  }
+  header.top{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-dark) 100%);
+    color:#fff;
+    padding:18px 20px;
+    border-bottom:4px solid var(--gold);
+  }
+  header.top .wrap{
+    max-width:1100px; margin:0 auto;
+    display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  header.top h1{margin:0; font-size:19px; font-weight:700;}
+  header.top .eyebrow{
+    text-transform:uppercase; letter-spacing:.1em; font-size:11px; color:var(--gold); font-weight:600; margin-bottom:4px;
+  }
+  .tabs{display:flex; gap:6px; margin-top:12px;}
+  .tab-btn{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff;
+    border-radius:6px 6px 0 0; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .tab-btn.active{background:var(--gray-bg); color:var(--navy);}
+
+  main{max-width:1100px; margin:0 auto; padding:20px;}
+
+  .access-denied{
+    max-width:520px; margin:60px auto; text-align:center;
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:40px 28px;
+  }
+  .access-denied .icon{font-size:36px; margin-bottom:10px;}
+  .access-denied h2{color:var(--navy); margin:0 0 8px;}
+  .access-denied p{color:var(--text-muted); font-size:14px; margin:0;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .toolbar{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    margin-bottom:16px;
+  }
+  .mes-nav{display:flex; align-items:center; gap:10px;}
+  .mes-nav button{
+    background:#fff; border:1px solid var(--border); border-radius:6px; width:32px; height:32px;
+    font-size:14px; cursor:pointer;
+  }
+  .mes-nav button:hover{background:var(--gray-bg);}
+  .mes-nav .mes-label{font-size:16px; font-weight:700; color:var(--navy); min-width:170px; text-align:center;}
+  .acoes-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  .btn{
+    border:1px solid var(--border); background:#fff; border-radius:6px; padding:9px 14px;
+    font-size:13px; font-weight:600; cursor:pointer; color:var(--navy);
+  }
+  .btn:hover{background:var(--gray-bg);}
+  .btn.primary{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .btn.primary:hover{background:var(--navy-dark);}
+
+  .cal-grid{
+    display:grid; grid-template-columns:repeat(7,1fr); gap:6px;
+  }
+  .cal-dow{text-align:center; font-size:11.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; padding-bottom:4px;}
+  .cal-day{
+    background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px; min-height:88px;
+    cursor:pointer; display:flex; flex-direction:column; gap:4px;
+  }
+  .cal-day:hover{border-color:var(--navy);}
+  .cal-day.vazio{background:transparent; border:none; cursor:default;}
+  .cal-day .num{font-size:12px; font-weight:700; color:var(--text-muted);}
+  .cal-day .letra-badge{
+    display:inline-flex; align-self:flex-start; width:18px; height:18px; border-radius:50%;
+    color:#fff; font-size:10px; font-weight:700; align-items:center; justify-content:center;
+  }
+  .cal-day .servidor-nome{font-size:10.5px; color:var(--text); line-height:1.3; word-break:break-word;}
+  .cal-day .servidor-nome.excecao{text-decoration:line-through; color:var(--text-muted);}
+  .cal-day .servidor-nome.excecao.afastado{color:#b3261e;}
+  .cal-day .servidor-nome.entrou{color:var(--navy); font-weight:600;}
+
+  .letra-a{background:var(--plantao-a);}
+  .letra-b{background:var(--plantao-b);}
+  .letra-c{background:var(--plantao-c);}
+  .letra-d{background:var(--plantao-d);}
+
+  .legenda-letras{display:flex; gap:14px; margin-top:14px; flex-wrap:wrap; font-size:12px; color:var(--text-muted);}
+  .legenda-letras .item{display:flex; align-items:center; gap:5px;}
+  .legenda-letras .dot{width:12px; height:12px; border-radius:50%; display:inline-block;}
+
+  .extra-item{
+    font-size:10px; font-weight:600; border-radius:4px; padding:1px 4px; margin-top:2px;
+    background:var(--gray-bg); border:1px solid var(--border); color:var(--text);
+  }
+  .extra-item .tag{font-weight:700; margin-right:3px;}
+  .extra-item .tag.D{color:#b45309;}
+  .extra-item .tag.N{color:#1e3a8a;}
+
+  table.tabela{width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius); overflow:hidden;}
+  table.tabela th, table.tabela td{border-bottom:1px solid var(--border); padding:10px 12px; text-align:left; font-size:13.5px;}
+  table.tabela th{background:var(--gray-bg); color:var(--navy); font-weight:700; font-size:12px; text-transform:uppercase;}
+  table.tabela tr:last-child td{border-bottom:none;}
+  .status-badge{font-size:10.5px; font-weight:700; text-transform:uppercase; border-radius:20px; padding:3px 10px;}
+  .status-badge.ativo{background:#e8f3e8; color:#1b5e20;}
+  .status-badge.ferias{background:#fef3c7; color:#92400e;}
+  .status-badge.afastado{background:#fbe9e7; color:#b3261e;}
+  .link-btn{background:none; border:none; color:var(--navy); font-weight:600; cursor:pointer; font-size:13px;}
+  .link-btn:hover{text-decoration:underline;}
+
+  .obs-item{
+    background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-bottom:10px;
+  }
+  .obs-item .obs-head{font-size:13px; font-weight:700; color:var(--navy);}
+  .obs-item .obs-meta{font-size:11.5px; color:var(--text-muted); margin-top:2px;}
+  .obs-item .obs-texto{font-size:13px; margin-top:6px; font-style:italic;}
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(13,43,69,.5); z-index:500;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff; border-radius:var(--radius); max-width:460px; width:100%; max-height:85vh; overflow-y:auto;}
+  .modal-head{display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);}
+  .modal-head h3{margin:0; font-size:15px; color:var(--navy);}
+  .modal-fechar{background:none; border:none; font-size:16px; cursor:pointer; color:var(--text-muted); width:28px; height:28px; border-radius:6px;}
+  .modal-fechar:hover{background:var(--gray-bg);}
+  .modal-body{padding:16px 20px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px; color:var(--text);}
+  .field input, .field select, .field textarea{
+    width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:6px; font-size:13.5px; font-family:inherit;
+  }
+  .field textarea{resize:vertical; min-height:60px;}
+  .modal-footer{display:flex; justify-content:flex-end; gap:8px; padding:14px 20px; border-top:1px solid var(--border);}
+
+  .loading{text-align:center; color:var(--text-muted); font-size:13px; padding:30px;}
+  .empty-msg{text-align:center; color:var(--text-muted); font-size:13px; padding:30px; background:#fff; border-radius:var(--radius); border:1px dashed var(--border);}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">CRV/DPP · Acesso restrito</div>
+      <h1>🗓️ Escala de Plantão</h1>
+    </div>
+  </div>
+  <div class="wrap" style="margin-top:0;">
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-view="calendario">Calendário</button>
+      <button class="tab-btn" data-view="servidores">Servidores</button>
+      <button class="tab-btn" data-view="observacoes">Observações</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="access-denied" id="accessDenied" style="display:none;">
+    <div class="icon">🔒</div>
+    <h2>Acesso restrito</h2>
+    <p>Esta página só pode ser acessada por usuários com acesso total do CRV, logados no site principal.</p>
+  </div>
+
+  <div id="appContent" style="display:none;">
+
+    <section class="view active" id="viewCalendario">
+      <div class="toolbar">
+        <div class="mes-nav">
+          <button type="button" id="mesAnterior">‹</button>
+          <div class="mes-label" id="mesLabel"></div>
+          <button type="button" id="mesProximo">›</button>
+        </div>
+        <div class="acoes-btns">
+          <button type="button" class="btn primary" id="btnExtra">🕐 Marcar Plantão Extra</button>
+          <button type="button" class="btn" id="btnTroca">🔄 Troca</button>
+          <button type="button" class="btn" id="btnFolga">🌴 Folga</button>
+          <button type="button" class="btn" id="btnAusencia">⚠️ Ausência</button>
+          <button type="button" class="btn" id="btnAfastamento">📋 Afastamento</button>
+        </div>
+      </div>
+      <div id="trocaAviso" style="display:none; background:#eef3f8; border:1px solid var(--navy); border-radius:6px; padding:10px 14px; margin-bottom:12px; font-size:13px; justify-content:space-between; align-items:center; gap:10px;">
+        <span id="trocaAvisoTexto"></span>
+        <button type="button" class="btn" id="btnCancelarTroca">Cancelar</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="legenda-letras">
+        <span class="item"><span class="dot letra-a"></span> Plantão A</span>
+        <span class="item"><span class="dot letra-b"></span> Plantão B</span>
+        <span class="item"><span class="dot letra-c"></span> Plantão C</span>
+        <span class="item"><span class="dot letra-d"></span> Plantão D</span>
+      </div>
+
+      <div style="margin-top:20px;">
+        <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">📋 Afastamentos do mês</h3>
+        <div id="afastamentosDoMes"></div>
+      </div>
+    </section>
+
+    <section class="view" id="viewServidores">
+      <div class="toolbar">
+        <div></div>
+        <div class="acoes-btns">
+          <button type="button" class="btn" id="btnImportarPadrao">↺ Importar servidores padrão</button>
+          <button type="button" class="btn primary" id="btnNovoServidor">+ Adicionar Servidor</button>
+        </div>
+      </div>
+      <table class="tabela" id="tabelaServidores">
+        <thead>
+          <tr><th>Nome</th><th>Matrícula</th><th>Plantão</th><th>Ciclo</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="corpoServidores"></tbody>
+      </table>
+    </section>
+
+    <section class="view" id="viewObservacoes">
+      <div class="toolbar">
+        <div></div>
+        <button type="button" class="btn primary" id="btnNovaObservacao">+ Observação</button>
+      </div>
+      <div id="listaObservacoes"></div>
+    </section>
+
+  </div>
+
+  <div class="loading" id="loadingMsg">Carregando...</div>
+</main>
+
+<!-- Modal: detalhe do dia -->
+<div class="modal-overlay" id="modalDia">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modalDiaTitulo"></h3><button type="button" class="modal-fechar" data-fechar="modalDia">✕</button></div>
+    <div class="modal-body" id="modalDiaBody"></div>
+  </div>
+</div>
+
+<!-- Modal: Plantão Extra -->
+<div class="modal-overlay" id="modalExtra">
+  <div class="modal-box">
+    <div class="modal-head"><h3>🕐 Marcar Plantão Extra</h3><button type="button" class="modal-fechar" data-fechar="modalExtra">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px; color:var(--text-muted); margin-top:0;">Plantão extra remunerado — não altera a escala padrão do servidor.</p>
+      <div class="field"><label>Servidor</label><select id="extraServidor"></select></div>
+      <div class="field"><label>Data</label><input type="date" id="extraData"></div>
+      <div class="field"><label>Horário</label>
+        <select id="extraHorario">
+          <option value="a">a) 08h00 às 16h00 (D)</option>
+          <option value="b">b) 10h00 às 18h00 (D)</option>
+          <option value="c">c) 16h00 às 00h00 (D)</option>
+          <option value="d">d) 22h00 às 06h00 (N)</option>
+          <option value="e">e) 00h00 às 08h00 (N)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalExtra">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarExtra">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Folga -->
+<div class="modal-overlay" id="modalFolga">
+  <div class="modal-box">
+    <div class="modal-head"><h3>🌴 Registrar Folga</h3><button type="button" class="modal-fechar" data-fechar="modalFolga">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Servidor</label><select id="folgaServidor"></select></div>
+      <div class="field"><label>Data</label><input type="date" id="folgaData"></div>
+      <div class="field"><label>Motivo</label>
+        <select id="folgaMotivoTipo">
+          <option value="8º plantão">8º plantão</option>
+          <option value="Banco de horas">Banco de horas</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="field" id="campoFolgaOutro" style="display:none;">
+        <label>Qual?</label><input type="text" id="folgaMotivoOutro">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalFolga">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarFolga">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ausência -->
+<div class="modal-overlay" id="modalAusencia">
+  <div class="modal-box">
+    <div class="modal-head"><h3>⚠️ Registrar Ausência</h3><button type="button" class="modal-fechar" data-fechar="modalAusencia">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Servidor</label><select id="ausenciaServidor"></select></div>
+      <div class="field"><label>Data</label><input type="date" id="ausenciaData"></div>
+      <div class="field"><label>Motivo</label>
+        <select id="ausenciaMotivoTipo">
+          <option value="Participação em curso de formação (Professor)">Participação em curso de formação (Professor)</option>
+          <option value="Participação em curso de formação (Coordenador)">Participação em curso de formação (Coordenador)</option>
+          <option value="Participação em curso de formação (Aluno)">Participação em curso de formação (Aluno)</option>
+          <option value="Viagem institucional">Viagem institucional</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="field" id="campoAusenciaOutro" style="display:none;">
+        <label>Qual?</label><input type="text" id="ausenciaMotivoOutro">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalAusencia">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarAusencia">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Afastamento -->
+<div class="modal-overlay" id="modalAfastamento">
+  <div class="modal-box">
+    <div class="modal-head"><h3>📋 Registrar Afastamento</h3><button type="button" class="modal-fechar" data-fechar="modalAfastamento">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Servidor</label><select id="afastamentoServidor"></select></div>
+      <div class="field"><label>Data início</label><input type="date" id="afastamentoInicio"></div>
+      <div class="field"><label>Data fim</label><input type="date" id="afastamentoFim"></div>
+      <div class="field"><label>Motivo</label>
+        <select id="afastamentoMotivoTipo">
+          <option value="Licença Prêmio">Licença Prêmio</option>
+          <option value="Férias">Férias</option>
+          <option value="Licença Tratamento de Saúde">Licença Tratamento de Saúde</option>
+          <option value="Licença Maternidade">Licença Maternidade</option>
+          <option value="Determinação Correcional">Determinação Correcional</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+      <div class="field" id="campoAfastamentoOutro" style="display:none;">
+        <label>Qual?</label><input type="text" id="afastamentoMotivoOutro">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalAfastamento">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarAfastamento">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Servidor (novo/editar) -->
+<div class="modal-overlay" id="modalServidor">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modalServidorTitulo">Servidor</h3><button type="button" class="modal-fechar" data-fechar="modalServidor">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="servidorDocId">
+      <div class="field"><label>Nome</label><input type="text" id="servidorNome"></div>
+      <div class="field"><label>Matrícula</label><input type="text" id="servidorMatricula" placeholder="Ex.: 123.456-7"></div>
+      <div class="field"><label>Padrão</label>
+        <select id="servidorPadrao">
+          <option value="unico">Único (24x72 — 1 dia trabalha, 3 de folga)</option>
+          <option value="duplo">Duplo (48x144 — 2 dias trabalha, 6 de folga)</option>
+        </select>
+      </div>
+      <div class="field"><label>Letra(s) do plantão</label>
+        <select id="servidorLetras" multiple size="4">
+          <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+        </select>
+      </div>
+      <div class="field"><label>Data-âncora (um dia em que ele(a) estava de plantão)</label><input type="date" id="servidorAncora"></div>
+      <div class="field"><label>Status</label>
+        <select id="servidorStatus">
+          <option value="ativo">Ativo</option>
+          <option value="ferias">Férias</option>
+          <option value="afastado">Afastado</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalServidor">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarServidor">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Movimentar/Trocar (drag-and-drop) -->
+<div class="modal-overlay" id="modalMovimentar">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Mover plantão</h3><button type="button" class="modal-fechar" data-fechar="modalMovimentar">✕</button></div>
+    <div class="modal-body">
+      <p id="movimentarTexto" style="margin-top:0;"></p>
+      <div class="field"><label>Motivo (opcional)</label><textarea id="movimentarMotivo"></textarea></div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button type="button" class="btn primary" id="btnConfirmarMovimentar" style="width:100%;"></button>
+        <button type="button" class="btn primary" id="btnConfirmarTrocaDias" style="width:100%; display:none;"></button>
+        <button type="button" class="btn" data-fechar="modalMovimentar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Observação manual -->
+<div class="modal-overlay" id="modalObservacao">
+  <div class="modal-box">
+    <div class="modal-head"><h3>+ Observação</h3><button type="button" class="modal-fechar" data-fechar="modalObservacao">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Servidor (opcional)</label><select id="obsServidor"><option value="">—</option></select></div>
+      <div class="field"><label>Data (opcional)</label><input type="date" id="obsData"></div>
+      <div class="field"><label>Texto</label><textarea id="obsTexto"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalObservacao">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarObservacao">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/escala-dados.js"></script>
+<script type="module">
+import { initializeApp, getApps, getApp }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getFirestore, collection, doc, getDocs, addDoc, setDoc, deleteDoc, serverTimestamp, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
+  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
+  projectId:         "crv-dpp-sc-v2",
+  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
+  messagingSenderId: "513539683551",
+  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
+};
+
+/* Reaproveita a sessão de Auth do site principal (mesmo app default) */
+const app  = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/* Mesma allowlist de js/firebase.js (EMAILS_CRV) */
+const EMAILS_CRV = [
+  'rodrigo.l.pastore@gmail.com',
+  'ivana.schafer@gmail.com',
+  'brunawlongen@gmail.com',
+  'ricardobritomarques12@gmail.com',
+  'abeljuliana2012@gmail.com',
+  'jessicaveiga9@gmail.com',
+  'day.sestren88@gmail.com',
+  'sepen@pp.sc.gov.br',
+  'leilakfarias@gmail.com',
+  'crv@pp.sc.gov.br'
+];
+
+const accessDenied = document.getElementById('accessDenied');
+const appContent   = document.getElementById('appContent');
+const loadingMsg   = document.getElementById('loadingMsg');
+
+let usuarioEmail = null;
+let servidores = [];
+let excecoes = [];
+let observacoes = [];
+let extras = [];
+let modoTroca = false;
+let trocaOrigem = null; // { servidorId, dataOrigem }
+let mesAtual = new Date().getMonth();
+let anoAtual = new Date().getFullYear();
+
+/*
+ * Em teste — liberado só pro Rodrigo por enquanto. Quando abrir pro resto
+ * da equipe do CRV, trocar a linha abaixo para: EMAILS_CRV.includes((user.email || '').toLowerCase())
+ */
+const EMAILS_LIBERADOS_ESCALA = ['rodrigo.l.pastore@gmail.com'];
+
+onAuthStateChanged(auth, async (user) => {
+  const autorizado = !!(user && EMAILS_LIBERADOS_ESCALA.includes((user.email || '').toLowerCase()));
+  loadingMsg.style.display = 'none';
+  if (!autorizado){
+    accessDenied.style.display = 'block';
+    appContent.style.display = 'none';
+    return;
+  }
+  usuarioEmail = user.email;
+  accessDenied.style.display = 'none';
+  appContent.style.display = 'block';
+  await carregarTudo();
+});
+
+async function carregarTudo(){
+  const [snapServ, snapExc, snapObs, snapExtra] = await Promise.all([
+    getDocs(collection(db, 'escala_servidores')),
+    getDocs(collection(db, 'escala_excecoes')),
+    getDocs(query(collection(db, 'escala_observacoes'), orderBy('criadoEm', 'desc'))),
+    getDocs(collection(db, 'escala_extras'))
+  ]);
+  servidores = snapServ.docs.map(d => ({ id: d.id, ...d.data() }));
+  excecoes = snapExc.docs.map(d => ({ id: d.id, ...d.data() }));
+  observacoes = snapObs.docs.map(d => ({ id: d.id, ...d.data() }));
+  extras = snapExtra.docs.map(d => ({ id: d.id, ...d.data() }));
+  preencherSelectsServidores();
+  renderCalendario();
+  renderServidores();
+  renderObservacoes();
+}
+
+// ---------- Navegação por abas ----------
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  const viewId = 'view' + btn.dataset.view.charAt(0).toUpperCase() + btn.dataset.view.slice(1);
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === viewId));
+});
+
+// ---------- Modais genéricos ----------
+document.querySelectorAll('[data-fechar]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById(btn.dataset.fechar).classList.remove('show');
+  });
+});
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); });
+});
+function abrirModal(id){ document.getElementById(id).classList.add('show'); }
+function fecharModal(id){ document.getElementById(id).classList.remove('show'); }
+
+// ---------- Modo Troca (seleção por clique no calendário) ----------
+function ativarModoTroca(){
+  if (modoTroca){ desativarModoTroca(); return; }
+  modoTroca = true;
+  trocaOrigem = null;
+  document.getElementById('btnTroca').classList.add('primary');
+  document.getElementById('trocaAvisoTexto').textContent = 'Clique no nome de quem sai do plantão, em qualquer dia do calendário.';
+  document.getElementById('trocaAviso').style.display = 'flex';
+}
+function desativarModoTroca(){
+  modoTroca = false;
+  trocaOrigem = null;
+  document.getElementById('btnTroca').classList.remove('primary');
+  document.getElementById('trocaAviso').style.display = 'none';
+}
+document.getElementById('btnCancelarTroca').addEventListener('click', desativarModoTroca);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modoTroca) desativarModoTroca(); });
+
+function preencherSelectsServidores(){
+  const opcoes = servidores.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+  ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor'].forEach(id => {
+    document.getElementById(id).innerHTML = opcoes;
+  });
+  document.getElementById('obsServidor').innerHTML = '<option value="">—</option>' + opcoes;
+
+  // Pré-seleciona o próprio usuário logado (conveniência) — mas o campo continua
+  // totalmente editável, porque um servidor pode registrar algo em nome de outro
+  // (ex.: pedir pro colega marcar um extra pra si). Vale pra todas as ações.
+  const eu = servidores.find(s => (s.email || '').toLowerCase() === (usuarioEmail || '').toLowerCase());
+  if (eu){
+    ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor'].forEach(id => {
+      document.getElementById(id).value = eu.id;
+    });
+  }
+}
+
+// ---------- Cálculo de servidores de plantão num dia, com exceções ----------
+function servidoresNoDia(data){
+  const dataStr = escalaFormatarData(data);
+  const base = new Set(servidores.filter(s => s.status === 'ativo' && calcularPlantao(s, data)).map(s => s.id));
+  const removidosInfo = new Map(); // id -> { tipo, motivo }
+  const adicionados = new Set();
+
+  excecoes.forEach(ex => {
+    if (ex.tipo === 'folga' || ex.tipo === 'ausencia'){
+      if (ex.data === dataStr) removidosInfo.set(ex.servidorId, { tipo: ex.tipo, motivo: ex.motivo });
+    } else if (ex.tipo === 'afastamento'){
+      if (dataStr >= ex.dataInicio && dataStr <= ex.dataFim) removidosInfo.set(ex.servidorId, { tipo: ex.tipo, motivo: ex.motivo });
+    } else if (ex.tipo === 'troca'){
+      if (ex.data === dataStr){
+        removidosInfo.set(ex.servidorId, { tipo: ex.tipo, motivo: ex.motivo });
+        adicionados.add(ex.comId);
+      }
+    } else if (ex.tipo === 'movimentacao'){
+      if (ex.dataOrigem === dataStr) removidosInfo.set(ex.servidorId, { tipo: ex.tipo, motivo: ex.motivo });
+      if (ex.dataDestino === dataStr) adicionados.add(ex.servidorId);
+    } else if (ex.tipo === 'trocaDias'){
+      if (ex.dataA === dataStr){ removidosInfo.set(ex.servidorA, { tipo: ex.tipo, motivo: ex.motivo }); adicionados.add(ex.servidorB); }
+      if (ex.dataB === dataStr){ removidosInfo.set(ex.servidorB, { tipo: ex.tipo, motivo: ex.motivo }); adicionados.add(ex.servidorA); }
+    }
+  });
+
+  const final = new Set(base);
+  removidosInfo.forEach((info, id) => final.delete(id));
+  adicionados.forEach(id => final.add(id));
+  const removidosDoBase = [...base].filter(id => removidosInfo.has(id)).map(id => ({ id, ...removidosInfo.get(id) }));
+  return { finalIds: final, removidosDoBase, adicionadosExtras: [...adicionados].filter(id => !base.has(id)) };
+}
+
+function descreverExcecao(ex){
+  const just = ex.motivo ? ` - Justificativa - ${ex.motivo}` : '';
+  if (ex.tipo === 'folga') return `FOLGA: ${nomeServidor(ex.servidorId)}${just}`;
+  if (ex.tipo === 'ausencia') return `AUSÊNCIA: ${nomeServidor(ex.servidorId)}${just}`;
+  if (ex.tipo === 'afastamento') return `AFASTAMENTO: ${nomeServidor(ex.servidorId)} (${formatarDataBr(ex.dataInicio)} a ${formatarDataBr(ex.dataFim)})${just}`;
+  if (ex.tipo === 'troca') return `TROCA: ${nomeServidor(ex.servidorId)} x ${nomeServidor(ex.comId)}${just}`;
+  if (ex.tipo === 'movimentacao') return `MOVIMENTAÇÃO: ${nomeServidor(ex.servidorId)} (${formatarDataBr(ex.dataOrigem)} → ${formatarDataBr(ex.dataDestino)})${just}`;
+  if (ex.tipo === 'trocaDias') return `TROCA: ${nomeServidor(ex.servidorA)} x ${nomeServidor(ex.servidorB)}${just}`;
+  return `${ex.tipo}${just}`;
+}
+
+function nomeServidor(id){
+  const s = servidores.find(s => s.id === id);
+  return s ? s.nome : id;
+}
+
+function extrasDoDia(data){
+  const dataStr = escalaFormatarData(data);
+  return extras.filter(ex => ex.data === dataStr);
+}
+
+// ---------- Calendário ----------
+const DOW = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function renderCalendario(){
+  document.getElementById('mesLabel').textContent = `${MESES[mesAtual]} ${anoAtual}`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  DOW.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const primeiroDia = new Date(anoAtual, mesAtual, 1);
+  const offset = primeiroDia.getDay();
+  const totalDias = new Date(anoAtual, mesAtual + 1, 0).getDate();
+
+  for (let i = 0; i < offset; i++){
+    const vazio = document.createElement('div');
+    vazio.className = 'cal-day vazio';
+    grid.appendChild(vazio);
+  }
+
+  for (let dia = 1; dia <= totalDias; dia++){
+    const data = new Date(anoAtual, mesAtual, dia);
+    const letra = escalaLetraDoDia(data);
+    const { finalIds, removidosDoBase, adicionadosExtras } = servidoresNoDia(data);
+
+    const cel = document.createElement('div');
+    cel.className = 'cal-day';
+
+    const num = document.createElement('div');
+    num.className = 'num';
+    num.textContent = dia;
+    cel.appendChild(num);
+
+    const badge = document.createElement('span');
+    badge.className = 'letra-badge letra-' + letra.toLowerCase();
+    badge.textContent = letra;
+    cel.appendChild(badge);
+
+    [...finalIds].forEach(id => {
+      const nome = document.createElement('div');
+      nome.className = 'servidor-nome' + (adicionadosExtras.includes(id) ? ' entrou' : '');
+      nome.textContent = nomeServidor(id).split(' ')[0];
+      nome.draggable = true;
+      nome.dataset.servidorId = id;
+      nome.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', JSON.stringify({ servidorId: id, dataOrigem: escalaFormatarData(data) }));
+      });
+      nome.addEventListener('click', (e) => {
+        if (!modoTroca || trocaOrigem) return;
+        e.stopPropagation();
+        trocaOrigem = { servidorId: id, dataOrigem: escalaFormatarData(data) };
+        document.getElementById('trocaAvisoTexto').textContent =
+          `Agora clique no dia em que ${nomeServidor(id)} vai passar a trabalhar (a compensação).`;
+      });
+      cel.appendChild(nome);
+    });
+    removidosDoBase.forEach(({ id, tipo, motivo }) => {
+      const nome = document.createElement('div');
+      nome.className = 'servidor-nome excecao' + (tipo === 'afastamento' ? ' afastado' : '');
+      nome.textContent = nomeServidor(id).split(' ')[0] + (motivo ? ` (${motivo})` : '');
+      cel.appendChild(nome);
+    });
+
+    extrasDoDia(data).forEach(ex => {
+      const item = document.createElement('div');
+      item.className = 'extra-item';
+      item.innerHTML = `<span class="tag ${ex.tipo}">${ex.tipo}</span>${nomeServidor(ex.servidorId).split(' ')[0]} ${ex.inicio}-${ex.fim}`;
+      cel.appendChild(item);
+    });
+
+    cel.addEventListener('click', () => {
+      if (modoTroca){
+        if (!trocaOrigem) return; // ainda não escolheu quem sai
+        const dataDestino = escalaFormatarData(data);
+        if (dataDestino === trocaOrigem.dataOrigem) return;
+        const { servidorId, dataOrigem } = trocaOrigem;
+        desativarModoTroca();
+        abrirModalMovimentar(servidorId, dataOrigem, dataDestino);
+        return;
+      }
+      abrirDetalheDia(data);
+    });
+
+    cel.addEventListener('dragover', (e) => { e.preventDefault(); cel.style.borderColor = 'var(--navy)'; cel.style.borderStyle = 'dashed'; });
+    cel.addEventListener('dragleave', () => { cel.style.borderColor = ''; cel.style.borderStyle = ''; });
+    cel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      cel.style.borderColor = '';
+      cel.style.borderStyle = '';
+      const raw = e.dataTransfer.getData('text/plain');
+      if (!raw) return;
+      const { servidorId, dataOrigem } = JSON.parse(raw);
+      const dataDestino = escalaFormatarData(data);
+      if (dataOrigem === dataDestino) return;
+      abrirModalMovimentar(servidorId, dataOrigem, dataDestino);
+    });
+
+    grid.appendChild(cel);
+  }
+
+  renderAfastamentosDoMes();
+}
+
+function formatarDataBr(dataStr){
+  const [ano, mes, dia] = dataStr.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+function renderAfastamentosDoMes(){
+  const container = document.getElementById('afastamentosDoMes');
+  container.innerHTML = '';
+
+  const inicioMes = escalaFormatarData(new Date(anoAtual, mesAtual, 1));
+  const fimMes = escalaFormatarData(new Date(anoAtual, mesAtual + 1, 0));
+
+  const doMes = excecoes.filter(ex =>
+    ex.tipo === 'afastamento' && ex.dataInicio <= fimMes && ex.dataFim >= inicioMes
+  );
+
+  if (doMes.length === 0){
+    container.innerHTML = '<div class="empty-msg">Nenhum afastamento neste mês.</div>';
+    return;
+  }
+
+  doMes.forEach(ex => {
+    const item = document.createElement('div');
+    item.className = 'obs-item';
+    item.innerHTML = `
+      <div class="obs-head">${escapeHtml(nomeServidor(ex.servidorId))}</div>
+      <div class="obs-meta">${formatarDataBr(ex.dataInicio)} a ${formatarDataBr(ex.dataFim)}</div>
+      <div class="obs-texto">${escapeHtml(ex.motivo || '—')}</div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function abrirDetalheDia(data){
+  const dataStr = escalaFormatarData(data);
+  const letra = escalaLetraDoDia(data);
+  const { finalIds, removidosDoBase } = servidoresNoDia(data);
+  document.getElementById('modalDiaTitulo').textContent =
+    data.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  const body = document.getElementById('modalDiaBody');
+  body.innerHTML = '';
+  const p = document.createElement('p');
+  p.innerHTML = `Plantão-base: <span class="letra-badge letra-${letra.toLowerCase()}" style="display:inline-flex;">${letra}</span>`;
+  body.appendChild(p);
+
+  if (removidosDoBase.length){
+    const pTitular = document.createElement('p');
+    pTitular.style.fontSize = '12.5px';
+    pTitular.style.color = 'var(--text-muted)';
+    pTitular.innerHTML = '<b>Titular original:</b> ' + removidosDoBase.map(r => escapeHtml(nomeServidor(r.id)) + (r.motivo ? ` (${escapeHtml(r.motivo)})` : '')).join(', ');
+    body.appendChild(pTitular);
+  }
+
+  const lista = document.createElement('ul');
+  lista.style.paddingLeft = '18px';
+  if (finalIds.size === 0){
+    lista.innerHTML = '<li>Nenhum servidor de plantão nesse dia.</li>';
+  } else {
+    [...finalIds].forEach(id => {
+      const li = document.createElement('li');
+      li.textContent = nomeServidor(id);
+      lista.appendChild(li);
+    });
+  }
+  body.appendChild(lista);
+
+  const excDia = excecoes.filter(ex =>
+    ex.data === dataStr ||
+    (ex.tipo === 'afastamento' && dataStr >= ex.dataInicio && dataStr <= ex.dataFim) ||
+    (ex.tipo === 'movimentacao' && (ex.dataOrigem === dataStr || ex.dataDestino === dataStr)) ||
+    (ex.tipo === 'trocaDias' && (ex.dataA === dataStr || ex.dataB === dataStr))
+  );
+  if (excDia.length){
+    const h = document.createElement('p');
+    h.innerHTML = '<b>Exceções nesse dia:</b>';
+    body.appendChild(h);
+    const ul2 = document.createElement('ul');
+    ul2.style.paddingLeft = '18px';
+    excDia.forEach(ex => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.alignItems = 'center';
+      li.style.gap = '8px';
+      const span = document.createElement('span');
+      span.textContent = descreverExcecao(ex);
+      li.appendChild(span);
+      const btnExcluir = document.createElement('button');
+      btnExcluir.type = 'button';
+      btnExcluir.className = 'link-btn';
+      btnExcluir.style.color = '#b3261e';
+      btnExcluir.textContent = 'Excluir';
+      btnExcluir.addEventListener('click', async () => {
+        if (!confirm('Excluir este registro? A escala volta ao padrão normal.')) return;
+        await deleteDoc(doc(db, 'escala_excecoes', ex.id));
+        await addDoc(collection(db, 'escala_observacoes'), {
+          texto: `Registro excluído: ${descreverExcecao(ex)}`,
+          autor: usuarioEmail, criadoEm: serverTimestamp()
+        });
+        fecharModal('modalDia');
+        await carregarTudo();
+      });
+      li.appendChild(btnExcluir);
+      ul2.appendChild(li);
+    });
+    body.appendChild(ul2);
+  }
+
+  const extrasHoje = extrasDoDia(data);
+  if (extrasHoje.length){
+    const h2 = document.createElement('p');
+    h2.innerHTML = '<b>Plantões extras nesse dia:</b>';
+    body.appendChild(h2);
+    const ul3 = document.createElement('ul');
+    ul3.style.paddingLeft = '18px';
+    extrasHoje.forEach(ex => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.alignItems = 'center';
+      li.style.gap = '8px';
+      const span = document.createElement('span');
+      span.textContent = `${nomeServidor(ex.servidorId)} — ${ex.tipo} ${ex.inicio} às ${ex.fim}`;
+      li.appendChild(span);
+      const btnExcluir = document.createElement('button');
+      btnExcluir.type = 'button';
+      btnExcluir.className = 'link-btn';
+      btnExcluir.style.color = 'var(--red, #b3261e)';
+      btnExcluir.textContent = 'Excluir';
+      btnExcluir.addEventListener('click', async () => {
+        if (!confirm(`Excluir o plantão extra de ${nomeServidor(ex.servidorId)} nesse dia?`)) return;
+        await deleteDoc(doc(db, 'escala_extras', ex.id));
+        await addDoc(collection(db, 'escala_observacoes'), {
+          texto: `Plantão extra excluído: ${nomeServidor(ex.servidorId)} — ${ex.tipo} ${ex.inicio} às ${ex.fim} (${dataStr}).`,
+          servidorId: ex.servidorId, data: dataStr, autor: usuarioEmail, criadoEm: serverTimestamp()
+        });
+        fecharModal('modalDia');
+        await carregarTudo();
+      });
+      li.appendChild(btnExcluir);
+      ul3.appendChild(li);
+    });
+    body.appendChild(ul3);
+  }
+
+  abrirModal('modalDia');
+}
+
+// ---------- Arrastar e soltar: mover / trocar dias ----------
+function abrirModalMovimentar(servidorId, dataOrigem, dataDestino){
+  const { finalIds: naDestino } = servidoresNoDia(escalaParseData(dataDestino));
+  const outroNoDestino = [...naDestino].find(id => id !== servidorId);
+
+  const nomeOrigem = nomeServidor(servidorId);
+  const txtOrigem = formatarDataBr(dataOrigem);
+  const txtDestino = formatarDataBr(dataDestino);
+
+  document.getElementById('movimentarMotivo').value = '';
+
+  const btnMover = document.getElementById('btnConfirmarMovimentar');
+  btnMover.textContent = `Movimentar ${nomeOrigem} do dia ${txtOrigem} para o dia ${txtDestino}`;
+  btnMover.onclick = async () => {
+    const motivo = document.getElementById('movimentarMotivo').value.trim();
+    await addDoc(collection(db, 'escala_excecoes'), {
+      tipo: 'movimentacao', servidorId, dataOrigem, dataDestino, motivo,
+      criadoPor: usuarioEmail, criadoEm: serverTimestamp()
+    });
+    await addDoc(collection(db, 'escala_observacoes'), {
+      texto: `${nomeOrigem} movido(a) do dia ${txtOrigem} para o dia ${txtDestino}. ${motivo || ''}`.trim(),
+      servidorId, data: dataDestino, autor: usuarioEmail, criadoEm: serverTimestamp()
+    });
+    fecharModal('modalMovimentar');
+    await carregarTudo();
+  };
+
+  const btnTroca = document.getElementById('btnConfirmarTrocaDias');
+  if (outroNoDestino){
+    const nomeDestino = nomeServidor(outroNoDestino);
+    document.getElementById('movimentarTexto').textContent =
+      `${nomeDestino} já está de plantão no dia ${txtDestino}. Escolha uma opção:`;
+    btnTroca.style.display = 'block';
+    btnTroca.textContent = `Trocar: ${nomeOrigem} ↔ ${nomeDestino}`;
+    btnTroca.onclick = async () => {
+      const motivo = document.getElementById('movimentarMotivo').value.trim();
+      await addDoc(collection(db, 'escala_excecoes'), {
+        tipo: 'trocaDias', servidorA: servidorId, dataA: dataOrigem, servidorB: outroNoDestino, dataB: dataDestino, motivo,
+        criadoPor: usuarioEmail, criadoEm: serverTimestamp()
+      });
+      await addDoc(collection(db, 'escala_observacoes'), {
+        texto: `Troca de dias: ${nomeOrigem} (${txtOrigem}) ↔ ${nomeDestino} (${txtDestino}). ${motivo || ''}`.trim(),
+        servidorId, data: dataDestino, autor: usuarioEmail, criadoEm: serverTimestamp()
+      });
+      fecharModal('modalMovimentar');
+      await carregarTudo();
+    };
+  } else {
+    document.getElementById('movimentarTexto').textContent = `Mover ${nomeOrigem} do dia ${txtOrigem} para o dia ${txtDestino}?`;
+    btnTroca.style.display = 'none';
+  }
+
+  abrirModal('modalMovimentar');
+}
+
+document.getElementById('mesAnterior').addEventListener('click', () => {
+  mesAtual--; if (mesAtual < 0){ mesAtual = 11; anoAtual--; }
+  renderCalendario();
+});
+document.getElementById('mesProximo').addEventListener('click', () => {
+  mesAtual++; if (mesAtual > 11){ mesAtual = 0; anoAtual++; }
+  renderCalendario();
+});
+
+// ---------- Plantão Extra ----------
+document.getElementById('btnExtra').addEventListener('click', () => abrirModal('modalExtra'));
+
+document.getElementById('btnSalvarExtra').addEventListener('click', async () => {
+  const servidorId = document.getElementById('extraServidor').value;
+  const data = document.getElementById('extraData').value;
+  const horarioId = document.getElementById('extraHorario').value;
+  if (!servidorId || !data || !horarioId) return alert('Preencha servidor, data e horário.');
+  const horario = ESCALA_HORARIOS_EXTRA.find(h => h.id === horarioId);
+  await addDoc(collection(db, 'escala_extras'), {
+    servidorId, data, horarioId, inicio: horario.inicio, fim: horario.fim, tipo: horario.tipo,
+    marcadoPor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  await addDoc(collection(db, 'escala_observacoes'), {
+    texto: `Plantão extra em ${data}: ${nomeServidor(servidorId)} — ${horario.tipo} ${horario.inicio} às ${horario.fim}.`,
+    servidorId, data, autor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  fecharModal('modalExtra');
+  await carregarTudo();
+});
+
+// ---------- Ações: Troca (clique no calendário) / Folga / Ausência / Afastamento ----------
+document.getElementById('btnTroca').addEventListener('click', ativarModoTroca);
+
+document.getElementById('btnFolga').addEventListener('click', () => {
+  document.getElementById('folgaMotivoTipo').value = '8º plantão';
+  document.getElementById('folgaMotivoOutro').value = '';
+  document.getElementById('campoFolgaOutro').style.display = 'none';
+  abrirModal('modalFolga');
+});
+document.getElementById('folgaMotivoTipo').addEventListener('change', (e) => {
+  document.getElementById('campoFolgaOutro').style.display = e.target.value === 'outro' ? 'block' : 'none';
+});
+document.getElementById('btnAusencia').addEventListener('click', () => {
+  document.getElementById('ausenciaMotivoTipo').value = 'Participação em curso de formação (Professor)';
+  document.getElementById('ausenciaMotivoOutro').value = '';
+  document.getElementById('campoAusenciaOutro').style.display = 'none';
+  abrirModal('modalAusencia');
+});
+document.getElementById('ausenciaMotivoTipo').addEventListener('change', (e) => {
+  document.getElementById('campoAusenciaOutro').style.display = e.target.value === 'outro' ? 'block' : 'none';
+});
+document.getElementById('btnAfastamento').addEventListener('click', () => {
+  document.getElementById('afastamentoMotivoTipo').value = 'Licença Prêmio';
+  document.getElementById('afastamentoMotivoOutro').value = '';
+  document.getElementById('campoAfastamentoOutro').style.display = 'none';
+  abrirModal('modalAfastamento');
+});
+
+document.getElementById('btnSalvarFolga').addEventListener('click', async () => {
+  const servidorId = document.getElementById('folgaServidor').value;
+  const data = document.getElementById('folgaData').value;
+  const motivoTipo = document.getElementById('folgaMotivoTipo').value;
+  const motivoOutro = document.getElementById('folgaMotivoOutro').value.trim();
+  const motivo = motivoTipo === 'outro' ? motivoOutro : motivoTipo;
+  if (!servidorId || !data) return alert('Preencha servidor e data.');
+  if (motivoTipo === 'outro' && !motivoOutro) return alert('Descreva o motivo da folga.');
+  await addDoc(collection(db, 'escala_excecoes'), { tipo:'folga', servidorId, data, motivo, criadoPor: usuarioEmail, criadoEm: serverTimestamp() });
+  await addDoc(collection(db, 'escala_observacoes'), {
+    texto: `Folga em ${data}: ${nomeServidor(servidorId)}. ${motivo || ''}`.trim(),
+    servidorId, data, autor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  fecharModal('modalFolga');
+  await carregarTudo();
+});
+
+document.getElementById('btnSalvarAusencia').addEventListener('click', async () => {
+  const servidorId = document.getElementById('ausenciaServidor').value;
+  const data = document.getElementById('ausenciaData').value;
+  const motivoTipo = document.getElementById('ausenciaMotivoTipo').value;
+  const motivoOutro = document.getElementById('ausenciaMotivoOutro').value.trim();
+  const motivo = motivoTipo === 'outro' ? motivoOutro : motivoTipo;
+  if (!servidorId || !data) return alert('Preencha servidor e data.');
+  if (motivoTipo === 'outro' && !motivoOutro) return alert('Descreva o motivo da ausência.');
+  await addDoc(collection(db, 'escala_excecoes'), { tipo:'ausencia', servidorId, data, motivo, criadoPor: usuarioEmail, criadoEm: serverTimestamp() });
+  await addDoc(collection(db, 'escala_observacoes'), {
+    texto: `Ausência em ${data}: ${nomeServidor(servidorId)}. ${motivo || ''}`.trim(),
+    servidorId, data, autor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  fecharModal('modalAusencia');
+  await carregarTudo();
+});
+
+document.getElementById('afastamentoMotivoTipo').addEventListener('change', (e) => {
+  document.getElementById('campoAfastamentoOutro').style.display = e.target.value === 'outro' ? 'block' : 'none';
+});
+
+document.getElementById('btnSalvarAfastamento').addEventListener('click', async () => {
+  const servidorId = document.getElementById('afastamentoServidor').value;
+  const dataInicio = document.getElementById('afastamentoInicio').value;
+  const dataFim = document.getElementById('afastamentoFim').value;
+  const motivoTipo = document.getElementById('afastamentoMotivoTipo').value;
+  const motivoOutro = document.getElementById('afastamentoMotivoOutro').value.trim();
+  const motivo = motivoTipo === 'outro' ? motivoOutro : motivoTipo;
+  if (!servidorId || !dataInicio || !dataFim) return alert('Preencha servidor, início e fim.');
+  if (motivoTipo === 'outro' && !motivoOutro) return alert('Descreva o motivo do afastamento.');
+  await addDoc(collection(db, 'escala_excecoes'), { tipo:'afastamento', servidorId, dataInicio, dataFim, motivo, criadoPor: usuarioEmail, criadoEm: serverTimestamp() });
+  await addDoc(collection(db, 'escala_observacoes'), {
+    texto: `Afastamento de ${dataInicio} a ${dataFim}: ${nomeServidor(servidorId)}. ${motivo || ''}`.trim(),
+    servidorId, data: dataInicio, autor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  fecharModal('modalAfastamento');
+  await carregarTudo();
+});
+
+// ---------- Servidores (CRUD) ----------
+function renderServidores(){
+  const corpo = document.getElementById('corpoServidores');
+  corpo.innerHTML = '';
+  if (servidores.length === 0){
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="6"><div class="empty-msg">Nenhum servidor cadastrado ainda. Clique em "Importar servidores padrão" pra começar com os 6 já configurados, ou "Adicionar Servidor".</div></td>';
+    corpo.appendChild(tr);
+    return;
+  }
+  servidores.forEach(s => {
+    const tr = document.createElement('tr');
+    const ciclo = (s.diasTrabalho === 1) ? '24x72' : '48x144';
+    tr.innerHTML = `
+      <td>${escapeHtml(s.nome)}</td>
+      <td>${escapeHtml(s.matricula || '—')}</td>
+      <td>${(s.letras || []).join('+')}</td>
+      <td>${ciclo}</td>
+      <td><span class="status-badge ${s.status}">${s.status}</span></td>
+      <td><button type="button" class="link-btn" data-editar="${s.id}">Editar</button></td>
+    `;
+    corpo.appendChild(tr);
+  });
+  corpo.querySelectorAll('[data-editar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirEdicaoServidor(btn.dataset.editar));
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function abrirEdicaoServidor(id){
+  const s = servidores.find(s => s.id === id);
+  document.getElementById('modalServidorTitulo').textContent = s ? 'Editar Servidor' : 'Novo Servidor';
+  document.getElementById('servidorDocId').value = s ? s.id : '';
+  document.getElementById('servidorNome').value = s ? s.nome : '';
+  document.getElementById('servidorMatricula').value = s ? (s.matricula || '') : '';
+  document.getElementById('servidorPadrao').value = s && s.diasTrabalho === 1 ? 'unico' : 'duplo';
+  document.getElementById('servidorAncora').value = s ? s.ancora : '';
+  document.getElementById('servidorStatus').value = s ? s.status : 'ativo';
+  const sel = document.getElementById('servidorLetras');
+  [...sel.options].forEach(opt => opt.selected = s ? (s.letras || []).includes(opt.value) : false);
+  abrirModal('modalServidor');
+}
+
+document.getElementById('btnNovoServidor').addEventListener('click', () => abrirEdicaoServidor(null));
+
+document.getElementById('btnSalvarServidor').addEventListener('click', async () => {
+  const docId = document.getElementById('servidorDocId').value;
+  const nome = document.getElementById('servidorNome').value.trim();
+  const matricula = document.getElementById('servidorMatricula').value.trim();
+  const padrao = document.getElementById('servidorPadrao').value;
+  const ancora = document.getElementById('servidorAncora').value;
+  const status = document.getElementById('servidorStatus').value;
+  const letras = [...document.getElementById('servidorLetras').selectedOptions].map(o => o.value);
+  if (!nome || !ancora || letras.length === 0) return alert('Preencha nome, âncora e ao menos uma letra.');
+
+  const dados = {
+    nome, matricula, letras, ancora, status,
+    diasTrabalho: padrao === 'unico' ? 1 : 2,
+    diasFolga: padrao === 'unico' ? 3 : 6
+  };
+
+  if (docId){
+    await setDoc(doc(db, 'escala_servidores', docId), dados, { merge: true });
+  } else {
+    await addDoc(collection(db, 'escala_servidores'), dados);
+  }
+  fecharModal('modalServidor');
+  await carregarTudo();
+});
+
+document.getElementById('btnImportarPadrao').addEventListener('click', async () => {
+  if (servidores.length > 0 && !confirm('Já existem servidores cadastrados. Importar mesmo assim pode duplicar. Continuar?')) return;
+  for (const s of ESCALA_SERVIDORES){
+    await setDoc(doc(db, 'escala_servidores', s.id), {
+      nome: s.nome, matricula: s.matricula, letras: s.letras, ancora: s.ancora,
+      diasTrabalho: s.diasTrabalho, diasFolga: s.diasFolga, status: s.status
+    }, { merge: true });
+  }
+  await carregarTudo();
+});
+
+// ---------- Observações ----------
+function renderObservacoes(){
+  const lista = document.getElementById('listaObservacoes');
+  lista.innerHTML = '';
+  if (observacoes.length === 0){
+    lista.innerHTML = '<div class="empty-msg">Nenhuma observação registrada ainda.</div>';
+    return;
+  }
+  observacoes.forEach(o => {
+    const item = document.createElement('div');
+    item.className = 'obs-item';
+    const dataFmt = o.criadoEm && o.criadoEm.toDate ? o.criadoEm.toDate().toLocaleString('pt-BR') : '';
+    item.innerHTML = `
+      <div class="obs-head">${o.servidorId ? escapeHtml(nomeServidor(o.servidorId)) : 'Observação geral'}</div>
+      <div class="obs-meta">${o.data ? 'Data: ' + o.data + ' · ' : ''}Registrado por ${escapeHtml(o.autor || '—')} em ${dataFmt}</div>
+      <div class="obs-texto">${escapeHtml(o.texto || '')}</div>
+    `;
+    lista.appendChild(item);
+  });
+}
+
+document.getElementById('btnNovaObservacao').addEventListener('click', () => abrirModal('modalObservacao'));
+document.getElementById('btnSalvarObservacao').addEventListener('click', async () => {
+  const servidorId = document.getElementById('obsServidor').value || null;
+  const data = document.getElementById('obsData').value || null;
+  const texto = document.getElementById('obsTexto').value.trim();
+  if (!texto) return alert('Escreva o texto da observação.');
+  await addDoc(collection(db, 'escala_observacoes'), { texto, servidorId, data, autor: usuarioEmail, criadoEm: serverTimestamp() });
+  document.getElementById('obsTexto').value = '';
+  fecharModal('modalObservacao');
+  await carregarTudo();
+});
+</script>
+
+</body>
+</html>

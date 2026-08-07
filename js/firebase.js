@@ -108,6 +108,7 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   /* Submenus conforme perfil */
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
   _mostrarSubMenuPainel(perfil?.tipo !== null);
+  _mostrarEscalaPlantaoNova(user.email);
 
   area.innerHTML = `
     <div class="topbar-user-info">
@@ -873,6 +874,19 @@ window._sidebarToggle = function(subId, btn) {
 function _mostrarSubMenuCRV(show) {
   const sub = document.getElementById('sidebar-crv-sub');
   if (sub) sub.style.display = show ? 'block' : 'none';
+}
+
+/*
+ * Escala de Plantão (nova) — em teste, visível só pro Rodrigo por enquanto.
+ * Quando liberar pro resto da equipe do CRV, trocar essa checagem por
+ * perfil?.tipo === 'crv' (igual o resto do menu CRV).
+ */
+function _mostrarEscalaPlantaoNova(email) {
+  const liberado = (email || '').toLowerCase() === 'rodrigo.l.pastore@gmail.com';
+  ['nav-escala-nova', 'card-escala-nova'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = liberado ? '' : 'none';
+  });
 }
 
 function _mostrarSubMenuPainel(show) {
