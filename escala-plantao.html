@@ -157,6 +157,13 @@
 
   .loading{text-align:center; color:var(--text-muted); font-size:13px; padding:30px;}
   .empty-msg{text-align:center; color:var(--text-muted); font-size:13px; padding:30px; background:#fff; border-radius:var(--radius); border:1px dashed var(--border);}
+
+  @media print{
+    body{background:#fff;}
+    header.top .tabs, .acoes-btns, #mesAnterior, #mesProximo{display:none !important;}
+    .cal-day{cursor:default; break-inside:avoid;}
+    #viewServidores, #accessDenied{display:none !important;}
+  }
 </style>
 </head>
 <body>
@@ -172,7 +179,6 @@
     <div class="tabs" id="tabs">
       <button class="tab-btn active" data-view="calendario">Calendário</button>
       <button class="tab-btn" data-view="servidores">Servidores</button>
-      <button class="tab-btn" data-view="observacoes">Observações</button>
     </div>
   </div>
 </header>
@@ -199,6 +205,7 @@
           <button type="button" class="btn" id="btnFolga">🌴 Folga</button>
           <button type="button" class="btn" id="btnAusencia">⚠️ Ausência</button>
           <button type="button" class="btn" id="btnAfastamento">📋 Afastamento</button>
+          <button type="button" class="btn" id="btnImprimir">🖨️ Imprimir</button>
         </div>
       </div>
       <div class="cal-grid" id="calGrid"></div>
@@ -215,7 +222,7 @@
       </div>
 
       <div style="margin-top:20px;">
-        <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">📋 Afastamentos do mês</h3>
+        <h3 style="font-size:14px; color:var(--navy); margin:0 0 10px;">📋 Afastamentos, Folgas e Ausências do mês</h3>
         <div id="afastamentosDoMes"></div>
       </div>
     </section>
@@ -230,18 +237,10 @@
       </div>
       <table class="tabela" id="tabelaServidores">
         <thead>
-          <tr><th>Nome</th><th>Matrícula</th><th>Plantão</th><th>Ciclo</th><th>Status</th><th></th></tr>
+          <tr><th>Nome</th><th>Matrícula</th><th>Plantão</th><th>Ciclo</th><th>Status</th><th>Folga por 8º plantão</th><th></th></tr>
         </thead>
         <tbody id="corpoServidores"></tbody>
       </table>
-    </section>
-
-    <section class="view" id="viewObservacoes">
-      <div class="toolbar">
-        <div></div>
-        <button type="button" class="btn primary" id="btnNovaObservacao">+ Observação</button>
-      </div>
-      <div id="listaObservacoes"></div>
     </section>
 
   </div>
@@ -264,7 +263,7 @@
     <div class="modal-body">
       <p style="font-size:12.5px; color:var(--text-muted); margin-top:0;">Plantão extra remunerado — não altera a escala padrão do servidor.</p>
       <div class="field"><label>Servidor</label><select id="extraServidor"></select></div>
-      <div class="field"><label>Data</label><input type="date" id="extraData"></div>
+      <div class="field"><label>Data</label><input type="date" id="extraData" min="2026-08-01"></div>
       <div class="field"><label>Horário</label>
         <select id="extraHorario">
           <option value="a">a) 08h00 às 16h00 (D)</option>
@@ -289,7 +288,7 @@
     <div class="modal-head"><h3>🌴 Registrar Folga</h3><button type="button" class="modal-fechar" data-fechar="modalFolga">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Servidor</label><select id="folgaServidor"></select></div>
-      <div class="field"><label>Data</label><input type="date" id="folgaData"></div>
+      <div class="field"><label>Data</label><input type="date" id="folgaData" min="2026-08-01"></div>
       <div class="field"><label>Motivo</label>
         <select id="folgaMotivoTipo">
           <option value="8º plantão">8º plantão</option>
@@ -314,7 +313,7 @@
     <div class="modal-head"><h3>⚠️ Registrar Ausência</h3><button type="button" class="modal-fechar" data-fechar="modalAusencia">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Servidor</label><select id="ausenciaServidor"></select></div>
-      <div class="field"><label>Data</label><input type="date" id="ausenciaData"></div>
+      <div class="field"><label>Data</label><input type="date" id="ausenciaData" min="2026-08-01"></div>
       <div class="field"><label>Motivo</label>
         <select id="ausenciaMotivoTipo">
           <option value="Participação em curso de formação (Professor)">Participação em curso de formação (Professor)</option>
@@ -341,8 +340,8 @@
     <div class="modal-head"><h3>📋 Registrar Afastamento</h3><button type="button" class="modal-fechar" data-fechar="modalAfastamento">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Servidor</label><select id="afastamentoServidor"></select></div>
-      <div class="field"><label>Data início</label><input type="date" id="afastamentoInicio"></div>
-      <div class="field"><label>Data fim</label><input type="date" id="afastamentoFim"></div>
+      <div class="field"><label>Data início</label><input type="date" id="afastamentoInicio" min="2026-08-01"></div>
+      <div class="field"><label>Data fim</label><input type="date" id="afastamentoFim" min="2026-08-01"></div>
       <div class="field"><label>Motivo</label>
         <select id="afastamentoMotivoTipo">
           <option value="Licença Prêmio">Licença Prêmio</option>
@@ -383,7 +382,8 @@
           <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
         </select>
       </div>
-      <div class="field"><label>Data-âncora (um dia em que ele(a) estava de plantão)</label><input type="date" id="servidorAncora"></div>
+      <div class="field"><label>Data-âncora (um dia em que ele(a) estava de plantão)</label><input type="date" id="servidorAncora" min="2026-08-01"></div>
+      <div class="field"><label>E-mail (login no site — usado só pra pré-preencher o seu nome nos formulários)</label><input type="email" id="servidorEmail" placeholder="nome@gmail.com"></div>
       <div class="field"><label>Status</label>
         <select id="servidorStatus">
           <option value="ativo">Ativo</option>
@@ -405,9 +405,9 @@
     <div class="modal-head"><h3>🔄 Registrar Troca</h3><button type="button" class="modal-fechar" data-fechar="modalTroca">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Solicitante</label><select id="trocaSolicitante"></select></div>
-      <div class="field"><label>Plantão do Solicitante (Data)</label><input type="date" id="trocaDataSolicitante"></div>
+      <div class="field"><label>Plantão do Solicitante (Data)</label><input type="date" id="trocaDataSolicitante" min="2026-08-01"></div>
       <div class="field"><label>Solicitado</label><select id="trocaSolicitado"></select></div>
-      <div class="field"><label>Dia de Plantão do Solicitado, para compensação</label><input type="date" id="trocaDataSolicitado"></div>
+      <div class="field"><label>Dia de Plantão do Solicitado, para compensação</label><input type="date" id="trocaDataSolicitado" min="2026-08-01"></div>
       <div class="field"><label>Motivo (opcional)</label><textarea id="trocaMotivo"></textarea></div>
     </div>
     <div class="modal-footer">
@@ -433,19 +433,11 @@
   </div>
 </div>
 
-<!-- Modal: Observação manual -->
-<div class="modal-overlay" id="modalObservacao">
+<!-- Modal: Detalhe de Folgas por 8º plantão -->
+<div class="modal-overlay" id="modalFolgas8">
   <div class="modal-box">
-    <div class="modal-head"><h3>+ Observação</h3><button type="button" class="modal-fechar" data-fechar="modalObservacao">✕</button></div>
-    <div class="modal-body">
-      <div class="field"><label>Servidor (opcional)</label><select id="obsServidor"><option value="">—</option></select></div>
-      <div class="field"><label>Data (opcional)</label><input type="date" id="obsData"></div>
-      <div class="field"><label>Texto</label><textarea id="obsTexto"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn" data-fechar="modalObservacao">Cancelar</button>
-      <button type="button" class="btn primary" id="btnSalvarObservacao">Salvar</button>
-    </div>
+    <div class="modal-head"><h3 id="folgas8Titulo"></h3><button type="button" class="modal-fechar" data-fechar="modalFolgas8">✕</button></div>
+    <div class="modal-body" id="folgas8Body"></div>
   </div>
 </div>
 
@@ -455,7 +447,7 @@ import { initializeApp, getApps, getApp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDocs, addDoc, setDoc, deleteDoc, serverTimestamp, query, orderBy }
+import { getFirestore, collection, doc, getDocs, addDoc, setDoc, deleteDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -493,7 +485,6 @@ const loadingMsg   = document.getElementById('loadingMsg');
 let usuarioEmail = null;
 let servidores = [];
 let excecoes = [];
-let observacoes = [];
 let extras = [];
 
 const MES_MINIMO = { ano: 2026, mes: 7 }; // agosto/2026 (0-indexado) — marco inicial da escala
@@ -525,20 +516,17 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function carregarTudo(){
-  const [snapServ, snapExc, snapObs, snapExtra] = await Promise.all([
+  const [snapServ, snapExc, snapExtra] = await Promise.all([
     getDocs(collection(db, 'escala_servidores')),
     getDocs(collection(db, 'escala_excecoes')),
-    getDocs(query(collection(db, 'escala_observacoes'), orderBy('criadoEm', 'desc'))),
     getDocs(collection(db, 'escala_extras'))
   ]);
   servidores = snapServ.docs.map(d => ({ id: d.id, ...d.data() }));
   excecoes = snapExc.docs.map(d => ({ id: d.id, ...d.data() }));
-  observacoes = snapObs.docs.map(d => ({ id: d.id, ...d.data() }));
   extras = snapExtra.docs.map(d => ({ id: d.id, ...d.data() }));
   preencherSelectsServidores();
   renderCalendario();
   renderServidores();
-  renderObservacoes();
 }
 
 // ---------- Navegação por abas ----------
@@ -563,16 +551,18 @@ function abrirModal(id){ document.getElementById(id).classList.add('show'); }
 function fecharModal(id){ document.getElementById(id).classList.remove('show'); }
 
 function preencherSelectsServidores(){
-  const opcoes = servidores.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
+  // Só servidores ativos entram nesses formulários — quem está de férias ou
+  // afastado não deve ser escolhido pra folga/extra/troca/novo afastamento.
+  const ativos = servidores.filter(s => s.status === 'ativo');
+  const opcoes = ativos.map(s => `<option value="${s.id}">${escapeHtml(s.nome)}</option>`).join('');
   ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor','trocaSolicitante','trocaSolicitado'].forEach(id => {
     document.getElementById(id).innerHTML = opcoes;
   });
-  document.getElementById('obsServidor').innerHTML = '<option value="">—</option>' + opcoes;
 
   // Pré-seleciona o próprio usuário logado (conveniência) — mas o campo continua
   // totalmente editável, porque um servidor pode registrar algo em nome de outro
   // (ex.: pedir pro colega marcar um extra pra si). Vale pra todas as ações.
-  const eu = servidores.find(s => (s.email || '').toLowerCase() === (usuarioEmail || '').toLowerCase());
+  const eu = ativos.find(s => (s.email || '').toLowerCase() === (usuarioEmail || '').toLowerCase());
   if (eu){
     ['folgaServidor','ausenciaServidor','afastamentoServidor','extraServidor','trocaSolicitante'].forEach(id => {
       document.getElementById(id).value = eu.id;
@@ -632,6 +622,98 @@ function nomeServidor(id){
 function extrasDoDia(data){
   const dataStr = escalaFormatarData(data);
   return extras.filter(ex => ex.data === dataStr);
+}
+
+// ---------- Folga por 8º plantão ----------
+// A cada 8 plantões ORDINÁRIOS (sem contar extra) num mesmo mês-calendário,
+// o servidor ganha 1 folga. O direito de meses diferentes se acumula (não
+// zera na virada do mês) até ser usado numa Folga com motivo "8º plantão".
+function ordinariosDoServidorNoMes(servidorId, ano, mes){
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+  let n = 0;
+  for (let dia = 1; dia <= totalDias; dia++){
+    if (servidoresNoDia(new Date(ano, mes, dia)).finalIds.has(servidorId)) n++;
+  }
+  return n;
+}
+
+// Lista cada crédito de folga (um por bloco de 8 plantões ordinários, com o
+// mês em que foi ganho) e casa cada folga já usada com o crédito mais antigo
+// ainda não consumido — sempre gasta o mais antigo primeiro, automaticamente.
+function detalheFolgas8(servidorId){
+  const hoje = new Date();
+  let ano = MES_MINIMO.ano, mes = MES_MINIMO.mes;
+  const creditos = [];
+  while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())){
+    const ordinarios = ordinariosDoServidorNoMes(servidorId, ano, mes);
+    const n = Math.floor(ordinarios / 8);
+    for (let i = 0; i < n; i++) creditos.push({ ano, mes, ordinarios });
+    mes++; if (mes > 11){ mes = 0; ano++; }
+  }
+
+  const usos = excecoes
+    .filter(ex => ex.tipo === 'folga' && ex.servidorId === servidorId && ex.motivo === '8º plantão')
+    .slice()
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  const usosComCredito = usos.map((uso, i) => ({ uso, credito: creditos[i] || null }));
+  const disponiveis = creditos.slice(usos.length);
+
+  return { creditos, usosComCredito, disponiveis };
+}
+
+function saldoFolgas8(servidorId){
+  const { creditos, usosComCredito, disponiveis } = detalheFolgas8(servidorId);
+  return { ganhas: creditos.length, usadas: usosComCredito.length, saldo: disponiveis.length };
+}
+
+function abrirDetalheFolgas8(servidorId){
+  const { creditos, usosComCredito, disponiveis } = detalheFolgas8(servidorId);
+  document.getElementById('folgas8Titulo').textContent = `🎁 Folgas por 8º plantão — ${nomeServidor(servidorId)}`;
+  const body = document.getElementById('folgas8Body');
+  body.innerHTML = '';
+
+  if (creditos.length === 0){
+    body.innerHTML = '<div class="empty-msg">Ainda não completou 8 plantões ordinários em nenhum mês.</div>';
+    abrirModal('modalFolgas8');
+    return;
+  }
+
+  const resumo = document.createElement('p');
+  resumo.style.marginTop = '0';
+  resumo.innerHTML = `<b>${disponiveis.length}</b> disponível${disponiveis.length === 1 ? '' : 'is'} · ${creditos.length} ganha${creditos.length === 1 ? '' : 's'} no total · ${usosComCredito.length} já usada${usosComCredito.length === 1 ? '' : 's'}`;
+  body.appendChild(resumo);
+
+  if (usosComCredito.length){
+    const h1 = document.createElement('p');
+    h1.innerHTML = '<b>Já usadas</b> (a mais antiga é sempre consumida primeiro):';
+    body.appendChild(h1);
+    const ul1 = document.createElement('ul');
+    ul1.style.paddingLeft = '18px';
+    usosComCredito.forEach(({ uso, credito }) => {
+      const li = document.createElement('li');
+      const ref = credito ? `${MESES[credito.mes]}/${credito.ano}` : '—';
+      li.textContent = `Tirada em ${formatarDataBr(uso.data)} — referente ao 8º plantão de ${ref}`;
+      ul1.appendChild(li);
+    });
+    body.appendChild(ul1);
+  }
+
+  if (disponiveis.length){
+    const h2 = document.createElement('p');
+    h2.innerHTML = '<b>Disponíveis</b>:';
+    body.appendChild(h2);
+    const ul2 = document.createElement('ul');
+    ul2.style.paddingLeft = '18px';
+    disponiveis.forEach(credito => {
+      const li = document.createElement('li');
+      li.textContent = `Referente ao 8º plantão de ${MESES[credito.mes]}/${credito.ano}`;
+      ul2.appendChild(li);
+    });
+    body.appendChild(ul2);
+  }
+
+  abrirModal('modalFolgas8');
 }
 
 // ---------- Calendário ----------
@@ -694,6 +776,27 @@ function renderCalendario(){
       nome.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', JSON.stringify({ servidorId: id, dataOrigem: escalaFormatarData(data) }));
       });
+      // Alvo de soltura específico desse nome — importante quando o dia tem mais
+      // de um servidor de plantão, pra saber exatamente com quem trocar (em vez
+      // de sempre pegar "o primeiro da lista").
+      nome.addEventListener('dragover', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        nome.style.outline = '2px dashed var(--navy)';
+      });
+      nome.addEventListener('dragleave', (e) => {
+        e.stopPropagation();
+        nome.style.outline = '';
+      });
+      nome.addEventListener('drop', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        nome.style.outline = '';
+        const raw = e.dataTransfer.getData('text/plain');
+        if (!raw) return;
+        const { servidorId: arrastado, dataOrigem } = JSON.parse(raw);
+        const dataDestino = escalaFormatarData(data);
+        if (arrastado === id && dataOrigem === dataDestino) return; // soltou sobre o próprio nome, no mesmo dia — nada a fazer
+        abrirModalMovimentar(arrastado, dataOrigem, dataDestino, id);
+      });
       cel.appendChild(nome);
     });
     removidosDoBase.forEach(({ id, tipo, motivo }) => {
@@ -706,7 +809,7 @@ function renderCalendario(){
     extrasDoDia(data).forEach(ex => {
       const item = document.createElement('div');
       item.className = 'extra-item';
-      item.innerHTML = `<span class="tag ${ex.tipo}">${ex.tipo}</span>${nomeServidor(ex.servidorId).split(' ')[0]} ${ex.inicio}-${ex.fim}`;
+      item.innerHTML = `<span class="tag ${ex.tipo}">${ex.tipo}</span>${escapeHtml(nomeServidor(ex.servidorId).split(' ')[0])} ${ex.inicio}-${ex.fim}`;
       cel.appendChild(item);
     });
 
@@ -723,7 +826,7 @@ function renderCalendario(){
       const { servidorId, dataOrigem } = JSON.parse(raw);
       const dataDestino = escalaFormatarData(data);
       if (dataOrigem === dataDestino) return;
-      abrirModalMovimentar(servidorId, dataOrigem, dataDestino);
+      abrirModalMovimentar(servidorId, dataOrigem, dataDestino, null);
     });
 
     grid.appendChild(cel);
@@ -765,22 +868,28 @@ function renderAfastamentosDoMes(){
 
   const inicioMes = escalaFormatarData(new Date(anoAtual, mesAtual, 1));
   const fimMes = escalaFormatarData(new Date(anoAtual, mesAtual + 1, 0));
+  const rotulo = { afastamento: 'AFASTAMENTO', folga: 'FOLGA', ausencia: 'AUSÊNCIA' };
 
-  const doMes = excecoes.filter(ex =>
-    ex.tipo === 'afastamento' && ex.dataInicio <= fimMes && ex.dataFim >= inicioMes
-  );
+  const doMes = excecoes.filter(ex => {
+    if (ex.tipo === 'afastamento') return ex.dataInicio <= fimMes && ex.dataFim >= inicioMes;
+    if (ex.tipo === 'folga' || ex.tipo === 'ausencia') return ex.data >= inicioMes && ex.data <= fimMes;
+    return false;
+  }).sort((a, b) => (a.dataInicio || a.data).localeCompare(b.dataInicio || b.data));
 
   if (doMes.length === 0){
-    container.innerHTML = '<div class="empty-msg">Nenhum afastamento neste mês.</div>';
+    container.innerHTML = '<div class="empty-msg">Nenhum afastamento, folga ou ausência neste mês.</div>';
     return;
   }
 
   doMes.forEach(ex => {
     const item = document.createElement('div');
     item.className = 'obs-item';
+    const periodo = ex.tipo === 'afastamento'
+      ? `${formatarDataBr(ex.dataInicio)} a ${formatarDataBr(ex.dataFim)}`
+      : formatarDataBr(ex.data);
     item.innerHTML = `
-      <div class="obs-head">${escapeHtml(nomeServidor(ex.servidorId))}</div>
-      <div class="obs-meta">${formatarDataBr(ex.dataInicio)} a ${formatarDataBr(ex.dataFim)}</div>
+      <div class="obs-head">${escapeHtml(rotulo[ex.tipo] || ex.tipo.toUpperCase())} — ${escapeHtml(nomeServidor(ex.servidorId))}</div>
+      <div class="obs-meta">${periodo}</div>
       <div class="obs-texto">${escapeHtml(ex.motivo || '—')}</div>
     `;
     container.appendChild(item);
@@ -902,9 +1011,19 @@ function abrirDetalheDia(data){
 }
 
 // ---------- Arrastar e soltar: mover / trocar dias ----------
-function abrirModalMovimentar(servidorId, dataOrigem, dataDestino){
+// alvoEspecifico: quando o usuário soltou em cima do nome de uma pessoa
+// específica (útil nos dias com mais de um servidor de plantão). Se vier
+// vazio, só dá pra resolver sozinho quando houver no máximo 1 candidato —
+// com 2 ou mais, pedimos pra soltar em cima do nome certo.
+function abrirModalMovimentar(servidorId, dataOrigem, dataDestino, alvoEspecifico){
   const { finalIds: naDestino } = servidoresNoDia(escalaParseData(dataDestino));
-  const outroNoDestino = [...naDestino].find(id => id !== servidorId);
+  const candidatos = [...naDestino].filter(id => id !== servidorId);
+
+  if (!alvoEspecifico && candidatos.length > 1){
+    alert('Esse dia já tem mais de um servidor de plantão. Solte o nome arrastado exatamente em cima da pessoa com quem deseja trocar.');
+    return;
+  }
+  const outroNoDestino = alvoEspecifico || candidatos[0] || null;
 
   const nomeOrigem = nomeServidor(servidorId);
   const txtOrigem = formatarDataBr(dataOrigem);
@@ -966,6 +1085,8 @@ document.getElementById('mesProximo').addEventListener('click', () => {
   renderCalendario();
 });
 
+document.getElementById('btnImprimir').addEventListener('click', () => window.print());
+
 // ---------- Plantão Extra ----------
 document.getElementById('btnExtra').addEventListener('click', () => abrirModal('modalExtra'));
 
@@ -1005,6 +1126,12 @@ document.getElementById('btnSalvarTroca').addEventListener('click', async () => 
   const motivo = document.getElementById('trocaMotivo').value.trim();
   if (!servidorA || !dataA || !servidorB || !dataB) return alert('Preencha solicitante, solicitado e as duas datas.');
   if (servidorA === servidorB) return alert('Selecione servidores diferentes para solicitante e solicitado.');
+  const noPlantaoA = servidoresNoDia(escalaParseData(dataA)).finalIds.has(servidorA);
+  const noPlantaoB = servidoresNoDia(escalaParseData(dataB)).finalIds.has(servidorB);
+  if (!noPlantaoA || !noPlantaoB){
+    const quem = !noPlantaoA && !noPlantaoB ? 'Nem o Solicitante nem o Solicitado estão' : (!noPlantaoA ? 'O Solicitante não está' : 'O Solicitado não está');
+    if (!confirm(`${quem} escalado(a) de plantão na data informada. Confira se a data está certa. Deseja salvar mesmo assim?`)) return;
+  }
   await addDoc(collection(db, 'escala_excecoes'), {
     tipo: 'trocaDias', servidorA, dataA, servidorB, dataB, motivo,
     criadoPor: usuarioEmail, criadoEm: serverTimestamp()
@@ -1088,6 +1215,7 @@ document.getElementById('btnSalvarAfastamento').addEventListener('click', async 
   const motivoOutro = document.getElementById('afastamentoMotivoOutro').value.trim();
   const motivo = motivoTipo === 'outro' ? motivoOutro : motivoTipo;
   if (!servidorId || !dataInicio || !dataFim) return alert('Preencha servidor, início e fim.');
+  if (dataFim < dataInicio) return alert('A data de fim não pode ser antes da data de início.');
   if (motivoTipo === 'outro' && !motivoOutro) return alert('Descreva o motivo do afastamento.');
   await addDoc(collection(db, 'escala_excecoes'), { tipo:'afastamento', servidorId, dataInicio, dataFim, motivo, criadoPor: usuarioEmail, criadoEm: serverTimestamp() });
   await addDoc(collection(db, 'escala_observacoes'), {
@@ -1104,25 +1232,33 @@ function renderServidores(){
   corpo.innerHTML = '';
   if (servidores.length === 0){
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="6"><div class="empty-msg">Nenhum servidor cadastrado ainda. Clique em "Importar servidores padrão" pra começar com os 6 já configurados, ou "Adicionar Servidor".</div></td>';
+    tr.innerHTML = '<td colspan="7"><div class="empty-msg">Nenhum servidor cadastrado ainda. Clique em "Importar servidores padrão" pra começar com os 6 já configurados, ou "Adicionar Servidor".</div></td>';
     corpo.appendChild(tr);
     return;
   }
   servidores.forEach(s => {
     const tr = document.createElement('tr');
     const ciclo = (s.diasTrabalho === 1) ? '24x72' : '48x144';
+    const { ganhas, usadas, saldo } = saldoFolgas8(s.id);
+    const folgaTexto = ganhas === 0
+      ? '—'
+      : `${saldo > 0 ? saldo + ' disponível' + (saldo > 1 ? 'is' : '') : 'sem saldo'} (${ganhas} ganha${ganhas > 1 ? 's' : ''}, ${usadas} usada${usadas === 1 ? '' : 's'})`;
     tr.innerHTML = `
       <td>${escapeHtml(s.nome)}</td>
       <td>${escapeHtml(s.matricula || '—')}</td>
       <td>${(s.letras || []).join('+')}</td>
       <td>${ciclo}</td>
       <td><span class="status-badge ${s.status}">${s.status}</span></td>
+      <td><button type="button" class="link-btn" data-folgas8="${s.id}">${folgaTexto}</button></td>
       <td><button type="button" class="link-btn" data-editar="${s.id}">Editar</button></td>
     `;
     corpo.appendChild(tr);
   });
   corpo.querySelectorAll('[data-editar]').forEach(btn => {
     btn.addEventListener('click', () => abrirEdicaoServidor(btn.dataset.editar));
+  });
+  corpo.querySelectorAll('[data-folgas8]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalheFolgas8(btn.dataset.folgas8));
   });
 }
 
@@ -1138,6 +1274,7 @@ function abrirEdicaoServidor(id){
   document.getElementById('servidorDocId').value = s ? s.id : '';
   document.getElementById('servidorNome').value = s ? s.nome : '';
   document.getElementById('servidorMatricula').value = s ? (s.matricula || '') : '';
+  document.getElementById('servidorEmail').value = s ? (s.email || '') : '';
   document.getElementById('servidorPadrao').value = s && s.diasTrabalho === 1 ? 'unico' : 'duplo';
   document.getElementById('servidorAncora').value = s ? s.ancora : '';
   document.getElementById('servidorStatus').value = s ? s.status : 'ativo';
@@ -1152,6 +1289,7 @@ document.getElementById('btnSalvarServidor').addEventListener('click', async () 
   const docId = document.getElementById('servidorDocId').value;
   const nome = document.getElementById('servidorNome').value.trim();
   const matricula = document.getElementById('servidorMatricula').value.trim();
+  const email = document.getElementById('servidorEmail').value.trim();
   const padrao = document.getElementById('servidorPadrao').value;
   const ancora = document.getElementById('servidorAncora').value;
   const status = document.getElementById('servidorStatus').value;
@@ -1159,7 +1297,7 @@ document.getElementById('btnSalvarServidor').addEventListener('click', async () 
   if (!nome || !ancora || letras.length === 0) return alert('Preencha nome, âncora e ao menos uma letra.');
 
   const dados = {
-    nome, matricula, letras, ancora, status,
+    nome, matricula, email, letras, ancora, status,
     diasTrabalho: padrao === 'unico' ? 1 : 2,
     diasFolga: padrao === 'unico' ? 3 : 6
   };
@@ -1177,45 +1315,13 @@ document.getElementById('btnImportarPadrao').addEventListener('click', async () 
   if (servidores.length > 0 && !confirm('Já existem servidores cadastrados. Importar mesmo assim pode duplicar. Continuar?')) return;
   for (const s of ESCALA_SERVIDORES){
     await setDoc(doc(db, 'escala_servidores', s.id), {
-      nome: s.nome, matricula: s.matricula, letras: s.letras, ancora: s.ancora,
+      nome: s.nome, matricula: s.matricula, email: s.email, letras: s.letras, ancora: s.ancora,
       diasTrabalho: s.diasTrabalho, diasFolga: s.diasFolga, status: s.status
     }, { merge: true });
   }
   await carregarTudo();
 });
 
-// ---------- Observações ----------
-function renderObservacoes(){
-  const lista = document.getElementById('listaObservacoes');
-  lista.innerHTML = '';
-  if (observacoes.length === 0){
-    lista.innerHTML = '<div class="empty-msg">Nenhuma observação registrada ainda.</div>';
-    return;
-  }
-  observacoes.forEach(o => {
-    const item = document.createElement('div');
-    item.className = 'obs-item';
-    const dataFmt = o.criadoEm && o.criadoEm.toDate ? o.criadoEm.toDate().toLocaleString('pt-BR') : '';
-    item.innerHTML = `
-      <div class="obs-head">${o.servidorId ? escapeHtml(nomeServidor(o.servidorId)) : 'Observação geral'}</div>
-      <div class="obs-meta">${o.data ? 'Data: ' + o.data + ' · ' : ''}Registrado por ${escapeHtml(o.autor || '—')} em ${dataFmt}</div>
-      <div class="obs-texto">${escapeHtml(o.texto || '')}</div>
-    `;
-    lista.appendChild(item);
-  });
-}
-
-document.getElementById('btnNovaObservacao').addEventListener('click', () => abrirModal('modalObservacao'));
-document.getElementById('btnSalvarObservacao').addEventListener('click', async () => {
-  const servidorId = document.getElementById('obsServidor').value || null;
-  const data = document.getElementById('obsData').value || null;
-  const texto = document.getElementById('obsTexto').value.trim();
-  if (!texto) return alert('Escreva o texto da observação.');
-  await addDoc(collection(db, 'escala_observacoes'), { texto, servidorId, data, autor: usuarioEmail, criadoEm: serverTimestamp() });
-  document.getElementById('obsTexto').value = '';
-  fecharModal('modalObservacao');
-  await carregarTudo();
-});
 </script>
 
 </body>
