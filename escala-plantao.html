@@ -441,6 +441,23 @@
   </div>
 </div>
 
+<!-- Modal: Crédito manual de Folga por 8º plantão (plantões de antes de agosto/2026) -->
+<div class="modal-overlay" id="modalCredito8">
+  <div class="modal-box">
+    <div class="modal-head"><h3>+ Crédito manual (8º plantão)</h3><button type="button" class="modal-fechar" data-fechar="modalCredito8">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px; color:var(--text-muted); margin-top:0;">Use só pra registrar um 8º plantão de antes de agosto/2026 — o sistema só calcula sozinho a partir daí.</p>
+      <input type="hidden" id="credito8ServidorId">
+      <div class="field"><label>Mês de referência</label><input type="month" id="credito8Mes"></div>
+      <div class="field"><label>Observação (opcional)</label><input type="text" id="credito8Motivo" placeholder="Ex.: plantões de antes do sistema"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" data-fechar="modalCredito8">Cancelar</button>
+      <button type="button" class="btn primary" id="btnSalvarCredito8">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/escala-dados.js"></script>
 <script type="module">
 import { initializeApp, getApps, getApp }
@@ -640,16 +657,26 @@ function ordinariosDoServidorNoMes(servidorId, ano, mes){
 // Lista cada crédito de folga (um por bloco de 8 plantões ordinários, com o
 // mês em que foi ganho) e casa cada folga já usada com o crédito mais antigo
 // ainda não consumido — sempre gasta o mais antigo primeiro, automaticamente.
+// Inclui também créditos lançados manualmente (tipo 'credito8manual'), pra
+// cobrir meses anteriores a agosto/2026 — a fórmula da escala só existe a
+// partir daí, então plantões de antes disso não entram no cálculo automático.
 function detalheFolgas8(servidorId){
   const hoje = new Date();
-  let ano = MES_MINIMO.ano, mes = MES_MINIMO.mes;
   const creditos = [];
+
+  excecoes
+    .filter(ex => ex.tipo === 'credito8manual' && ex.servidorId === servidorId)
+    .forEach(ex => creditos.push({ ano: ex.ano, mes: ex.mes, manual: true, id: ex.id, motivo: ex.motivo }));
+
+  let ano = MES_MINIMO.ano, mes = MES_MINIMO.mes;
   while (ano < hoje.getFullYear() || (ano === hoje.getFullYear() && mes <= hoje.getMonth())){
     const ordinarios = ordinariosDoServidorNoMes(servidorId, ano, mes);
     const n = Math.floor(ordinarios / 8);
-    for (let i = 0; i < n; i++) creditos.push({ ano, mes, ordinarios });
+    for (let i = 0; i < n; i++) creditos.push({ ano, mes, ordinarios, manual: false });
     mes++; if (mes > 11){ mes = 0; ano++; }
   }
+
+  creditos.sort((a, b) => (a.ano - b.ano) || (a.mes - b.mes));
 
   const usos = excecoes
     .filter(ex => ex.tipo === 'folga' && ex.servidorId === servidorId && ex.motivo === '8º plantão')
@@ -667,6 +694,32 @@ function saldoFolgas8(servidorId){
   return { ganhas: creditos.length, usadas: usosComCredito.length, saldo: disponiveis.length };
 }
 
+function itemCreditoLi(credito, prefixo, servidorId){
+  const li = document.createElement('li');
+  li.style.display = 'flex';
+  li.style.alignItems = 'center';
+  li.style.gap = '8px';
+  const span = document.createElement('span');
+  const ref = `${MESES[credito.mes]}/${credito.ano}`;
+  span.textContent = `${prefixo} ${ref}` + (credito.manual ? ' (lançamento manual)' : '');
+  li.appendChild(span);
+  if (credito.manual){
+    const btnExcluir = document.createElement('button');
+    btnExcluir.type = 'button';
+    btnExcluir.className = 'link-btn';
+    btnExcluir.style.color = '#b3261e';
+    btnExcluir.textContent = 'Excluir';
+    btnExcluir.addEventListener('click', async () => {
+      if (!confirm(`Excluir o crédito manual referente a ${ref}?`)) return;
+      await deleteDoc(doc(db, 'escala_excecoes', credito.id));
+      await carregarTudo();
+      abrirDetalheFolgas8(servidorId);
+    });
+    li.appendChild(btnExcluir);
+  }
+  return li;
+}
+
 function abrirDetalheFolgas8(servidorId){
   const { creditos, usosComCredito, disponiveis } = detalheFolgas8(servidorId);
   document.getElementById('folgas8Titulo').textContent = `🎁 Folgas por 8º plantão — ${nomeServidor(servidorId)}`;
@@ -675,46 +728,78 @@ function abrirDetalheFolgas8(servidorId){
 
   if (creditos.length === 0){
     body.innerHTML = '<div class="empty-msg">Ainda não completou 8 plantões ordinários em nenhum mês.</div>';
-    abrirModal('modalFolgas8');
-    return;
+  } else {
+    const resumo = document.createElement('p');
+    resumo.style.marginTop = '0';
+    resumo.innerHTML = `<b>${disponiveis.length}</b> disponível${disponiveis.length === 1 ? '' : 'is'} · ${creditos.length} ganha${creditos.length === 1 ? '' : 's'} no total · ${usosComCredito.length} já usada${usosComCredito.length === 1 ? '' : 's'}`;
+    body.appendChild(resumo);
+
+    if (usosComCredito.length){
+      const h1 = document.createElement('p');
+      h1.innerHTML = '<b>Já usadas</b> (a mais antiga é sempre consumida primeiro):';
+      body.appendChild(h1);
+      const ul1 = document.createElement('ul');
+      ul1.style.paddingLeft = '18px';
+      usosComCredito.forEach(({ uso, credito }) => {
+        const li = document.createElement('li');
+        const ref = credito ? `${MESES[credito.mes]}/${credito.ano}` : '—';
+        li.textContent = `Tirada em ${formatarDataBr(uso.data)} — referente ao 8º plantão de ${ref}`;
+        ul1.appendChild(li);
+      });
+      body.appendChild(ul1);
+    }
+
+    if (disponiveis.length){
+      const h2 = document.createElement('p');
+      h2.innerHTML = '<b>Disponíveis</b>:';
+      body.appendChild(h2);
+      const ul2 = document.createElement('ul');
+      ul2.style.paddingLeft = '18px';
+      disponiveis.forEach(credito => {
+        ul2.appendChild(itemCreditoLi(credito, 'Referente ao 8º plantão de', servidorId));
+      });
+      body.appendChild(ul2);
+    }
   }
 
-  const resumo = document.createElement('p');
-  resumo.style.marginTop = '0';
-  resumo.innerHTML = `<b>${disponiveis.length}</b> disponível${disponiveis.length === 1 ? '' : 'is'} · ${creditos.length} ganha${creditos.length === 1 ? '' : 's'} no total · ${usosComCredito.length} já usada${usosComCredito.length === 1 ? '' : 's'}`;
-  body.appendChild(resumo);
-
-  if (usosComCredito.length){
-    const h1 = document.createElement('p');
-    h1.innerHTML = '<b>Já usadas</b> (a mais antiga é sempre consumida primeiro):';
-    body.appendChild(h1);
-    const ul1 = document.createElement('ul');
-    ul1.style.paddingLeft = '18px';
-    usosComCredito.forEach(({ uso, credito }) => {
-      const li = document.createElement('li');
-      const ref = credito ? `${MESES[credito.mes]}/${credito.ano}` : '—';
-      li.textContent = `Tirada em ${formatarDataBr(uso.data)} — referente ao 8º plantão de ${ref}`;
-      ul1.appendChild(li);
-    });
-    body.appendChild(ul1);
-  }
-
-  if (disponiveis.length){
-    const h2 = document.createElement('p');
-    h2.innerHTML = '<b>Disponíveis</b>:';
-    body.appendChild(h2);
-    const ul2 = document.createElement('ul');
-    ul2.style.paddingLeft = '18px';
-    disponiveis.forEach(credito => {
-      const li = document.createElement('li');
-      li.textContent = `Referente ao 8º plantão de ${MESES[credito.mes]}/${credito.ano}`;
-      ul2.appendChild(li);
-    });
-    body.appendChild(ul2);
-  }
+  const btnManual = document.createElement('button');
+  btnManual.type = 'button';
+  btnManual.className = 'btn';
+  btnManual.style.marginTop = '14px';
+  btnManual.textContent = '+ Lançar crédito manual (mês anterior a agosto/2026)';
+  btnManual.addEventListener('click', () => abrirModalCredito8(servidorId));
+  body.appendChild(btnManual);
 
   abrirModal('modalFolgas8');
 }
+
+function abrirModalCredito8(servidorId){
+  document.getElementById('credito8ServidorId').value = servidorId;
+  document.getElementById('credito8Mes').value = '';
+  document.getElementById('credito8Motivo').value = '';
+  abrirModal('modalCredito8');
+}
+
+document.getElementById('btnSalvarCredito8').addEventListener('click', async () => {
+  const servidorId = document.getElementById('credito8ServidorId').value;
+  const mesRef = document.getElementById('credito8Mes').value; // "AAAA-MM"
+  const motivo = document.getElementById('credito8Motivo').value.trim();
+  if (!servidorId || !mesRef) return alert('Escolha o mês de referência.');
+  const [anoStr, mesStr] = mesRef.split('-');
+  const ano = Number(anoStr);
+  const mes = Number(mesStr) - 1;
+  await addDoc(collection(db, 'escala_excecoes'), {
+    tipo: 'credito8manual', servidorId, ano, mes, motivo,
+    criadoPor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  await addDoc(collection(db, 'escala_observacoes'), {
+    texto: `Crédito manual de folga (8º plantão) lançado pra ${nomeServidor(servidorId)}, referente a ${MESES[mes]}/${ano}. ${motivo || ''}`.trim(),
+    servidorId, autor: usuarioEmail, criadoEm: serverTimestamp()
+  });
+  fecharModal('modalCredito8');
+  await carregarTudo();
+  abrirDetalheFolgas8(servidorId);
+});
 
 // ---------- Calendário ----------
 const DOW = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
