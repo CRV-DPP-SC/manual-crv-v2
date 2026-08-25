@@ -145,6 +145,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="PERNOITE" onclick="selMod('PERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Pernoite<small>Medida excepcional administrativa</small></div></div>
           <div class="ri" data-v="MANDADO"  onclick="selMod('MANDADO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Mandado de Prisão de Comarca Diversa<small>Cumprimento de mandado expedido por outra comarca</small></div></div>
           <div class="ri" data-v="CIVIL"    onclick="selMod('CIVIL')"><div class="rd"><div class="rdi"></div></div><div class="rl">Prisão Civil<small>Modalidade especializada — preso(a) civil</small></div></div>
+          <div class="ri" data-v="INTERESTADUAL" onclick="selMod('INTERESTADUAL')"><div class="rd"><div class="rdi"></div></div><div class="rl">Transferência Interestadual<small>Autorização de transferência para/de outro Estado</small></div></div>
           <div class="ri" data-v="RETORNO"  onclick="selMod('RETORNO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Saída Temporária - Unidade Diversa<small>Reeducando que se apresentou em unidade diversa da origem</small></div></div>
           <div class="ri" data-v="COMPLEXO" onclick="selMod('COMPLEXO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Transferência dentro do Mesmo Complexo Prisional<small>Movimentação entre unidades do mesmo complexo</small></div></div>
           <div class="ri" data-v="RETMD"    onclick="selMod('RETMD')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de MD<small>Retorno à unidade de origem após transferência provisória (Medida Disciplinar)</small></div></div>
@@ -286,7 +287,7 @@ function ui(){
   sec('s4pad', m==='I');
   sec('s4', m==='I');
   sec('s5', m==='PERNOITE');
-  sec('s6', m==='PERNOITE' && S.fin==='__transferencia');
+  sec('s6', (m==='PERNOITE' && S.fin==='__transferencia') || m==='INTERESTADUAL');
 }
 function sec(id,on){ g(id).classList.toggle('off',!on); g(id).style.display=on?'':'none'; }
 function rg(gid,val,cls){
@@ -360,6 +361,17 @@ function gerar(){
            'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com a natureza específica da medida e por estarem atendidos os requisitos formais e materiais exigidos.',
            'Efetivada a remoção, o Juízo competente será devidamente comunicado no prazo legal.',
            PHIG].join('\n\n')
+    };
+  }
+
+  // TRANSFERÊNCIA INTERESTADUAL
+  if(m==='INTERESTADUAL'){
+    var sub='Transferência Interestadual';
+    if(!S.sgpe) return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:null};
+    return {
+      badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
+      txt:['Trata-se de pedido de autorização para transferência Interestadual. Após análise do pedido e da documentação em anexo, bem como em análise ao Processo SGPe n. '+S.sgpe+', a CRV decide pela aprovação do pedido.',
+           PCOM, PHIG].join('\n\n')
     };
   }
 
