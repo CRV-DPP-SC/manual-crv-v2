@@ -102,17 +102,13 @@ async function enviarRecado(destinoTipo, destino, texto) {
 async function _garantirConversa(outroEmail, origemRecado) {
   const id = convId(meuEmail(), outroEmail);
   const ref = doc(db, 'conversas', id);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    await setDoc(ref, {
-      participantes: [meuEmail(), outroEmail].sort(),
-      criadaEm: serverTimestamp(),
-      origemRecado: origemRecado || null,
-      ultimaMensagemEm: serverTimestamp(),
-      ultimaMensagemTexto: '',
-      ultimaLeitura: {}
-    });
-  }
+  // Não faz getDoc() antes: se a conversa ainda não existe, a regra de leitura
+  // trava (resource vem nulo) e derrubaria isso com permissão negada. O
+  // Firestore já distingue create/update sozinho a partir do setDoc abaixo.
+  await setDoc(ref, {
+    participantes: [meuEmail(), outroEmail].sort(),
+    origemRecado: origemRecado || null
+  }, { merge: true });
   return id;
 }
 
@@ -242,10 +238,17 @@ async function _abrirThread(outroEmail, origemRecado) {
   const enviar = async () => {
     const texto = input.value;
     if (!texto.trim()) return;
-    input.value = '';
-    await enviarMensagem(outroEmail, texto, origemRecado);
-    _abrirThread(outroEmail, origemRecado);
-    _atualizarBadgeMensagens();
+    input.disabled = true;
+    try {
+      await enviarMensagem(outroEmail, texto, origemRecado);
+      input.value = '';
+      await _abrirThread(outroEmail, origemRecado);
+      _atualizarBadgeMensagens();
+    } catch (e) {
+      console.error('Erro ao enviar mensagem:', e);
+      alert('Não foi possível enviar a mensagem. Tente novamente em instantes.');
+      input.disabled = false;
+    }
   };
   corpo.querySelector('.msg-enviar').onclick = enviar;
   input.addEventListener('keydown', ev => { if (ev.key === 'Enter') enviar(); });
@@ -259,39 +262,96 @@ function escHtmlMsg(s) {
 async function _renderNovoRecado() {
   const painel = document.getElementById('mensagens-panel');
   const corpo = painel.querySelector('.msg-corpo');
-  const unidadesOpts = (window.UNIDADES || []).map(u => `<option value="${u.email}">${u.nome}</option>`).join('');
-  const srOpts = Object.keys(window.SR_INFO || {}).sort().map(c => `<option value="${c}">${c} — ${window.SR_INFO[c]?.nome || c}</option>`).join('');
+
+  const srCods = Object.keys(window.SR_INFO || {}).sort();
+  let _seq = 0;
+  const arvoreHtml = srCods.map(sr => {
+    const id = 'nr-' + (_seq++);
+    const nomeSr = escHtmlMsg(window.SR_INFO?.[sr]?.nome || sr);
+    const unidades = (window.UNIDADES || []).filter(u => u.sr === sr);
+    const unidadesHtml = unidades.map(u => `
+      <div class="nr-item" data-tipo="unidade" data-destino="${escHtmlMsg(u.email)}" data-label="${escHtmlMsg(u.nome)}"
+        style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(u.nome)}</div>`).join('');
+    return `
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;">
+          <span class="nr-seta" data-alvo="${id}" style="cursor:pointer;font-size:.6rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">▸</span>
+          <span class="nr-item" data-tipo="regional" data-destino="${sr}" data-label="${sr} — ${nomeSr}"
+            style="flex:1;min-width:0;cursor:pointer;font-size:.74rem;font-weight:600;color:var(--cinza-800,#38372f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
+        </div>
+        <div id="${id}" class="online-grupo-conteudo" style="display:none;">${unidadesHtml}</div>
+      </div>`;
+  }).join('');
+
   corpo.innerHTML = `
     <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:8px;">
       <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
       <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Novo recado</span>
     </div>
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      <select class="msg-destino-tipo" style="font-size:.75rem;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;">
-        <option value="unidade">Para uma unidade prisional</option>
-        <option value="regional">Para uma superintendência regional</option>
-      </select>
-      <select class="msg-destino-unidade" style="font-size:.75rem;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;">${unidadesOpts}</select>
-      <select class="msg-destino-regional" style="display:none;font-size:.75rem;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;">${srOpts}</select>
+    <div class="nr-resumo" style="display:none;align-items:center;justify-content:space-between;gap:6px;padding:7px 8px;background:var(--azul-50,#f0f7ff);border-radius:6px;margin-bottom:8px;font-size:.75rem;color:var(--cinza-900,#1a1a17);">
+      <span>Para: <strong class="nr-resumo-nome"></strong></span>
+      <button class="nr-trocar" style="border:none;background:none;color:var(--azul-400,#3b82f6);font-size:.7rem;cursor:pointer;">trocar</button>
+    </div>
+    <div class="nr-dica" style="font-size:.68rem;color:var(--cinza-500,#8b897f);padding:0 2px 6px;">Clique numa regional para mandar pra ela, ou na seta pra ver as unidades.</div>
+    <div class="nr-arvore" style="max-height:240px;overflow-y:auto;">${arvoreHtml}</div>
+    <div class="nr-form" style="display:none;flex-direction:column;gap:6px;">
       <textarea class="msg-texto-recado" rows="3" placeholder="Escrever recado…" style="font-size:.78rem;padding:6px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;resize:vertical;"></textarea>
       <button class="msg-enviar-recado" style="padding:7px;border:none;border-radius:6px;background:var(--azul-400,#3b82f6);color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;">Enviar recado</button>
     </div>`;
   corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
-  const tipoSel = corpo.querySelector('.msg-destino-tipo');
-  const selUnidade = corpo.querySelector('.msg-destino-unidade');
-  const selRegional = corpo.querySelector('.msg-destino-regional');
-  tipoSel.addEventListener('change', () => {
-    const eUnidade = tipoSel.value === 'unidade';
-    selUnidade.style.display = eUnidade ? '' : 'none';
-    selRegional.style.display = eUnidade ? 'none' : '';
+
+  let destinoTipo = null, destino = null;
+  const arvore  = corpo.querySelector('.nr-arvore');
+  const dica    = corpo.querySelector('.nr-dica');
+  const resumo  = corpo.querySelector('.nr-resumo');
+  const form    = corpo.querySelector('.nr-form');
+  const resumoNome = corpo.querySelector('.nr-resumo-nome');
+
+  arvore.addEventListener('click', ev => {
+    const seta = ev.target.closest('.nr-seta');
+    if (seta) {
+      const alvo = document.getElementById(seta.dataset.alvo);
+      const abrir = alvo.style.display === 'none';
+      arvore.querySelectorAll('.nr-seta').forEach(s => {
+        if (s !== seta) { document.getElementById(s.dataset.alvo).style.display = 'none'; s.style.transform = ''; }
+      });
+      alvo.style.display = abrir ? 'block' : 'none';
+      seta.style.transform = abrir ? 'rotate(90deg)' : '';
+      return;
+    }
+    const item = ev.target.closest('.nr-item');
+    if (item) {
+      destinoTipo = item.dataset.tipo;
+      destino = item.dataset.destino;
+      resumoNome.textContent = item.dataset.label;
+      arvore.style.display = 'none';
+      dica.style.display = 'none';
+      resumo.style.display = 'flex';
+      form.style.display = 'flex';
+      form.querySelector('.msg-texto-recado').focus();
+    }
   });
-  corpo.querySelector('.msg-enviar-recado').onclick = async () => {
+
+  corpo.querySelector('.nr-trocar').onclick = () => {
+    destinoTipo = null; destino = null;
+    resumo.style.display = 'none';
+    form.style.display = 'none';
+    dica.style.display = '';
+    arvore.style.display = '';
+  };
+
+  corpo.querySelector('.msg-enviar-recado').onclick = async ev => {
     const texto = corpo.querySelector('.msg-texto-recado').value;
-    if (!texto.trim()) return;
-    const destinoTipo = tipoSel.value;
-    const destino = destinoTipo === 'unidade' ? selUnidade.value : selRegional.value;
-    await enviarRecado(destinoTipo, destino, texto);
-    _renderInicio();
+    if (!texto.trim() || !destinoTipo || !destino) return;
+    ev.target.disabled = true;
+    try {
+      await enviarRecado(destinoTipo, destino, texto);
+      _renderInicio();
+    } catch (e) {
+      console.error('Erro ao enviar recado:', e);
+      alert('Não foi possível enviar o recado. Tente novamente em instantes.');
+      ev.target.disabled = false;
+    }
   };
 }
 
