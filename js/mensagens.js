@@ -5,7 +5,7 @@
 import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
-         query, where, orderBy, limit, serverTimestamp }
+         query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 const FC = {
@@ -21,13 +21,89 @@ const _auth = getAuth(_app);
 const db    = getFirestore(_app);
 
 let _user = null;
+let _unsubListeners = [];
+
+function _pararListenersTempoReal() {
+  _unsubListeners.forEach(fn => { try { fn(); } catch (_) {} });
+  _unsubListeners = [];
+}
+
+async function _iniciarListenersTempoReal(tentativas) {
+  _pararListenersTempoReal();
+  let info = window._presencaInfo;
+  if (!info && (tentativas || 0) < 10) { setTimeout(() => _iniciarListenersTempoReal((tentativas || 0) + 1), 500); return; }
+  if (!info) return;
+
+  if (info.unidadeEmail) {
+    _unsubListeners.push(_ouvirRecados(query(collection(db, 'recados'),
+      where('destinoTipo', '==', 'unidade'), where('destino', '==', info.unidadeEmail))));
+  }
+  if (info.tipo === 'super' && info.srCod) {
+    _unsubListeners.push(_ouvirRecados(query(collection(db, 'recados'),
+      where('destinoTipo', '==', 'regional'), where('destino', '==', info.srCod))));
+  }
+  _unsubListeners.push(_ouvirConversas());
+}
+
+function _ouvirRecados(q) {
+  let primeira = true;
+  return onSnapshot(q, snap => {
+    if (primeira) { primeira = false; _atualizarBadgeMensagens(); return; }
+    snap.docChanges().forEach(ch => {
+      if (ch.type !== 'added') return;
+      const r = { id: ch.doc.id, ...ch.doc.data() };
+      if (r.de !== meuEmail() && !r.lidoPor?.[meuEmail()]) {
+        _mostrarToast('Recado — ' + (r.deNome || r.de), r.texto, () => _abrirDireto(r.de, r.id));
+      }
+    });
+    _atualizarBadgeMensagens();
+  }, e => console.error('Erro no listener de recados:', e));
+}
+
+function _ouvirConversas() {
+  let primeira = true;
+  const q = query(collection(db, 'conversas'), where('participantes', 'array-contains', meuEmail()));
+  return onSnapshot(q, snap => {
+    if (primeira) { primeira = false; _atualizarBadgeMensagens(); return; }
+    snap.docChanges().forEach(ch => {
+      if (ch.type === 'removed') return;
+      const c = ch.doc.data();
+      const outro = _outroParticipante(c);
+      const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
+      const novaMsg = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
+      if (novaMsg) _mostrarToast(_nomeContato(outro), c.ultimaMensagemTexto, () => _abrirDireto(outro));
+    });
+    _atualizarBadgeMensagens();
+  }, e => console.error('Erro no listener de conversas:', e));
+}
+
+function _abrirDireto(outroEmail, origemRecado) {
+  document.getElementById('online-panel')?.remove();
+  _criarPainelMensagens();
+  _abrirThread(outroEmail, origemRecado);
+}
+
+function _mostrarToast(titulo, texto, onClick) {
+  const el = document.createElement('div');
+  const n = document.querySelectorAll('.crv-msg-toast').length;
+  el.className = 'crv-msg-toast';
+  el.style.cssText = `position:fixed;right:20px;bottom:${20 + n * 76}px;z-index:3000;width:260px;
+    background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);
+    padding:10px 14px;cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .18s,transform .18s;`;
+  el.innerHTML = `
+    <div style="font-size:.68rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">✉️ ${escHtmlMsg(titulo)}</div>
+    <div style="font-size:.78rem;color:var(--cinza-900,#1a1a17);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(texto || '')}</div>`;
+  el.onclick = () => { el.remove(); onClick?.(); };
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+  setTimeout(() => el.remove(), 8000);
+}
 
 onAuthStateChanged(_auth, user => {
   _user = user || null;
-  if (user) setTimeout(_atualizarBadgeMensagens, 1500);
-  else document.getElementById('mensagens-panel')?.remove();
+  if (user) setTimeout(() => _iniciarListenersTempoReal(), 1500);
+  else { _pararListenersTempoReal(); document.getElementById('mensagens-panel')?.remove(); }
 });
-setInterval(() => { if (_user) _atualizarBadgeMensagens(); }, 3 * 60 * 1000);
 
 // ── Utilitários ──
 const meuEmail = () => (_user?.email || '').toLowerCase();
