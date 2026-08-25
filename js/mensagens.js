@@ -389,12 +389,11 @@ async function _renderInicio() {
   _atualizarBadgeMensagens();
 }
 
-window._toggleMensagensPanel = function () {
-  const existente = document.getElementById('mensagens-panel');
-  if (existente) { existente.remove(); return; }
-  if (!_user || !window._presencaInfo) return;
+function _criarPainelMensagens() {
+  let painel = document.getElementById('mensagens-panel');
+  if (painel) return painel;
 
-  const painel = document.createElement('div');
+  painel = document.createElement('div');
   painel.id = 'mensagens-panel';
   painel.className = 'topbar-online-panel';
   painel.innerHTML = `
@@ -410,12 +409,29 @@ window._toggleMensagensPanel = function () {
   }
 
   const fechar = ev => {
-    if (!painel.contains(ev.target) && !ev.target.closest?.('#msg-chip')) {
+    const caminho = ev.composedPath ? ev.composedPath() : [ev.target];
+    if (!caminho.includes(painel) && !caminho.includes(document.getElementById('msg-chip'))) {
       painel.remove();
       document.removeEventListener('click', fechar);
     }
   };
   setTimeout(() => document.addEventListener('click', fechar), 0);
 
+  return painel;
+}
+
+window._toggleMensagensPanel = function () {
+  const existente = document.getElementById('mensagens-panel');
+  if (existente) { existente.remove(); return; }
+  if (!_user || !window._presencaInfo) return;
+  _criarPainelMensagens();
   _renderInicio();
+};
+
+// Chamado pelo emoji 💬 no painel de usuários online
+window._abrirConversaOnline = function (email) {
+  document.getElementById('online-panel')?.remove();
+  if (!_user || !window._presencaInfo || !email) return;
+  _criarPainelMensagens();
+  _abrirThread(email);
 };
