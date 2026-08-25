@@ -228,8 +228,8 @@ window._toggleOnlinePanel = async function () {
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
-      <span style="font-size:.78rem;color:var(--cinza-900,#1a1a17);">${principal}</span>
-      ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;">${secundario}</span>` : ''}
+      <span title="${principal}" style="font-size:.78rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${principal}</span>
+      ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;flex-shrink:0;">${secundario}</span>` : ''}
     </div>`;
   };
   const listaOu = lista => lista.length ? lista.map(linha).join('')
@@ -242,10 +242,10 @@ window._toggleOnlinePanel = async function () {
     <div>
       <div class="online-grupo-row" data-nivel="${nivel}" data-alvo="${id}" style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;cursor:pointer;">
         <span data-seta="${id}" style="display:inline-block;font-size:.6rem;color:var(--cinza-500,#8b897f);transition:transform .15s;flex-shrink:0;">▸</span>
-        <span style="font-size:.72rem;font-weight:600;color:var(--cinza-800,#38372f);flex:1;">${label}</span>
-        <span style="font-size:.64rem;font-weight:700;color:var(--cinza-500,#8b897f);">${n2(count)}</span>
+        <span title="${label}" style="font-size:.72rem;font-weight:600;color:var(--cinza-800,#38372f);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</span>
+        <span style="font-size:.64rem;font-weight:700;color:var(--cinza-500,#8b897f);margin-left:auto;flex-shrink:0;">${n2(count)}</span>
       </div>
-      <div id="${id}" style="display:none;">${conteudoHtml}</div>
+      <div id="${id}" class="online-grupo-conteudo" style="display:none;">${conteudoHtml}</div>
     </div>`;
   };
 

@@ -1049,7 +1049,7 @@ img { max-width: 100%; display: block; }
 }
 .topbar-online-panel {
   position: fixed;
-  width: 260px;
+  width: 300px;
   background: #fff;
   border: 1px solid rgba(0,0,0,.08);
   border-radius: 10px;
@@ -1061,6 +1061,11 @@ img { max-width: 100%; display: block; }
   .topbar-online-chip { display: none; }
 }
 .online-grupo-row:hover { background: rgba(0,0,0,.05); }
+.online-grupo-conteudo {
+  margin: 2px 0 4px 10px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(0,0,0,.07);
+}
 .topbar-user-avatar {
   height: 30px;
   min-width: 30px;
