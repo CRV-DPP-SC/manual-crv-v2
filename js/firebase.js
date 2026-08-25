@@ -104,11 +104,19 @@ function _iniciaisPerfil(email) {
   return e.split('@')[0].substring(0, 2).toUpperCase();
 }
 
+// ── Aguarda o carregamento de window.UNIDADES (evita corrida com _sincronizarUnidadesFirestore) ──
+async function _aguardarUnidades(tentativas = 15) {
+  while ((!window.UNIDADES || !window.UNIDADES.length) && tentativas-- > 0) {
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
 // ── Resolve escopo de presença (tipo + unidade/regional) e envia sinal de vida ──
 async function _iniciarPresenca(user) {
   const email = (user.email || '').toLowerCase();
   const perfil = _resolverPerfil(email);
-  let tipo = null, unidadeEmail = '', unidadeNome = '', srCod = '';
+  let tipo = null, unidadeEmail = '', srCod = '';
+  await _aguardarUnidades();
 
   if (perfil?.tipo === 'crv') {
     tipo = 'crv';
@@ -120,7 +128,6 @@ async function _iniciarPresenca(user) {
     unidadeEmail = email.replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
                          .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
     const unidade = (window.UNIDADES || []).find(u => u.email === unidadeEmail);
-    unidadeNome = unidade?.nome || '';
     srCod = unidade?.sr || '';
   } else {
     try {
@@ -130,21 +137,21 @@ async function _iniciarPresenca(user) {
         const dados = snap.data();
         unidadeEmail = dados.emailUnidade || '';
         const unidade = (window.UNIDADES || []).find(u => u.email === unidadeEmail);
-        unidadeNome = unidade?.nome || dados.nomeUnidade || '';
         srCod = unidade?.sr || dados.srUnidade || '';
+        _presencaInfo = { tipo, unidadeEmail, srCod, nome: dados.nome || _nomeExibicao(email) };
       }
     } catch (_) { /* sem cadastro aprovado — não registra presença */ }
   }
 
   if (!tipo) return;
-  _presencaInfo = { tipo, unidadeEmail, unidadeNome, srCod, nome: _nomeExibicao(email) };
+  if (!_presencaInfo) _presencaInfo = { tipo, unidadeEmail, srCod, nome: _nomeExibicao(email) };
 
   const enviarPulso = async () => {
     if (document.hidden) return;
     try {
       await setDoc(doc(db, 'presencas', user.uid), {
         nome: _presencaInfo.nome, email, perfil: tipo,
-        unidadeEmail, unidadeNome, srCod,
+        unidadeEmail, srCod,
         updatedAt: serverTimestamp()
       });
       await setDoc(doc(db, 'presencas_pulso', user.uid), { ts: serverTimestamp() });
@@ -209,28 +216,36 @@ window._toggleOnlinePanel = async function () {
     });
   } catch (e) { console.error('Erro ao carregar presenças:', e); }
 
-  const rotulo = { crv: 'DPP', super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coord. Penal', servidor: 'Servidor' };
-  const linha = p => `
+  const nomeUnidade = email => (window.UNIDADES || []).find(u => u.email === email)?.nome || email;
+  const nomeRegional = cod => window.SR_INFO?.[cod]?.nome || cod;
+  const funcaoPrimaria = { super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coordenador de Execução Penal' };
+  const rotuloBadge = { crv: 'DPP', servidor: 'Servidor' };
+  const linha = p => {
+    const funcao = funcaoPrimaria[p.perfil];
+    const principal = funcao || p.nome || p.email;
+    const secundario = funcao ? '' : (rotuloBadge[p.perfil] || '');
+    return `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
-      <span style="font-size:.78rem;color:var(--cinza-900,#1a1a17);">${p.nome || p.email}</span>
-      <span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;">${rotulo[p.perfil] || p.perfil}</span>
+      <span style="font-size:.78rem;color:var(--cinza-900,#1a1a17);">${principal}</span>
+      ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;">${secundario}</span>` : ''}
     </div>`;
+  };
 
   let corpo;
   if (_presencaInfo.tipo === 'crv') {
     const porSr = {};
     itens.forEach(p => { const k = p.srCod || '—'; (porSr[k] = porSr[k] || []).push(p); });
     corpo = Object.keys(porSr).sort().map(sr => {
-      const nomeSr = window.SR_INFO?.[sr]?.nome || sr;
+      const nomeSr = nomeRegional(sr);
       const porUnidade = {};
       porSr[sr].forEach(p => {
-        const k = p.unidadeEmail ? (p.unidadeNome || p.unidadeEmail) : nomeSr;
+        const k = p.unidadeEmail || ('__sr__' + sr);
         (porUnidade[k] = porUnidade[k] || []).push(p);
       });
       return `<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cinza-500,#8b897f);padding:8px 4px 2px;">${sr} — ${nomeSr}</div>` +
         Object.keys(porUnidade).map(un => `
-          <div style="font-size:.7rem;font-weight:600;color:var(--cinza-700,#4a4940);padding:3px 4px 1px 10px;">${un}</div>
+          <div style="font-size:.7rem;font-weight:600;color:var(--cinza-700,#4a4940);padding:3px 4px 1px 10px;">${un.startsWith('__sr__') ? nomeSr : nomeUnidade(un)}</div>
           ${porUnidade[un].map(linha).join('')}`).join('');
     }).join('');
   } else {
@@ -239,8 +254,8 @@ window._toggleOnlinePanel = async function () {
   if (!corpo) corpo = `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Ninguém mais online no momento.</div>`;
 
   const escopoTexto = _presencaInfo.tipo === 'crv' ? 'Todas as regionais'
-    : _presencaInfo.tipo === 'super' ? `Regional ${_presencaInfo.srCod}`
-    : `Unidade — ${_presencaInfo.unidadeNome || _presencaInfo.unidadeEmail}`;
+    : _presencaInfo.tipo === 'super' ? `${_presencaInfo.srCod} — ${nomeRegional(_presencaInfo.srCod)}`
+    : `Unidade — ${nomeUnidade(_presencaInfo.unidadeEmail)}`;
 
   const painel = document.createElement('div');
   painel.id = 'online-panel';
