@@ -363,37 +363,113 @@ async function _renderNovaConversa() {
   const corpo = painel.querySelector('.msg-corpo');
   const info = window._presencaInfo;
   const ehDpp = info?.tipo === 'crv';
+  const ehInstitucional = ['crv', 'super', 'dir', 'cpen'].includes(info?.tipo);
   corpo.innerHTML = `
     <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:6px;">
       <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
-      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Nova conversa</span>
+      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Mensagem direta</span>
     </div>
     <input type="text" class="msg-busca-contato" placeholder="${ehDpp ? 'Buscar por nome, unidade, SR…' : 'Buscar…'}" style="width:100%;box-sizing:border-box;font-size:.75rem;padding:6px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;margin-bottom:6px;">
-    <div class="msg-lista-contatos" style="max-height:260px;overflow-y:auto;"></div>`;
+    <div class="msg-lista-contatos" style="max-height:280px;overflow-y:auto;"></div>`;
   corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
 
   const institucionais = await _contatosElegiveis();
   const listaEl = corpo.querySelector('.msg-lista-contatos');
   const buscaEl = corpo.querySelector('.msg-busca-contato');
+  const temContato = email => institucionais.some(c => c.email === email);
 
   const linhaContato = c => `
-    <div class="msg-contato" data-email="${c.email}" style="padding:6px;border-radius:6px;cursor:pointer;font-size:.76rem;color:var(--cinza-900,#1a1a17);">${c.nome}</div>`;
+    <div class="msg-contato" data-email="${c.email}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.nome}</div>`;
 
-  const renderLista = async termo => {
-    let itens = institucionais.filter(c => !termo || c.nome.toLowerCase().includes(termo.toLowerCase()));
-    if (ehDpp && termo && termo.trim().length >= 2) {
-      const servidores = await _buscarServidores(termo);
-      itens = itens.concat(servidores);
-    }
+  const renderListaPlana = itens => {
     listaEl.innerHTML = itens.length ? itens.map(linhaContato).join('')
       : `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:6px;">Nenhum contato encontrado.</div>`;
-    listaEl.querySelectorAll('.msg-contato').forEach(el => {
-      el.onclick = () => _abrirThread(el.dataset.email);
-    });
   };
-  renderLista('');
+
+  const renderArvore = () => {
+    const srCods = Object.keys(window.SR_INFO || {}).sort();
+    let _seq = 0;
+    listaEl.innerHTML = srCods.map(sr => {
+      const id = 'nc-' + (_seq++);
+      const nomeSr = window.SR_INFO?.[sr]?.nome || sr;
+      const srEmail = sr.toLowerCase() + '@pp.sc.gov.br';
+      const contatoSr = temContato(srEmail)
+        ? `<div class="msg-contato" data-email="${srEmail}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-400,#3b82f6);">Superintendente</div>` : '';
+      const unidadesHtml = (window.UNIDADES || []).filter(u => u.sr === sr).map(u => {
+        const uid = 'nc-' + (_seq++);
+        const dirEmail = u.email.split('@')[0] + 'dir@pp.sc.gov.br';
+        const cpenEmail = u.email.split('@')[0] + 'cpen@pp.sc.gov.br';
+        const pessoas = [
+          temContato(dirEmail)  ? `<div class="msg-contato" data-email="${dirEmail}" style="padding:5px 6px 5px 42px;border-radius:6px;cursor:pointer;font-size:.75rem;">Diretor(a)</div>` : '',
+          temContato(cpenEmail) ? `<div class="msg-contato" data-email="${cpenEmail}" style="padding:5px 6px 5px 42px;border-radius:6px;cursor:pointer;font-size:.75rem;">Coord. Exec. Penal</div>` : ''
+        ].join('');
+        return `
+          <div>
+            <div class="nc-unidade-row" data-alvo="${uid}" style="display:flex;align-items:center;gap:6px;padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;">
+              <span class="nc-seta" style="font-size:.55rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">▸</span>
+              <span style="flex:1;min-width:0;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nome}</span>
+            </div>
+            <div id="${uid}" class="online-grupo-conteudo" style="display:none;">${pessoas || '<div style="font-size:.7rem;color:var(--cinza-500,#8b897f);padding:4px 6px 4px 42px;">—</div>'}</div>
+          </div>`;
+      }).join('');
+      return `
+        <div>
+          <div class="nc-regional-row" data-alvo="${id}" style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;cursor:pointer;">
+            <span class="nc-seta" style="font-size:.6rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">▸</span>
+            <span style="flex:1;min-width:0;font-size:.74rem;font-weight:600;color:var(--cinza-800,#38372f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
+          </div>
+          <div id="${id}" class="online-grupo-conteudo" style="display:none;">${contatoSr}${unidadesHtml}</div>
+        </div>`;
+    }).join('');
+  };
+
+  const renderListaFiltrada = async termo => {
+    let itens = institucionais.filter(c => c.nome.toLowerCase().includes(termo.toLowerCase()));
+    if (ehDpp && termo.trim().length >= 2) itens = itens.concat(await _buscarServidores(termo));
+    renderListaPlana(itens);
+  };
+
+  const mostrarPadrao = () => ehInstitucional ? renderArvore() : renderListaPlana(institucionais);
+  mostrarPadrao();
+
+  // Um único listener delegado cobre tanto a árvore quanto a lista plana, em qualquer re-render.
+  listaEl.addEventListener('click', ev => {
+    const contato = ev.target.closest('.msg-contato');
+    if (contato) { _abrirThread(contato.dataset.email); return; }
+    const regRow = ev.target.closest('.nc-regional-row');
+    if (regRow) {
+      const alvo = document.getElementById(regRow.dataset.alvo);
+      const seta = regRow.querySelector('.nc-seta');
+      const abrir = alvo.style.display === 'none';
+      listaEl.querySelectorAll('.nc-regional-row').forEach(r => {
+        if (r !== regRow) { document.getElementById(r.dataset.alvo).style.display = 'none'; r.querySelector('.nc-seta').style.transform = ''; }
+      });
+      alvo.style.display = abrir ? 'block' : 'none';
+      seta.style.transform = abrir ? 'rotate(90deg)' : '';
+      return;
+    }
+    const unRow = ev.target.closest('.nc-unidade-row');
+    if (unRow) {
+      const alvo = document.getElementById(unRow.dataset.alvo);
+      const seta = unRow.querySelector('.nc-seta');
+      const abrir = alvo.style.display === 'none';
+      const paiRegional = unRow.closest('.online-grupo-conteudo');
+      paiRegional?.querySelectorAll('.nc-unidade-row').forEach(r => {
+        if (r !== unRow) { document.getElementById(r.dataset.alvo).style.display = 'none'; r.querySelector('.nc-seta').style.transform = ''; }
+      });
+      alvo.style.display = abrir ? 'block' : 'none';
+      seta.style.transform = abrir ? 'rotate(90deg)' : '';
+    }
+  });
+
   let deb;
-  buscaEl.addEventListener('input', () => { clearTimeout(deb); deb = setTimeout(() => renderLista(buscaEl.value), 250); });
+  buscaEl.addEventListener('input', () => {
+    clearTimeout(deb);
+    deb = setTimeout(() => {
+      const termo = buscaEl.value.trim();
+      termo ? renderListaFiltrada(termo) : mostrarPadrao();
+    }, 250);
+  });
   buscaEl.focus();
 }
 
@@ -432,7 +508,7 @@ async function _renderInicio() {
   corpo.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:8px;">
       <button class="msg-btn-novo-recado" style="flex:1;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;cursor:pointer;">+ Recado p/ unidade</button>
-      <button class="msg-btn-nova-conversa" style="flex:1;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;cursor:pointer;">+ Nova conversa</button>
+      <button class="msg-btn-nova-conversa" style="flex:1;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;cursor:pointer;">+ Mensagem Direta</button>
     </div>
     <div style="max-height:300px;overflow-y:auto;">
       ${semNada ? `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhuma mensagem por aqui ainda.</div>` : ''}
@@ -489,12 +565,4 @@ window._toggleMensagensPanel = function () {
   if (!_user || !window._presencaInfo) return;
   _criarPainelMensagens();
   _renderInicio();
-};
-
-// Chamado pelo emoji 💬 no painel de usuários online
-window._abrirConversaOnline = function (email) {
-  document.getElementById('online-panel')?.remove();
-  if (!_user || !window._presencaInfo || !email) return;
-  _criarPainelMensagens();
-  _abrirThread(email);
 };

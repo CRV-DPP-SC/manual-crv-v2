@@ -198,48 +198,36 @@ async function _atualizarContadorOnline() {
 window._toggleOnlinePanel = async function () {
   const existente = document.getElementById('online-panel');
   if (existente) { existente.remove(); return; }
-  if (!_presencaInfo || _presencaInfo.tipo === 'servidor') return; // servidor só vê o número
+  if (!usuarioAtual) return;
   _atualizarContadorOnline();
 
   const cutoff = new Date(Date.now() - PRESENCA_TOLERANCIA_MS);
   const cutoffMs = cutoff.getTime();
   let itens = [];
-  const _colhe = (snap, alvo) => {
+  try {
+    const snap = await getDocs(query(collection(db, 'presencas'), where('updatedAt', '>', cutoff)));
     snap.forEach(d => {
       const p = d.data();
-      if ((p.updatedAt?.toMillis?.() || 0) >= cutoffMs && !alvo.some(x => x.email === p.email)) alvo.push(p);
+      if ((p.updatedAt?.toMillis?.() || 0) >= cutoffMs) itens.push(p);
     });
-  };
-  try {
-    if (_presencaInfo.tipo === 'crv') {
-      _colhe(await getDocs(query(collection(db, 'presencas'), where('updatedAt', '>', cutoff))), itens);
-    } else if (_presencaInfo.tipo === 'super') {
-      _colhe(await getDocs(query(collection(db, 'presencas'), where('srCod', '==', _presencaInfo.srCod))), itens);
-    } else {
-      // CPEN/DIR: própria unidade inteira + todos os outros CPEN/DIR do Estado (podem conversar com qualquer um)
-      _colhe(await getDocs(query(collection(db, 'presencas'), where('unidadeEmail', '==', _presencaInfo.unidadeEmail))), itens);
-      _colhe(await getDocs(query(collection(db, 'presencas'), where('perfil', 'in', ['cpen', 'dir']))), itens);
-    }
   } catch (e) { console.error('Erro ao carregar presenças:', e); }
 
   const SR_NOME_CURTO = {
     SR01: 'Grande Florianópolis', SR02: 'Sul', SR03: 'Norte', SR04: 'Vale do Itajaí',
     SR05: 'Serrana', SR06: 'Oeste', SR07: 'Médio Vale', SR08: 'Planalto Norte'
   };
-  const nomeUnidade = email => (window.UNIDADES || []).find(u => u.email === email)?.nome || email;
   const nomeRegional = cod => SR_NOME_CURTO[cod] || window.SR_INFO?.[cod]?.nome || cod;
   const n2 = n => String(n).padStart(2, '0');
   const funcaoPrimaria = { super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coordenador de Execução Penal' };
   const rotuloBadge = { crv: 'DPP', servidor: 'Servidor' };
-  const linha = (p, mostrarUnidade) => {
+  const linha = p => {
     const funcao = funcaoPrimaria[p.perfil];
     const principal = funcao || p.nome || p.email;
-    const secundario = mostrarUnidade && p.unidadeEmail ? nomeUnidade(p.unidadeEmail) : (funcao ? '' : (rotuloBadge[p.perfil] || ''));
+    const secundario = funcao ? '' : (rotuloBadge[p.perfil] || '');
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
       <span title="${principal}" style="font-size:.78rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${principal}</span>
-      <span onclick="window._abrirConversaOnline && window._abrirConversaOnline('${p.email}')" title="Mandar mensagem" style="font-size:.72rem;flex-shrink:0;opacity:.55;cursor:pointer;">💬</span>
       ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;flex-shrink:0;">${secundario}</span>` : ''}
     </div>`;
   };
@@ -270,36 +258,21 @@ window._toggleOnlinePanel = async function () {
     }).join('');
   };
 
-  let corpo;
-  if (_presencaInfo.tipo === 'crv') {
-    const srCods = Object.keys(window.SR_INFO || {}).sort();
-    corpo = srCods.map(sr => {
-      const count = itens.filter(p => p.srCod === sr).length;
-      return linhaGrupo(1, `${sr} — ${nomeRegional(sr)}`.toUpperCase(), count, conteudoRegional(sr));
-    }).join('');
-    const dpp = itens.filter(p => p.perfil === 'crv');
-    corpo += `<div style="border-top:1px solid rgba(0,0,0,.08);margin:6px 2px;"></div>`;
-    corpo += linhaGrupo(1, 'SEJURI/DPP', dpp.length, listaOu(dpp));
-  } else if (_presencaInfo.tipo === 'super') {
-    corpo = conteudoRegional(_presencaInfo.srCod);
-  } else {
-    const propria = itens.filter(p => p.unidadeEmail === _presencaInfo.unidadeEmail);
-    const outros = itens.filter(p => p.unidadeEmail !== _presencaInfo.unidadeEmail);
-    const secao = (titulo, lista, mostrarUnidade) => `
-      <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cinza-500,#8b897f);padding:8px 4px 2px;">${titulo}</div>
-      ${lista.length ? lista.map(p => linha(p, mostrarUnidade)).join('') : listaOu([])}`;
-    corpo = secao('Minha unidade', propria, false) + secao('Outros CPEN/Diretores online', outros, true);
-  }
-
-  const escopoTexto = _presencaInfo.tipo === 'crv' ? 'Todas as regionais'
-    : _presencaInfo.tipo === 'super' ? `${_presencaInfo.srCod} — ${nomeRegional(_presencaInfo.srCod)}`
-    : `Unidade — ${nomeUnidade(_presencaInfo.unidadeEmail)}`;
+  // Todo mundo vê a mesma árvore completa (regional → unidade → pessoa)
+  const srCods = Object.keys(window.SR_INFO || {}).sort();
+  let corpo = srCods.map(sr => {
+    const count = itens.filter(p => p.srCod === sr).length;
+    return linhaGrupo(1, `${sr} — ${nomeRegional(sr)}`.toUpperCase(), count, conteudoRegional(sr));
+  }).join('');
+  const dpp = itens.filter(p => p.perfil === 'crv');
+  corpo += `<div style="border-top:1px solid rgba(0,0,0,.08);margin:6px 2px;"></div>`;
+  corpo += linhaGrupo(1, 'SEJURI/DPP', dpp.length, listaOu(dpp));
 
   const painel = document.createElement('div');
   painel.id = 'online-panel';
   painel.className = 'topbar-online-panel';
   painel.innerHTML = `
-    <div style="font-size:.6rem;color:var(--cinza-500,#8b897f);text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 4px 6px;">${escopoTexto}</div>
+    <div style="font-size:.6rem;color:var(--cinza-500,#8b897f);text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 4px 6px;">Todas as regionais</div>
     <div style="max-height:360px;overflow-y:auto;">${corpo}</div>`;
   document.body.appendChild(painel);
 
