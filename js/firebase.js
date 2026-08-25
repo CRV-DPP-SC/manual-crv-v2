@@ -42,8 +42,8 @@ let usuarioAtual = null;
 // ══════════════════════════════════════════════
 // PRESENÇA — usuários online
 // ══════════════════════════════════════════════
-const PRESENCA_INTERVALO_MS = 10 * 60 * 1000;   // envia sinal de vida a cada 10 min
-const PRESENCA_TOLERANCIA_MS = 12 * 60 * 1000;  // considera "online" até 12 min sem sinal
+const PRESENCA_INTERVALO_MS = 5 * 60 * 1000;    // envia sinal de vida a cada 5 min
+const PRESENCA_TOLERANCIA_MS = 6 * 60 * 1000;   // considera "online" até 6 min sem sinal
 let _presencaTimer = null;
 let _presencaInfo  = null; // { tipo, unidadeEmail, unidadeNome, srCod, nome }
 
@@ -202,22 +202,24 @@ window._toggleOnlinePanel = async function () {
   _atualizarContadorOnline();
 
   const cutoff = new Date(Date.now() - PRESENCA_TOLERANCIA_MS);
+  const cutoffMs = cutoff.getTime();
   let itens = [];
-  try {
-    let q;
-    if (_presencaInfo.tipo === 'crv') {
-      q = query(collection(db, 'presencas'), where('updatedAt', '>', cutoff));
-    } else if (_presencaInfo.tipo === 'super') {
-      q = query(collection(db, 'presencas'), where('srCod', '==', _presencaInfo.srCod));
-    } else {
-      q = query(collection(db, 'presencas'), where('unidadeEmail', '==', _presencaInfo.unidadeEmail));
-    }
-    const snap = await getDocs(q);
-    const cutoffMs = cutoff.getTime();
+  const _colhe = (snap, alvo) => {
     snap.forEach(d => {
       const p = d.data();
-      if ((p.updatedAt?.toMillis?.() || 0) >= cutoffMs) itens.push(p);
+      if ((p.updatedAt?.toMillis?.() || 0) >= cutoffMs && !alvo.some(x => x.email === p.email)) alvo.push(p);
     });
+  };
+  try {
+    if (_presencaInfo.tipo === 'crv') {
+      _colhe(await getDocs(query(collection(db, 'presencas'), where('updatedAt', '>', cutoff))), itens);
+    } else if (_presencaInfo.tipo === 'super') {
+      _colhe(await getDocs(query(collection(db, 'presencas'), where('srCod', '==', _presencaInfo.srCod))), itens);
+    } else {
+      // CPEN/DIR: própria unidade inteira + todos os outros CPEN/DIR do Estado (podem conversar com qualquer um)
+      _colhe(await getDocs(query(collection(db, 'presencas'), where('unidadeEmail', '==', _presencaInfo.unidadeEmail))), itens);
+      _colhe(await getDocs(query(collection(db, 'presencas'), where('perfil', 'in', ['cpen', 'dir']))), itens);
+    }
   } catch (e) { console.error('Erro ao carregar presenças:', e); }
 
   const SR_NOME_CURTO = {
@@ -229,10 +231,10 @@ window._toggleOnlinePanel = async function () {
   const n2 = n => String(n).padStart(2, '0');
   const funcaoPrimaria = { super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coordenador de Execução Penal' };
   const rotuloBadge = { crv: 'DPP', servidor: 'Servidor' };
-  const linha = p => {
+  const linha = (p, mostrarUnidade) => {
     const funcao = funcaoPrimaria[p.perfil];
     const principal = funcao || p.nome || p.email;
-    const secundario = funcao ? '' : (rotuloBadge[p.perfil] || '');
+    const secundario = mostrarUnidade && p.unidadeEmail ? nomeUnidade(p.unidadeEmail) : (funcao ? '' : (rotuloBadge[p.perfil] || ''));
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
@@ -281,7 +283,12 @@ window._toggleOnlinePanel = async function () {
   } else if (_presencaInfo.tipo === 'super') {
     corpo = conteudoRegional(_presencaInfo.srCod);
   } else {
-    corpo = listaOu(itens);
+    const propria = itens.filter(p => p.unidadeEmail === _presencaInfo.unidadeEmail);
+    const outros = itens.filter(p => p.unidadeEmail !== _presencaInfo.unidadeEmail);
+    const secao = (titulo, lista, mostrarUnidade) => `
+      <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cinza-500,#8b897f);padding:8px 4px 2px;">${titulo}</div>
+      ${lista.length ? lista.map(p => linha(p, mostrarUnidade)).join('') : listaOu([])}`;
+    corpo = secao('Minha unidade', propria, false) + secao('Outros CPEN/Diretores online', outros, true);
   }
 
   const escopoTexto = _presencaInfo.tipo === 'crv' ? 'Todas as regionais'
