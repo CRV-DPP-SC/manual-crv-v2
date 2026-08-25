@@ -506,9 +506,9 @@ async function _renderInicio() {
 
   const semNada = !recados.length && !conversas.length;
   corpo.innerHTML = `
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <button class="msg-btn-novo-recado" style="flex:1;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;cursor:pointer;">+ Recado p/ unidade</button>
-      <button class="msg-btn-nova-conversa" style="flex:1;padding:6px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;cursor:pointer;">+ Mensagem Direta</button>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+      <button class="msg-btn-novo-recado" style="width:100%;padding:7px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;text-align:left;cursor:pointer;">+ Recado para todos usuários da Unidade Prisional</button>
+      <button class="msg-btn-nova-conversa" style="width:100%;padding:7px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;text-align:left;cursor:pointer;">+ Mensagem com Destinatário Específico</button>
     </div>
     <div style="max-height:300px;overflow-y:auto;">
       ${semNada ? `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhuma mensagem por aqui ainda.</div>` : ''}

@@ -328,11 +328,11 @@ function _mostrarTopbarUsuario(user, labelOverride) {
 
   area.innerHTML = `
     <div class="topbar-user-info">
-      <span id="online-chip" class="topbar-online-chip" onclick="window._toggleOnlinePanel()">
+      <span id="online-chip" class="topbar-online-chip" title="Usuários Online" onclick="window._toggleOnlinePanel()">
         <span class="topbar-online-dot"></span>
         <span id="online-count-num">—</span>
       </span>
-      <span id="msg-chip" class="topbar-online-chip" onclick="window._toggleMensagensPanel && window._toggleMensagensPanel()">
+      <span id="msg-chip" class="topbar-online-chip" title="Menu de Mensagens e Conversas" onclick="window._toggleMensagensPanel && window._toggleMensagensPanel()">
         <span style="font-size:.8rem;">✉️</span>
         <span id="msg-count-num" style="display:none;"></span>
       </span>
