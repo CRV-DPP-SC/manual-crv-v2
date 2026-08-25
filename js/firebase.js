@@ -297,10 +297,12 @@ window._toggleOnlinePanel = async function () {
       if (r !== row) {
         document.getElementById(r.dataset.alvo).style.display = 'none';
         r.querySelector('[data-seta]').style.transform = '';
+        r.classList.remove('aberto');
       }
     });
     alvo.style.display = vaiAbrir ? 'block' : 'none';
     seta.style.transform = vaiAbrir ? 'rotate(90deg)' : '';
+    row.classList.toggle('aberto', vaiAbrir);
   });
 
   const chip = document.getElementById('online-chip');

@@ -1061,6 +1061,11 @@ img { max-width: 100%; display: block; }
   .topbar-online-chip { display: none; }
 }
 .online-grupo-row:hover { background: rgba(0,0,0,.05); }
+.online-grupo-row.aberto {
+  background: var(--azul-50, #f0f7ff);
+  border-left: 3px solid var(--azul-400, #3b82f6);
+  padding-left: 3px;
+}
 .online-grupo-conteudo {
   margin: 2px 0 4px 10px;
   padding-left: 8px;
