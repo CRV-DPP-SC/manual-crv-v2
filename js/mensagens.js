@@ -269,17 +269,19 @@ async function _renderNovoRecado() {
     const id = 'nr-' + (_seq++);
     const nomeSr = escHtmlMsg(window.SR_INFO?.[sr]?.nome || sr);
     const unidades = (window.UNIDADES || []).filter(u => u.sr === sr);
+    const opcaoRegional = `
+      <div class="nr-item" data-tipo="regional" data-destino="${sr}" data-label="${sr} — ${nomeSr}"
+        style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-400,#3b82f6);">Enviar para toda a regional</div>`;
     const unidadesHtml = unidades.map(u => `
       <div class="nr-item" data-tipo="unidade" data-destino="${escHtmlMsg(u.email)}" data-label="${escHtmlMsg(u.nome)}"
         style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(u.nome)}</div>`).join('');
     return `
       <div>
-        <div style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;">
-          <span class="nr-seta" data-alvo="${id}" style="cursor:pointer;font-size:.6rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">▸</span>
-          <span class="nr-item" data-tipo="regional" data-destino="${sr}" data-label="${sr} — ${nomeSr}"
-            style="flex:1;min-width:0;cursor:pointer;font-size:.74rem;font-weight:600;color:var(--cinza-800,#38372f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
+        <div class="nr-regional-row" data-alvo="${id}" style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;cursor:pointer;">
+          <span class="nr-seta" style="font-size:.6rem;color:var(--cinza-500,#8b897f);transition:transform .15s;flex-shrink:0;">▸</span>
+          <span style="flex:1;min-width:0;font-size:.74rem;font-weight:600;color:var(--cinza-800,#38372f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
         </div>
-        <div id="${id}" class="online-grupo-conteudo" style="display:none;">${unidadesHtml}</div>
+        <div id="${id}" class="online-grupo-conteudo" style="display:none;">${opcaoRegional}${unidadesHtml}</div>
       </div>`;
   }).join('');
 
@@ -292,7 +294,7 @@ async function _renderNovoRecado() {
       <span>Para: <strong class="nr-resumo-nome"></strong></span>
       <button class="nr-trocar" style="border:none;background:none;color:var(--azul-400,#3b82f6);font-size:.7rem;cursor:pointer;">trocar</button>
     </div>
-    <div class="nr-dica" style="font-size:.68rem;color:var(--cinza-500,#8b897f);padding:0 2px 6px;">Clique numa regional para mandar pra ela, ou na seta pra ver as unidades.</div>
+    <div class="nr-dica" style="font-size:.68rem;color:var(--cinza-500,#8b897f);padding:0 2px 6px;">Clique numa regional para ver as unidades dela.</div>
     <div class="nr-arvore" style="max-height:240px;overflow-y:auto;">${arvoreHtml}</div>
     <div class="nr-form" style="display:none;flex-direction:column;gap:6px;">
       <textarea class="msg-texto-recado" rows="3" placeholder="Escrever recado…" style="font-size:.78rem;padding:6px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;resize:vertical;"></textarea>
@@ -308,12 +310,13 @@ async function _renderNovoRecado() {
   const resumoNome = corpo.querySelector('.nr-resumo-nome');
 
   arvore.addEventListener('click', ev => {
-    const seta = ev.target.closest('.nr-seta');
-    if (seta) {
-      const alvo = document.getElementById(seta.dataset.alvo);
+    const linhaRegional = ev.target.closest('.nr-regional-row');
+    if (linhaRegional) {
+      const alvo = document.getElementById(linhaRegional.dataset.alvo);
+      const seta = linhaRegional.querySelector('.nr-seta');
       const abrir = alvo.style.display === 'none';
-      arvore.querySelectorAll('.nr-seta').forEach(s => {
-        if (s !== seta) { document.getElementById(s.dataset.alvo).style.display = 'none'; s.style.transform = ''; }
+      arvore.querySelectorAll('.nr-regional-row').forEach(r => {
+        if (r !== linhaRegional) { document.getElementById(r.dataset.alvo).style.display = 'none'; r.querySelector('.nr-seta').style.transform = ''; }
       });
       alvo.style.display = abrir ? 'block' : 'none';
       seta.style.transform = abrir ? 'rotate(90deg)' : '';
