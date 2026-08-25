@@ -1060,6 +1060,7 @@ img { max-width: 100%; display: block; }
 @media(max-width:700px) {
   .topbar-online-chip { display: none; }
 }
+.online-grupo-row:hover { background: rgba(0,0,0,.05); }
 .topbar-user-avatar {
   height: 30px;
   min-width: 30px;

@@ -218,6 +218,7 @@ window._toggleOnlinePanel = async function () {
 
   const nomeUnidade = email => (window.UNIDADES || []).find(u => u.email === email)?.nome || email;
   const nomeRegional = cod => window.SR_INFO?.[cod]?.nome || cod;
+  const n2 = n => String(n).padStart(2, '0');
   const funcaoPrimaria = { super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coordenador de Execução Penal' };
   const rotuloBadge = { crv: 'DPP', servidor: 'Servidor' };
   const linha = p => {
@@ -225,33 +226,53 @@ window._toggleOnlinePanel = async function () {
     const principal = funcao || p.nome || p.email;
     const secundario = funcao ? '' : (rotuloBadge[p.perfil] || '');
     return `
-    <div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;">
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
       <span style="font-size:.78rem;color:var(--cinza-900,#1a1a17);">${principal}</span>
       ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;">${secundario}</span>` : ''}
     </div>`;
   };
+  const listaOu = lista => lista.length ? lista.map(linha).join('')
+    : `<div style="font-size:.72rem;color:var(--cinza-500,#8b897f);padding:5px 6px 5px 24px;">Ninguém online no momento.</div>`;
+
+  let _grupoSeq = 0;
+  const linhaGrupo = (nivel, label, count, conteudoHtml) => {
+    const id = 'online-grp-' + (_grupoSeq++);
+    return `
+    <div>
+      <div class="online-grupo-row" data-nivel="${nivel}" data-alvo="${id}" style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;cursor:pointer;">
+        <span data-seta="${id}" style="display:inline-block;font-size:.6rem;color:var(--cinza-500,#8b897f);transition:transform .15s;flex-shrink:0;">▸</span>
+        <span style="font-size:.72rem;font-weight:600;color:var(--cinza-800,#38372f);flex:1;">${label}</span>
+        <span style="font-size:.64rem;font-weight:700;color:var(--cinza-500,#8b897f);">${n2(count)}</span>
+      </div>
+      <div id="${id}" style="display:none;">${conteudoHtml}</div>
+    </div>`;
+  };
+
+  // Conteúdo de uma regional: pessoas ligadas direto à SR + uma linha por unidade
+  const conteudoRegional = sr => {
+    const direto = itens.filter(p => p.srCod === sr && !p.unidadeEmail);
+    const unidades = (window.UNIDADES || []).filter(u => u.sr === sr);
+    return listaOu(direto) + unidades.map(u => {
+      const pessoas = itens.filter(p => p.unidadeEmail === u.email);
+      return linhaGrupo(2, u.nome, pessoas.length, listaOu(pessoas));
+    }).join('');
+  };
 
   let corpo;
   if (_presencaInfo.tipo === 'crv') {
-    const porSr = {};
-    itens.forEach(p => { const k = p.srCod || '—'; (porSr[k] = porSr[k] || []).push(p); });
-    corpo = Object.keys(porSr).sort().map(sr => {
-      const nomeSr = nomeRegional(sr);
-      const porUnidade = {};
-      porSr[sr].forEach(p => {
-        const k = p.unidadeEmail || ('__sr__' + sr);
-        (porUnidade[k] = porUnidade[k] || []).push(p);
-      });
-      return `<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cinza-500,#8b897f);padding:8px 4px 2px;">${sr} — ${nomeSr}</div>` +
-        Object.keys(porUnidade).map(un => `
-          <div style="font-size:.7rem;font-weight:600;color:var(--cinza-700,#4a4940);padding:3px 4px 1px 10px;">${un.startsWith('__sr__') ? nomeSr : nomeUnidade(un)}</div>
-          ${porUnidade[un].map(linha).join('')}`).join('');
+    const srCods = Object.keys(window.SR_INFO || {}).sort();
+    corpo = srCods.map(sr => {
+      const count = itens.filter(p => p.srCod === sr).length;
+      return linhaGrupo(1, `${sr} — ${nomeRegional(sr)}`, count, conteudoRegional(sr));
     }).join('');
+    const dpp = itens.filter(p => p.perfil === 'crv');
+    corpo += linhaGrupo(1, 'DPP', dpp.length, listaOu(dpp));
+  } else if (_presencaInfo.tipo === 'super') {
+    corpo = conteudoRegional(_presencaInfo.srCod);
   } else {
-    corpo = itens.map(linha).join('');
+    corpo = listaOu(itens);
   }
-  if (!corpo) corpo = `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Ninguém mais online no momento.</div>`;
 
   const escopoTexto = _presencaInfo.tipo === 'crv' ? 'Todas as regionais'
     : _presencaInfo.tipo === 'super' ? `${_presencaInfo.srCod} — ${nomeRegional(_presencaInfo.srCod)}`
@@ -262,8 +283,26 @@ window._toggleOnlinePanel = async function () {
   painel.className = 'topbar-online-panel';
   painel.innerHTML = `
     <div style="font-size:.6rem;color:var(--cinza-500,#8b897f);text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 4px 6px;">${escopoTexto}</div>
-    <div style="max-height:320px;overflow-y:auto;">${corpo}</div>`;
+    <div style="max-height:360px;overflow-y:auto;">${corpo}</div>`;
   document.body.appendChild(painel);
+
+  painel.addEventListener('click', ev => {
+    const row = ev.target.closest('.online-grupo-row');
+    if (!row) return;
+    const alvo = document.getElementById(row.dataset.alvo);
+    const seta = row.querySelector('[data-seta]');
+    const vaiAbrir = alvo.style.display === 'none';
+    const container = row.parentElement.parentElement;
+    container.querySelectorAll(`.online-grupo-row[data-nivel="${row.dataset.nivel}"]`).forEach(r => {
+      if (r !== row) {
+        document.getElementById(r.dataset.alvo).style.display = 'none';
+        r.querySelector('[data-seta]').style.transform = '';
+      }
+    });
+    alvo.style.display = vaiAbrir ? 'block' : 'none';
+    seta.style.transform = vaiAbrir ? 'rotate(90deg)' : '';
+  });
+
   const chip = document.getElementById('online-chip');
   if (chip) {
     const r = chip.getBoundingClientRect();
