@@ -145,6 +145,7 @@ async function _iniciarPresenca(user) {
 
   if (!tipo) return;
   if (!_presencaInfo) _presencaInfo = { tipo, unidadeEmail, srCod, nome: _nomeExibicao(email) };
+  window._presencaInfo = _presencaInfo;
 
   const enviarPulso = async () => {
     if (document.hidden) return;
@@ -173,7 +174,9 @@ function _pararPresenca(user) {
   clearInterval(window._presencaContadorTimer);
   _presencaTimer = null;
   _presencaInfo = null;
+  window._presencaInfo = null;
   document.getElementById('online-panel')?.remove();
+  document.getElementById('mensagens-panel')?.remove();
   if (user) {
     deleteDoc(doc(db, 'presencas', user.uid)).catch(() => {});
     deleteDoc(doc(db, 'presencas_pulso', user.uid)).catch(() => {});
@@ -346,6 +349,10 @@ function _mostrarTopbarUsuario(user, labelOverride) {
       <span id="online-chip" class="topbar-online-chip" onclick="window._toggleOnlinePanel()">
         <span class="topbar-online-dot"></span>
         <span id="online-count-num">—</span>
+      </span>
+      <span id="msg-chip" class="topbar-online-chip" onclick="window._toggleMensagensPanel && window._toggleMensagensPanel()">
+        <span style="font-size:.8rem;">✉️</span>
+        <span id="msg-count-num" style="display:none;"></span>
       </span>
       <div class="topbar-user-avatar" style="background:${cor};">${iniciais}</div>
       <span class="topbar-user-nome">${nome}</span>
