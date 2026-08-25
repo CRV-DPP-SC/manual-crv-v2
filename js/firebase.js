@@ -268,7 +268,7 @@ window._toggleOnlinePanel = async function () {
     const srCods = Object.keys(window.SR_INFO || {}).sort();
     corpo = srCods.map(sr => {
       const count = itens.filter(p => p.srCod === sr).length;
-      return linhaGrupo(1, `${sr} — ${nomeRegional(sr)}`, count, conteudoRegional(sr));
+      return linhaGrupo(1, `${sr} — ${nomeRegional(sr)}`.toUpperCase(), count, conteudoRegional(sr));
     }).join('');
     const dpp = itens.filter(p => p.perfil === 'crv');
     corpo += `<div style="border-top:1px solid rgba(0,0,0,.08);margin:6px 2px;"></div>`;
