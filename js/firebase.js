@@ -216,8 +216,12 @@ window._toggleOnlinePanel = async function () {
     });
   } catch (e) { console.error('Erro ao carregar presenças:', e); }
 
+  const SR_NOME_CURTO = {
+    SR01: 'Grande Florianópolis', SR02: 'Sul', SR03: 'Norte', SR04: 'Vale do Itajaí',
+    SR05: 'Serrana', SR06: 'Oeste', SR07: 'Médio Vale', SR08: 'Planalto Norte'
+  };
   const nomeUnidade = email => (window.UNIDADES || []).find(u => u.email === email)?.nome || email;
-  const nomeRegional = cod => window.SR_INFO?.[cod]?.nome || cod;
+  const nomeRegional = cod => SR_NOME_CURTO[cod] || window.SR_INFO?.[cod]?.nome || cod;
   const n2 = n => String(n).padStart(2, '0');
   const funcaoPrimaria = { super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coordenador de Execução Penal' };
   const rotuloBadge = { crv: 'DPP', servidor: 'Servidor' };
@@ -267,7 +271,8 @@ window._toggleOnlinePanel = async function () {
       return linhaGrupo(1, `${sr} — ${nomeRegional(sr)}`, count, conteudoRegional(sr));
     }).join('');
     const dpp = itens.filter(p => p.perfil === 'crv');
-    corpo += linhaGrupo(1, 'DPP', dpp.length, listaOu(dpp));
+    corpo += `<div style="border-top:1px solid rgba(0,0,0,.08);margin:6px 2px;"></div>`;
+    corpo += linhaGrupo(1, 'SEJURI/DPP', dpp.length, listaOu(dpp));
   } else if (_presencaInfo.tipo === 'super') {
     corpo = conteudoRegional(_presencaInfo.srCod);
   } else {
