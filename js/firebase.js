@@ -199,6 +199,7 @@ window._toggleOnlinePanel = async function () {
   const existente = document.getElementById('online-panel');
   if (existente) { existente.remove(); return; }
   if (!_presencaInfo || _presencaInfo.tipo === 'servidor') return; // servidor só vê o número
+  _atualizarContadorOnline();
 
   const cutoff = new Date(Date.now() - PRESENCA_TOLERANCIA_MS);
   let itens = [];
