@@ -32,7 +32,6 @@ setInterval(() => { if (_user) _atualizarBadgeMensagens(); }, 3 * 60 * 1000);
 // ── Utilitários ──
 const meuEmail = () => (_user?.email || '').toLowerCase();
 const convId = (a, b) => [a, b].sort().join('__');
-const chaveLocal = () => 'crv_msg_ultima_leitura_recados_' + meuEmail();
 
 function _rotuloPerfil(email) {
   const e = (email || '').toLowerCase();
@@ -132,6 +131,20 @@ async function _marcarConversaLida(id) {
   } catch (_) {}
 }
 
+async function _marcarRecadoLido(id) {
+  try {
+    await setDoc(doc(db, 'recados', id), { lidoPor: { [meuEmail()]: true } }, { merge: true });
+  } catch (_) {}
+}
+
+function _formatarData(ts) {
+  const ms = ts?.toMillis?.();
+  if (!ms) return '';
+  const d = new Date(ms), hoje = new Date();
+  if (d.toDateString() === hoje.toDateString()) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: d.getFullYear() !== hoje.getFullYear() ? 'numeric' : undefined });
+}
+
 // ── Leitura ──
 async function _listarRecadosRecebidos() {
   const info = window._presencaInfo;
@@ -178,8 +191,7 @@ async function _atualizarBadgeMensagens() {
   let n = 0;
   try {
     const recados = await _listarRecadosRecebidos();
-    const ultimaLocal = Number(localStorage.getItem(chaveLocal()) || 0);
-    n += recados.filter(r => (r.enviadoEm?.toMillis?.() || 0) > ultimaLocal && r.de !== meuEmail()).length;
+    n += recados.filter(r => !r.lidoPor?.[meuEmail()]).length;
     const conversas = await _listarConversas();
     n += conversas.filter(c => {
       const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
@@ -211,7 +223,13 @@ async function _abrirThread(outroEmail, origemRecado) {
   corpo.innerHTML = `<div style="padding:10px;font-size:.75rem;color:var(--cinza-500,#8b897f);">Carregando…</div>`;
 
   const id = convId(meuEmail(), outroEmail);
-  const [mensagens] = await Promise.all([_listarMensagens(id), _marcarConversaLida(id)]);
+  const tarefas = [_listarMensagens(id), _marcarConversaLida(id)];
+  let recadoOrigem = null;
+  if (origemRecado) {
+    tarefas.push(_marcarRecadoLido(origemRecado));
+    try { const s = await getDoc(doc(db, 'recados', origemRecado)); if (s.exists()) recadoOrigem = s.data(); } catch (_) {}
+  }
+  const [mensagens] = await Promise.all(tarefas);
 
   const bolha = m => `
     <div style="display:flex;${m.de === meuEmail() ? 'justify-content:flex-end;' : ''}margin:4px 0;">
@@ -220,11 +238,18 @@ async function _abrirThread(outroEmail, origemRecado) {
       </div>
     </div>`;
 
+  const recadoHtml = recadoOrigem ? `
+    <div style="background:var(--azul-50,#f0f7ff);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+      <div style="font-size:.66rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado original — ${escHtmlMsg(recadoOrigem.deNome || recadoOrigem.de)}</div>
+      <div style="font-size:.76rem;color:var(--cinza-900,#1a1a17);margin-top:2px;">${escHtmlMsg(recadoOrigem.texto)}</div>
+    </div>` : '';
+
   corpo.innerHTML = `
     <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:6px;">
       <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
       <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">${_nomeContato(outroEmail)}</span>
     </div>
+    ${recadoHtml}
     <div class="msg-lista" style="max-height:220px;overflow-y:auto;padding:0 2px;">
       ${mensagens.length ? mensagens.map(bolha).join('') : '<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:6px 2px;">Nenhuma mensagem ainda.</div>'}
     </div>
@@ -479,28 +504,32 @@ async function _renderInicio() {
   const corpo = painel.querySelector('.msg-corpo');
   corpo.innerHTML = `<div style="padding:10px;font-size:.75rem;color:var(--cinza-500,#8b897f);">Carregando…</div>`;
 
-  const [recados, conversas] = await Promise.all([_listarRecadosRecebidos(), _listarConversas()]);
-  localStorage.setItem(chaveLocal(), String(Date.now()));
+  const [recadosTodos, conversasTodas] = await Promise.all([_listarRecadosRecebidos(), _listarConversas()]);
+
+  const recados = recadosTodos.filter(r => !r.lidoPor?.[meuEmail()]);
+  const conversas = conversasTodas.filter(c => {
+    const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
+    return (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
+  });
 
   const itemRecado = r => `
     <div class="msg-item-recado" data-id="${r.id}" data-de="${r.de}" style="padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,.05);">
-      <div style="display:flex;justify-content:space-between;gap:6px;">
-        <span style="font-size:.7rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado — ${r.deNome || r.de}</span>
+      <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;">
+        <span style="font-size:.7rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
+        <span style="font-size:.64rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(r.enviadoEm)}</span>
       </div>
       <div style="font-size:.76rem;color:var(--cinza-900,#1a1a17);margin-top:2px;">${escHtmlMsg(r.texto)}</div>
     </div>`;
 
   const itemConversa = c => {
     const outro = _outroParticipante(c);
-    const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
-    const naoLida = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
     return `
     <div class="msg-item-conversa" data-email="${outro}" style="padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,.05);display:flex;justify-content:space-between;align-items:center;gap:6px;">
       <div style="min-width:0;">
-        <div style="font-size:.76rem;font-weight:${naoLida ? '700' : '500'};color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_nomeContato(outro)}</div>
-        <div style="font-size:.7rem;color:var(--cinza-500,#8b897f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${escHtmlMsg(c.ultimaMensagemTexto || '')}</div>
+        <div style="font-size:.76rem;font-weight:700;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_nomeContato(outro)}</div>
+        <div style="font-size:.7rem;color:var(--cinza-500,#8b897f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${escHtmlMsg(c.ultimaMensagemTexto || '')}</div>
       </div>
-      ${naoLida ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--azul-400,#3b82f6);flex-shrink:0;"></span>' : ''}
+      <span style="font-size:.64rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(c.ultimaMensagemEm)}</span>
     </div>`;
   };
 
@@ -511,13 +540,15 @@ async function _renderInicio() {
       <button class="msg-btn-nova-conversa" style="width:100%;padding:7px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;text-align:left;cursor:pointer;">+ Mensagem com Destinatário Específico</button>
     </div>
     <div style="max-height:300px;overflow-y:auto;">
-      ${semNada ? `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhuma mensagem por aqui ainda.</div>` : ''}
+      ${semNada ? `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhuma mensagem pendente. Tudo lido por aqui.</div>` : ''}
       ${recados.map(itemRecado).join('')}
       ${conversas.map(itemConversa).join('')}
-    </div>`;
+    </div>
+    ${recadosTodos.length ? `<button class="msg-btn-historico" style="width:100%;margin-top:8px;padding:6px;border:none;background:none;color:var(--azul-400,#3b82f6);font-size:.7rem;cursor:pointer;">Ver histórico de recados da unidade/regional →</button>` : ''}`;
 
   corpo.querySelector('.msg-btn-novo-recado').onclick = _renderNovoRecado;
   corpo.querySelector('.msg-btn-nova-conversa').onclick = _renderNovaConversa;
+  corpo.querySelector('.msg-btn-historico')?.addEventListener('click', _renderHistoricoRecados);
   corpo.querySelectorAll('.msg-item-recado').forEach(el => {
     el.onclick = () => _abrirThread(el.dataset.de, el.dataset.id);
   });
@@ -526,6 +557,39 @@ async function _renderInicio() {
   });
 
   _atualizarBadgeMensagens();
+}
+
+async function _renderHistoricoRecados() {
+  const painel = document.getElementById('mensagens-panel');
+  if (!painel) return;
+  const corpo = painel.querySelector('.msg-corpo');
+  corpo.innerHTML = `<div style="padding:10px;font-size:.75rem;color:var(--cinza-500,#8b897f);">Carregando…</div>`;
+
+  const recados = await _listarRecadosRecebidos();
+  const item = r => {
+    const lido = !!r.lidoPor?.[meuEmail()];
+    return `
+    <div class="msg-item-recado" data-id="${r.id}" data-de="${r.de}" style="padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,.05);">
+      <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;">
+        <span style="font-size:.7rem;font-weight:700;color:${lido ? 'var(--cinza-500,#8b897f)' : 'var(--azul-400,#3b82f6)'};text-transform:uppercase;letter-spacing:.03em;">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
+        <span style="font-size:.64rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(r.enviadoEm)}</span>
+      </div>
+      <div style="font-size:.76rem;color:${lido ? 'var(--cinza-500,#8b897f)' : 'var(--cinza-900,#1a1a17)'};margin-top:2px;">${escHtmlMsg(r.texto)}</div>
+    </div>`;
+  };
+
+  corpo.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:6px;">
+      <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
+      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Histórico de recados</span>
+    </div>
+    <div style="max-height:340px;overflow-y:auto;">
+      ${recados.length ? recados.map(item).join('') : '<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhum recado recebido ainda.</div>'}
+    </div>`;
+  corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
+  corpo.querySelectorAll('.msg-item-recado').forEach(el => {
+    el.onclick = () => _abrirThread(el.dataset.de, el.dataset.id);
+  });
 }
 
 function _criarPainelMensagens() {
