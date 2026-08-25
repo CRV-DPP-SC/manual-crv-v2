@@ -7,7 +7,8 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
          updatePassword, reauthenticateWithCredential, EmailAuthProvider,
          sendPasswordResetEmail, onAuthStateChanged, signOut }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where,
+         serverTimestamp, getCountFromServer }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -37,6 +38,14 @@ const EMAILS_CRV = [
 ];
 const SENHA_TEMPORARIA = '12345crv';
 let usuarioAtual = null;
+
+// ══════════════════════════════════════════════
+// PRESENÇA — usuários online
+// ══════════════════════════════════════════════
+const PRESENCA_INTERVALO_MS = 10 * 60 * 1000;   // envia sinal de vida a cada 10 min
+const PRESENCA_TOLERANCIA_MS = 12 * 60 * 1000;  // considera "online" até 12 min sem sinal
+let _presencaTimer = null;
+let _presencaInfo  = null; // { tipo, unidadeEmail, unidadeNome, srCod, nome }
 
 // ══════════════════════════════════════════════
 // PERFIL — resolve localmente por padrão de e-mail
@@ -95,6 +104,162 @@ function _iniciaisPerfil(email) {
   return e.split('@')[0].substring(0, 2).toUpperCase();
 }
 
+// ── Resolve escopo de presença (tipo + unidade/regional) e envia sinal de vida ──
+async function _iniciarPresenca(user) {
+  const email = (user.email || '').toLowerCase();
+  const perfil = _resolverPerfil(email);
+  let tipo = null, unidadeEmail = '', unidadeNome = '', srCod = '';
+
+  if (perfil?.tipo === 'crv') {
+    tipo = 'crv';
+  } else if (perfil?.tipo === 'super') {
+    tipo = 'super';
+    srCod = email.split('@')[0].toUpperCase();
+  } else if (perfil?.tipo === 'dir' || perfil?.tipo === 'cpen') {
+    tipo = perfil.tipo;
+    unidadeEmail = email.replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
+                         .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
+    const unidade = (window.UNIDADES || []).find(u => u.email === unidadeEmail);
+    unidadeNome = unidade?.nome || '';
+    srCod = unidade?.sr || '';
+  } else {
+    try {
+      const snap = await getDoc(doc(db, 'usuarios_cadastrados', user.uid));
+      if (snap.exists() && snap.data().status === 'aprovado') {
+        tipo = 'servidor';
+        const dados = snap.data();
+        unidadeEmail = dados.emailUnidade || '';
+        const unidade = (window.UNIDADES || []).find(u => u.email === unidadeEmail);
+        unidadeNome = unidade?.nome || dados.nomeUnidade || '';
+        srCod = unidade?.sr || dados.srUnidade || '';
+      }
+    } catch (_) { /* sem cadastro aprovado — não registra presença */ }
+  }
+
+  if (!tipo) return;
+  _presencaInfo = { tipo, unidadeEmail, unidadeNome, srCod, nome: _nomeExibicao(email) };
+
+  const enviarPulso = async () => {
+    if (document.hidden) return;
+    try {
+      await setDoc(doc(db, 'presencas', user.uid), {
+        nome: _presencaInfo.nome, email, perfil: tipo,
+        unidadeEmail, unidadeNome, srCod,
+        updatedAt: serverTimestamp()
+      });
+      await setDoc(doc(db, 'presencas_pulso', user.uid), { ts: serverTimestamp() });
+    } catch (_) { /* falha de pulso não deve travar a navegação */ }
+  };
+
+  enviarPulso();
+  clearInterval(_presencaTimer);
+  _presencaTimer = setInterval(enviarPulso, PRESENCA_INTERVALO_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) enviarPulso(); });
+
+  _atualizarContadorOnline();
+  clearInterval(window._presencaContadorTimer);
+  window._presencaContadorTimer = setInterval(_atualizarContadorOnline, 2 * 60 * 1000);
+}
+
+function _pararPresenca(user) {
+  clearInterval(_presencaTimer);
+  clearInterval(window._presencaContadorTimer);
+  _presencaTimer = null;
+  _presencaInfo = null;
+  document.getElementById('online-panel')?.remove();
+  if (user) {
+    deleteDoc(doc(db, 'presencas', user.uid)).catch(() => {});
+    deleteDoc(doc(db, 'presencas_pulso', user.uid)).catch(() => {});
+  }
+}
+
+async function _atualizarContadorOnline() {
+  const num = document.getElementById('online-count-num');
+  if (!num) return;
+  try {
+    const cutoff = new Date(Date.now() - PRESENCA_TOLERANCIA_MS);
+    const q = query(collection(db, 'presencas_pulso'), where('ts', '>', cutoff));
+    const snap = await getCountFromServer(q);
+    num.textContent = snap.data().count;
+  } catch (_) { num.textContent = '—'; }
+}
+
+// ── Painel de detalhamento (clique no contador) ──
+window._toggleOnlinePanel = async function () {
+  const existente = document.getElementById('online-panel');
+  if (existente) { existente.remove(); return; }
+  if (!_presencaInfo || _presencaInfo.tipo === 'servidor') return; // servidor só vê o número
+
+  const cutoff = new Date(Date.now() - PRESENCA_TOLERANCIA_MS);
+  let itens = [];
+  try {
+    let q;
+    if (_presencaInfo.tipo === 'crv') {
+      q = query(collection(db, 'presencas'), where('updatedAt', '>', cutoff));
+    } else if (_presencaInfo.tipo === 'super') {
+      q = query(collection(db, 'presencas'), where('srCod', '==', _presencaInfo.srCod), where('updatedAt', '>', cutoff));
+    } else {
+      q = query(collection(db, 'presencas'), where('unidadeEmail', '==', _presencaInfo.unidadeEmail), where('updatedAt', '>', cutoff));
+    }
+    const snap = await getDocs(q);
+    snap.forEach(d => itens.push(d.data()));
+  } catch (e) { console.error('Erro ao carregar presenças:', e); }
+
+  const rotulo = { crv: 'DPP', super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coord. Penal', servidor: 'Servidor' };
+  const linha = p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
+      <span style="font-size:.78rem;color:var(--cinza-900,#1a1a17);">${p.nome || p.email}</span>
+      <span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;">${rotulo[p.perfil] || p.perfil}</span>
+    </div>`;
+
+  let corpo;
+  if (_presencaInfo.tipo === 'crv') {
+    const porSr = {};
+    itens.forEach(p => { const k = p.srCod || '—'; (porSr[k] = porSr[k] || []).push(p); });
+    corpo = Object.keys(porSr).sort().map(sr => {
+      const nomeSr = window.SR_INFO?.[sr]?.nome || sr;
+      const porUnidade = {};
+      porSr[sr].forEach(p => {
+        const k = p.unidadeEmail ? (p.unidadeNome || p.unidadeEmail) : nomeSr;
+        (porUnidade[k] = porUnidade[k] || []).push(p);
+      });
+      return `<div style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--cinza-500,#8b897f);padding:8px 4px 2px;">${sr} — ${nomeSr}</div>` +
+        Object.keys(porUnidade).map(un => `
+          <div style="font-size:.7rem;font-weight:600;color:var(--cinza-700,#4a4940);padding:3px 4px 1px 10px;">${un}</div>
+          ${porUnidade[un].map(linha).join('')}`).join('');
+    }).join('');
+  } else {
+    corpo = itens.map(linha).join('');
+  }
+  if (!corpo) corpo = `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Ninguém mais online no momento.</div>`;
+
+  const escopoTexto = _presencaInfo.tipo === 'crv' ? 'Todas as regionais'
+    : _presencaInfo.tipo === 'super' ? `Regional ${_presencaInfo.srCod}`
+    : `Unidade — ${_presencaInfo.unidadeNome || _presencaInfo.unidadeEmail}`;
+
+  const painel = document.createElement('div');
+  painel.id = 'online-panel';
+  painel.className = 'topbar-online-panel';
+  painel.innerHTML = `
+    <div style="font-size:.6rem;color:var(--cinza-500,#8b897f);text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 4px 6px;">${escopoTexto}</div>
+    <div style="max-height:320px;overflow-y:auto;">${corpo}</div>`;
+  document.body.appendChild(painel);
+  const chip = document.getElementById('online-chip');
+  if (chip) {
+    const r = chip.getBoundingClientRect();
+    painel.style.top = (r.bottom + 6) + 'px';
+    painel.style.right = (window.innerWidth - r.right) + 'px';
+  }
+  const fechar = ev => {
+    if (!painel.contains(ev.target) && ev.target.id !== 'online-chip' && !ev.target.closest?.('#online-chip')) {
+      painel.remove();
+      document.removeEventListener('click', fechar);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', fechar), 0);
+};
+
 function _mostrarTopbarUsuario(user, labelOverride) {
   const area = document.getElementById('topbar-user-area');
   if (!area) return;
@@ -112,11 +277,16 @@ function _mostrarTopbarUsuario(user, labelOverride) {
 
   area.innerHTML = `
     <div class="topbar-user-info">
+      <span id="online-chip" class="topbar-online-chip" onclick="window._toggleOnlinePanel()">
+        <span class="topbar-online-dot"></span>
+        <span id="online-count-num">—</span>
+      </span>
       <div class="topbar-user-avatar" style="background:${cor};">${iniciais}</div>
       <span class="topbar-user-nome">${nome}</span>
       <span class="topbar-user-badge">${label}</span>
       <button onclick="fazerLogout()" style="margin-left:6px;padding:4px 12px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Sair</button>
     </div>`;
+  _iniciarPresenca(user);
 }
 
 
@@ -189,6 +359,7 @@ onAuthStateChanged(auth, (user) => {
     if (info) info.textContent = 'Conectado como: ' + (user.email || '');
     _sincronizarUnidadesFirestore();
   } else {
+    _pararPresenca();
     _mostrarTopbarVisitante();
     /* Popup automático de login desativado temporariamente — reativar quando o Painel entrar no ar */
   }
@@ -550,9 +721,11 @@ window.trocarSenha = async function () {
 // LOGOUT
 // ══════════════════════════════════════════════
 window.fazerLogout = async function () {
+  const user = auth.currentUser;
   await signOut(auth);
   localStorage.removeItem('crv_ori_email');
   usuarioAtual = null; window._usuarioAtual = null;
+  _pararPresenca(user);
   _mostrarTopbarVisitante();
   window.navegarPara && navegarPara('inicio');
 };

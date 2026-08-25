@@ -1024,6 +1024,42 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 7px;
 }
+.topbar-online-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.08);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+.topbar-online-chip:hover { background: rgba(255,255,255,.14); }
+.topbar-online-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+}
+#online-count-num {
+  font-size: .68rem;
+  font-weight: 600;
+  color: rgba(255,255,255,.8);
+}
+.topbar-online-panel {
+  position: fixed;
+  width: 260px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
+  padding: 10px;
+  z-index: 2000;
+}
+@media(max-width:700px) {
+  .topbar-online-chip { display: none; }
+}
 .topbar-user-avatar {
   height: 30px;
   min-width: 30px;
