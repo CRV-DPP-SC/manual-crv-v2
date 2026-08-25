@@ -233,6 +233,7 @@ window._toggleOnlinePanel = async function () {
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
       <span title="${principal}" style="font-size:.78rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${principal}</span>
+      <span style="font-size:.72rem;flex-shrink:0;opacity:.55;">💬</span>
       ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;flex-shrink:0;">${secundario}</span>` : ''}
     </div>`;
   };
