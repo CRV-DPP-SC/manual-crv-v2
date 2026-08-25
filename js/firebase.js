@@ -197,12 +197,16 @@ window._toggleOnlinePanel = async function () {
     if (_presencaInfo.tipo === 'crv') {
       q = query(collection(db, 'presencas'), where('updatedAt', '>', cutoff));
     } else if (_presencaInfo.tipo === 'super') {
-      q = query(collection(db, 'presencas'), where('srCod', '==', _presencaInfo.srCod), where('updatedAt', '>', cutoff));
+      q = query(collection(db, 'presencas'), where('srCod', '==', _presencaInfo.srCod));
     } else {
-      q = query(collection(db, 'presencas'), where('unidadeEmail', '==', _presencaInfo.unidadeEmail), where('updatedAt', '>', cutoff));
+      q = query(collection(db, 'presencas'), where('unidadeEmail', '==', _presencaInfo.unidadeEmail));
     }
     const snap = await getDocs(q);
-    snap.forEach(d => itens.push(d.data()));
+    const cutoffMs = cutoff.getTime();
+    snap.forEach(d => {
+      const p = d.data();
+      if ((p.updatedAt?.toMillis?.() || 0) >= cutoffMs) itens.push(p);
+    });
   } catch (e) { console.error('Erro ao carregar presenças:', e); }
 
   const rotulo = { crv: 'DPP', super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coord. Penal', servidor: 'Servidor' };
