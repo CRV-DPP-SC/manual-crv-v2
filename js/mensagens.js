@@ -67,6 +67,11 @@ function _ouvirConversas() {
     if (primeira) { primeira = false; _atualizarBadgeMensagens(); return; }
     snap.docChanges().forEach(ch => {
       if (ch.type === 'removed') return;
+      // Ignora o eco local otimista da nossa própria escrita (ex.: _marcarConversaLida).
+      // Nesse momento serverTimestamp() ainda não resolveu (fica null no cache local),
+      // então "ultimaLeitura" leria como 0 e disparia um toast falso de "mensagem nova"
+      // toda vez que a própria gaveta marca a conversa como lida.
+      if (ch.doc.metadata.hasPendingWrites) return;
       const c = ch.doc.data();
       const outro = _outroParticipante(c);
       const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
