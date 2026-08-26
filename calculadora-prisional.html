@@ -580,6 +580,11 @@ function baixarImagemResumo(){
     var maxH=pageH-topY-margin;
     if(imgH>maxH){imgH=maxH;imgW=imgH*canvas.width/canvas.height;}
     var x=(pageW-imgW)/2;
+    var agora=new Date();
+    var dataHora=agora.toLocaleDateString('pt-BR')+' às '+agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('Gerado em '+dataHora,margin,12);
     doc.addImage(img,'PNG',x,topY,imgW,imgH);
     doc.save('resumo-vagas-recolhidos.pdf');
     showToast('✓ PDF gerado!');
