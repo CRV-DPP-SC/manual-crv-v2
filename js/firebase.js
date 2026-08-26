@@ -111,6 +111,195 @@ async function _aguardarUnidades(tentativas = 15) {
   }
 }
 
+// ── Envia a unidade/SR escolhida pro iframe do Painel (mesmo contrato de trocarUnidade) ──
+function _enviarSelecaoPainel(valor) {
+  const frame = document.getElementById('painel-embed-iframe');
+  if (!frame) return;
+  const jaCarregado = frame.src && frame.src.includes('painel');
+  if (window.navegarPara) window.navegarPara('painel-embed');
+  const enviar = () => frame.contentWindow?.postMessage({ crvSelecionarUnidade: valor }, '*');
+  if (jaCarregado) enviar();
+  else frame.addEventListener('load', enviar, { once: true });
+}
+
+// ── Seletor de Unidade/SR na barra do site principal, para CRV e SUPER ──
+// Substitui o antigo seletor interno do iframe do Painel (que ficava num cabeçalho
+// duplicado). Mesmo widget de árvore (com sanfona por SR) usado dentro do Painel,
+// só que vive aqui fora e comunica a escolha via postMessage.
+async function _montarSeletorPainelTopbar(perfil, user) {
+  const host = document.getElementById('topbar-painel-seletor-wrap');
+  if (!host) return;
+  await _aguardarUnidades();
+  const unidades = window.UNIDADES || [];
+  const srInfo   = window.SR_INFO  || {};
+
+  if (perfil.tipo === 'crv')        _montarTopbarTreeCRV(host, unidades, srInfo);
+  else if (perfil.tipo === 'super') _montarTopbarTreeSuper(host, unidades, srInfo, user);
+}
+
+function _montarTopbarTreeCRV(host, unidades, srInfo) {
+  const srs = [...new Set(unidades.map(u => u.sr))].sort();
+
+  function buildTree(filtro) {
+    filtro = (filtro || '').toLowerCase().trim();
+    let html = '';
+    srs.forEach(srCod => {
+      const info  = srInfo[srCod] || {};
+      const unids = unidades.filter(u => u.sr === srCod && (!filtro || u.nome.toLowerCase().includes(filtro)));
+      if (filtro && !unids.length &&
+          !srCod.toLowerCase().includes(filtro) &&
+          !(info.nome || '').toLowerCase().includes(filtro)) return;
+      const hasMatch = filtro && unids.length > 0;
+      html += `<div class="topbar-tree-sr" id="tbtsr-${srCod}">
+        <span class="topbar-tree-sr-arrow${hasMatch ? ' open' : ''}" id="tbtarr-${srCod}" onclick="event.stopPropagation();_tbTreeToggleSR('${srCod}')">▶</span>
+        <span style="flex:1;cursor:pointer;" onclick="_tbTreeSelSR('${srCod}')">${srCod} — ${info.nome || srCod}</span>
+      </div>
+      <div class="topbar-tree-units${hasMatch ? ' open' : ''}" id="tbtunits-${srCod}">
+        ${(filtro ? unids : unidades.filter(u => u.sr === srCod)).map(u =>
+          `<div class="topbar-tree-unit" onclick="_tbTreeSelUnit('${u.email}')">${u.nome}</div>`
+        ).join('')}
+      </div>`;
+    });
+    return html;
+  }
+
+  host.innerHTML = `
+    <div class="topbar-tree-wrap" id="topbar-tree-wrap">
+      <button class="topbar-tree-trigger" onclick="_tbTreeAbrirFechar(event)">
+        <span id="topbar-tree-label">✦ CRV — Visão geral</span>
+        <span class="topbar-tree-trigger-arrow" id="topbar-tree-trigger-arrow">▾</span>
+      </button>
+      <div class="topbar-tree-panel" id="topbar-tree-panel" style="display:none;">
+        <input class="topbar-tree-search" placeholder="🔍 Buscar regional ou unidade…"
+               oninput="_tbTreeFiltrar(this.value)" onclick="event.stopPropagation()">
+        <div id="topbar-tree-body">
+          <div class="topbar-tree-sr selecionado" onclick="_tbTreeSelCRV()"
+               style="border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px;">✦ CRV — Visão geral</div>
+          ${buildTree('')}
+        </div>
+      </div>
+    </div>`;
+
+  function _fechar() {
+    const panel = document.getElementById('topbar-tree-panel');
+    const arrow = document.getElementById('topbar-tree-trigger-arrow');
+    if (panel) panel.style.display = 'none';
+    if (arrow) arrow.textContent = '▾';
+  }
+  function _atualizarLabel(txt) {
+    const lbl = document.getElementById('topbar-tree-label');
+    if (lbl) lbl.textContent = txt;
+  }
+
+  window._tbTreeAbrirFechar = function (e) {
+    e.stopPropagation();
+    const panel  = document.getElementById('topbar-tree-panel');
+    const arrow  = document.getElementById('topbar-tree-trigger-arrow');
+    const search = document.querySelector('#topbar-tree-panel .topbar-tree-search');
+    if (!panel) return;
+    const aberto = panel.style.display !== 'none';
+    panel.style.display = aberto ? 'none' : 'block';
+    if (arrow) arrow.textContent = aberto ? '▾' : '▴';
+    if (!aberto && search) { search.value = ''; window._tbTreeFiltrar(''); search.focus(); }
+  };
+  window._tbTreeSelSR = function (srCod) {
+    _enviarSelecaoPainel('__sr_' + srCod + '__');
+    _atualizarLabel(`${srCod} — ${(srInfo[srCod] || {}).nome || srCod}`);
+    _fechar();
+  };
+  window._tbTreeSelCRV = function () {
+    _enviarSelecaoPainel('__crv__');
+    _atualizarLabel('✦ CRV — Visão geral');
+    _fechar();
+  };
+  window._tbTreeSelUnit = function (email) {
+    const u = unidades.find(x => x.email === email);
+    _enviarSelecaoPainel(email);
+    _atualizarLabel(u ? u.nome : email);
+    _fechar();
+  };
+  window._tbTreeFiltrar = function (val) {
+    const body = document.getElementById('topbar-tree-body');
+    if (!body) return;
+    const crvItem = body.querySelector('.topbar-tree-sr.selecionado');
+    body.innerHTML = (crvItem ? crvItem.outerHTML : '') + buildTree(val);
+  };
+  // Efeito sanfona: abrir uma SR fecha as demais.
+  window._tbTreeToggleSR = function (srCod) {
+    const estavaAberto = document.getElementById('tbtunits-' + srCod)?.classList.contains('open');
+    document.querySelectorAll('.topbar-tree-units.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.topbar-tree-sr-arrow.open').forEach(el => el.classList.remove('open'));
+    if (!estavaAberto) {
+      document.getElementById('tbtunits-' + srCod)?.classList.add('open');
+      document.getElementById('tbtarr-' + srCod)?.classList.add('open');
+    }
+  };
+
+  document.addEventListener('click', function _closeDrop(e) {
+    const wrap = document.getElementById('topbar-tree-wrap');
+    if (wrap && !wrap.contains(e.target)) _fechar();
+  });
+}
+
+function _montarTopbarTreeSuper(host, unidades, srInfo, user) {
+  const srM   = (user.email || '').toLowerCase().match(/^(sr\d+)@pp\.sc\.gov\.br$/);
+  const srCod = srM ? srM[1].toUpperCase() : null;
+  const nomeSr = srCod ? (srInfo[srCod]?.nome || srCod) : 'Minha SR';
+  const unidadesSr = unidades.filter(u => u.sr === srCod);
+
+  host.innerHTML = `
+    <div class="topbar-tree-wrap" id="topbar-tree-wrap">
+      <button class="topbar-tree-trigger" onclick="_tbTreeAbrirFechar(event)">
+        <span id="topbar-tree-label">✦ ${srCod || 'Minha SR'} — ${nomeSr}</span>
+        <span class="topbar-tree-trigger-arrow" id="topbar-tree-trigger-arrow">▾</span>
+      </button>
+      <div class="topbar-tree-panel" id="topbar-tree-panel" style="display:none;">
+        <div id="topbar-tree-body">
+          <div class="topbar-tree-sr selecionado" onclick="_tbTreeSelSuperSR()"
+               style="border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px;">✦ ${srCod || 'Minha SR'} — ${nomeSr}</div>
+          ${unidadesSr.map(u => `<div class="topbar-tree-unit" onclick="_tbTreeSelUnit('${u.email}')">${u.nome}</div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  function _fechar() {
+    const panel = document.getElementById('topbar-tree-panel');
+    const arrow = document.getElementById('topbar-tree-trigger-arrow');
+    if (panel) panel.style.display = 'none';
+    if (arrow) arrow.textContent = '▾';
+  }
+  function _atualizarLabel(txt) {
+    const lbl = document.getElementById('topbar-tree-label');
+    if (lbl) lbl.textContent = txt;
+  }
+
+  window._tbTreeAbrirFechar = function (e) {
+    e.stopPropagation();
+    const panel = document.getElementById('topbar-tree-panel');
+    const arrow = document.getElementById('topbar-tree-trigger-arrow');
+    if (!panel) return;
+    const aberto = panel.style.display !== 'none';
+    panel.style.display = aberto ? 'none' : 'block';
+    if (arrow) arrow.textContent = aberto ? '▾' : '▴';
+  };
+  window._tbTreeSelSuperSR = function () {
+    _enviarSelecaoPainel('__sr__');
+    _atualizarLabel(`✦ ${srCod || 'Minha SR'} — ${nomeSr}`);
+    _fechar();
+  };
+  window._tbTreeSelUnit = function (email) {
+    const u = unidadesSr.find(x => x.email === email);
+    _enviarSelecaoPainel(email);
+    _atualizarLabel(u ? u.nome : email);
+    _fechar();
+  };
+
+  document.addEventListener('click', function _closeDrop(e) {
+    const wrap = document.getElementById('topbar-tree-wrap');
+    if (wrap && !wrap.contains(e.target)) _fechar();
+  });
+}
+
 // ── Resolve escopo de presença (tipo + unidade/regional) e envia sinal de vida ──
 async function _iniciarPresenca(user) {
   const email = (user.email || '').toLowerCase();
@@ -339,12 +528,14 @@ function _mostrarTopbarUsuario(user, labelOverride) {
         <span style="font-size:.8rem;">✉️</span>
         <span id="msg-count-num" style="display:none;"></span>
       </span>
+      <div id="topbar-painel-seletor-wrap"></div>
       <div class="topbar-user-avatar" style="background:${cor};">${iniciais}</div>
       <span class="topbar-user-nome">${nome}</span>
       <span class="topbar-user-badge">${label}</span>
       <button onclick="fazerLogout()" style="margin-left:6px;padding:4px 12px;background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Sair</button>
     </div>`;
   _iniciarPresenca(user);
+  if (perfil?.tipo === 'crv' || perfil?.tipo === 'super') _montarSeletorPainelTopbar(perfil, user);
 }
 
 
@@ -1034,32 +1225,134 @@ function _fecharModal(id) { document.getElementById(id)?.classList.remove('abert
 
 function _htmlConteudoRestrito() {
   return `
-  <div class="restrito-grid">
-    <div class="restrito-card" onclick="document.getElementById('modal-grupo-crv').classList.add('aberto')"
-      style="background:linear-gradient(135deg,#0d2b55,#1a2a4a);border:2px solid #3b82f6;">
-      <span class="restrito-card-badge" style="background:#3b82f6;color:#fff;">SETOR</span>
-      <div class="restrito-card-icon">📁</div>
-      <div class="restrito-card-titulo">CRV</div>
-      <div class="restrito-card-sub" style="color:#93c5fd;">Ferramentas internas do setor</div>
-    </div>
-    <div class="restrito-card" onclick="document.getElementById('modal-grupo-jud').classList.add('aberto')"
-      style="background:linear-gradient(135deg,#312e81,#4338ca);border:2px solid #818cf8;">
-      <span class="restrito-card-badge" style="background:#818cf8;color:#fff;">JUDICIÁRIO</span>
-      <div class="restrito-card-icon">⚖️</div>
-      <div class="restrito-card-titulo">Sistemas — Judiciário</div>
-      <div class="restrito-card-sub" style="color:#c7d2fe;">SEEU · EPROC 1º · EPROC 2º</div>
-    </div>
-    <div class="restrito-card" onclick="document.getElementById('modal-grupo-estado').classList.add('aberto')"
-      style="background:linear-gradient(135deg,#064e3b,#0f6e56);border:2px solid #34d399;">
-      <span class="restrito-card-badge" style="background:#34d399;color:#064e3b;">ESTADO</span>
-      <div class="restrito-card-icon">🏛️</div>
-      <div class="restrito-card-titulo">Sistemas — Estado</div>
-      <div class="restrito-card-sub" style="color:#6ee7b7;">SIGRHPORTAL · iPEN · SGPe</div>
-    </div>
+  <div class="restrito-lista">
+    <button class="restrito-row" onclick="_abrirGrupoRestrito('crv')" style="--cor:#3b82f6;">
+      <span class="restrito-row-icon">📁</span>
+      <div class="restrito-row-corpo">
+        <div class="restrito-row-titulo">CRV <span class="restrito-row-badge" style="background:#3b82f6;">SETOR</span></div>
+        <div class="restrito-row-sub">Ferramentas internas do setor</div>
+      </div>
+      <span class="restrito-row-arrow">›</span>
+    </button>
+    <button class="restrito-row" onclick="_abrirGrupoRestrito('jud')" style="--cor:#818cf8;">
+      <span class="restrito-row-icon">⚖️</span>
+      <div class="restrito-row-corpo">
+        <div class="restrito-row-titulo">Sistemas — Judiciário <span class="restrito-row-badge" style="background:#818cf8;">JUDICIÁRIO</span></div>
+        <div class="restrito-row-sub">SEEU · EPROC 1º · EPROC 2º</div>
+      </div>
+      <span class="restrito-row-arrow">›</span>
+    </button>
+    <button class="restrito-row" onclick="_abrirGrupoRestrito('estado')" style="--cor:#34d399;">
+      <span class="restrito-row-icon">🏛️</span>
+      <div class="restrito-row-corpo">
+        <div class="restrito-row-titulo">Sistemas — Estado <span class="restrito-row-badge" style="background:#34d399;">ESTADO</span></div>
+        <div class="restrito-row-sub">SIGRHPORTAL · iPEN · SGPe</div>
+      </div>
+      <span class="restrito-row-arrow">›</span>
+    </button>
   </div>
   <div style="margin-top:8px;margin-bottom:20px;">
     <button onclick="fazerLogout()" style="height:38px;padding:0 18px;background:#fff;border:1.5px solid #dc2626;color:#dc2626;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;">Sair</button>
   </div>`;
+}
+
+/* ── Abre um grupo do Acesso Restrito na própria tela (sem modal), com botão de voltar ── */
+function _btnVoltarRestrito() {
+  return `<button onclick="_voltarRestrito()" style="display:flex;align-items:center;gap:5px;margin-bottom:16px;font-size:.82rem;background:none;border:none;color:var(--azul-500);cursor:pointer;font-family:inherit;padding:0;">← Voltar</button>`;
+}
+
+window._voltarRestrito = function () {
+  const pl = document.getElementById('restrito-placeholder');
+  if (pl) pl.innerHTML = _htmlConteudoRestrito();
+};
+
+window._abrirGrupoRestrito = function (grupo) {
+  const pl = document.getElementById('restrito-placeholder');
+  if (!pl) return;
+  if (grupo === 'crv')    pl.innerHTML = _htmlGrupoCRV();
+  if (grupo === 'jud')    pl.innerHTML = _htmlGrupoJud();
+  if (grupo === 'estado') pl.innerHTML = _htmlGrupoEstado();
+};
+
+function _htmlGrupoCRV() {
+  return _btnVoltarRestrito() + `
+    <h2 style="font-size:1.1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">📁 CRV — Ferramentas do Setor</h2>
+    <p style="font-size:.85rem;color:var(--txt-3);margin:0 0 20px;">Central de Regulação de Vagas · DPP/SC</p>
+    <div class="grupo-grid">
+      <div class="grupo-item" onclick="_abrirFerramenta('calculadora-prisional.html','📊 Calculadora de Gestão de Vagas')">
+        <div class="grupo-item-icon">📊</div>
+        <div class="grupo-item-titulo">Calculadora de Gestão de Vagas</div>
+        <div class="grupo-item-sub">Déficit, excedente e taxa de ocupação</div>
+      </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('gerador_despachos_crv.html','⚖️ Gerador de Despachos')">
+        <div class="grupo-item-icon">⚖️</div>
+        <div class="grupo-item-titulo">Gerador de Despachos</div>
+        <div class="grupo-item-sub">Deferir, Indeferir e Devolver — CRV</div>
+      </div>
+      <div class="grupo-item" onclick="window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')">
+        <div class="grupo-item-icon">📋</div>
+        <div class="grupo-item-titulo">Trello CRV ↗</div>
+        <div class="grupo-item-sub">Gestão de tarefas da equipe</div>
+      </div>
+      <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')">
+        <div class="grupo-item-icon">📅</div>
+        <div class="grupo-item-titulo">Escala de Plantão ↗</div>
+        <div class="grupo-item-sub">Acesso à escala da equipe</div>
+      </div>
+      <div class="grupo-item" id="card-escala-nova" style="display:none;" onclick="_abrirFerramenta('escala-plantao.html','🗓️ Escala de Plantão (nova)')">
+        <div class="grupo-item-icon">🗓️</div>
+        <div class="grupo-item-titulo">Escala de Plantão (nova)</div>
+        <div class="grupo-item-sub">Versão interna, em desenvolvimento</div>
+      </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('caixinha-controle.html','☕ Caixinha do Setor')">
+        <div class="grupo-item-icon">☕</div>
+        <div class="grupo-item-titulo">Caixinha do Setor</div>
+        <div class="grupo-item-sub">Controle de depósitos e prestação de contas</div>
+      </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('formulario-diarias-sc.html','✈️ Sistema de Diárias')">
+        <div class="grupo-item-icon">✈️</div>
+        <div class="grupo-item-titulo">Sistema de Diárias</div>
+        <div class="grupo-item-sub">MLR-41 e MLR-42</div>
+      </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('controle-viagens.html','🗺️ Controle de Viagens')">
+        <div class="grupo-item-icon">🗺️</div>
+        <div class="grupo-item-titulo">Controle de Viagens</div>
+        <div class="grupo-item-sub">Registro de saídas e itinerários</div>
+      </div>
+      <div class="grupo-item" onclick="abrirEditorUnidades()">
+        <div class="grupo-item-icon">✏️</div>
+        <div class="grupo-item-titulo">Atualização — Unidades Prisionais</div>
+        <div class="grupo-item-sub">Editar diretores, e-mails e telefones</div>
+      </div>
+      <div class="grupo-item" style="position:relative;" onclick="_abrirFerramenta('beneficios-relatorio.html','📋 Antecipação de Benefícios')">
+        <button type="button" class="grupo-item-link-btn" title="Copiar link do formulário público" onclick="event.stopPropagation();_copiarLinkBeneficios()">🔗</button>
+        <div class="grupo-item-icon">📋</div>
+        <div class="grupo-item-titulo">Antecipação de Benefícios</div>
+        <div class="grupo-item-sub">Respostas, compilado por SR/unidade e anexos</div>
+      </div>
+    </div>`;
+}
+
+function _htmlGrupoJud() {
+  return _btnVoltarRestrito() + `
+    <h2 style="font-size:1.1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">⚖️ Sistemas — Judiciário</h2>
+    <p style="font-size:.85rem;color:var(--txt-3);margin:0 0 20px;">Sistemas do Poder Judiciário de SC</p>
+    <div class="grupo-grid">
+      <a class="grupo-item" href="https://seeu.pje.jus.br/seeu/" target="_blank"><div class="grupo-item-icon">⚖️</div><div class="grupo-item-titulo">SEEU</div><div class="grupo-item-sub">Sistema Eletrônico de Execução Unificado</div></a>
+      <a class="grupo-item" href="https://eproc1g.tjsc.jus.br/eproc/" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 1º Grau</div><div class="grupo-item-sub">Processo eletrônico 1ª instância</div></a>
+      <a class="grupo-item" href="https://eproc2g.tjsc.jus.br/eproc/externo_controlador.php?acao=principal" target="_blank"><div class="grupo-item-icon">🏛️</div><div class="grupo-item-titulo">EPROC 2º Grau</div><div class="grupo-item-sub">Processo eletrônico 2ª instância</div></a>
+    </div>`;
+}
+
+function _htmlGrupoEstado() {
+  return _btnVoltarRestrito() + `
+    <h2 style="font-size:1.1rem;font-weight:700;color:var(--txt-1);margin:0 0 4px;">🏛️ Sistemas — Estado</h2>
+    <p style="font-size:.85rem;color:var(--txt-3);margin:0 0 20px;">Sistemas do Estado de Santa Catarina</p>
+    <div class="grupo-grid">
+      <a class="grupo-item" href="https://sigrhportal.sea.sc.gov.br/SIGRHNovoPortal/#/auth" target="_blank"><div class="grupo-item-icon">👤</div><div class="grupo-item-titulo">SIGRHPORTAL</div><div class="grupo-item-sub">Recursos Humanos SC</div></a>
+      <a class="grupo-item" href="https://www.sc.gov.br/sap/ipen/signin" target="_blank"><div class="grupo-item-icon">🔗</div><div class="grupo-item-titulo">i-PEN</div><div class="grupo-item-sub">Sistema prisional SC</div></a>
+      <a class="grupo-item" href="https://sgpe.sea.sc.gov.br" target="_blank"><div class="grupo-item-icon">📄</div><div class="grupo-item-titulo">SGPe</div><div class="grupo-item-sub">Gestão de Processos Eletrônicos</div></a>
+    </div>`;
 }
 
 /* ── Abre ferramenta interna no centro da página ── */

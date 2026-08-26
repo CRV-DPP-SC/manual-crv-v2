@@ -196,10 +196,19 @@ function renderizarUnidades() {
   }).join('');
 }
 
-function toggleSR(header) { header.classList.toggle('aberto'); }
+function toggleSR(header) {
+  const estavaAberto = header.classList.contains('aberto');
+  document.querySelectorAll('.sr-header.aberto').forEach(h => h.classList.remove('aberto'));
+  if (!estavaAberto) header.classList.add('aberto');
+}
 window.toggleSR = toggleSR;
 
-function toggleUP(header) { header.classList.toggle('aberto'); }
+function toggleUP(header) {
+  const bloco = header.closest('.sr-unidades');
+  const estavaAberto = header.classList.contains('aberto');
+  if (bloco) bloco.querySelectorAll('.up-header.aberto').forEach(h => h.classList.remove('aberto'));
+  if (!estavaAberto) header.classList.add('aberto');
+}
 window.toggleUP = toggleUP;
 
 function filtrarUnidades() {

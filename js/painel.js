@@ -229,6 +229,8 @@ function _iniciarListenerPendencias() {
     snap.forEach(d => {
       const s = { id: d.id, ...d.data() };
       if (s.statusGeral === 'cancelado') return;
+      // Negativa de qualquer envolvido encerra o processo — não é mais pendência de ninguém.
+      if ((s.assinantes || []).some(a => a.status === 'negado')) return;
       const minha = (s.assinantes || []).find(a =>
         a.email === usuarioAtual.email && a.status === 'pendente'
       );
@@ -333,6 +335,8 @@ async function _verificarPendenciasLogin() {
     snap.forEach(d => {
       const s = { id: d.id, ...d.data() };
       if (s.statusGeral === 'cancelado') return;
+      // Negativa de qualquer envolvido encerra o processo — não é mais pendência de ninguém.
+      if ((s.assinantes || []).some(a => a.status === 'negado')) return;
       const minha = (s.assinantes || []).find(a =>
         a.email === usuarioAtual.email && a.status === 'pendente'
       );
@@ -376,6 +380,13 @@ window.fecharModalPendencias = function () {
 };
 
 function renderizarCabecalhoPainel() {
+  // Cabeçalho interno do Painel desligado para todos os perfis: nome/e-mail/cargo já
+  // aparecem na barra do site principal, e o seletor de unidade/SR de CRV/SUPER agora
+  // vive lá também (js/firebase.js, _montarSeletorPainelTopbar), então não é mais
+  // necessário manter esse bloco visível para ninguém.
+  const headerEl = document.querySelector('.p-header');
+  if (headerEl) headerEl.style.display = 'none';
+
   const nomeEl   = document.getElementById('p-nome-usuario');
   const emailEl  = document.getElementById('p-email-usuario');
   const perfilEl = document.getElementById('p-perfil-badge');
@@ -628,6 +639,14 @@ function trocarUnidade(valor) {
   }
 }
 
+// ── Recebe a escolha de unidade/SR feita no seletor da barra do site principal ──
+// (mesmo iframe, comunicação via postMessage — ver js/firebase.js, _montarSeletorPainelTopbar)
+window.addEventListener('message', (e) => {
+  if (!e.data || typeof e.data.crvSelecionarUnidade !== 'string') return;
+  if (!['crv', 'super'].includes(perfilAtual)) return;
+  trocarUnidade(e.data.crvSelecionarUnidade);
+});
+
 function _atualizarTabAcessos() {
   const tabAcessos = document.getElementById('tab-acessos');
   if (tabAcessos) {
@@ -655,33 +674,142 @@ function _ehNavCartoes() {
 }
 
 const _GRUPO_DE_ABA = {
-  pendentes: 'transferencias', minhas: 'transferencias',
+  pendentes: 'transferencias', minhas: 'transferencias', negados: 'transferencias',
   historico: 'transferencias', cancelados: 'transferencias',
   acessos: 'acesso',
+  local_pendentes: 'transf_local', local_historico: 'transf_local',
+  externa_pendentes: 'transf_externa', externa_historico: 'transf_externa',
 };
-const _LABEL_GRUPO = { transferencias: 'Transferências', acesso: 'Controle de Acesso', ferramentas: 'Ferramentas' };
+const _LABEL_GRUPO = {
+  transferencias: 'Transferências', acesso: 'Controle de Acesso de Usuários', ferramentas: 'Ferramentas',
+  transf_local: 'Solicitação da Unidade', transf_externa: 'Solicitação de Outra Unidade',
+};
 const _LABEL_ABA   = {
-  pendentes: 'Assinaturas Pendentes', minhas: 'Solicitar Assinatura',
-  historico: 'Histórico', cancelados: 'Cancelados', acessos: 'Usuários',
+  historico: 'Histórico — Geral', cancelados: 'Cancelados', acessos: 'Usuários',
+  minhas: 'Solicitações da Unidade', negados: 'Com Negativa',
+  local_pendentes: 'Pendente(s) de Assinatura(s)', local_historico: 'Histórico',
+  externa_pendentes: 'Pendente(s) de Assinatura(s)', externa_historico: 'Histórico',
 };
+
+// ── Volta para a tela de grupo correta a partir do breadcrumb ──
+function _voltarParaGrupo() {
+  if (_grupoAtivo === 'transf_local')   { _mostrarSubGrupoTransf('local');   return; }
+  if (_grupoAtivo === 'transf_externa') { _mostrarSubGrupoTransf('externa'); return; }
+  _mostrarSubGrupo(_grupoAtivo);
+}
+
+// ── Rótulos sensíveis a modo leitura (viewer não recebe linguagem de "minha ação") ──
+function _lblAguardandoTitulo() { return modoLeitura() ? 'Aguardando manifestação' : 'Aguardando minha ação'; }
+function _lblAguardandoAba()    { return modoLeitura() ? 'Aguardando manifestação' : 'Aguardando sua manifestação'; }
+function _fraseSituacao(n) {
+  if (modoLeitura()) {
+    return n > 0
+      ? `Há ${n} pendência${n > 1 ? 's' : ''} de manifestação nesta unidade.`
+      : 'Não há pendências de manifestação nesta unidade.';
+  }
+  return n > 0
+    ? `Há ${n} pendência${n > 1 ? 's' : ''} aguardando sua manifestação.`
+    : 'Não há pendências aguardando sua manifestação.';
+}
 
 function _atualizarBreadcrumb() {
   const bc = document.getElementById('p-breadcrumb');
   if (!bc) return;
   if (!_ehNavCartoes() || !_abaAtiva) { bc.className = ''; return; }
   const gl = _LABEL_GRUPO[_grupoAtivo] || '';
-  const al = _LABEL_ABA[_abaAtiva]    || _abaAtiva;
+  const al = _abaAtiva === 'pendentes' ? _lblAguardandoAba() : (_LABEL_ABA[_abaAtiva] || _abaAtiva);
   bc.className = 'visivel';
   bc.innerHTML = `
     <button class="p-bc-btn" onclick="mostrarLandingGrupos()">← Início</button>
     <span class="p-bc-sep">/</span>
-    <button class="p-bc-btn" onclick="_mostrarSubGrupo('${_grupoAtivo}')">${gl}</button>
+    <button class="p-bc-btn" onclick="_voltarParaGrupo()">${gl}</button>
     <span class="p-bc-sep">/</span>
     <span class="p-bc-atual">${al}</span>`;
 }
 
-window.mostrarLandingGrupos = function() {
-  _grupoAtivo = null;
+// ── Classificador único (reaproveita calcularStatusGeral) ──
+function _classeDoc(s) { return calcularStatusGeral(s.assinantes || [], s.statusGeral).classe; }
+
+// ── Contagem de situação da unidade (Home) ──
+// Reaproveita os mesmos filtros de carregarAba('pendentes'/'minhas') e calcularStatusGeral.
+// Uma única leitura, sem listener novo. "aguardando" já respeita a regra de negócio:
+// pedido com qualquer negativa deixa de ser pendência de qualquer um (processo encerrado).
+async function _contarSituacaoUnidade() {
+  const resultado = { aguardando: 0, andamento: 0, negado: 0, concluido: 0, externaAndamento: 0 };
+  const unids = unidadesVisiveis().map(u => u.email);
+  if (!unids.length) return resultado;
+
+  const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+  snap.forEach(d => {
+    const s = d.data();
+    const jaNegado = (s.assinantes || []).some(a => a.status === 'negado');
+
+    if (!jaNegado) {
+      if (modoLeitura()) {
+        const temPendente = (s.assinantes || []).some(
+          a => a.emailUnidade === unidadeSelecionada.email && a.status === 'pendente'
+        );
+        if (temPendente) resultado.aguardando++;
+      } else if (podeAssinar()) {
+        const minhaAssinatura = (s.assinantes || []).find(a => a.email === usuarioAtual.email);
+        if (minhaAssinatura?.status === 'pendente') resultado.aguardando++;
+      }
+    }
+
+    const origemCorresponde = unids.includes(s.emailUnidadeOrigem);
+    const criadoPorMim = !modoLeitura() && s.emailCriador === usuarioAtual.email;
+    const cat = _classeDoc(s);
+
+    if (origemCorresponde || criadoPorMim) {
+      if (cat === 'andamento') resultado.andamento++;
+      else if (cat === 'negado') resultado.negado++;
+      else if (cat === 'concluido') resultado.concluido++;
+    } else if (cat === 'andamento') {
+      const envolvido = (s.assinantes || []).some(a =>
+        unids.includes(a.emailUnidade) || (!modoLeitura() && a.email === usuarioAtual.email)
+      );
+      if (envolvido) resultado.externaAndamento++;
+    }
+  });
+  return resultado;
+}
+
+function _indicadorCard(n, label, cor, onclickExpr, legenda) {
+  return `<button onclick="${onclickExpr}" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:16px 12px;text-align:center;cursor:pointer;font-family:inherit;">
+    <span style="display:block;font-size:1.7rem;font-weight:800;color:${cor};line-height:1;">${n}</span>
+    <span style="display:block;font-size:.66rem;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.04em;margin-top:6px;">${label}</span>
+    ${legenda ? `<span style="display:block;font-size:.64rem;color:var(--txt-4,var(--txt-3));margin-top:3px;font-weight:400;text-transform:none;letter-spacing:0;">${legenda}</span>` : ''}
+  </button>`;
+}
+
+// ── Busca (com cache) as solicitações de um escopo: 'local' (origem é esta unidade)
+// ou 'externa' (outra unidade é origem, mas esta unidade está entre os assinantes). ──
+let _transfDocsCache = { local: null, externa: null };
+
+async function _buscarTransferenciasEscopo(escopo) {
+  if (_transfDocsCache[escopo]) return _transfDocsCache[escopo];
+  const unids = unidadesVisiveis().map(u => u.email);
+  const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+  const lista = [];
+  snap.forEach(d => {
+    const s = { id: d.id, ...d.data() };
+    const origemLocal = unids.includes(s.emailUnidadeOrigem);
+    const criadoPorMim = !modoLeitura() && s.emailCriador === usuarioAtual.email;
+    if (escopo === 'local' && (origemLocal || criadoPorMim)) { lista.push(s); return; }
+    if (escopo === 'externa' && !origemLocal) {
+      const envolvido = (s.assinantes || []).some(a =>
+        unids.includes(a.emailUnidade) || (!modoLeitura() && a.email === usuarioAtual.email)
+      );
+      if (envolvido) lista.push(s);
+    }
+  });
+  _transfDocsCache[escopo] = lista;
+  return lista;
+}
+
+// ── Tela intermediária: Pendente(s) de Assinatura(s) / Histórico, para um escopo ──
+window._mostrarSubGrupoTransf = function(escopo) {
+  _grupoAtivo = escopo === 'local' ? 'transf_local' : 'transf_externa';
   _abaAtiva   = null;
   _atualizarBreadcrumb();
   document.querySelector('.p-abas').style.display = 'none';
@@ -690,35 +818,162 @@ window.mostrarLandingGrupos = function() {
   corpo.className = '';
 
   const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+  const titulo = escopo === 'local' ? `Solicitação de ${unNome || 'Unidade'}` : 'Solicitação de Outra Unidade';
+  const backBtn = `<button class="p-bc-btn" onclick="mostrarLandingGrupos()" style="display:flex;align-items:center;gap:5px;margin-bottom:20px;font-size:.82rem;">← Voltar</button>`;
 
-  const badgePend = document.getElementById('p-badge-pendentes');
-  const nPend = badgePend && badgePend.style.display !== 'none' ? badgePend.textContent : '';
-  const badgeAc = document.getElementById('p-badge-acessos');
-  const nAcessos = badgeAc && badgeAc.style.display !== 'none' ? badgeAc.textContent : '';
+  corpo.innerHTML = `
+  <div style="padding:24px 32px 40px;">
+    ${backBtn}
+    <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 20px;">${titulo}</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:760px;">
+      <button class="p-sub-card" onclick="abrirTransferenciasEscopo('${escopo}','pendentes')">
+        <span class="p-sub-card-icon">✍️</span>
+        <span class="p-sub-card-titulo">Pendente(s) de Assinatura(s)</span>
+        <span class="p-sub-card-sub">Ainda em andamento, sem negativa registrada</span>
+      </button>
+      <button class="p-sub-card" onclick="abrirTransferenciasEscopo('${escopo}','historico')">
+        <span class="p-sub-card-icon">📂</span>
+        <span class="p-sub-card-titulo">Histórico de Pedidos de Transferência${escopo === 'externa' ? ' de Outra Unidade' : ' Local'}</span>
+        <span class="p-sub-card-sub">Concluídas, com negativa ou canceladas</span>
+      </button>
+    </div>
+  </div>`;
+};
 
-  const grupos = [
-    { id: 'transferencias', icon: '📋', titulo: 'Transferências',     sub: 'Anuências, solicitações e histórico', cor: 'var(--azul-600)', badge: nPend },
-    ...(['dir','cpen'].includes(perfilAtual) || modoLeitura() ? [
-      { id: 'acesso',      icon: '🔐', titulo: 'Controle de Acesso', sub: 'Usuários e permissões da unidade',    cor: '#7c3aed', badge: nAcessos },
-    ] : []),
+// ── Abre a lista (Pendente ou Histórico) de um escopo ──
+let _transfHistDocsAtual   = [];
+let _transfHistEscopoAtual = 'local';
+let _transfHistFiltroAtual = 'todos';
+
+window.abrirTransferenciasEscopo = async function(escopo, sub) {
+  _abaAtiva   = `${escopo}_${sub}`;
+  _grupoAtivo = escopo === 'local' ? 'transf_local' : 'transf_externa';
+  _atualizarBreadcrumb();
+
+  const corpo = document.getElementById('p-corpo');
+  corpo.className = '';
+  corpo.innerHTML = '<div class="p-loading">Carregando…</div>';
+
+  const lista = await _buscarTransferenciasEscopo(escopo);
+
+  if (sub === 'pendentes') {
+    const filtrada = lista.filter(s => _classeDoc(s) === 'andamento');
+    renderizarLista(corpo, filtrada, escopo === 'local' ? 'localPendentes' : 'externaPendentes');
+  } else {
+    _transfHistEscopoAtual = escopo;
+    _transfHistFiltroAtual = 'todos';
+    _transfHistDocsAtual   = lista.filter(s => _classeDoc(s) !== 'andamento');
+    _renderizarTransfHistorico(corpo);
+  }
+};
+
+function _renderizarTransfHistorico(corpo) {
+  const opcoes = [
+    ['todos',     'Todos'],
+    ['concluido', 'Concluída'],
+    ['negado',    'Com negativa'],
+    ['cancelado', 'Cancelada'],
   ];
+  corpo.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <select onchange="filtrarTransfHistorico(this.value)"
+        style="max-width:260px;width:100%;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);color:var(--txt-1);font-family:inherit;font-size:.82rem;">
+        ${opcoes.map(([v, l]) => `<option value="${v}" ${_transfHistFiltroAtual === v ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div id="p-transf-hist-lista"></div>`;
+  _renderizarTransfHistoricoLista();
+}
+
+function _renderizarTransfHistoricoLista() {
+  const el = document.getElementById('p-transf-hist-lista');
+  if (!el) return;
+  const filtrada = _transfHistFiltroAtual === 'todos'
+    ? _transfHistDocsAtual
+    : _transfHistDocsAtual.filter(s => _classeDoc(s) === _transfHistFiltroAtual);
+  renderizarLista(el, filtrada, _transfHistEscopoAtual === 'local' ? 'localHistorico' : 'externaHistorico');
+}
+
+window.filtrarTransfHistorico = function (valor) {
+  _transfHistFiltroAtual = valor;
+  _renderizarTransfHistoricoLista();
+};
+
+window.mostrarLandingGrupos = async function() {
+  _grupoAtivo = null;
+  _abaAtiva   = null;
+  _atualizarBreadcrumb();
+  document.querySelector('.p-abas').style.display = 'none';
+  _transfDocsCache = { local: null, externa: null }; // reseta cache ao voltar pra Home
+
+  const corpo = document.getElementById('p-corpo');
+  corpo.className = 'p-home-wide';
+  corpo.innerHTML = '<div class="p-loading">Carregando…</div>';
+
+  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+
+  const { aguardando, andamento, negado, concluido, externaAndamento } = await _contarSituacaoUnidade();
+
+  const badgeAc = document.getElementById('p-badge-acessos');
+  const nAcessos = badgeAc && badgeAc.style.display !== 'none' ? (parseInt(badgeAc.textContent, 10) || 0) : 0;
+  const mostraAcesso = ['dir', 'cpen'].includes(perfilAtual) || modoLeitura();
+
+  const linhasTransf = [
+    { onclick: `_mostrarSubGrupoTransf('local')`,   icon: '🏢', titulo: `Solicitação de ${unNome || 'Unidade'}`, sub: 'Pedidos originados por esta unidade', badge: andamento },
+    { onclick: `_mostrarSubGrupoTransf('externa')`, icon: '📥', titulo: 'Solicitação de Outra Unidade', sub: 'Pedidos que dependem de manifestação desta unidade', badge: externaAndamento },
+  ];
+
+  const _linhaTransf = (it) => `
+    <button class="p-transf-row" onclick="${it.onclick}">
+      <span class="p-transf-icon">${it.icon}</span>
+      <div class="p-transf-corpo">
+        <div class="p-transf-titulo">${it.titulo}</div>
+        <div class="p-transf-sub">${it.sub}</div>
+      </div>
+      ${it.badge ? `<span class="p-transf-badge">${it.badge}</span>` : ''}
+      <span class="p-transf-arrow">›</span>
+    </button>`;
 
   corpo.innerHTML = `
   <div style="padding:28px 32px 40px;">
-    ${unNome ? `<p style="font-size:.78rem;color:var(--txt-3);margin:0 0 20px;">📍 ${unNome}</p>` : ''}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;max-width:760px;">
-      ${grupos.map(g => {
-        const extra = g.badge ? `<span class="p-grupo-badge">${g.badge}</span>` : '';
-        return `<button class="p-grupo-card" onclick="_mostrarSubGrupo('${g.id}')" style="--grupo-cor:${g.cor};">
-          <span class="p-grupo-icon">${g.icon}</span>
-          <div class="p-grupo-corpo">
-            <div class="p-grupo-titulo">${g.titulo} ${extra}</div>
-            <div class="p-grupo-sub">${g.sub}</div>
-          </div>
-          <span class="p-grupo-arrow" style="color:${g.cor};">›</span>
-        </button>`;
-      }).join('')}
+    ${unNome ? `<p style="font-size:.78rem;color:var(--txt-3);margin:0 0 4px;">📍 ${unNome}</p>` : ''}
+    <h1 style="font-size:1.15rem;font-weight:800;color:var(--txt-1);margin:0 0 6px;">VISÃO GERAL</h1>
+    <p style="font-size:.88rem;color:var(--txt-2);margin:0 0 22px;">${_fraseSituacao(aguardando)}</p>
+
+    ${aguardando > 0 ? `
+    <div style="background:var(--amarelo-light);border:1px solid var(--amarelo);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--txt-1);margin-bottom:2px;">⚠️ Atenção</div>
+        <div style="font-size:.8rem;color:var(--txt-2);">${_fraseSituacao(aguardando)}</div>
+      </div>
+      <button class="p-btn" style="background:var(--azul-600);color:#fff;white-space:nowrap;" onclick="carregarAba('pendentes')">Ver pendências →</button>
+    </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;max-width:980px;margin-bottom:28px;">
+      ${_indicadorCard(aguardando, 'DOCUMENTOS PENDENTES DE ASSINATURA', 'var(--amarelo)', "carregarAba('pendentes')", '')}
+      ${_indicadorCard(andamento,  'Em andamento',          'var(--azul-600)', "abrirTransferenciasEscopo('local','pendentes')", 'Pendente de alguma(s) assinatura(s)')}
+      ${_indicadorCard(concluido,  'Concluídas',            'var(--verde)', "abrirTransferenciasEscopo('local','historico')", 'Assinatura de todos os envolvidos')}
+      ${_indicadorCard(negado,     'ENCERRADO',             'var(--vermelho)', "carregarAba('historico')", 'Processo encerrado de plano em razão da recusa de assinatura')}
     </div>
+
+    <h2 style="font-size:.9rem;font-weight:700;color:var(--txt-1);margin:0 0 12px;">📋 Transferências</h2>
+    <div class="p-transf-lista" style="max-width:980px;margin-bottom:${mostraAcesso ? '28px' : '0'};">
+      ${linhasTransf.map(_linhaTransf).join('')}
+    </div>
+
+    ${mostraAcesso ? `
+    <h2 style="font-size:.9rem;font-weight:700;color:var(--txt-1);margin:0 0 12px;">🔐 Controle de Acesso de Usuários</h2>
+    <div class="p-transf-lista" style="max-width:980px;">
+      <button class="p-transf-row" onclick="_mostrarSubGrupo('acesso')">
+        <span class="p-transf-icon">👤</span>
+        <div class="p-transf-corpo">
+          <div class="p-transf-titulo">Usuários</div>
+          <div class="p-transf-sub">${nAcessos ? nAcessos + ' solicitação(ões) de acesso pendente(s)' : 'Gerenciar acesso dos servidores da unidade'}</div>
+        </div>
+        ${nAcessos ? `<span class="p-transf-badge" style="background:#f59e0b;">${nAcessos}</span>` : ''}
+        <span class="p-transf-arrow">›</span>
+      </button>
+    </div>` : ''}
   </div>`;
 };
 
@@ -799,6 +1054,7 @@ window.carregarAba = async function (aba) {
   _atualizarBarra();
 
   const corpo = document.getElementById('p-corpo');
+  corpo.className = '';
   corpo.innerHTML = '<div class="p-loading">Carregando…</div>';
 
   // Abas com lógica própria
@@ -819,6 +1075,10 @@ window.carregarAba = async function (aba) {
     if (aba === 'pendentes') {
       snap.forEach(d => {
         const s = { id: d.id, ...d.data() };
+        // Regra de negócio: uma negativa de qualquer envolvido encerra o processo
+        // (transferência exige anuência de todos). Um pedido já negado não é mais "pendente"
+        // para ninguém, mesmo que outro assinante ainda não tenha se manifestado.
+        if ((s.assinantes || []).some(a => a.status === 'negado')) return;
 
         if (modoLeitura()) {
           // Modo leitura: mostra docs em que a unidade visualizada tem assinatura pendente
@@ -844,9 +1104,24 @@ window.carregarAba = async function (aba) {
       });
 
     } else if (aba === 'historico') {
+      // Inclui todos os status (inclusive cancelado); o filtro de exibição é aplicado
+      // depois por _renderizarHistorico, preservando "exceto cancelado" como padrão inicial.
       snap.forEach(d => {
         const s = { id: d.id, ...d.data() };
-        if (s.statusGeral === 'cancelado') return;
+        const envolvido = (s.assinantes || []).some(a =>
+          unids.includes(a.emailUnidade) ||
+          (!modoLeitura() && a.email === usuarioAtual.email)
+        );
+        if (envolvido || unids.includes(s.emailUnidadeOrigem)) solicitacoes.push(s);
+      });
+      _historicoDocsCache = solicitacoes;
+      _renderizarHistorico(corpo);
+      return;
+
+    } else if (aba === 'negados') {
+      snap.forEach(d => {
+        const s = { id: d.id, ...d.data() };
+        if (calcularStatusGeral(s.assinantes || [], s.statusGeral).classe !== 'negado') return;
         const envolvido = (s.assinantes || []).some(a =>
           unids.includes(a.emailUnidade) ||
           (!modoLeitura() && a.email === usuarioAtual.email)
@@ -1111,6 +1386,42 @@ window.bulkExcluirAcess = async function() {
 };
 
 // ── RENDERIZA LISTA ──
+// ── Histórico: cache + filtro de status em memória (sem nova leitura ao trocar o filtro) ──
+let _historicoDocsCache = [];
+let _historicoFiltroStatus = 'ativos'; // 'ativos' = todos, exceto cancelados (comportamento padrão)
+
+function _aplicarFiltroHistorico(lista) {
+  if (_historicoFiltroStatus === 'todos') return lista;
+  if (_historicoFiltroStatus === 'ativos') return lista.filter(s => s.statusGeral !== 'cancelado');
+  return lista.filter(s => calcularStatusGeral(s.assinantes || [], s.statusGeral).classe === _historicoFiltroStatus);
+}
+
+function _renderizarHistorico(corpo) {
+  const opcoes = [
+    ['ativos',    'Todos, exceto cancelados'],
+    ['todos',     'Todos'],
+    ['andamento', 'Em andamento'],
+    ['concluido', 'Concluída'],
+    ['negado',    'Com negativa'],
+    ['cancelado', 'Cancelada'],
+  ];
+  corpo.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <select id="p-historico-filtro" onchange="filtrarHistorico(this.value)"
+        style="max-width:260px;width:100%;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);color:var(--txt-1);font-family:inherit;font-size:.82rem;">
+        ${opcoes.map(([v, l]) => `<option value="${v}" ${_historicoFiltroStatus === v ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div id="p-historico-lista"></div>`;
+  renderizarLista(document.getElementById('p-historico-lista'), _aplicarFiltroHistorico(_historicoDocsCache), 'historico');
+}
+
+window.filtrarHistorico = function (valor) {
+  _historicoFiltroStatus = valor;
+  const listaEl = document.getElementById('p-historico-lista');
+  if (listaEl) renderizarLista(listaEl, _aplicarFiltroHistorico(_historicoDocsCache), 'historico');
+};
+
 function renderizarLista(el, lista, tipo) {
   _selSols.clear();
   _selSolsData = lista;
@@ -1121,6 +1432,11 @@ function renderizarLista(el, lista, tipo) {
     minhas:     'Nenhuma solicitação encontrada.',
     historico:  'Nenhum registro no histórico.',
     cancelados: 'Nenhuma solicitação cancelada.',
+    negados:    'Nenhuma solicitação com negativa.',
+    localPendentes:   'Nenhuma solicitação local pendente de assinatura.',
+    localHistorico:   'Nenhum registro no histórico local.',
+    externaPendentes: 'Nenhuma solicitação de outra unidade pendente de assinatura.',
+    externaHistorico: 'Nenhum registro no histórico de outras unidades.',
   };
   if (!lista.length) {
     el.innerHTML = `<div class="p-vazio">${msgs[tipo] || 'Nenhum registro.'}</div>`;

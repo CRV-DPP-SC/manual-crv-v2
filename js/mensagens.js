@@ -80,6 +80,7 @@ function _ouvirConversas() {
 function _abrirDireto(outroEmail, origemRecado) {
   document.getElementById('online-panel')?.remove();
   _criarPainelMensagens();
+  _renderListaLateral();
   _abrirThread(outroEmail, origemRecado);
 }
 // Chamado pelo emoji 💬 no painel de online (só aparece pro DPP)
@@ -93,8 +94,8 @@ function _mostrarToast(titulo, texto, onClick) {
     background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);
     padding:10px 14px;cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .18s,transform .18s;`;
   el.innerHTML = `
-    <div style="font-size:.68rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">✉️ ${escHtmlMsg(titulo)}</div>
-    <div style="font-size:.78rem;color:var(--cinza-900,#1a1a17);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(texto || '')}</div>`;
+    <div style="font-size:.68rem;font-weight:700;color:var(--azul-500);text-transform:uppercase;letter-spacing:.03em;">✉️ ${escHtmlMsg(titulo)}</div>
+    <div style="font-size:.78rem;color:var(--txt-1);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(texto || '')}</div>`;
   el.onclick = () => { el.remove(); onClick?.(); };
   document.body.appendChild(el);
   requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
@@ -310,11 +311,22 @@ function _nomeContato(email) {
   return email;
 }
 
+let _conversaAtivaEmail = null;
+
+function _colunaThread() { return document.querySelector('#mensagens-panel .msg-thread-col'); }
+
+function _marcarItemAtivoNaLista(email) {
+  const col = document.querySelector('#mensagens-panel .msg-lista-col');
+  if (!col) return;
+  col.querySelectorAll('.msg-item').forEach(el => el.classList.toggle('ativa', el.dataset.email === email));
+}
+
 async function _abrirThread(outroEmail, origemRecado) {
-  const painel = document.getElementById('mensagens-panel');
-  if (!painel) return;
-  const corpo = painel.querySelector('.msg-corpo');
-  corpo.innerHTML = `<div style="padding:10px;font-size:.75rem;color:var(--cinza-500,#8b897f);">Carregando…</div>`;
+  const corpo = _colunaThread();
+  if (!corpo) return;
+  _conversaAtivaEmail = outroEmail;
+  _marcarItemAtivoNaLista(outroEmail);
+  corpo.innerHTML = `<div class="msg-thread-vazio">Carregando…</div>`;
 
   const id = convId(meuEmail(), outroEmail);
   const tarefas = [_listarMensagens(id), _marcarConversaLida(id)];
@@ -330,39 +342,38 @@ async function _abrirThread(outroEmail, origemRecado) {
     const ms = m.enviadaEm?.toMillis?.();
     const hora = ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     return `
-    <div style="display:flex;${eu ? 'justify-content:flex-end;' : ''}margin:4px 0;">
-      <div style="max-width:78%;padding:6px 10px;border-radius:10px;font-size:.78rem;background:${eu ? 'var(--azul-400,#3b82f6)' : '#f0f0ee'};color:${eu ? '#fff' : 'var(--cinza-900,#1a1a17)'};">
-        ${escHtmlMsg(m.texto)}
-        ${hora ? `<div style="font-size:.62rem;margin-top:3px;text-align:right;opacity:.7;">${hora}</div>` : ''}
-      </div>
+    <div class="msg-bolha ${eu ? 'msg-bolha-enviada' : 'msg-bolha-recebida'}">
+      ${escHtmlMsg(m.texto)}
+      ${hora ? `<span class="msg-bolha-hora">${hora}</span>` : ''}
     </div>`;
   };
 
   const recadoHtml = recadoOrigem ? `
-    <div style="background:var(--azul-50,#f0f7ff);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+    <div class="msg-recado-origem">
       <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;">
-        <span style="font-size:.66rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado original — ${escHtmlMsg(recadoOrigem.deNome || recadoOrigem.de)}</span>
-        <span style="font-size:.62rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(recadoOrigem.enviadoEm)}</span>
+        <span style="font-size:.66rem;font-weight:700;color:var(--azul-500);text-transform:uppercase;letter-spacing:.03em;">Recado original — ${escHtmlMsg(recadoOrigem.deNome || recadoOrigem.de)}</span>
+        <span style="font-size:.62rem;color:var(--txt-3);flex-shrink:0;">${_formatarData(recadoOrigem.enviadoEm)}</span>
       </div>
-      <div style="font-size:.76rem;color:var(--cinza-900,#1a1a17);margin-top:2px;">${escHtmlMsg(recadoOrigem.texto)}</div>
+      <div style="font-size:.76rem;color:var(--txt-1);margin-top:2px;">${escHtmlMsg(recadoOrigem.texto)}</div>
     </div>` : '';
 
   corpo.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:6px;">
-      <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
-      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">${_nomeContato(outroEmail)}</span>
+    <div class="msg-thread-head">
+      <div><div class="msg-thread-head-nome">${_nomeContato(outroEmail)}</div></div>
     </div>
     ${recadoHtml}
-    <div class="msg-lista" style="max-height:220px;overflow-y:auto;padding:0 2px;">
-      ${mensagens.length ? mensagens.map(bolha).join('') : '<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:6px 2px;">Nenhuma mensagem ainda.</div>'}
+    <div class="msg-thread-msgs">
+      ${mensagens.length ? mensagens.map(bolha).join('') : '<div class="msg-vazio">Nenhuma mensagem ainda.</div>'}
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;">
-      <input type="text" class="msg-input" placeholder="Escrever mensagem…" style="flex:1;font-size:.78rem;padding:6px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;">
-      <button class="msg-enviar" style="padding:6px 10px;border:none;border-radius:6px;background:var(--azul-400,#3b82f6);color:#fff;font-size:.78rem;cursor:pointer;">Enviar</button>
+    <div class="msg-thread-input">
+      <input type="text" class="msg-thread-campo" placeholder="Escrever uma mensagem…">
+      <button class="msg-thread-enviar" title="Enviar" aria-label="Enviar">➤</button>
     </div>`;
 
-  corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
-  const input = corpo.querySelector('.msg-input');
+  const msgsEl = corpo.querySelector('.msg-thread-msgs');
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  const input = corpo.querySelector('.msg-thread-campo');
   const enviar = async () => {
     const texto = input.value;
     if (!texto.trim()) return;
@@ -371,14 +382,14 @@ async function _abrirThread(outroEmail, origemRecado) {
       await enviarMensagem(outroEmail, texto, origemRecado);
       input.value = '';
       await _abrirThread(outroEmail, origemRecado);
-      _atualizarBadgeMensagens();
+      _renderListaLateral();
     } catch (e) {
       console.error('Erro ao enviar mensagem:', e);
       alert('Não foi possível enviar a mensagem. Tente novamente em instantes.');
       input.disabled = false;
     }
   };
-  corpo.querySelector('.msg-enviar').onclick = enviar;
+  corpo.querySelector('.msg-thread-enviar').onclick = enviar;
   input.addEventListener('keydown', ev => { if (ev.key === 'Enter') enviar(); });
   input.focus();
 }
@@ -388,8 +399,9 @@ function escHtmlMsg(s) {
 }
 
 async function _renderNovoRecado() {
-  const painel = document.getElementById('mensagens-panel');
-  const corpo = painel.querySelector('.msg-corpo');
+  const corpo = _colunaThread();
+  if (!corpo) return;
+  _marcarItemAtivoNaLista(null);
 
   const srCods = Object.keys(window.SR_INFO || {}).sort();
   let _seq = 0;
@@ -399,36 +411,38 @@ async function _renderNovoRecado() {
     const unidades = (window.UNIDADES || []).filter(u => u.sr === sr);
     const opcaoRegional = `
       <div class="nr-item" data-tipo="regional" data-destino="${sr}" data-label="${sr} — ${nomeSr}"
-        style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-400,#3b82f6);">Enviar para toda a regional</div>`;
+        style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-500);">Enviar para toda a regional</div>`;
     const unidadesHtml = unidades.map(u => `
       <div class="nr-item" data-tipo="unidade" data-destino="${escHtmlMsg(u.email)}" data-label="${escHtmlMsg(u.nome)}"
         style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(u.nome)}</div>`).join('');
     return `
       <div>
         <div class="nr-regional-row" data-alvo="${id}" style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;cursor:pointer;">
-          <span class="nr-seta" style="font-size:.6rem;color:var(--cinza-500,#8b897f);transition:transform .15s;flex-shrink:0;">▸</span>
-          <span style="flex:1;min-width:0;font-size:.74rem;font-weight:600;color:var(--cinza-800,#38372f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
+          <span class="nr-seta" style="font-size:.6rem;color:var(--txt-3);transition:transform .15s;flex-shrink:0;">▸</span>
+          <span style="flex:1;min-width:0;font-size:.74rem;font-weight:600;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
         </div>
         <div id="${id}" class="online-grupo-conteudo" style="display:none;">${opcaoRegional}${unidadesHtml}</div>
       </div>`;
   }).join('');
 
   corpo.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:8px;">
-      <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
-      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Novo recado</span>
+    <div class="msg-thread-head">
+      <div class="msg-thread-head-nome" style="flex:1;">Novo recado</div>
+      <button class="msg-drawer-close" title="Cancelar" aria-label="Cancelar">✕</button>
     </div>
-    <div class="nr-resumo" style="display:none;align-items:center;justify-content:space-between;gap:6px;padding:7px 8px;background:var(--azul-50,#f0f7ff);border-radius:6px;margin-bottom:8px;font-size:.75rem;color:var(--cinza-900,#1a1a17);">
-      <span>Para: <strong class="nr-resumo-nome"></strong></span>
-      <button class="nr-trocar" style="border:none;background:none;color:var(--azul-400,#3b82f6);font-size:.7rem;cursor:pointer;">trocar</button>
-    </div>
-    <div class="nr-dica" style="font-size:.68rem;color:var(--cinza-500,#8b897f);padding:0 2px 6px;">Clique numa regional para ver as unidades dela.</div>
-    <div class="nr-arvore" style="max-height:240px;overflow-y:auto;">${arvoreHtml}</div>
-    <div class="nr-form" style="display:none;flex-direction:column;gap:6px;">
-      <textarea class="msg-texto-recado" rows="3" placeholder="Escrever recado…" style="font-size:.78rem;padding:6px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;resize:vertical;"></textarea>
-      <button class="msg-enviar-recado" style="padding:7px;border:none;border-radius:6px;background:var(--azul-400,#3b82f6);color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;">Enviar recado</button>
+    <div class="msg-form-col">
+      <div class="nr-resumo msg-resumo-destino" style="display:none;">
+        <span>Para: <strong class="nr-resumo-nome"></strong></span>
+        <button class="nr-trocar" style="border:none;background:none;color:var(--azul-500);font-size:.7rem;cursor:pointer;font-family:inherit;">trocar</button>
+      </div>
+      <div class="nr-dica" style="font-size:.68rem;color:var(--txt-3);">Clique numa regional para ver as unidades dela.</div>
+      <div class="nr-arvore" style="max-height:320px;overflow-y:auto;">${arvoreHtml}</div>
+      <div class="nr-form" style="display:none;flex-direction:column;gap:8px;">
+        <textarea class="msg-texto-recado" rows="4" placeholder="Escrever recado…"></textarea>
+        <button class="msg-enviar-recado" style="padding:9px;border:none;border-radius:8px;background:var(--azul-600);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;">Enviar recado</button>
+      </div>
     </div>`;
-  corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
+  corpo.querySelector('.msg-drawer-close').onclick = () => _limparColunaThread();
 
   let destinoTipo = null, destino = null;
   const arvore  = corpo.querySelector('.nr-arvore');
@@ -477,7 +491,8 @@ async function _renderNovoRecado() {
     ev.target.disabled = true;
     try {
       await enviarRecado(destinoTipo, destino, texto);
-      _renderInicio();
+      _limparColunaThread();
+      _renderListaLateral();
     } catch (e) {
       console.error('Erro ao enviar recado:', e);
       alert('Não foi possível enviar o recado. Tente novamente em instantes.');
@@ -487,19 +502,22 @@ async function _renderNovoRecado() {
 }
 
 async function _renderNovaConversa() {
-  const painel = document.getElementById('mensagens-panel');
-  const corpo = painel.querySelector('.msg-corpo');
+  const corpo = _colunaThread();
+  if (!corpo) return;
+  _marcarItemAtivoNaLista(null);
   const info = window._presencaInfo;
   const ehDpp = info?.tipo === 'crv';
   const ehInstitucional = ['crv', 'super', 'dir', 'cpen'].includes(info?.tipo);
   corpo.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:6px;">
-      <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
-      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Mensagem direta</span>
+    <div class="msg-thread-head">
+      <div class="msg-thread-head-nome" style="flex:1;">Mensagem direta</div>
+      <button class="msg-drawer-close" title="Cancelar" aria-label="Cancelar">✕</button>
     </div>
-    <input type="text" class="msg-busca-contato" placeholder="${ehDpp ? 'Buscar por nome, unidade, SR…' : 'Buscar…'}" style="width:100%;box-sizing:border-box;font-size:.75rem;padding:6px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;margin-bottom:6px;">
-    <div class="msg-lista-contatos" style="max-height:280px;overflow-y:auto;"></div>`;
-  corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
+    <div class="msg-form-col">
+      <input type="text" class="msg-busca-contato" placeholder="${ehDpp ? 'Buscar por nome, unidade, SR…' : 'Buscar…'}">
+      <div class="msg-lista-contatos" style="max-height:400px;overflow-y:auto;"></div>
+    </div>`;
+  corpo.querySelector('.msg-drawer-close').onclick = () => _limparColunaThread();
 
   const institucionais = await _contatosElegiveis();
   const listaEl = corpo.querySelector('.msg-lista-contatos');
@@ -507,11 +525,11 @@ async function _renderNovaConversa() {
   const temContato = email => institucionais.some(c => c.email === email);
 
   const linhaContato = c => `
-    <div class="msg-contato" data-email="${c.email}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.nome}</div>`;
+    <div class="msg-contato" data-email="${c.email}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.nome}</div>`;
 
   const renderListaPlana = itens => {
     listaEl.innerHTML = itens.length ? itens.map(linhaContato).join('')
-      : `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:6px;">Nenhum contato encontrado.</div>`;
+      : `<div style="font-size:.75rem;color:var(--txt-3);padding:6px;">Nenhum contato encontrado.</div>`;
   };
 
   const renderArvore = () => {
@@ -522,7 +540,7 @@ async function _renderNovaConversa() {
       const nomeSr = window.SR_INFO?.[sr]?.nome || sr;
       const srEmail = sr.toLowerCase() + '@pp.sc.gov.br';
       const contatoSr = temContato(srEmail)
-        ? `<div class="msg-contato" data-email="${srEmail}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-400,#3b82f6);">Superintendente</div>` : '';
+        ? `<div class="msg-contato" data-email="${srEmail}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-500);">Superintendente</div>` : '';
       const unidadesHtml = (window.UNIDADES || []).filter(u => u.sr === sr).map(u => {
         const uid = 'nc-' + (_seq++);
         const dirEmail = u.email.split('@')[0] + 'dir@pp.sc.gov.br';
@@ -534,17 +552,17 @@ async function _renderNovaConversa() {
         return `
           <div>
             <div class="nc-unidade-row" data-alvo="${uid}" style="display:flex;align-items:center;gap:6px;padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;">
-              <span class="nc-seta" style="font-size:.55rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">▸</span>
+              <span class="nc-seta" style="font-size:.55rem;color:var(--txt-3);flex-shrink:0;">▸</span>
               <span style="flex:1;min-width:0;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nome}</span>
             </div>
-            <div id="${uid}" class="online-grupo-conteudo" style="display:none;">${pessoas || '<div style="font-size:.7rem;color:var(--cinza-500,#8b897f);padding:4px 6px 4px 42px;">—</div>'}</div>
+            <div id="${uid}" class="online-grupo-conteudo" style="display:none;">${pessoas || '<div style="font-size:.7rem;color:var(--txt-3);padding:4px 6px 4px 42px;">—</div>'}</div>
           </div>`;
       }).join('');
       return `
         <div>
           <div class="nc-regional-row" data-alvo="${id}" style="display:flex;align-items:center;gap:6px;padding:6px;border-radius:6px;cursor:pointer;">
-            <span class="nc-seta" style="font-size:.6rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">▸</span>
-            <span style="flex:1;min-width:0;font-size:.74rem;font-weight:600;color:var(--cinza-800,#38372f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
+            <span class="nc-seta" style="font-size:.6rem;color:var(--txt-3);flex-shrink:0;">▸</span>
+            <span style="flex:1;min-width:0;font-size:.74rem;font-weight:600;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${sr} — ${nomeSr}</span>
           </div>
           <div id="${id}" class="online-grupo-conteudo" style="display:none;">${contatoSr}${unidadesHtml}</div>
         </div>`;
@@ -601,95 +619,104 @@ async function _renderNovaConversa() {
   buscaEl.focus();
 }
 
-async function _renderInicio() {
-  const painel = document.getElementById('mensagens-panel');
-  if (!painel) return;
-  const corpo = painel.querySelector('.msg-corpo');
-  corpo.innerHTML = `<div style="padding:10px;font-size:.75rem;color:var(--cinza-500,#8b897f);">Carregando…</div>`;
+function _limparColunaThread() {
+  _conversaAtivaEmail = null;
+  _marcarItemAtivoNaLista(null);
+  const corpo = _colunaThread();
+  if (corpo) corpo.innerHTML = `<div class="msg-thread-vazio">Selecione uma conversa ou inicie uma nova.</div>`;
+}
 
-  const [recadosTodos, conversasTodas] = await Promise.all([_listarRecadosRecebidos(), _listarConversas()]);
+async function _renderListaLateral() {
+  const col = document.querySelector('#mensagens-panel .msg-lista-col');
+  if (!col) return;
 
-  const recados = recadosTodos.filter(r => !r.lidoPor?.[meuEmail()]);
-  const conversas = conversasTodas.filter(c => {
-    const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
-    return (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
-  });
+  const [recadosTodos, conversas] = await Promise.all([_listarRecadosRecebidos(), _listarConversas()]);
+  const recadosNaoLidos = recadosTodos.filter(r => !r.lidoPor?.[meuEmail()]);
 
   const itemRecado = r => `
-    <div class="msg-item-recado" data-id="${r.id}" data-de="${r.de}" style="padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,.05);">
-      <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;">
-        <span style="font-size:.7rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
-        <span style="font-size:.64rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(r.enviadoEm)}</span>
+    <div class="msg-item msg-item-recado" data-id="${r.id}" data-de="${r.de}">
+      <div class="msg-item-corpo">
+        <div class="msg-item-topo">
+          <span class="msg-item-nome nl" style="color:var(--azul-500);">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
+          <span class="msg-item-hora">${_formatarData(r.enviadoEm)}</span>
+        </div>
+        <div class="msg-item-prev nl">${escHtmlMsg(r.texto)}</div>
       </div>
-      <div style="font-size:.76rem;color:var(--cinza-900,#1a1a17);margin-top:2px;">${escHtmlMsg(r.texto)}</div>
+      <span class="msg-dot"></span>
     </div>`;
 
   const itemConversa = c => {
     const outro = _outroParticipante(c);
+    const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
+    const naoLida = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
     return `
-    <div class="msg-item-conversa" data-email="${outro}" style="padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,.05);display:flex;justify-content:space-between;align-items:center;gap:6px;">
-      <div style="min-width:0;">
-        <div style="font-size:.76rem;font-weight:700;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_nomeContato(outro)}</div>
-        <div style="font-size:.7rem;color:var(--cinza-500,#8b897f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${escHtmlMsg(c.ultimaMensagemTexto || '')}</div>
+    <div class="msg-item msg-item-conversa" data-email="${outro}">
+      <div class="msg-item-corpo">
+        <div class="msg-item-topo">
+          <span class="msg-item-nome ${naoLida ? 'nl' : ''}">${_nomeContato(outro)}</span>
+          <span class="msg-item-hora">${_formatarData(c.ultimaMensagemEm)}</span>
+        </div>
+        <div class="msg-item-prev ${naoLida ? 'nl' : ''}">${escHtmlMsg(c.ultimaMensagemTexto || 'Sem mensagens ainda')}</div>
       </div>
-      <span style="font-size:.64rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(c.ultimaMensagemEm)}</span>
+      ${naoLida ? '<span class="msg-dot"></span>' : ''}
     </div>`;
   };
 
-  const semNada = !recados.length && !conversas.length;
-  corpo.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
-      <button class="msg-btn-novo-recado" style="width:100%;padding:7px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;text-align:left;cursor:pointer;">+ Recado para todos usuários da Unidade Prisional</button>
-      <button class="msg-btn-nova-conversa" style="width:100%;padding:7px 8px;border:0.5px solid rgba(0,0,0,.15);border-radius:6px;background:#fff;font-size:.72rem;text-align:left;cursor:pointer;">+ Mensagem com Destinatário Específico</button>
+  const semNada = !recadosNaoLidos.length && !conversas.length;
+  col.innerHTML = `
+    <div class="msg-acoes">
+      <button class="msg-btn-acao msg-btn-novo-recado">+ Recado para toda a unidade</button>
+      <button class="msg-btn-acao msg-btn-nova-conversa">+ Nova conversa</button>
     </div>
-    <div style="max-height:300px;overflow-y:auto;">
-      ${semNada ? `<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhuma mensagem pendente. Tudo lido por aqui.</div>` : ''}
-      ${recados.map(itemRecado).join('')}
-      ${conversas.map(itemConversa).join('')}
-    </div>
-    ${recadosTodos.length ? `<button class="msg-btn-historico" style="width:100%;margin-top:8px;padding:6px;border:none;background:none;color:var(--azul-400,#3b82f6);font-size:.7rem;cursor:pointer;">Ver histórico de recados da unidade/regional →</button>` : ''}`;
+    ${recadosNaoLidos.length ? `<div class="msg-secao-label">Recados</div>${recadosNaoLidos.map(itemRecado).join('')}` : ''}
+    ${conversas.length ? `<div class="msg-secao-label">Conversas</div>${conversas.map(itemConversa).join('')}` : ''}
+    ${semNada ? '<div class="msg-vazio">Nenhuma mensagem ainda. Comece uma conversa acima.</div>' : ''}
+    ${recadosTodos.length ? `<button class="msg-btn-acao msg-btn-historico" style="margin-top:10px;color:var(--azul-500);">Ver histórico de recados →</button>` : ''}`;
 
-  corpo.querySelector('.msg-btn-novo-recado').onclick = _renderNovoRecado;
-  corpo.querySelector('.msg-btn-nova-conversa').onclick = _renderNovaConversa;
-  corpo.querySelector('.msg-btn-historico')?.addEventListener('click', _renderHistoricoRecados);
-  corpo.querySelectorAll('.msg-item-recado').forEach(el => {
+  col.querySelector('.msg-btn-novo-recado').onclick = _renderNovoRecado;
+  col.querySelector('.msg-btn-nova-conversa').onclick = _renderNovaConversa;
+  col.querySelector('.msg-btn-historico')?.addEventListener('click', _renderHistoricoRecados);
+  col.querySelectorAll('.msg-item-recado').forEach(el => {
     el.onclick = () => _abrirThread(el.dataset.de, el.dataset.id);
   });
-  corpo.querySelectorAll('.msg-item-conversa').forEach(el => {
+  col.querySelectorAll('.msg-item-conversa').forEach(el => {
     el.onclick = () => _abrirThread(el.dataset.email);
   });
+  _marcarItemAtivoNaLista(_conversaAtivaEmail);
 
   _atualizarBadgeMensagens();
 }
 
 async function _renderHistoricoRecados() {
-  const painel = document.getElementById('mensagens-panel');
-  if (!painel) return;
-  const corpo = painel.querySelector('.msg-corpo');
-  corpo.innerHTML = `<div style="padding:10px;font-size:.75rem;color:var(--cinza-500,#8b897f);">Carregando…</div>`;
+  const corpo = _colunaThread();
+  if (!corpo) return;
+  _marcarItemAtivoNaLista(null);
+  corpo.innerHTML = `<div class="msg-thread-vazio">Carregando…</div>`;
 
   const recados = await _listarRecadosRecebidos();
   const item = r => {
     const lido = !!r.lidoPor?.[meuEmail()];
     return `
-    <div class="msg-item-recado" data-id="${r.id}" data-de="${r.de}" style="padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid rgba(0,0,0,.05);">
-      <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;">
-        <span style="font-size:.7rem;font-weight:700;color:${lido ? 'var(--cinza-500,#8b897f)' : 'var(--azul-400,#3b82f6)'};text-transform:uppercase;letter-spacing:.03em;">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
-        <span style="font-size:.64rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(r.enviadoEm)}</span>
+    <div class="msg-item msg-item-recado" data-id="${r.id}" data-de="${r.de}" style="border-radius:8px;">
+      <div class="msg-item-corpo">
+        <div class="msg-item-topo">
+          <span class="msg-item-nome" style="color:${lido ? 'var(--txt-3)' : 'var(--azul-500)'};">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
+          <span class="msg-item-hora">${_formatarData(r.enviadoEm)}</span>
+        </div>
+        <div class="msg-item-prev" style="color:${lido ? 'var(--txt-3)' : 'var(--txt-1)'};">${escHtmlMsg(r.texto)}</div>
       </div>
-      <div style="font-size:.76rem;color:${lido ? 'var(--cinza-500,#8b897f)' : 'var(--cinza-900,#1a1a17)'};margin-top:2px;">${escHtmlMsg(r.texto)}</div>
     </div>`;
   };
 
   corpo.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;padding:4px 2px 8px;border-bottom:0.5px solid rgba(0,0,0,.08);margin-bottom:6px;">
-      <button class="msg-voltar" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--cinza-500,#8b897f);">←</button>
-      <span style="font-size:.78rem;font-weight:600;color:var(--cinza-800,#38372f);">Histórico de recados</span>
+    <div class="msg-thread-head">
+      <div class="msg-thread-head-nome" style="flex:1;">Histórico de recados</div>
+      <button class="msg-drawer-close" title="Cancelar" aria-label="Cancelar">✕</button>
     </div>
-    <div style="max-height:340px;overflow-y:auto;">
-      ${recados.length ? recados.map(item).join('') : '<div style="font-size:.75rem;color:var(--cinza-500,#8b897f);padding:8px 4px;">Nenhum recado recebido ainda.</div>'}
+    <div class="msg-form-col">
+      ${recados.length ? recados.map(item).join('') : '<div class="msg-vazio">Nenhum recado recebido ainda.</div>'}
     </div>`;
-  corpo.querySelector('.msg-voltar').onclick = () => _renderInicio();
+  corpo.querySelector('.msg-drawer-close').onclick = () => _limparColunaThread();
   corpo.querySelectorAll('.msg-item-recado').forEach(el => {
     el.onclick = () => _abrirThread(el.dataset.de, el.dataset.id);
   });
@@ -701,35 +728,31 @@ function _criarPainelMensagens() {
 
   painel = document.createElement('div');
   painel.id = 'mensagens-panel';
-  painel.className = 'topbar-online-panel';
+  painel.className = 'msg-overlay';
   painel.innerHTML = `
-    <div style="font-size:.6rem;color:var(--cinza-500,#8b897f);text-transform:uppercase;letter-spacing:.04em;font-weight:700;padding:2px 4px 6px;">Mensagens</div>
-    <div class="msg-corpo"></div>`;
+    <div class="msg-drawer">
+      <div class="msg-drawer-head">
+        <h2>Mensagens</h2>
+        <button class="msg-drawer-close" id="msg-drawer-fechar" title="Fechar" aria-label="Fechar">✕</button>
+      </div>
+      <div class="msg-drawer-body">
+        <div class="msg-lista-col"></div>
+        <div class="msg-thread-col"><div class="msg-thread-vazio">Selecione uma conversa ou inicie uma nova.</div></div>
+      </div>
+    </div>`;
   document.body.appendChild(painel);
 
-  const chip = document.getElementById('msg-chip');
-  if (chip) {
-    const r = chip.getBoundingClientRect();
-    painel.style.top = (r.bottom + 6) + 'px';
-    painel.style.right = (window.innerWidth - r.right) + 'px';
-  }
-
-  const fechar = ev => {
-    const caminho = ev.composedPath ? ev.composedPath() : [ev.target];
-    if (!caminho.includes(painel) && !caminho.includes(document.getElementById('msg-chip'))) {
-      painel.remove();
-      document.removeEventListener('click', fechar);
-    }
-  };
-  setTimeout(() => document.addEventListener('click', fechar), 0);
+  const fechar = () => { painel.remove(); _conversaAtivaEmail = null; };
+  painel.querySelector('#msg-drawer-fechar').onclick = fechar;
+  painel.addEventListener('mousedown', ev => { if (ev.target === painel) fechar(); });
 
   return painel;
 }
 
 window._toggleMensagensPanel = function () {
   const existente = document.getElementById('mensagens-panel');
-  if (existente) { existente.remove(); return; }
+  if (existente) { existente.remove(); _conversaAtivaEmail = null; return; }
   if (!_user || !window._presencaInfo) return;
   _criarPainelMensagens();
-  _renderInicio();
+  _renderListaLateral();
 };

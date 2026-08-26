@@ -405,6 +405,28 @@
       border-radius: 10px; background: #dc2626; color: #fff;
     }
 
+    /* ── HOME (dir/cpen) — largura ampliada + lista de linhas ── */
+    #p-corpo.p-home-wide { max-width: 1180px; }
+
+    .p-transf-lista { display: flex; flex-direction: column; gap: 10px; }
+    .p-transf-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--bg-card);
+      box-shadow: var(--shadow-sm); cursor: pointer; text-align: left;
+      font-family: inherit; width: 100%; transition: all .15s;
+    }
+    .p-transf-row:hover { box-shadow: var(--shadow-md); border-color: var(--azul-400); }
+    .p-transf-icon   { font-size: 1.25rem; flex-shrink: 0; width: 30px; text-align: center; }
+    .p-transf-corpo  { flex: 1; min-width: 0; }
+    .p-transf-titulo { font-size: .88rem; font-weight: 700; color: var(--txt-1); }
+    .p-transf-sub    { font-size: .74rem; color: var(--txt-3); margin-top: 2px; }
+    .p-transf-badge  {
+      font-size: .64rem; font-weight: 700; padding: 2px 9px;
+      border-radius: 10px; background: #dc2626; color: #fff; flex-shrink: 0;
+    }
+    .p-transf-arrow  { font-size: 1rem; color: var(--txt-3); flex-shrink: 0; font-weight: 700; opacity: .6; }
+
     /* ── DASHBOARD / NAVEGAÇÃO CRV / SR ── */
     #p-corpo.dashboard-mode { padding: 0; max-width: none; }
 
@@ -576,9 +598,6 @@
         <span class="p-perfil-badge" id="p-perfil-badge">—</span>
       </div>
       <div id="p-seletor-unidade-wrap"></div>
-    </div>
-    <div class="p-header-acoes">
-      <button class="p-btn-logout" onclick="fazerLogoutPainel()">Sair</button>
     </div>
   </div>
 
