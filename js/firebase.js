@@ -220,14 +220,17 @@ window._toggleOnlinePanel = async function () {
   const n2 = n => String(n).padStart(2, '0');
   const funcaoPrimaria = { super: 'Superintendente', dir: 'Diretor(a)', cpen: 'Coordenador de Execução Penal' };
   const rotuloBadge = { crv: 'DPP', servidor: 'Servidor' };
+  const souDpp = _presencaInfo?.tipo === 'crv';
   const linha = p => {
     const funcao = funcaoPrimaria[p.perfil];
     const principal = funcao || p.nome || p.email;
     const secundario = funcao ? '' : (rotuloBadge[p.perfil] || '');
+    const mostrarMsg = souDpp && p.email !== usuarioAtual?.email?.toLowerCase();
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
       <span title="${principal}" style="font-size:.78rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${principal}</span>
+      ${mostrarMsg ? `<span onclick="window._abrirConversaOnline && window._abrirConversaOnline('${p.email}')" title="Mandar mensagem" style="font-size:.72rem;flex-shrink:0;opacity:.55;cursor:pointer;">💬</span>` : ''}
       ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;flex-shrink:0;">${secundario}</span>` : ''}
     </div>`;
   };

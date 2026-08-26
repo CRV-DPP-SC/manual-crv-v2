@@ -82,6 +82,8 @@ function _abrirDireto(outroEmail, origemRecado) {
   _criarPainelMensagens();
   _abrirThread(outroEmail, origemRecado);
 }
+// Chamado pelo emoji 💬 no painel de online (só aparece pro DPP)
+window._abrirConversaOnline = _abrirDireto;
 
 function _mostrarToast(titulo, texto, onClick) {
   const el = document.createElement('div');
@@ -117,6 +119,21 @@ function _rotuloPerfil(email) {
   return '';
 }
 
+const EMAILS_CRV = [
+  'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
+  'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
+  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'
+];
+function _nomeExibicaoEmail(email) {
+  const prefix = (email || '').split('@')[0];
+  const partes = prefix.split('.');
+  if (partes.length > 1) return partes[0].charAt(0).toUpperCase() + partes[0].slice(1).toLowerCase();
+  return prefix.toUpperCase();
+}
+function _colegasDpp() {
+  return EMAILS_CRV.filter(e => e !== meuEmail()).map(e => ({ email: e, nome: 'DPP — ' + _nomeExibicaoEmail(e) }));
+}
+
 // Diretório institucional inteiro (DIR/CPEN de cada unidade + cada SR), montado só
 // com dados já carregados em window.UNIDADES/SR_INFO — sem consulta ao banco.
 function _diretorioInstitucional() {
@@ -136,7 +153,7 @@ function _diretorioInstitucional() {
 async function _contatosElegiveis() {
   const info = window._presencaInfo;
   if (!info) return [];
-  if (info.tipo === 'crv') return _diretorioInstitucional();
+  if (info.tipo === 'crv') return _colegasDpp().concat(_diretorioInstitucional());
   if (info.tipo === 'super' || info.tipo === 'dir' || info.tipo === 'cpen') return _diretorioInstitucional();
   if (info.tipo === 'servidor' && info.unidadeEmail) {
     const base = info.unidadeEmail.split('@')[0];
@@ -284,6 +301,7 @@ function _outroParticipante(conversa) {
 }
 
 function _nomeContato(email) {
+  if (EMAILS_CRV.includes((email || '').toLowerCase())) return 'DPP — ' + _nomeExibicaoEmail(email);
   const rot = _rotuloPerfil(email);
   if (rot) {
     const unidade = (window.UNIDADES || []).find(u => email.startsWith(u.email.split('@')[0]));
