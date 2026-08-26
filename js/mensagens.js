@@ -307,16 +307,25 @@ async function _abrirThread(outroEmail, origemRecado) {
   }
   const [mensagens] = await Promise.all(tarefas);
 
-  const bolha = m => `
-    <div style="display:flex;${m.de === meuEmail() ? 'justify-content:flex-end;' : ''}margin:4px 0;">
-      <div style="max-width:78%;padding:6px 10px;border-radius:10px;font-size:.78rem;background:${m.de === meuEmail() ? 'var(--azul-400,#3b82f6)' : '#f0f0ee'};color:${m.de === meuEmail() ? '#fff' : 'var(--cinza-900,#1a1a17)'};">
+  const bolha = m => {
+    const eu = m.de === meuEmail();
+    const ms = m.enviadaEm?.toMillis?.();
+    const hora = ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+    <div style="display:flex;${eu ? 'justify-content:flex-end;' : ''}margin:4px 0;">
+      <div style="max-width:78%;padding:6px 10px;border-radius:10px;font-size:.78rem;background:${eu ? 'var(--azul-400,#3b82f6)' : '#f0f0ee'};color:${eu ? '#fff' : 'var(--cinza-900,#1a1a17)'};">
         ${escHtmlMsg(m.texto)}
+        ${hora ? `<div style="font-size:.62rem;margin-top:3px;text-align:right;opacity:.7;">${hora}</div>` : ''}
       </div>
     </div>`;
+  };
 
   const recadoHtml = recadoOrigem ? `
     <div style="background:var(--azul-50,#f0f7ff);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
-      <div style="font-size:.66rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado original — ${escHtmlMsg(recadoOrigem.deNome || recadoOrigem.de)}</div>
+      <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;">
+        <span style="font-size:.66rem;font-weight:700;color:var(--azul-400,#3b82f6);text-transform:uppercase;letter-spacing:.03em;">Recado original — ${escHtmlMsg(recadoOrigem.deNome || recadoOrigem.de)}</span>
+        <span style="font-size:.62rem;color:var(--cinza-500,#8b897f);flex-shrink:0;">${_formatarData(recadoOrigem.enviadoEm)}</span>
+      </div>
       <div style="font-size:.76rem;color:var(--cinza-900,#1a1a17);margin-top:2px;">${escHtmlMsg(recadoOrigem.texto)}</div>
     </div>` : '';
 
