@@ -201,6 +201,12 @@ img { max-width: 100%; display: block; }
 @media(max-width:700px){
   .topbar-hero-badge { display: none; }
   .topbar-hero-titulo { font-size: .95rem; }
+  /* Celular: menos vão entre os itens para caberem título, 📍, Sair, sino e tema */
+  .topbar { gap: 8px; padding: 0 10px; }
+}
+@media(max-width:480px){
+  .topbar-sep { display: none; }
+  .topbar-hero-sub { display: none; }
 }
 
 .btn-menu {
@@ -1230,8 +1236,10 @@ img { max-width: 100%; display: block; }
 .topbar-tree-trigger span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-tree-trigger:hover { background: rgba(255,255,255,.16); }
 .topbar-tree-trigger-arrow { font-size: .7rem; opacity: .7; flex-shrink: 0; }
+/* Fixed (e não absolute): a .topbar tem overflow:hidden e cortava a lista.
+   A posição (top/left) é calculada em js/firebase.js ao abrir. */
 .topbar-tree-panel {
-  position: absolute; top: calc(100% + 4px); left: 0; min-width: 260px; z-index: 200;
+  position: fixed; min-width: 260px; max-width: calc(100vw - 16px); z-index: 1000;
   background: #0d2240; border: 1px solid rgba(255,255,255,.2);
   border-radius: 8px; max-height: 60vh; overflow-y: auto;
   padding: 4px 0;
@@ -1260,7 +1268,18 @@ img { max-width: 100%; display: block; }
   color: rgba(255,255,255,.75); transition: background .15s; border-radius: 4px;
 }
 .topbar-tree-unit:hover { background: rgba(255,255,255,.1); color: #fff; }
-@media(max-width:900px) { .topbar-tree-wrap { display: none; } }
+/* Celular / tela estreita: o seletor vira só um ícone 📍 na barra e a lista
+   abre ocupando a largura da tela (funciona em pé e deitado). */
+@media(max-width:900px) {
+  .topbar-tree-wrap { max-width: none; width: auto; flex-shrink: 0; }
+  .topbar-tree-trigger { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 50%; }
+  .topbar-tree-trigger::before { content: '📍'; font-size: .95rem; }
+  .topbar-tree-trigger span { display: none; }
+  .topbar-tree-panel {
+    left: 8px !important; right: 8px; width: auto; min-width: 0; max-width: none;
+  }
+  .topbar-tree-sr, .topbar-tree-unit { padding-top: 11px; padding-bottom: 11px; } /* área de toque maior */
+}
 .btn-topbar-logout {
   width: 28px;
   height: 28px;
@@ -1287,6 +1306,7 @@ img { max-width: 100%; display: block; }
 }
 @media(max-width:480px) {
   .btn-topbar-login { padding: 0 10px; font-size: .72rem; }
+  .topbar-user-avatar { display: none; } /* celular em pé: libera espaço na barra */
 }
 
 /* ══════════════════════════════════════════════

@@ -103,6 +103,23 @@ function _enviarSelecaoPainel(valor) {
   else frame.addEventListener('load', enviar, { once: true });
 }
 
+// ── Posiciona a lista suspensa logo abaixo do botão ──
+// A lista é position:fixed porque a .topbar tem overflow:hidden (cortava o conteúdo).
+function _posicionarPainelTopbar(panel) {
+  const trigger = panel.parentElement?.querySelector('.topbar-tree-trigger');
+  if (!trigger) return;
+  const r = trigger.getBoundingClientRect();
+  const largura = Math.max(panel.offsetWidth, 260);
+  const left = Math.min(r.left, window.innerWidth - largura - 8);
+  panel.style.top  = (r.bottom + 4) + 'px';
+  panel.style.left = Math.max(8, left) + 'px';
+  panel.style.maxHeight = Math.max(200, window.innerHeight - r.bottom - 16) + 'px';
+}
+// Rolar ou redimensionar a janela reposiciona a lista aberta (acompanha o botão)
+['resize', 'scroll'].forEach(ev => window.addEventListener(ev, () => {
+  const p = document.getElementById('topbar-tree-panel');
+  if (p && p.style.display !== 'none') _posicionarPainelTopbar(p);
+}, { passive: true }));
 // ── Seletor de Unidade/SR na barra do site principal, para CRV e SUPER ──
 // Substitui o antigo seletor interno do iframe do Painel (que ficava num cabeçalho
 // duplicado). Mesmo widget de árvore (com sanfona por SR) usado dentro do Painel,
@@ -146,7 +163,7 @@ function _montarTopbarTreeCRV(host, unidades, srInfo) {
 
   host.innerHTML = `
     <div class="topbar-tree-wrap" id="topbar-tree-wrap">
-      <button class="topbar-tree-trigger" onclick="_tbTreeAbrirFechar(event)">
+      <button class="topbar-tree-trigger" onclick="_tbTreeAbrirFechar(event)" title="Escolher regional ou unidade" aria-label="Escolher regional ou unidade">
         <span id="topbar-tree-label">✦ CRV — Visão geral</span>
         <span class="topbar-tree-trigger-arrow" id="topbar-tree-trigger-arrow">▾</span>
       </button>
@@ -180,6 +197,7 @@ function _montarTopbarTreeCRV(host, unidades, srInfo) {
     if (!panel) return;
     const aberto = panel.style.display !== 'none';
     panel.style.display = aberto ? 'none' : 'block';
+    if (!aberto) _posicionarPainelTopbar(panel);
     if (arrow) arrow.textContent = aberto ? '▾' : '▴';
     if (!aberto && search) { search.value = ''; window._tbTreeFiltrar(''); search.focus(); }
   };
@@ -229,7 +247,7 @@ function _montarTopbarTreeSuper(host, unidades, srInfo, user) {
 
   host.innerHTML = `
     <div class="topbar-tree-wrap" id="topbar-tree-wrap">
-      <button class="topbar-tree-trigger" onclick="_tbTreeAbrirFechar(event)">
+      <button class="topbar-tree-trigger" onclick="_tbTreeAbrirFechar(event)" title="Escolher regional ou unidade" aria-label="Escolher regional ou unidade">
         <span id="topbar-tree-label">✦ ${srCod || 'Minha SR'} — ${nomeSr}</span>
         <span class="topbar-tree-trigger-arrow" id="topbar-tree-trigger-arrow">▾</span>
       </button>
@@ -260,6 +278,7 @@ function _montarTopbarTreeSuper(host, unidades, srInfo, user) {
     if (!panel) return;
     const aberto = panel.style.display !== 'none';
     panel.style.display = aberto ? 'none' : 'block';
+    if (!aberto) _posicionarPainelTopbar(panel);
     if (arrow) arrow.textContent = aberto ? '▾' : '▴';
   };
   window._tbTreeSelSuperSR = function () {
