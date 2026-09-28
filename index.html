@@ -723,6 +723,9 @@
         </div>
         <div id="login-erro" class="form-erro"></div>
         <button id="btn-entrar" class="btn-primario" onclick="fazerLogin()">Entrar</button>
+        <p class="form-hint" style="margin-top:8px;text-align:center;">
+          <button type="button" id="btn-esqueci-senha" onclick="esqueciSenha()" style="background:none;border:none;color:var(--azul-500);cursor:pointer;padding:0;font-size:.78rem;font-family:inherit;text-decoration:underline;">Esqueci minha senha / definir senha</button>
+        </p>
         <p class="form-hint">Primeiro acesso na CRV? Use a senha temporária enviada pelo administrador.</p>
         <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
           <p style="font-size:.78rem;color:var(--txt-3);margin-bottom:8px;text-align:center;">Servidor da unidade prisional?</p>
@@ -871,31 +874,15 @@
   <div class="iframe-topbar"><span>⚙️ Gerador de Ofícios</span><button onclick="fecharGeradorOficios()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
   <iframe id="gerador-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
 </div>
-<div id="modal-guia" class="iframe-modal">
-  <div class="iframe-topbar"><span>📄 Guia — Gerador de Ofícios</span><button onclick="fecharGuiaOficios()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
-  <iframe id="guia-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
-</div>
-<div id="modal-caixinha" class="iframe-modal">
-  <div class="iframe-topbar"><span>☕ Caixinha do Setor</span><button onclick="fecharCaixinha()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
-  <iframe id="caixinha-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
-</div>
-<div id="modal-calculadora" class="iframe-modal">
-  <div class="iframe-topbar"><span>📊 Calculadora de Gestão de Vagas</span><button onclick="fecharCalculadora()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
-  <iframe id="calc-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
-</div>
-<div id="modal-viagens" class="iframe-modal">
-  <div class="iframe-topbar"><span>🗺️ Controle de Viagens</span><button onclick="fecharViagens()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:.82rem;">✕ Fechar</button></div>
-  <iframe id="viagens-iframe" src="" style="flex:1;border:none;width:100%;"></iframe>
-</div>
 
 
 
 <!-- Botão topo -->
 <button id="btnTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
 
-<script src="js/app.js" defer></script>
-<script type="module" src="js/firebase.js?v=11"></script>
-<script type="module" src="js/notificacoes.js?v=5"></script>
-<script type="module" src="js/mensagens.js?v=9"></script>
+<script src="js/app.js?v=2" defer></script>
+<script type="module" src="js/firebase.js?v=12"></script>
+<script type="module" src="js/notificacoes.js?v=6"></script>
+<script type="module" src="js/mensagens.js?v=10"></script>
 </body>
 </html>

@@ -403,13 +403,14 @@ td{padding:.65rem .85rem;vertical-align:top;color:#374151}
 <script type="module">
 // ── FIREBASE ──────────────────────────────────────────────────────────────────
 import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,getDocs,updateDoc,deleteDoc,doc,query,orderBy}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-const CFG={apiKey:"AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",authDomain:"crv-dpp-sc.firebaseapp.com",
-  projectId:"crv-dpp-sc",storageBucket:"crv-dpp-sc.firebasestorage.app",
-  messagingSenderId:"707080008192",appId:"1:707080008192:web:64f44c65629c0fc5941ee5"};
-const fbApp=getApps().length?getApps()[0]:initializeApp(CFG);
+import{FIREBASE_CONFIG,ehCRV}from"./js/config-crv.js";
+// Mesmo projeto e mesma sessão de login do site (crv-dpp-sc-v2)
+const fbApp=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
 const db=getFirestore(fbApp);
+const auth=getAuth(fbApp);
 const COL="controle_viagens";
 
 // ── DADOS ─────────────────────────────────────────────────────────────────────
@@ -615,7 +616,7 @@ function renderDmsChips(wrapId){
   cont.innerHTML=st.selArr.map(v=>{
     const it=st.items.find(i=>i.val===v);
     const lbl=it?it.label:v;
-    return`<span class="chip ${st.chipClass}">${esc(lbl)} <button type="button" onclick="dmsRemove('${wrapId}','${esc(v)}')">×</button></span>`;
+    return`<span class="chip ${st.chipClass}">${esc(lbl)} <button type="button" data-val="${esc(v)}" onclick="dmsRemove('${wrapId}',this.dataset.val)">×</button></span>`;
   }).join('');
 }
 
@@ -998,7 +999,13 @@ function toast(msg){
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 initFormDms();
-carregar();
+// Só a equipe CRV acessa (antes a página não exigia login)
+onAuthStateChanged(auth,user=>{
+  if(user&&ehCRV(user.email)){carregar();return;}
+  fbSt('err');
+  document.getElementById('fbSt').textContent=user?'⛔ Acesso restrito':'🔒 Faça login';
+  toast(user?'⛔ Acesso restrito à equipe CRV.':'🔒 Faça login no site da CRV para usar o Controle de Viagens.');
+});
 </script>
 </body>
 </html>

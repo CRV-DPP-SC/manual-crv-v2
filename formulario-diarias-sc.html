@@ -8,34 +8,85 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script type="module">
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, orderBy, query }
+  /* Sistema de Diárias — dados no Firestore do site (crv-dpp-sc-v2),
+     compartilhados pela equipe CRV. Antes ficavam só no navegador. */
+  import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc }
     from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  import { FIREBASE_CONFIG, ehCRV } from "./js/config-crv.js";
 
-  const cfg = {
-    apiKey:"AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
-    authDomain:"crv-dpp-sc.firebaseapp.com",
-    projectId:"crv-dpp-sc",
-    storageBucket:"crv-dpp-sc.firebasestorage.app",
-    messagingSenderId:"707080008192",
-    appId:"1:707080008192:web:64f44c65629c0fc5941ee5"
-  };
-  const app = getApps().length ? getApps()[0] : initializeApp(cfg);
-  const db  = getFirestore(app);
+  const app  = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+  const COL_SRV  = 'diarias_servidores';
+  const COL_VIAG = 'diarias_viagens';
+  const IDS_EXEMPLO = ['s1','s2','s3']; // servidores fictícios da versão antiga
 
-  window._syncServidoresFirebase = async function() {
-    try {
-      const q    = query(collection(db,"servidores"), orderBy("nome"));
-      const snap = await getDocs(q);
-      const lista = [];
-      snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
-      if (!lista.length) return { ok:false, msg:'Nenhum servidor encontrado no Firebase.' };
-      localStorage.setItem('diarias_v2_servidores', JSON.stringify(lista));
-      return { ok:true, total: lista.length };
-    } catch(e) {
-      return { ok:false, msg: e.message };
+  // Firestore não aceita 'undefined' — a ida e volta em JSON remove esses campos
+  const limpar = o => JSON.parse(JSON.stringify(o));
+
+  async function carregar() {
+    const [sSnap, vSnap] = await Promise.all([
+      getDocs(collection(db, COL_SRV)), getDocs(collection(db, COL_VIAG))
+    ]);
+    const servidores = sSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+      .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    const viagens = vSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+    return { servidores, viagens };
+  }
+
+  // Migração única: envia o que estava salvo só neste navegador.
+  // As chaves antigas são renomeadas (não apagadas) como cópia de segurança.
+  async function migrarLocal(dados) {
+    let nS = 0, nV = 0;
+    const ler = k => { try { return JSON.parse(localStorage.getItem(k) || '[]') || []; } catch (_) { return []; } };
+    const srvLocal  = ler('diarias_v2_servidores');
+    const viagLocal = ler('diarias_v2_viagens');
+    for (const s of srvLocal) {
+      if (!s.id || IDS_EXEMPLO.includes(s.id) || dados.servidores.some(x => x.id === s.id)) continue;
+      await setDoc(doc(db, COL_SRV, s.id), limpar(s));
+      dados.servidores.push(s); nS++;
     }
+    for (const v of viagLocal) {
+      if (!v.id || dados.viagens.some(x => x.id === v.id)) continue;
+      await setDoc(doc(db, COL_VIAG, v.id), limpar(v));
+      dados.viagens.push(v); nV++;
+    }
+    [['diarias_v2_servidores', srvLocal], ['diarias_v2_viagens', viagLocal]].forEach(([k, lista]) => {
+      if (!lista.length) return;
+      localStorage.setItem(k + '_migrado', JSON.stringify(lista));
+      localStorage.removeItem(k);
+    });
+    return { nS, nV };
+  }
+
+  window._diariasFS = {
+    salvarServidor: s  => setDoc(doc(db, COL_SRV, s.id), limpar(s)),
+    excluirServidor: id => deleteDoc(doc(db, COL_SRV, id)),
+    salvarViagem:   v  => setDoc(doc(db, COL_VIAG, v.id), limpar(v)),
+    excluirViagem:  id => deleteDoc(doc(db, COL_VIAG, id)),
+    recarregar: carregar,
   };
+
+  let _resolver;
+  window._diariasPronto = new Promise(r => { _resolver = r; });
+  onAuthStateChanged(auth, async (user) => {
+    if (!_resolver) return;
+    const resolver = _resolver; _resolver = null;
+    if (!user || !ehCRV(user.email)) {
+      resolver({ ok: false, motivo: user ? 'Acesso restrito à equipe CRV.' : 'Faça login no site da CRV para usar o Sistema de Diárias.' });
+      return;
+    }
+    try {
+      const dados = await carregar();
+      let mig = { nS: 0, nV: 0 };
+      try { mig = await migrarLocal(dados); } catch (e) { console.warn('Migração local falhou:', e); }
+      resolver({ ok: true, ...dados, mig });
+    } catch (e) {
+      resolver({ ok: false, motivo: 'Erro ao carregar dados: ' + e.message });
+    }
+  });
 </script>
 
 <style>
@@ -804,7 +855,7 @@ table.desloc input:focus,table.desloc select:focus{
         <div class="lista-sub">Dados armazenados localmente (versão de teste)</div>
       </div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-sec" id="btn-sync-firebase" onclick="APP.syncFirebase()">🔄 Sincronizar Firebase</button>
+        <button class="btn btn-sec" id="btn-sync-firebase" onclick="APP.syncFirebase()">🔄 Recarregar dados</button>
         <button class="btn btn-pri" onclick="APP.abrirModalServidor(null)">+ Novo Servidor</button>
       </div>
     </div>
@@ -953,53 +1004,34 @@ const TRANSPORTES = ["Veículo Oficial","Veículo Próprio","Ônibus","Avião","
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
                "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-// ── SERVIDORES MOCK (pré-carregados para teste) ─────────────────
-const SERVIDORES_MOCK = [
-  { id:"s1", nome:"JOÃO CARLOS SILVA", cpf:"123.456.789-00",
-    matricula:"1234567-0-01", cargo:"POLICIAL PENAL",
-    lotacao:"DEPARTAMENTO DE POLICIA PENAL",
-    municipio:"FLORIANÓPOLIS", email:"joao.silva@sc.gov.br",
-    celular:"(48) 99999-1111", telefone:"", banco:"BANCO DO BRASIL",
-    agencia:"0001-1", conta:"123456-0" },
-  { id:"s2", nome:"MARIA APARECIDA SANTOS", cpf:"987.654.321-00",
-    matricula:"7654321-0-01", cargo:"TÉCNICA EM SEGURANÇA PÚBLICA",
-    lotacao:"DEPARTAMENTO DE POLICIA PENAL",
-    municipio:"JOINVILLE", email:"maria.santos@sc.gov.br",
-    celular:"(47) 98888-2222", telefone:"(47) 3333-4444",
-    banco:"CAIXA ECONÔMICA FEDERAL", agencia:"0123-4", conta:"654321-1" },
-  { id:"s3", nome:"PEDRO HENRIQUE OLIVEIRA", cpf:"456.789.123-00",
-    matricula:"4567891-0-01", cargo:"DIRETOR DE UNIDADE PRISIONAL",
-    lotacao:"DEPARTAMENTO DE POLICIA PENAL",
-    municipio:"BLUMENAU", email:"pedro.oliveira@sc.gov.br",
-    celular:"(47) 97777-3333", telefone:"", banco:"BANCO DO BRASIL",
-    agencia:"0002-2", conta:"789012-3" }
-];
-
-// ── STORAGE ─────────────────────────────────────────────────────
+// ── STORAGE (Firestore, com cache em memória) ──────────────────
+// Leituras são síncronas a partir do cache; cada gravação envia ao
+// Firestore apenas os registros que mudaram. O cache guarda cópias
+// profundas para que mutações no formulário não passem despercebidas.
+const _clone = o => JSON.parse(JSON.stringify(o));
 const DB = {
-  _key_srv: 'diarias_v2_servidores',
-  _key_viag: 'diarias_v2_viagens',
+  _srv: [],
+  _viag: [],
 
-  getServidores() {
-    try { return JSON.parse(localStorage.getItem(this._key_srv)) || null; }
-    catch(e) { return null; }
+  getServidores() { return this._srv.map(_clone); },
+  setServidores(lista) { this._sincronizar(lista, '_srv', 'Servidor'); },
+  getViagens() { return this._viag.map(_clone); },
+  setViagens(lista) { this._sincronizar(lista, '_viag', 'Viagem'); },
+
+  _sincronizar(nova, chave, tipo) {
+    const antiga = this[chave];
+    const ids = new Set(nova.map(x => x.id));
+    const erro = e => toast('Erro ao salvar no servidor: ' + e.message, 'erro');
+    antiga.filter(x => !ids.has(x.id))
+      .forEach(x => window._diariasFS['excluir' + tipo](x.id).catch(erro));
+    nova.forEach(x => {
+      const velho = antiga.find(o => o.id === x.id);
+      if (!velho || JSON.stringify(velho) !== JSON.stringify(x))
+        window._diariasFS['salvar' + tipo](x).catch(erro);
+    });
+    this[chave] = nova.map(_clone);
   },
-  setServidores(lista) {
-    localStorage.setItem(this._key_srv, JSON.stringify(lista));
-  },
-  getViagens() {
-    try { return JSON.parse(localStorage.getItem(this._key_viag)) || []; }
-    catch(e) { return []; }
-  },
-  setViagens(lista) {
-    localStorage.setItem(this._key_viag, JSON.stringify(lista));
-  },
-  initServidores() {
-    // Carrega mock apenas na primeira vez
-    if (!this.getServidores()) this.setServidores(SERVIDORES_MOCK);
-  }
 };
-
 // ── ESTADO GLOBAL ────────────────────────────────────────────────
 const STATE = {
   tab: 'viagens',           // 'viagens' | 'servidores'
@@ -1090,7 +1122,6 @@ const APP = {
 
   // ── INICIALIZAÇÃO ─────────────────────────────────────────────
   init() {
-    DB.initServidores();
     popularSelectCidade('f-municipio');
     popularSelectCidade('srv-municipio');
     popularCodigos();
@@ -1564,17 +1595,18 @@ const APP = {
       grid.innerHTML='<div class="lista-vazia"><div class="icon">👤</div><p>Nenhum servidor cadastrado.</p></div>';
       return;
     }
+    const e = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     grid.innerHTML = lista.map((s,i)=>`
       <div class="srv-list-card">
-        <div class="srv-list-avatar">${iniciais(s.nome)}</div>
+        <div class="srv-list-avatar">${e(iniciais(s.nome))}</div>
         <div class="srv-list-info">
-          <div class="srv-list-nome">${s.nome}</div>
-          <div class="srv-list-det">${s.cargo||'—'} · ${s.municipio||'—'} · Mat.: ${s.matricula||'—'}</div>
-          <div style="font-size:.72rem;color:var(--texto2);margin-top:2px;">${s.email||''} ${s.celular?'· '+s.celular:''}</div>
+          <div class="srv-list-nome">${e(s.nome)}</div>
+          <div class="srv-list-det">${e(s.cargo||'—')} · ${e(s.municipio||'—')} · Mat.: ${e(s.matricula||'—')}</div>
+          <div style="font-size:.72rem;color:var(--texto2);margin-top:2px;">${e(s.email||'')} ${s.celular?'· '+e(s.celular):''}</div>
         </div>
         <div class="srv-list-acoes">
-          <button class="btn btn-sec btn-sm" onclick="APP.abrirModalServidor('${s.id}')">✏ Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="APP.excluirServidor('${s.id}','${s.nome.replace(/'/g,"\\'")}')">🗑</button>
+          <button class="btn btn-sec btn-sm" data-id="${e(s.id)}" onclick="APP.abrirModalServidor(this.dataset.id)">✏ Editar</button>
+          <button class="btn btn-danger btn-sm" data-id="${e(s.id)}" data-nome="${e(s.nome)}" onclick="APP.excluirServidor(this.dataset.id,this.dataset.nome)">🗑</button>
         </div>
       </div>`).join('');
   },
@@ -1701,26 +1733,23 @@ const APP = {
   },
 
   // ── SINCRONIZAÇÃO FIREBASE ────────────────────────────────────
+  // Recarrega servidores e viagens do Firestore (alterações feitas por colegas)
   async syncFirebase() {
     const btn = document.getElementById('btn-sync-firebase');
     btn.disabled = true;
-    btn.textContent = '⏳ Sincronizando...';
-
-    if (typeof window._syncServidoresFirebase !== 'function') {
-      toast('Firebase ainda não carregou. Aguarde alguns segundos e tente novamente.', 'aviso');
-      btn.disabled = false; btn.textContent = '🔄 Sincronizar Firebase';
-      return;
-    }
-
-    const res = await window._syncServidoresFirebase();
-    btn.disabled = false; btn.textContent = '🔄 Sincronizar Firebase';
-
-    if (res.ok) {
-      toast(`✓ ${res.total} servidor(es) importado(s) do Firebase.`);
+    btn.textContent = '⏳ Recarregando...';
+    try {
+      const dados = await window._diariasFS.recarregar();
+      DB._srv  = dados.servidores;
+      DB._viag = dados.viagens;
       this.renderServidores();
       popularSelectsServidores();
-    } else {
-      toast('Erro ao sincronizar: ' + res.msg, 'erro');
+      this.renderLista();
+      toast(`✓ ${dados.servidores.length} servidor(es) e ${dados.viagens.length} viagem(ns) carregados.`);
+    } catch (e) {
+      toast('Erro ao recarregar: ' + e.message, 'erro');
+    } finally {
+      btn.disabled = false; btn.textContent = '🔄 Recarregar dados';
     }
   },
 
@@ -2508,7 +2537,21 @@ APP._abrirForm = function() {
 };
 
 // ── INICIALIZAR ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', ()=>APP.init());
+document.addEventListener('DOMContentLoaded', async ()=>{
+  const r = await window._diariasPronto;
+  if (!r || !r.ok) {
+    document.body.innerHTML = `<div style="max-width:460px;margin:80px auto;padding:28px;background:#fff;border-radius:14px;box-shadow:var(--sombra);text-align:center;font-family:var(--fonte);">
+      <div style="font-size:2rem;margin-bottom:10px;">🔒</div>
+      <div style="font-weight:700;margin-bottom:6px;">Sistema de Diárias</div>
+      <div style="color:var(--texto2);font-size:.9rem;">${(r && r.motivo) || 'Não foi possível carregar.'}</div></div>`;
+    return;
+  }
+  DB._srv  = r.servidores;
+  DB._viag = r.viagens;
+  APP.init();
+  if (r.mig && (r.mig.nS || r.mig.nV))
+    toast(`Dados deste navegador enviados ao servidor: ${r.mig.nS} servidor(es), ${r.mig.nV} viagem(ns).`);
+});
 </script>
 </body>
 </html>

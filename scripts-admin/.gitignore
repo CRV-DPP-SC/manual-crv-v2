@@ -1,0 +1,4 @@
+# Chaves de conta de serviço nunca vão para o repositório
+*.json
+!package.json
+node_modules/

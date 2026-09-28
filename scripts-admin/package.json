@@ -1,0 +1,8 @@
+{
+  "name": "crv-scripts-admin",
+  "private": true,
+  "description": "Tarefas administrativas do CRV executadas pelo workflow 'Admin CRV' do GitHub Actions.",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

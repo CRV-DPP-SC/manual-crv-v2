@@ -13,15 +13,7 @@ import { getAuth, onAuthStateChanged }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, collection, serverTimestamp }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
+import { FIREBASE_CONFIG as firebaseConfig } from "../../js/config-crv.js";
 
 /*
  * Usa o app DEFAULT (sem nome) para compartilhar a sessão com o site

@@ -8,47 +8,30 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia } from "./config-crv.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
-const FC = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
-const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FC);
+const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const _auth = getAuth(_app);
 const _db   = getFirestore(_app);
-
-// ── OneSignal ──
-const ONESIGNAL_APP_ID = 'd8932eb7-fa75-4f11-b0a2-68974e0afe42';
-
-// ── Perfis que podem assinar transferências ──
-const EMAILS_CRV = [
-  'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
-  'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com',
-  'crv@pp.sc.gov.br'
-];
 
 function _podeSinalizar(email) {
   const e = (email || '').toLowerCase();
   return EMAILS_CRV.includes(e)
-    || /^sr0[1-8]@pp\.sc\.gov\.br$/.test(e)
+    || RE_SUPERINTENDENTE.test(e)
     || /^.+dir@pp\.sc\.gov\.br$/.test(e)
     || /^.+cpen@pp\.sc\.gov\.br$/.test(e);
 }
 
 // Retorna a tag de unidade usada pelo OneSignal — pr18@pp.sc.gov.br para
-// DIR/CPEN, ou o próprio e-mail (ex: sr01@pp.sc.gov.br) para Superintendente.
-// Retorna null para outros perfis.
+// DIR/CPEN, ou o e-mail da Superintendência (ex: sr01@pp.sc.gov.br) para o
+// Superintendente (login sr01sr@). Retorna null para outros perfis.
 function _getEmailUnidade(email) {
   const e = (email || '').toLowerCase();
+  const srCod = srDoSuperintendente(e);
+  if (srCod) return emailSuperintendencia(srCod);
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))  return e.replace(/dir@pp\.sc\.gov\.br$/,  '@pp.sc.gov.br');
   if (/^.+cpen@pp\.sc\.gov\.br$/.test(e)) return e.replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
-  if (/^sr0[1-8]@pp\.sc\.gov\.br$/.test(e)) return e;
   return null;
 }
 
@@ -397,7 +380,7 @@ function _injetarDOM() {
         </div>
         <div class="ntf-neg-body">
           <div id="ntf-neg-titulo" style="font-size:.88rem;font-weight:600;color:#0f172a;margin-bottom:12px;"></div>
-          <label class="ntf-neg-label">Motivo da negação (opcional)</label>
+          <label class="ntf-neg-label">Justificativa (obrigatória — ficará visível para as unidades envolvidas)</label>
           <textarea class="ntf-neg-motivo" id="ntf-neg-motivo" placeholder="Descreva o motivo…"></textarea>
           <div class="ntf-neg-acoes">
             <button class="ntf-neg-cancel" onclick="_ntfFecharNeg()">Cancelar</button>
@@ -473,6 +456,8 @@ function _iniciarListener(email) {
     snap.forEach(d => {
       const s = { id: d.id, ...d.data() };
       if (s.statusGeral === 'cancelado') return;
+      // Mesma regra do Painel: uma negativa de qualquer envolvido encerra o processo.
+      if ((s.assinantes || []).some(a => a.status === 'negado')) return;
       const minha = (s.assinantes || []).find(
         a => a.email === email && a.status === 'pendente'
       );
@@ -744,6 +729,11 @@ window._ntfNegar = async function() {
   if (!_pendConf || !_emailUsuario) return;
   const btn = document.getElementById('ntf-neg-ok');
   const motivo = (document.getElementById('ntf-neg-motivo')?.value || '').trim();
+  if (!motivo) {
+    _ntfToast('A justificativa é obrigatória para negar a anuência.');
+    document.getElementById('ntf-neg-motivo')?.focus();
+    return;
+  }
   if (btn) { btn.disabled = true; btn.textContent = 'Negando…'; }
 
   try {
@@ -752,7 +742,7 @@ window._ntfNegar = async function() {
     if (!snap.exists()) throw new Error('Documento não encontrado.');
     const assinantes = (snap.data().assinantes || []).map(a =>
       a.email === _emailUsuario
-        ? { ...a, status: 'negado', motivoNegacao: motivo, dataAcao: new Date().toISOString() }
+        ? { ...a, status: 'negado', motivo, dataAcao: new Date().toISOString() }
         : a
     );
     await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });

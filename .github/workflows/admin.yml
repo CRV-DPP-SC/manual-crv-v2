@@ -1,0 +1,51 @@
+name: Admin CRV
+
+# Tarefas administrativas executadas manualmente:
+# GitHub → Actions → "Admin CRV" → Run workflow.
+# Sempre rode primeiro SEM marcar "executar" (simulação) e leia o resultado.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tarefa:
+        description: 'Tarefa'
+        required: true
+        type: choice
+        options:
+          - contas-institucionais
+          - criar-logins-superintendentes
+          - migrar-assinaturas-sr
+          - migrar-projeto-antigo
+      executar:
+        description: 'Executar de verdade (desmarcado = só simulação)'
+        type: boolean
+        default: false
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts-admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - name: Rodar tarefa
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_ANTIGO: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ANTIGO }}
+          TAREFA: ${{ inputs.tarefa }}
+          EXECUTAR: ${{ inputs.executar }}
+        run: |
+          FLAG=""
+          if [ "$EXECUTAR" = "true" ]; then FLAG="--executar"; fi
+          case "$TAREFA" in
+            contas-institucionais)         node contas-institucionais.js $FLAG ;;
+            criar-logins-superintendentes) node contas-institucionais.js --criar-sr $FLAG ;;
+            migrar-assinaturas-sr)         node migrar-assinaturas-sr.js $FLAG ;;
+            migrar-projeto-antigo)         node migrar-projeto-antigo.js $FLAG ;;
+            *) echo "Tarefa desconhecida: $TAREFA"; exit 1 ;;
+          esac

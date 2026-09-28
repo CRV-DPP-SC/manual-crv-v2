@@ -1031,7 +1031,8 @@ tbody td {
 
 <!-- FIREBASE -->
 <script type="module">
-import { initializeApp }         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { FIREBASE_CONFIG, ehCRV, escHtml } from "./js/config-crv.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, addDoc, collection,
          query, orderBy, onSnapshot, updateDoc, deleteDoc, serverTimestamp, getDocs, where }
@@ -1070,18 +1071,9 @@ async function enviarAnexoParaDrive(file, subpasta){
 }
 
 // ============================================================
-// CONFIG FIREBASE (mesmo projeto do site)
+// FIREBASE — mesmo projeto e mesma sessão de login do site (crv-dpp-sc-v2)
 // ============================================================
-const firebaseConfig = {
-  apiKey:            "AIzaSyAtfo2cXialN7EWi4bBO9LMF2Ez3zz8Lo4",
-  authDomain:        "crv-dpp-sc.firebaseapp.com",
-  projectId:         "crv-dpp-sc",
-  storageBucket:     "crv-dpp-sc.firebasestorage.app",
-  messagingSenderId: "707080008192",
-  appId:             "1:707080008192:web:64f44c65629c0fc5941ee5"
-};
-
-const app  = initializeApp(firebaseConfig);
+const app  = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
@@ -1102,8 +1094,8 @@ const CORES   = ['bg-azul','bg-verde','bg-ouro','bg-roxo','bg-rosa','bg-teal','b
 // AUTENTICAÇÃO
 // ============================================================
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    toast('⚠️ Você precisa estar logado.', 'aviso');
+  if (!user || !ehCRV(user.email)) {
+    toast(user ? '⛔ Acesso restrito à equipe CRV.' : '⚠️ Faça login no site da CRV para usar a Caixinha.', 'aviso');
     return;
   }
   usuarioAtual = user;
@@ -1164,7 +1156,7 @@ function popularSelectsMembros() {
     const sel = document.getElementById(id);
     const valorAtual = sel.value;
     sel.innerHTML = `<option value="">${placeholder}</option>` +
-      MEMBROS.map(nome => `<option>${nome}</option>`).join('');
+      MEMBROS.map(nome => `<option value="${escHtml(nome)}">${escHtml(nome)}</option>`).join('');
     if (MEMBROS.includes(valorAtual)) sel.value = valorAtual;
   });
 }
@@ -1177,8 +1169,8 @@ function renderMembrosConfigList() {
   }
   wrap.innerHTML = MEMBROS.map(nome => `
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--cinza-7);border-radius:8px;padding:.55rem .9rem;">
-      <span style="font-weight:600;font-size:.88rem;color:var(--cinza-1);">${nome}</span>
-      <button class="btn-remover-anexo" onclick="removerMembro('${nome.replace(/'/g,"\\'")}')" title="Excluir pessoa">🗑️ Excluir</button>
+      <span style="font-weight:600;font-size:.88rem;color:var(--cinza-1);">${escHtml(nome)}</span>
+      <button class="btn-remover-anexo" data-nome="${escHtml(nome)}" onclick="removerMembro(this.dataset.nome)" title="Excluir pessoa">🗑️ Excluir</button>
     </div>`).join('');
 }
 
@@ -1280,8 +1272,8 @@ function atualizarPainel() {
 
     grid.innerHTML += `
       <div class="membro-card">
-        <div class="membro-avatar ${CORES[i % CORES.length]}">${nome.charAt(0)}</div>
-        <div class="membro-nome">${nome}</div>
+        <div class="membro-avatar ${CORES[i % CORES.length]}">${escHtml(nome.charAt(0))}</div>
+        <div class="membro-nome">${escHtml(nome)}</div>
         <span class="membro-status ${statusCls}">${statusTxt}</span>
         ${meta ? `<div class="membro-valor">${fmt(totalPago)} / ${fmt(meta)}</div>` : ''}
       </div>`;
@@ -1367,14 +1359,14 @@ function exibirModal(dados, tipo) {
       <div class="modal-linha"><span class="modal-linha-label">Membro</span><span class="modal-linha-valor">${dados.membro}</span></div>
       <div class="modal-linha"><span class="modal-linha-label">Referência</span><span class="modal-linha-valor">${mesNome}</span></div>
       <div class="modal-linha"><span class="modal-linha-label">Valor</span><span class="modal-linha-valor destaque">${fmt(dados.valor)}</span></div>
-      <div class="modal-linha"><span class="modal-linha-label">Descrição</span><span class="modal-linha-valor">${dados.descricao}</span></div>
+      <div class="modal-linha"><span class="modal-linha-label">Descrição</span><span class="modal-linha-valor">${escHtml(dados.descricao)}</span></div>
       <div class="modal-linha"><span class="modal-linha-label">Anexo</span><span class="modal-linha-valor">${temAnexo ? '✅ '+anexoFile[prefixo].name : '—'}</span></div>`;
   } else {
     html = `
       <div class="modal-linha"><span class="modal-linha-label">Responsável</span><span class="modal-linha-valor">${dados.membro}</span></div>
       <div class="modal-linha"><span class="modal-linha-label">Data</span><span class="modal-linha-valor">${formatarData(dados.data)}</span></div>
-      <div class="modal-linha"><span class="modal-linha-label">O que foi comprado</span><span class="modal-linha-valor">${dados.descricao}</span></div>
-      ${dados.local ? `<div class="modal-linha"><span class="modal-linha-label">Local</span><span class="modal-linha-valor">${dados.local}</span></div>` : ''}
+      <div class="modal-linha"><span class="modal-linha-label">O que foi comprado</span><span class="modal-linha-valor">${escHtml(dados.descricao)}</span></div>
+      ${dados.local ? `<div class="modal-linha"><span class="modal-linha-label">Local</span><span class="modal-linha-valor">${escHtml(dados.local)}</span></div>` : ''}
       <div class="modal-linha"><span class="modal-linha-label">Valor</span><span class="modal-linha-valor destaque">${fmt(dados.valor)}</span></div>
       <div class="modal-linha"><span class="modal-linha-label">Anexo</span><span class="modal-linha-valor">${temAnexo ? '✅ '+anexoFile[prefixo].name : '—'}</span></div>`;
   }
@@ -1497,12 +1489,12 @@ function renderHistorico(lista, tbodyId) {
     return `
       <tr>
         <td><span class="td-tipo ${isEntrada?'tipo-deposito':'tipo-compra'}">${isEntrada?'💰 Depósito':'🛒 Compra'}</span></td>
-        <td style="font-weight:600;">${l.membro || '—'}</td>
-        <td style="max-width:200px;word-break:break-word;">${l.descricao || '—'}</td>
+        <td style="font-weight:600;">${escHtml(l.membro || '—')}</td>
+        <td style="max-width:200px;word-break:break-word;">${escHtml(l.descricao || '—')}</td>
         <td><span class="td-valor ${isEntrada?'entrada':'saida'}">${isEntrada?'+':'−'}${fmt(l.valor)}</span></td>
         <td><span class="td-status st-${l.status==='confirmado'?'confirmado':'cancelado'}">${l.status==='confirmado'?'✓ Confirmado':'✕ Cancelado'}</span></td>
-        <td>${l.urlAnexo ? `<a class="btn-ver-anexo" href="${l.urlAnexo}" target="_blank">Ver 📎</a>` : '<span style="color:var(--cinza-4);font-size:.8rem;">—</span>'}</td>
-        <td class="td-auditoria">${l.registradoPor || '—'}</td>
+        <td>${l.urlAnexo ? `<a class="btn-ver-anexo" href="${escHtml(l.urlAnexo)}" target="_blank" rel="noopener">Ver 📎</a>` : '<span style="color:var(--cinza-4);font-size:.8rem;">—</span>'}</td>
+        <td class="td-auditoria">${escHtml(l.registradoPor || '—')}</td>
         <td class="td-auditoria">${dataTS.toLocaleString('pt-BR')}</td>
         <td class="col-acoes"><button class="btn-remover-anexo" onclick="excluirLancamento('${l.id}')" title="Excluir lançamento">🗑️</button></td>
       </tr>`;
@@ -1560,10 +1552,10 @@ window.gerarRelatorio = function() {
       <tr>
         <td>${dt}</td>
         <td><span class="td-tipo ${isE?'tipo-deposito':'tipo-compra'}">${isE?'💰 Dep.':'🛒 Compra'}</span></td>
-        <td style="font-weight:600;">${l.membro||'—'}</td>
-        <td>${l.descricao||'—'}</td>
+        <td style="font-weight:600;">${escHtml(l.membro||'—')}</td>
+        <td>${escHtml(l.descricao||'—')}</td>
         <td><span class="td-valor ${isE?'entrada':'saida'}">${isE?'+':'−'}${fmt(l.valor)}</span></td>
-        <td class="td-auditoria">${l.registradoPor||'—'}</td>
+        <td class="td-auditoria">${escHtml(l.registradoPor||'—')}</td>
       </tr>`;
   }).join('');
 };

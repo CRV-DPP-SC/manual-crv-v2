@@ -67,17 +67,21 @@ function _extrairAssinantes(s) {
   var o = s.ori, d = s.des;
 
   function _emailDir(u)  { return u.em.replace(/@pp\.sc\.gov\.br$/, 'dir@pp.sc.gov.br'); }
-  function _emailSR(cod) { return cod.toLowerCase() + '@pp.sc.gov.br'; }
+  /* sr01sr@ = login do(a) Superintendente (quem assina);
+     sr01@   = e-mail da Superintendência (usado como "unidade" nos filtros e no push) */
+  function _emailSuperintendente(cod) { return cod.toLowerCase() + 'sr@pp.sc.gov.br'; }
+  function _emailSuperintendencia(cod) { return cod.toLowerCase() + '@pp.sc.gov.br'; }
 
   if (o) lista.push({ email: _emailDir(o), nome: o.dir || o.n, cargo: o.cg || 'Diretor(a)', unidade: o.n, emailUnidade: o.em });
   if (s.dd && d) lista.push({ email: _emailDir(d), nome: d.dir || d.n, cargo: d.cg || 'Diretor(a)', unidade: d.n, emailUnidade: d.em });
   if (s.sro && o) {
     var srO = SR[o.sr];
-    if (srO) lista.push({ email: _emailSR(o.sr), nome: srO.s, cargo: 'Superintendente Regional', unidade: srO.nome, emailUnidade: _emailSR(o.sr) });
+    if (srO) lista.push({ email: _emailSuperintendente(o.sr), nome: srO.s, cargo: 'Superintendente Regional', unidade: srO.nome, emailUnidade: _emailSuperintendencia(o.sr) });
   }
-  if (s.srd && d) {
+  /* Mesma SR na origem e no destino: o Superintendente assina uma vez só */
+  if (s.srd && d && !(s.sro && o && o.sr === d.sr)) {
     var srD = SR[d.sr];
-    if (srD) lista.push({ email: _emailSR(d.sr), nome: srD.s, cargo: 'Superintendente Regional', unidade: srD.nome, emailUnidade: _emailSR(d.sr) });
+    if (srD) lista.push({ email: _emailSuperintendente(d.sr), nome: srD.s, cargo: 'Superintendente Regional', unidade: srD.nome, emailUnidade: _emailSuperintendencia(d.sr) });
   }
   return lista;
 }

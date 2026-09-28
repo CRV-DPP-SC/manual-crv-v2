@@ -10,34 +10,16 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where,
          serverTimestamp, getCountFromServer }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente } from "./config-crv.js";
 
-const firebaseConfig = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
-
-const app  = initializeApp(firebaseConfig);
+const app  = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-const EMAILS_CRV = [
-  'rodrigo.l.pastore@gmail.com',
-  'ivana.schafer@gmail.com',
-  'brunawlongen@gmail.com',
-  'ricardobritomarques12@gmail.com',
-  'abeljuliana2012@gmail.com',
-  'jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com',
-  'sepen@pp.sc.gov.br',
-  'leilakfarias@gmail.com',
-  'crv@pp.sc.gov.br'
-];
-const SENHA_TEMPORARIA = '12345crv';
 let usuarioAtual = null;
+/* Senha usada no login do primeiro acesso — só em memória, para impedir que a
+   nova senha seja igual à temporária (sem deixar a senha temporária no código). */
+let _senhaPrimeiroAcesso = null;
 
 // ══════════════════════════════════════════════
 // PRESENÇA — usuários online
@@ -53,7 +35,7 @@ let _presencaInfo  = null; // { tipo, unidadeEmail, unidadeNome, srCod, nome }
 function _resolverPerfil(email) {
   const e = (email || '').toLowerCase();
   if (EMAILS_CRV.includes(e))                return { tipo: 'crv',   label: 'CRV',             cor: '#3b82f6' };
-  if (/^sr0[1-8]@pp\.sc\.gov\.br$/.test(e)) return { tipo: 'super', label: 'Superintendente', cor: '#7c3aed' };
+  if (RE_SUPERINTENDENTE.test(e))           return { tipo: 'super', label: 'Superintendente', cor: '#7c3aed' };
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))    return { tipo: 'dir',   label: 'Diretor(a)',      cor: '#15803d' };
   if (/^.+cpen@pp\.sc\.gov\.br$/.test(e))   return { tipo: 'cpen',  label: 'Coord. Penal',   cor: '#b45309' };
   return null; // e-mail particular — verificado no Firestore
@@ -77,15 +59,14 @@ function _mostrarTopbarVisitante() {
   const btnS = document.getElementById('sidebar-btn-senha');
   if (btnS) btnS.style.display = 'none';
   _mostrarSubMenuCRV(false);
-  /* Submenu de Ferramentas (Gerador de Ofícios/PAD) liberado sem login — bypass temporário */
-  _mostrarSubMenuPainel(true);
+  _mostrarSubMenuPainel(false);
 }
 
 function _iniciaisPerfil(email) {
   const e = (email || '').toLowerCase();
-  // SR: sr01@pp.sc.gov.br → SR01
-  const srM = e.match(/^(sr\d+)@pp\.sc\.gov\.br$/);
-  if (srM) return srM[1].toUpperCase();
+  // SR: sr01sr@pp.sc.gov.br → SR01
+  const srCodIni = srDoSuperintendente(e);
+  if (srCodIni) return srCodIni;
   // DIR: pr01dir@ → PR01 | itapemadir@ → IT
   const dirM = e.match(/^(.+?)dir@pp\.sc\.gov\.br$/);
   if (dirM) {
@@ -242,8 +223,7 @@ function _montarTopbarTreeCRV(host, unidades, srInfo) {
 }
 
 function _montarTopbarTreeSuper(host, unidades, srInfo, user) {
-  const srM   = (user.email || '').toLowerCase().match(/^(sr\d+)@pp\.sc\.gov\.br$/);
-  const srCod = srM ? srM[1].toUpperCase() : null;
+  const srCod = srDoSuperintendente(user.email);
   const nomeSr = srCod ? (srInfo[srCod]?.nome || srCod) : 'Minha SR';
   const unidadesSr = unidades.filter(u => u.sr === srCod);
 
@@ -311,7 +291,7 @@ async function _iniciarPresenca(user) {
     tipo = 'crv';
   } else if (perfil?.tipo === 'super') {
     tipo = 'super';
-    srCod = email.split('@')[0].toUpperCase();
+    srCod = srDoSuperintendente(email);
   } else if (perfil?.tipo === 'dir' || perfil?.tipo === 'cpen') {
     tipo = perfil.tipo;
     unidadeEmail = email.replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
@@ -412,14 +392,14 @@ window._toggleOnlinePanel = async function () {
   const souDpp = _presencaInfo?.tipo === 'crv';
   const linha = p => {
     const funcao = funcaoPrimaria[p.perfil];
-    const principal = funcao || p.nome || p.email;
+    const principal = escHtml(funcao || p.nome || p.email);
     const secundario = funcao ? '' : (rotuloBadge[p.perfil] || '');
     const mostrarMsg = souDpp && p.email !== usuarioAtual?.email?.toLowerCase();
     return `
     <div style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 24px;border-radius:6px;">
       <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></span>
       <span title="${principal}" style="font-size:.78rem;color:var(--cinza-900,#1a1a17);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${principal}</span>
-      ${mostrarMsg ? `<span onclick="window._abrirConversaOnline && window._abrirConversaOnline('${p.email}')" title="Mandar mensagem" style="font-size:.72rem;flex-shrink:0;opacity:.55;cursor:pointer;">💬</span>` : ''}
+      ${mostrarMsg ? `<span data-email="${escHtml(p.email)}" onclick="window._abrirConversaOnline && window._abrirConversaOnline(this.dataset.email)" title="Mandar mensagem" style="font-size:.72rem;flex-shrink:0;opacity:.55;cursor:pointer;">💬</span>` : ''}
       ${secundario ? `<span style="font-size:.62rem;color:var(--cinza-500,#8b897f);margin-left:auto;flex-shrink:0;">${secundario}</span>` : ''}
     </div>`;
   };
@@ -428,6 +408,7 @@ window._toggleOnlinePanel = async function () {
 
   let _grupoSeq = 0;
   const linhaGrupo = (nivel, label, count, conteudoHtml) => {
+    label = escHtml(label);
     const id = 'online-grp-' + (_grupoSeq++);
     return `
     <div>
@@ -515,7 +496,8 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   if (btnSenha) btnSenha.style.display = '';
   /* Submenus conforme perfil */
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
-  _mostrarSubMenuPainel(perfil?.tipo !== null);
+  /* Qualquer usuário autenticado (inclusive servidor aprovado) vê Manual/Ferramentas */
+  _mostrarSubMenuPainel(true);
   _mostrarEscalaPlantaoNova(user.email);
 
   area.innerHTML = `
@@ -541,8 +523,6 @@ function _mostrarTopbarUsuario(user, labelOverride) {
 
 /* ── Modal alterar senha ── */
 window._abrirModalSenha = function() {
-  const m = document.getElementById('user-menu');
-  if (m) m.style.display = 'none';
   ['senha-atual','senha-nova','senha-confirmar'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -684,8 +664,9 @@ window.fazerLogin = async function () {
         try {
           const snap = await getDoc(doc(db, 'usuarios', cred.user.uid));
           if (!snap.exists() || snap.data().senhaConfigurada !== true) primeiroAcesso = true;
-        } catch (_) { if (senha === SENHA_TEMPORARIA) primeiroAcesso = true; }
+        } catch (_) { /* sem acesso ao doc — segue como acesso normal */ }
         if (primeiroAcesso) {
+          _senhaPrimeiroAcesso = senha;
           _mostrarTela('tela-trocar-senha'); return;
         }
         _fecharModal('modal-login');
@@ -765,6 +746,38 @@ window.fazerLogin = async function () {
   } finally {
     btn.textContent = 'Entrar'; btn.disabled = false;
   }
+};
+
+// ══════════════════════════════════════════════
+// ESQUECI MINHA SENHA — também usado pelos novos logins (ex.: sr01sr@)
+// para definir a primeira senha. A mensagem é sempre a mesma, exista
+// ou não a conta, para não revelar quais e-mails estão cadastrados.
+// ══════════════════════════════════════════════
+window.esqueciSenha = async function () {
+  const email  = document.getElementById('login-email').value.trim().toLowerCase();
+  const erroEl = document.getElementById('login-erro');
+  const btn    = document.getElementById('btn-esqueci-senha');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    erroEl.textContent = 'Digite seu e-mail no campo acima e clique novamente em "Esqueci minha senha".';
+    erroEl.style.display = 'block';
+    document.getElementById('login-email')?.focus();
+    return;
+  }
+  if (btn) btn.disabled = true;
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (e) {
+    if (e.code === 'auth/too-many-requests') {
+      erroEl.textContent = 'Muitas tentativas. Aguarde alguns minutos.';
+      erroEl.style.display = 'block';
+      if (btn) btn.disabled = false;
+      return;
+    }
+    /* demais erros (inclusive usuário inexistente) caem na mensagem neutra abaixo */
+  }
+  erroEl.style.display = 'none';
+  window.showToast && showToast('Se o e-mail estiver cadastrado, você receberá um link para definir a senha.');
+  if (btn) btn.disabled = false;
 };
 
 // ══════════════════════════════════════════════
@@ -952,9 +965,10 @@ window.trocarSenha = async function () {
   erroEl.style.display = 'none';
   if (nova.length < 8)            { erroEl.textContent = 'Mínimo 8 caracteres.'; erroEl.style.display = 'block'; return; }
   if (nova !== conf)              { erroEl.textContent = 'As senhas não coincidem.'; erroEl.style.display = 'block'; return; }
-  if (nova === SENHA_TEMPORARIA)  { erroEl.textContent = 'Escolha uma senha diferente da temporária.'; erroEl.style.display = 'block'; return; }
+  if (_senhaPrimeiroAcesso && nova === _senhaPrimeiroAcesso) { erroEl.textContent = 'Escolha uma senha diferente da temporária.'; erroEl.style.display = 'block'; return; }
   try {
     await updatePassword(usuarioAtual, nova);
+    _senhaPrimeiroAcesso = null;
     try { await setDoc(doc(db, 'usuarios', usuarioAtual.uid), { senhaConfigurada: true, email: usuarioAtual.email }, { merge: true }); } catch (_) {}
     _mostrarTopbarUsuario(usuarioAtual);
     _mostrarTela('tela-login');
@@ -990,50 +1004,15 @@ window.fecharNovidades = function () {
 };
 
 // ══════════════════════════════════════════════
-// FERRAMENTAS — iframes
+// GERADOR DE OFÍCIOS — iframe em tela cheia
+// (demais ferramentas abrem no centro da página via _abrirFerramenta)
 // ══════════════════════════════════════════════
-window.abrirCaixinha = function () {
-  const m = document.getElementById('modal-caixinha');
-  const f = document.getElementById('caixinha-iframe');
-  if (f && !f.src.includes('caixinha')) f.src = 'caixinha-controle.html';
-  if (m) m.classList.add('aberto');
-};
-window.fecharCaixinha = function () { document.getElementById('modal-caixinha')?.classList.remove('aberto'); };
-
-window.abrirCalculadora = function () {
-  const m = document.getElementById('modal-calculadora');
-  const f = document.getElementById('calc-iframe');
-  if (f && !f.src.includes('calculadora')) f.src = 'calculadora-prisional.html';
-  if (m) m.classList.add('aberto');
-};
-window.fecharCalculadora = function () { document.getElementById('modal-calculadora')?.classList.remove('aberto'); };
-
-window.abrirViagens = function () {
-  const m = document.getElementById('modal-viagens');
-  const f = document.getElementById('viagens-iframe');
-  if (f && !f.src.includes('controle-viagens')) f.src = 'controle-viagens.html';
-  if (m) m.classList.add('aberto');
-};
-window.fecharViagens = function () { document.getElementById('modal-viagens')?.classList.remove('aberto'); };
-
 window.abrirGeradorOficios = function () {
   const f = document.getElementById('gerador-iframe');
   if (f && !f.src.includes('gerador-oficios')) f.src = 'gerador-oficios-v2/index.html';
   document.getElementById('modal-gerador')?.classList.add('aberto');
 };
 window.fecharGeradorOficios = function () { document.getElementById('modal-gerador')?.classList.remove('aberto'); };
-
-window.abrirGuiaOficios = function () {
-  const f = document.getElementById('guia-iframe');
-  if (f && !f.src.includes('guia')) f.src = 'guia_crv_dpp.html';
-  document.getElementById('modal-guia')?.classList.add('aberto');
-};
-window.fecharGuiaOficios = function () { document.getElementById('modal-guia')?.classList.remove('aberto'); };
-
-/* Dados de unidade passados pelo Painel ao abrir o PAD */
-window.abrirGeradorPAD = function () {
-  window.open('https://sepen-dpp.github.io/PAD/', '_blank');
-};
 
 // ══════════════════════════════════════════════
 // EDITOR DE UNIDADES (usuários com acesso total — área restrita)
@@ -1094,33 +1073,33 @@ window.abrirEditorUnidades = async function () {
           <div style="font-weight:700;color:#1e40af;font-size:.78rem;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Superintendência Regional</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <div style="grid-column:1/-1;"><label style="${labelStyle}">Superintendente</label>
-              <input data-sr="${sr}" data-campo-sr="superintendente" value="${srInfo.superintendente||''}" style="${inputStyle}" /></div>
+              <input data-sr="${sr}" data-campo-sr="superintendente" value="${escHtml(srInfo.superintendente)}" style="${inputStyle}" /></div>
             <div><label style="${labelStyle}">Telefone SR</label>
-              <input data-sr="${sr}" data-campo-sr="tel" value="${srInfo.tel||''}" style="${inputStyle}" /></div>
+              <input data-sr="${sr}" data-campo-sr="tel" value="${escHtml(srInfo.tel)}" style="${inputStyle}" /></div>
             <div><label style="${labelStyle}">E-mail SR</label>
-              <input data-sr="${sr}" data-campo-sr="email" value="${srInfo.email||''}" style="${inputStyle}" /></div>
+              <input data-sr="${sr}" data-campo-sr="email" value="${escHtml(srInfo.email)}" style="${inputStyle}" /></div>
           </div>
         </div>
 
         <!-- Unidades (cada uma colapsável) -->
         ${items.map(({ u, idx }) => `
-        <details class="ed-unidade" data-idx="${idx}" data-busca="${(u.nome+' '+u.cidade+' '+(u.diretor||'')).toLowerCase().replace(/"/g,'&quot;')}" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+        <details class="ed-unidade" data-idx="${idx}" data-busca="${escHtml((u.nome+' '+u.cidade+' '+(u.diretor||'')).toLowerCase())}" style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
           <summary style="cursor:pointer;padding:8px 12px;background:#f1f5f9;font-weight:600;font-size:.82rem;color:#1a2a4a;list-style:none;display:flex;justify-content:space-between;align-items:center;">
-            <span>${u.nome}</span>
-            <span style="font-size:.72rem;font-weight:400;color:#94a3b8;">${u.cidade}</span>
+            <span>${escHtml(u.nome)}</span>
+            <span style="font-size:.72rem;font-weight:400;color:#94a3b8;">${escHtml(u.cidade)}</span>
           </summary>
           <div style="padding:10px 12px;background:#fff;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div><label style="${labelStyle}">Diretor(a)</label>
-                <input data-idx="${idx}" data-campo="diretor" value="${u.diretor||''}" style="${inputStyle}" /></div>
+                <input data-idx="${idx}" data-campo="diretor" value="${escHtml(u.diretor)}" style="${inputStyle}" /></div>
               <div><label style="${labelStyle}">E-mail</label>
-                <input data-idx="${idx}" data-campo="email" value="${u.email||''}" style="${inputStyle}" /></div>
+                <input data-idx="${idx}" data-campo="email" value="${escHtml(u.email)}" style="${inputStyle}" /></div>
               <div><label style="${labelStyle}">Telefone</label>
-                <input data-idx="${idx}" data-campo="tel" value="${u.tel||''}" style="${inputStyle}" /></div>
+                <input data-idx="${idx}" data-campo="tel" value="${escHtml(u.tel)}" style="${inputStyle}" /></div>
               <div><label style="${labelStyle}">Cidade</label>
-                <input data-idx="${idx}" data-campo="cidade" value="${u.cidade||''}" style="${inputStyle}" /></div>
+                <input data-idx="${idx}" data-campo="cidade" value="${escHtml(u.cidade)}" style="${inputStyle}" /></div>
               <div style="grid-column:1/-1;"><label style="${labelStyle}">Endereço</label>
-                <input data-idx="${idx}" data-campo="end" value="${u.end||''}" style="${inputStyle}" /></div>
+                <input data-idx="${idx}" data-campo="end" value="${escHtml(u.end)}" style="${inputStyle}" /></div>
             </div>
           </div>
         </details>`).join('')}
@@ -1202,8 +1181,8 @@ async function _entrarNaAreaRestrita(user) {
         const el = document.getElementById('novidades-conteudo');
         if (el) el.innerHTML = novas.map(n =>
           `<div style="margin-bottom:.8rem;padding-bottom:.8rem;border-bottom:1px solid #e5e7eb;">
-            <div style="font-weight:600;color:#1a2a4a;">${n.titulo||''}</div>
-            <div style="color:#4b5563;font-size:.84rem;margin-top:.2rem;">${n.descricao||''}</div>
+            <div style="font-weight:600;color:#1a2a4a;">${escHtml(n.titulo)}</div>
+            <div style="color:#4b5563;font-size:.84rem;margin-top:.2rem;">${escHtml(n.descricao)}</div>
           </div>`).join('');
         document.getElementById('modal-novidades')?.classList.add('aberto');
       }
@@ -1357,10 +1336,6 @@ function _htmlGrupoEstado() {
 
 /* ── Abre ferramenta interna no centro da página ── */
 window._abrirFerramenta = function(url, titulo) {
-  /* Fecha todos os modais de grupo */
-  ['modal-grupo-crv','modal-grupo-jud','modal-grupo-estado'].forEach(function(id) {
-    document.getElementById(id)?.classList.remove('aberto');
-  });
   const iframe = document.getElementById('crv-tool-iframe');
   const tituloEl = document.getElementById('crv-tool-titulo');
   if (iframe) {
@@ -1427,52 +1402,3 @@ function _mostrarSubMenuPainel(show) {
     });
   }
 }
-
-/* ── Reset de senhas (apenas rodrigo.l.pastore@gmail.com) ── */
-window._abrirResetSenhas = async function() {
-  if (!usuarioAtual || usuarioAtual.email !== 'rodrigo.l.pastore@gmail.com') {
-    showToast && showToast('Acesso restrito ao administrador.'); return;
-  }
-  const pl = document.getElementById('restrito-placeholder');
-  if (!pl) return;
-  pl.innerHTML = _btnVoltar() + `
-    <div style="max-width:560px;padding:20px 0;">
-      <h3 style="margin-bottom:8px;color:var(--texto);">🔑 Redefinir Senhas</h3>
-      <p style="font-size:.85rem;color:var(--txt-3);margin-bottom:16px;line-height:1.6;">
-        Esta ação marca todos os usuários como <strong>"primeiro acesso"</strong>.<br>
-        Você deve redefinir as senhas para <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">12345crv</code> manualmente no
-        <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a> antes de acionar esta função.
-      </p>
-      <div id="reset-resultado" style="margin-bottom:12px;font-size:.83rem;"></div>
-      <button id="btn-reset-exec" onclick="_executarResetSenhas()"
-        style="padding:10px 24px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.88rem;font-family:inherit;">
-        ⚠ Marcar todos como primeiro acesso
-      </button>
-    </div>`;
-};
-
-window._executarResetSenhas = async function() {
-  const btn = document.getElementById('btn-reset-exec');
-  const res = document.getElementById('reset-resultado');
-  if (btn) { btn.disabled = true; btn.textContent = 'Processando…'; }
-  if (res) res.textContent = '';
-  try {
-    const { getDocs: _gd, collection: _c, writeBatch, doc: _d }
-      = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
-    const db2 = getFirestore();
-    /* Reseta coleção 'usuarios' (CRV) */
-    const snapU = await getDocs(collection(db2, 'usuarios'));
-    const batch = writeBatch(db2);
-    let count = 0;
-    snapU.forEach(d => { batch.update(d.ref, { senhaConfigurada: false }); count++; });
-    /* Reseta coleção 'usuarios_cadastrados' (unidades) */
-    const snapC = await getDocs(collection(db2, 'usuarios_cadastrados'));
-    snapC.forEach(d => { if (d.data().status === 'aprovado') { batch.update(d.ref, { senhaConfigurada: false }); count++; } });
-    await batch.commit();
-    if (res) res.innerHTML = `<span style="color:#15803d;">✅ ${count} usuário(s) marcados para primeiro acesso.</span><br><span style="font-size:.78rem;color:var(--txt-3);">Redefina as senhas para <strong>12345crv</strong> no Firebase Console e comunique os usuários.</span>`;
-    if (btn) { btn.disabled = false; btn.textContent = '⚠ Marcar todos como primeiro acesso'; }
-  } catch(e) {
-    if (res) res.innerHTML = `<span style="color:#dc2626;">Erro: ${e.message}</span>`;
-    if (btn) { btn.disabled = false; btn.textContent = '⚠ Marcar todos como primeiro acesso'; }
-  }
-};

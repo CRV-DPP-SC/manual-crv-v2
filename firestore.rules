@@ -1,0 +1,257 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════
+// CRV — Regras do Firestore (projeto crv-dpp-sc-v2)
+//
+// Princípio: tudo é NEGADO, exceto o que está liberado abaixo.
+// Não existe mais a regra genérica "match /{document=**}" — ela liberava
+// leitura e gravação de todas as coleções para QUALQUER conta logada,
+// inclusive cadastros pendentes/recusados.
+//
+// Perfis:
+//   CRV              → lista fixa (igual a js/config-crv.js)
+//   Superintendente  → sr01sr@ … sr08sr@pp.sc.gov.br   (e-mail confirmado)
+//   Diretor(a)       → xxxdir@pp.sc.gov.br              (e-mail confirmado)
+//   CPEN             → xxxcpen@pp.sc.gov.br             (e-mail confirmado)
+//   Servidor         → e-mail pessoal com cadastro APROVADO em usuarios_cadastrados
+//
+// "E-mail confirmado" impede que alguém crie agora uma conta falsa
+// (ex.: pr05dir@…) e ganhe o perfil. As contas legítimas são marcadas como
+// confirmadas pela tarefa "contas-institucionais" do workflow Admin CRV.
+// ════════════════════════════════════════════════════════════════════
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Identidade ───────────────────────────────────────────────────
+    function logado() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function meuEmail() {
+      return request.auth.token.email.lower();
+    }
+    function confirmado() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isCRV() {
+      return logado() && meuEmail() in [
+        'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
+        'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
+        'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'
+      ];
+    }
+    function isSR() {
+      return logado() && confirmado() && meuEmail().matches('^sr0[1-8]sr@pp[.]sc[.]gov[.]br$');
+    }
+    function isDir() {
+      return logado() && confirmado() && meuEmail().matches('^.+dir@pp[.]sc[.]gov[.]br$');
+    }
+    function isCpen() {
+      return logado() && confirmado() && meuEmail().matches('^.+cpen@pp[.]sc[.]gov[.]br$');
+    }
+    function isGestor() {           // Diretor ou CPEN
+      return isDir() || isCpen();
+    }
+    function isInstitucional() {
+      return isCRV() || isSR() || isGestor();
+    }
+
+    // 'pr05dir@pp.sc.gov.br' → 'pr05@pp.sc.gov.br'
+    function unidadeDoGestor() {
+      return meuEmail().replace('(dir|cpen)@pp[.]sc[.]gov[.]br$', '@pp.sc.gov.br');
+    }
+    // 'sr03sr@pp.sc.gov.br' → 'SR03'
+    function srDoSuperintendente() {
+      return meuEmail().split('sr@')[0].upper();
+    }
+
+    // Servidor com e-mail pessoal: só vale com cadastro APROVADO
+    function meuCadastro() {
+      return /databases/$(database)/documents/usuarios_cadastrados/$(request.auth.uid);
+    }
+    function servidorAprovado() {
+      return logado() && exists(meuCadastro()) && get(meuCadastro()).data.status == 'aprovado';
+    }
+    function unidadeDoServidor() {
+      return servidorAprovado() ? get(meuCadastro()).data.emailUnidade : '';
+    }
+
+    // Qualquer pessoa com acesso liberado ao sistema
+    function membro() {
+      return isInstitucional() || servidorAprovado();
+    }
+
+    // ── Unidades (diretores, contatos, endereços) ───────────────────
+    // Leitura pública: a página inicial mostra as unidades antes do login.
+    match /unidades_config/{id} {
+      allow read: if true;
+      allow write: if isCRV();
+    }
+
+    // ── Novidades exibidas à equipe CRV ─────────────────────────────
+    match /novidades/{id} {
+      allow read: if membro();
+      allow write: if isCRV();
+    }
+
+    // ── Controle de primeiro acesso / último acesso ─────────────────
+    match /usuarios/{uid} {
+      allow read, write: if logado() && request.auth.uid == uid;
+      allow read: if isCRV();
+    }
+
+    // ── Cadastro de servidores (contém CPF e data de nascimento) ────
+    match /usuarios_cadastrados/{uid} {
+      // Criação: só o próprio cadastro, sempre como "pendente"
+      allow create: if logado()
+        && request.auth.uid == uid
+        && request.resource.data.email == meuEmail()
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.perfil == 'servidor'
+        && request.resource.data.aprovadoPor == null;
+
+      // Leitura: o próprio servidor, a CRV, e Diretor/CPEN da unidade
+      allow read: if logado() && (
+        request.auth.uid == uid
+        || isCRV()
+        || (isGestor() && resource.data.emailUnidade == unidadeDoGestor())
+      );
+
+      // Aprovar / recusar / revogar / reabrir: CRV ou Diretor/CPEN da unidade.
+      // Só os campos de situação podem mudar — ninguém altera CPF/nome alheios.
+      allow update: if (isCRV() || (isGestor() && resource.data.emailUnidade == unidadeDoGestor()))
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','aprovadoPor','aprovadoEm','motivoRecusa']);
+
+      // Novo pedido após recusa/revogação: o próprio servidor, voltando a "pendente"
+      allow update: if logado() && request.auth.uid == uid
+        && resource.data.status in ['recusado','revogado']
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.aprovadoPor == null
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nome','cpf','dataNascimento','emailUnidade','nomeUnidade','srUnidade',
+                       'status','aprovadoPor','aprovadoEm','motivoRecusa','atualizadoEm']);
+
+      allow delete: if isCRV() || (isGestor() && resource.data.emailUnidade == unidadeDoGestor());
+    }
+
+    // ── Solicitações de assinatura (ofícios) ────────────────────────
+    // ETAPA INTERMEDIÁRIA: leitura ainda aberta a todos os membros porque o
+    // Painel busca a coleção inteira. Na Fase 1 as buscas passam a filtrar
+    // pelos envolvidos e esta leitura será restringida.
+    match /solicitacoes/{id} {
+      allow read: if membro();
+      allow create: if membro()
+        && request.resource.data.emailCriador == request.auth.token.email;
+      // Assinar / negar / cancelar: só estes campos mudam; o conteúdo do ofício
+      // e os dados de criação ficam congelados depois de criado.
+      allow update: if membro()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['assinantes','statusGeral','cancelamento','atualizadoEm']);
+      allow delete: if isCRV();
+    }
+
+    // ── Presença (usuários online) ──────────────────────────────────
+    match /presencas/{uid} {
+      allow read: if membro();
+      allow write: if logado() && request.auth.uid == uid;
+    }
+    match /presencas_pulso/{uid} {
+      allow read: if membro();
+      allow write: if logado() && request.auth.uid == uid;
+    }
+
+    // ── Mensagens ───────────────────────────────────────────────────
+    function msgEhInstitucional(email) {
+      return email.matches('^sr0[1-8]sr@pp[.]sc[.]gov[.]br$')
+          || email.matches('^.+(cpen|dir)@pp[.]sc[.]gov[.]br$');
+    }
+    function outroParticipante(participantes) {
+      return participantes[0] == request.auth.token.email ? participantes[1] : participantes[0];
+    }
+    function parValido(outro) {
+      return isCRV()
+        || ((isSR() || isGestor()) && msgEhInstitucional(outro))
+        || (unidadeDoServidor() != '' && (
+             outro == unidadeDoServidor().split('@')[0] + 'cpen@pp.sc.gov.br' ||
+             outro == unidadeDoServidor().split('@')[0] + 'dir@pp.sc.gov.br'
+           ));
+    }
+    function podeReceberRecado(r) {
+      return (r.destinoTipo == 'unidade'
+               && ((isGestor() && r.destino == unidadeDoGestor()) || unidadeDoServidor() == r.destino))
+          || (r.destinoTipo == 'regional' && isSR() && r.destino == srDoSuperintendente());
+    }
+    function recadoValido(recadoId, meuOutro) {
+      let r = get(/databases/$(database)/documents/recados/$(recadoId)).data;
+      return r.de == meuOutro && podeReceberRecado(r);
+    }
+
+    match /recados/{id} {
+      allow create: if membro()
+        && request.resource.data.de == request.auth.token.email
+        && request.resource.data.destinoTipo in ['unidade', 'regional']
+        && request.resource.data.texto is string
+        && request.resource.data.texto.size() > 0
+        && request.resource.data.texto.size() < 2000;
+      allow read: if membro() && (
+        resource.data.de == request.auth.token.email || podeReceberRecado(resource.data)
+      );
+      // Marcar como lido: só o campo lidoPor, e só a própria marcação
+      allow update: if membro() && podeReceberRecado(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lidoPor']);
+      allow delete: if false;
+    }
+
+    match /conversas/{id} {
+      allow read, update: if membro() && request.auth.token.email in resource.data.participantes;
+      allow create: if membro()
+        && request.auth.token.email in request.resource.data.participantes
+        && request.resource.data.participantes.size() == 2
+        && (
+          request.resource.data.origemRecado == null
+            ? parValido(outroParticipante(request.resource.data.participantes))
+            : recadoValido(request.resource.data.origemRecado, outroParticipante(request.resource.data.participantes))
+        );
+
+      match /mensagens/{msgId} {
+        allow read: if membro()
+          && request.auth.token.email in get(/databases/$(database)/documents/conversas/$(id)).data.participantes;
+        allow create: if membro()
+          && request.auth.token.email in get(/databases/$(database)/documents/conversas/$(id)).data.participantes
+          && request.resource.data.de == request.auth.token.email;
+      }
+    }
+
+    // ── Antecipação de Benefícios ───────────────────────────────────
+    // Status público (sem dados sensíveis): o formulário sabe quais unidades já responderam
+    match /beneficios_status/{slug} {
+      allow get, list: if true;
+      allow create: if !exists(/databases/$(database)/documents/beneficios_status/$(slug))
+                     && request.resource.data.keys().hasAll(['unidade','respondida'])
+                     && request.resource.data.respondida == true;
+      allow update, delete: if false;
+    }
+    // Respostas completas: gravação pública (1x por unidade), leitura só CRV
+    match /beneficios_respostas/{slug} {
+      allow create: if !exists(/databases/$(database)/documents/beneficios_respostas/$(slug))
+                     && request.resource.data.keys().hasAll(['unidade','responsavel','respostas']);
+      allow read: if isCRV();
+      allow update, delete: if false;
+    }
+
+    // ── Ferramentas internas da CRV ─────────────────────────────────
+    match /caixinha_config/{id}      { allow read, write: if isCRV(); }
+    match /caixinha_lancamentos/{id} { allow read, write: if isCRV(); }
+    match /controle_viagens/{id}     { allow read, write: if isCRV(); }
+    match /diarias_servidores/{id}   { allow read, write: if isCRV(); }   // CPF e dados bancários
+    match /diarias_viagens/{id}      { allow read, write: if isCRV(); }
+    match /escala_servidores/{id}    { allow read, write: if isCRV(); }
+    match /escala_excecoes/{id}      { allow read, write: if isCRV(); }
+    match /escala_extras/{id}        { allow read, write: if isCRV(); }
+    match /escala_observacoes/{id}   { allow read, write: if isCRV(); }
+
+    // sistema_estado (bot de notificações): sem acesso pelo site — o bot usa
+    // conta de serviço, que não passa por estas regras.
+  }
+}

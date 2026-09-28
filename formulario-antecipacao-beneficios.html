@@ -597,31 +597,26 @@ import { getFirestore, doc, getDoc, getDocs, collection, writeBatch, serverTimes
  */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnmN9XVSxUwIB3p-6FLcOb64Qd59NHDiCErAKjeig3SmYE1NjpfNsFnDHm-SH6MN0K6g/exec';
 
-const firebaseConfig = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
+import { FIREBASE_CONFIG as firebaseConfig } from "./js/config-crv.js";
 
 const app = initializeApp(firebaseConfig);
 
 /*
  * App Check — proteção contra bots/spam na escrita pública.
- * TODO: substituir 'COLOQUE_AQUI_A_SITE_KEY_DO_RECAPTCHA' pela site key
- * gerada no Console do Firebase > App Check > reCAPTCHA v3, depois de
- * registrar este app. Até lá, o formulário funciona normalmente (App
- * Check só passa a bloquear de fato quando "Enforce" é ativado lá).
+ * Para ativar: Console do Firebase > App Check > registrar o app com
+ * reCAPTCHA v3, colar a site key abaixo e depois ligar "Enforce" no
+ * Firestore. Enquanto estiver vazia, o App Check não é carregado.
  */
-try {
-  initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('COLOQUE_AQUI_A_SITE_KEY_DO_RECAPTCHA'),
-    isTokenAutoRefreshEnabled: true
-  });
-} catch (e) {
-  console.warn('App Check não inicializado (site key pendente):', e);
+const RECAPTCHA_SITE_KEY = '';
+if (RECAPTCHA_SITE_KEY) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+  } catch (e) {
+    console.warn('App Check não inicializado:', e);
+  }
 }
 
 const db = getFirestore(app);

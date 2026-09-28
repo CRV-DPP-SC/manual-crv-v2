@@ -13,15 +13,8 @@ async function _buscarUnidadesFirestore() {
   try {
     const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js');
     const { getFirestore, doc, getDoc }       = await import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js');
-    const firebaseConfig = {
-      apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-      authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-      projectId:         "crv-dpp-sc-v2",
-      storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-      messagingSenderId: "513539683551",
-      appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-    };
-    const fbApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const { FIREBASE_CONFIG }                 = await import('./config-crv.js');
+    const fbApp = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
     const db    = getFirestore(fbApp);
     const snap  = await getDoc(doc(db, 'unidades_config', 'principal'));
     return snap.exists() ? snap.data() : null;
@@ -146,6 +139,10 @@ function toggleFlowStep(body) {
 window.toggleFlowStep = toggleFlowStep;
 
 // ── RENDERIZA UNIDADES ──
+function _esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function renderizarUnidades() {
   const container = document.getElementById('unidades-container');
   if (!container || !UNIDADES.length) return;
@@ -173,22 +170,22 @@ function renderizarUnidades() {
     return `
     <div class="sr-bloco" data-sr="${sr.toLowerCase()}">
       <div class="sr-header" onclick="toggleSR(this)">
-        <span>🏛️ ${srLabels[sr]} <span style="font-size:.78rem;font-weight:400;opacity:.8;margin-left:8px;">${ups.length} unidade(s) · Sup.: ${srInfo.superintendente || '—'}</span></span>
+        <span>🏛️ ${srLabels[sr]} <span style="font-size:.78rem;font-weight:400;opacity:.8;margin-left:8px;">${ups.length} unidade(s) · Sup.: ${_esc(srInfo.superintendente || '—')}</span></span>
         <span>▼</span>
       </div>
       <div class="sr-unidades">
         ${ups.map(u => `
         <div class="up-card">
           <div class="up-header" onclick="toggleUP(this)">
-            <span>${u.nome}</span>
-            <span style="font-size:.75rem;color:var(--cinza-3);">${u.cidade} ▸</span>
+            <span>${_esc(u.nome)}</span>
+            <span style="font-size:.75rem;color:var(--cinza-3);">${_esc(u.cidade)} ▸</span>
           </div>
           <div class="up-detalhe">
-            <div><strong>Diretor(a):</strong> ${u.diretor}</div>
-            <div><strong>E-mail:</strong> <a href="mailto:${u.email}">${u.email}</a></div>
-            <div><strong>Telefone:</strong> ${u.tel}</div>
-            <div><strong>Endereço:</strong> ${u.end}</div>
-            <div><strong>Superintendência:</strong> ${srInfo.nome || sr} · Sup.: ${srInfo.superintendente || '—'} · ${srInfo.tel || ''}</div>
+            <div><strong>Diretor(a):</strong> ${_esc(u.diretor)}</div>
+            <div><strong>E-mail:</strong> <a href="mailto:${_esc(u.email)}">${_esc(u.email)}</a></div>
+            <div><strong>Telefone:</strong> ${_esc(u.tel)}</div>
+            <div><strong>Endereço:</strong> ${_esc(u.end)}</div>
+            <div><strong>Superintendência:</strong> ${_esc(srInfo.nome || sr)} · Sup.: ${_esc(srInfo.superintendente || '—')} · ${_esc(srInfo.tel || '')}</div>
           </div>
         </div>`).join('')}
       </div>
@@ -279,7 +276,7 @@ function toggleTema() {
   const btn = document.querySelector('.btn-tema');
   if (btn) btn.textContent = novo === 'escuro' ? '☀️' : '🌙';
   /* Propaga tema para iframes embarcados */
-  ['painel-embed-iframe','gerador-iframe','guia-iframe','crv-tool-iframe','caixinha-iframe','calc-iframe','viagens-iframe'].forEach(fid => {
+  ['painel-embed-iframe','gerador-iframe','crv-tool-iframe'].forEach(fid => {
     const fr = document.getElementById(fid);
     try { if (fr?.contentWindow) fr.contentWindow.postMessage({ crvTema: novo }, '*'); } catch(_) {}
   });

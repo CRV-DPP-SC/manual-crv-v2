@@ -7,16 +7,9 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
          query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente } from "./config-crv.js";
 
-const FC = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
-const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FC);
+const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const _auth = getAuth(_app);
 const db    = getFirestore(_app);
 
@@ -76,7 +69,7 @@ function _ouvirConversas() {
       const outro = _outroParticipante(c);
       const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
       const novaMsg = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
-      if (novaMsg) _mostrarToast(_nomeContato(outro), c.ultimaMensagemTexto, () => _abrirDireto(outro));
+      if (novaMsg) _mostrarToast(_nomeContatoTexto(outro), c.ultimaMensagemTexto, () => _abrirDireto(outro));
     });
     _atualizarBadgeMensagens();
   }, e => console.error('Erro no listener de conversas:', e));
@@ -119,17 +112,12 @@ const convId = (a, b) => [a, b].sort().join('__');
 
 function _rotuloPerfil(email) {
   const e = (email || '').toLowerCase();
-  if (/^sr0[1-8]@pp\.sc\.gov\.br$/.test(e)) return 'Superintendente';
+  if (RE_SUPERINTENDENTE.test(e))           return 'Superintendente';
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))    return 'Diretor(a)';
   if (/^.+cpen@pp\.sc\.gov\.br$/.test(e))   return 'Coord. Execução Penal';
   return '';
 }
 
-const EMAILS_CRV = [
-  'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
-  'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'
-];
 function _nomeExibicaoEmail(email) {
   const prefix = (email || '').split('@')[0];
   const partes = prefix.split('.');
@@ -150,7 +138,7 @@ function _diretorioInstitucional() {
     lista.push({ email: base + 'cpen@pp.sc.gov.br', nome: 'Coord. Exec. Penal — ' + u.nome });
   });
   Object.keys(window.SR_INFO || {}).sort().forEach(cod => {
-    lista.push({ email: cod.toLowerCase() + '@pp.sc.gov.br', nome: cod + ' — ' + (window.SR_INFO[cod]?.nome || cod) });
+    lista.push({ email: emailSuperintendente(cod), nome: 'Superintendente — ' + cod + ' — ' + (window.SR_INFO[cod]?.nome || cod) });
   });
   return lista.filter(c => c.email !== meuEmail());
 }
@@ -306,8 +294,14 @@ function _outroParticipante(conversa) {
   return (conversa.participantes || []).find(e => e !== meuEmail()) || '';
 }
 
+/* Retorna texto JÁ ESCAPADO — pronto para innerHTML */
 function _nomeContato(email) {
+  return escHtmlMsg(_nomeContatoTexto(email));
+}
+function _nomeContatoTexto(email) {
   if (EMAILS_CRV.includes((email || '').toLowerCase())) return 'DPP — ' + _nomeExibicaoEmail(email);
+  const srCod = srDoSuperintendente(email);
+  if (srCod) return 'Superintendente — ' + srCod + ' — ' + (window.SR_INFO?.[srCod]?.nome || '');
   const rot = _rotuloPerfil(email);
   if (rot) {
     const unidade = (window.UNIDADES || []).find(u => email.startsWith(u.email.split('@')[0]));
@@ -530,7 +524,7 @@ async function _renderNovaConversa() {
   const temContato = email => institucionais.some(c => c.email === email);
 
   const linhaContato = c => `
-    <div class="msg-contato" data-email="${c.email}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.nome}</div>`;
+    <div class="msg-contato" data-email="${escHtmlMsg(c.email)}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(c.nome)}</div>`;
 
   const renderListaPlana = itens => {
     listaEl.innerHTML = itens.length ? itens.map(linhaContato).join('')
@@ -542,8 +536,8 @@ async function _renderNovaConversa() {
     let _seq = 0;
     listaEl.innerHTML = srCods.map(sr => {
       const id = 'nc-' + (_seq++);
-      const nomeSr = window.SR_INFO?.[sr]?.nome || sr;
-      const srEmail = sr.toLowerCase() + '@pp.sc.gov.br';
+      const nomeSr = escHtmlMsg(window.SR_INFO?.[sr]?.nome || sr);
+      const srEmail = emailSuperintendente(sr);
       const contatoSr = temContato(srEmail)
         ? `<div class="msg-contato" data-email="${srEmail}" style="padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;font-size:.76rem;font-weight:600;color:var(--azul-500);">Superintendente</div>` : '';
       const unidadesHtml = (window.UNIDADES || []).filter(u => u.sr === sr).map(u => {
@@ -558,7 +552,7 @@ async function _renderNovaConversa() {
           <div>
             <div class="nc-unidade-row" data-alvo="${uid}" style="display:flex;align-items:center;gap:6px;padding:5px 6px 5px 24px;border-radius:6px;cursor:pointer;">
               <span class="nc-seta" style="font-size:.55rem;color:var(--txt-3);flex-shrink:0;">▸</span>
-              <span style="flex:1;min-width:0;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.nome}</span>
+              <span style="flex:1;min-width:0;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtmlMsg(u.nome)}</span>
             </div>
             <div id="${uid}" class="online-grupo-conteudo" style="display:none;">${pessoas || '<div style="font-size:.7rem;color:var(--txt-3);padding:4px 6px 4px 42px;">—</div>'}</div>
           </div>`;
@@ -639,7 +633,7 @@ async function _renderListaLateral() {
   const recadosNaoLidos = recadosTodos.filter(r => !r.lidoPor?.[meuEmail()]);
 
   const itemRecado = r => `
-    <div class="msg-item msg-item-recado" data-id="${r.id}" data-de="${r.de}">
+    <div class="msg-item msg-item-recado" data-id="${escHtmlMsg(r.id)}" data-de="${escHtmlMsg(r.de)}">
       <div class="msg-item-corpo">
         <div class="msg-item-topo">
           <span class="msg-item-nome nl" style="color:var(--azul-500);">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>
@@ -655,7 +649,7 @@ async function _renderListaLateral() {
     const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
     const naoLida = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
     return `
-    <div class="msg-item msg-item-conversa" data-email="${outro}">
+    <div class="msg-item msg-item-conversa" data-email="${escHtmlMsg(outro)}">
       <div class="msg-item-corpo">
         <div class="msg-item-topo">
           <span class="msg-item-nome ${naoLida ? 'nl' : ''}">${_nomeContato(outro)}</span>
@@ -702,7 +696,7 @@ async function _renderHistoricoRecados() {
   const item = r => {
     const lido = !!r.lidoPor?.[meuEmail()];
     return `
-    <div class="msg-item msg-item-recado" data-id="${r.id}" data-de="${r.de}" style="border-radius:8px;">
+    <div class="msg-item msg-item-recado" data-id="${escHtmlMsg(r.id)}" data-de="${escHtmlMsg(r.de)}" style="border-radius:8px;">
       <div class="msg-item-corpo">
         <div class="msg-item-topo">
           <span class="msg-item-nome" style="color:${lido ? 'var(--txt-3)' : 'var(--azul-500)'};">Recado — ${escHtmlMsg(r.deNome || r.de)}</span>

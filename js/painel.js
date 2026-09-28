@@ -8,27 +8,12 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendP
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente } from "./config-crv.js";
 
 // ── CONFIG FIREBASE ──
-const firebaseConfig = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
-const app  = initializeApp(firebaseConfig);
+const app  = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-
-// ── E-MAILS CRV (acesso total) ──
-const EMAILS_CRV = [
-  'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
-  'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com',
-  'crv@pp.sc.gov.br'
-];
 
 // ── ESTADO ──
 let UNIDADES          = [];
@@ -65,9 +50,9 @@ async function resolverPerfil(user) {
   if (EMAILS_CRV.includes(e))
     return { perfil: 'crv', escopo: { tipo: 'crv' } };
 
-  const srMatch = e.match(/^(sr0[1-8])@pp\.sc\.gov\.br$/);
-  if (srMatch)
-    return { perfil: 'super', escopo: { tipo: 'sr', codigo: srMatch[1].toUpperCase() } };
+  const srCod = srDoSuperintendente(e);
+  if (srCod)
+    return { perfil: 'super', escopo: { tipo: 'sr', codigo: srCod } };
 
   const dirMatch = e.match(/^(.+)dir@pp\.sc\.gov\.br$/);
   if (dirMatch) {
@@ -817,7 +802,7 @@ window._mostrarSubGrupoTransf = function(escopo) {
   const corpo = document.getElementById('p-corpo');
   corpo.className = '';
 
-  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+  const unNome = escHtml(escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '');
   const titulo = escopo === 'local' ? `Solicitação de ${unNome || 'Unidade'}` : 'Solicitação de Outra Unidade';
   const backBtn = `<button class="p-bc-btn" onclick="mostrarLandingGrupos()" style="display:flex;align-items:center;gap:5px;margin-bottom:20px;font-size:.82rem;">← Voltar</button>`;
 
@@ -910,13 +895,14 @@ window.mostrarLandingGrupos = async function() {
   corpo.className = 'p-home-wide';
   corpo.innerHTML = '<div class="p-loading">Carregando…</div>';
 
-  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+  const unNome = escHtml(escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '');
 
   const { aguardando, andamento, negado, concluido, externaAndamento } = await _contarSituacaoUnidade();
 
   const badgeAc = document.getElementById('p-badge-acessos');
   const nAcessos = badgeAc && badgeAc.style.display !== 'none' ? (parseInt(badgeAc.textContent, 10) || 0) : 0;
-  const mostraAcesso = ['dir', 'cpen'].includes(perfilAtual) || modoLeitura();
+  // Cadastros de servidores (com CPF): só Diretor/CPEN da unidade e CRV
+  const mostraAcesso = ['dir', 'cpen'].includes(perfilAtual) || (perfilAtual === 'crv' && modoLeitura());
 
   const linhasTransf = [
     { onclick: `_mostrarSubGrupoTransf('local')`,   icon: '🏢', titulo: `Solicitação de ${unNome || 'Unidade'}`, sub: 'Pedidos originados por esta unidade', badge: andamento },
@@ -986,7 +972,7 @@ window._mostrarSubGrupo = function(grupoId) {
   const corpo = document.getElementById('p-corpo');
   corpo.className = '';
 
-  const unNome = escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '';
+  const unNome = escHtml(escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '');
 
   const backBtn = `<button class="p-bc-btn" onclick="mostrarLandingGrupos()" style="display:flex;align-items:center;gap:5px;margin-bottom:20px;font-size:.82rem;">← Voltar</button>`;
 
@@ -1487,7 +1473,7 @@ function renderizarLista(el, lista, tipo) {
                 a.status === 'cancelado' ? '🚫' : '⏳'
               }</span>
               <span class="p-assinante-nome">${escHtml(a.nome || a.email)}</span>
-              ${a.status === 'negado' && a.motivo ? `<span class="p-assinante-motivo">— ${escHtml(a.motivo)}</span>` : ''}
+              ${a.status === 'negado' && _motivoNeg(a) ? `<span class="p-assinante-motivo">— ${escHtml(_motivoNeg(a))}</span>` : ''}
               ${a.dataAcao ? `<span class="p-assinante-data">${new Date(a.dataAcao).toLocaleDateString('pt-BR')}</span>` : ''}
             </div>`).join('')}
         </div>
@@ -1536,6 +1522,9 @@ window.pAccToggle = function(id) {
   body.style.display = open ? 'none' : 'block';
   if (arrow) arrow.textContent = open ? '▶' : '▼';
 };
+
+/* Negativas antigas feitas pelo sino gravavam o texto em 'motivoNegacao' */
+function _motivoNeg(a) { return a.motivo || a.motivoNegacao || ''; }
 
 function calcularStatusGeral(assinantes, statusDoc) {
   if (statusDoc === 'cancelado')                       return { label: 'Cancelado',    classe: 'cancelado' };
@@ -1987,7 +1976,7 @@ window.verDetalheOficio = async function (id) {
         <div style="flex:1;">
           <div style="font-size:.84rem;font-weight:600;color:var(--txt-1);">${escHtml(a.nome || a.email)}</div>
           ${a.cargo ? `<div style="font-size:.72rem;color:var(--txt-3);">${escHtml(a.cargo)}</div>` : ''}
-          ${a.motivo ? `<div style="font-size:.75rem;color:var(--vermelho);margin-top:2px;">Negativa: ${escHtml(a.motivo)}</div>` : ''}
+          ${_motivoNeg(a) ? `<div style="font-size:.75rem;color:var(--vermelho);margin-top:2px;">Negativa: ${escHtml(_motivoNeg(a))}</div>` : ''}
           ${dtStr ? `<div style="font-size:.7rem;color:var(--txt-4);margin-top:2px;">${dtStr}</div>` : ''}
         </div>
       </div>`;
@@ -2113,15 +2102,6 @@ window.copiarResumoModal = function () {
     });
 };
 
-// ── ESCAPE HTML (evita quebra de DOM ao inserir conteúdo do Firestore) ──
-function escHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 // ── BRASÃO BASE64 (evita falha do pdfmake ao buscar URL relativa) ──
 async function getBrasaoBase64() {
   try {
@@ -2179,7 +2159,7 @@ window.gerarPDFValidado = async function (id) {
           <strong>${escHtml(a.nome || a.email)}</strong>
           ${a.cargo ? `<br><span style="color:#555;">${escHtml(a.cargo)}</span>` : ''}
           <br><span style="color:#666;font-size:8pt;">${escHtml(dtStr)}</span>
-          ${a.motivo ? `<br><span style="color:#dc2626;font-size:8pt;">Motivo: ${escHtml(a.motivo)}</span>` : ''}
+          ${_motivoNeg(a) ? `<br><span style="color:#dc2626;font-size:8pt;">Motivo: ${escHtml(_motivoNeg(a))}</span>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -2342,16 +2322,19 @@ async function carregarAbaAcessos(el) {
       const dataApr = r.aprovadoEm?.toDate ? r.aprovadoEm.toDate().toLocaleDateString('pt-BR') : null;
 
       const acoes = [];
+      /* Nome/e-mail vêm do cadastro (texto livre do usuário) — passados via data-*,
+         nunca interpolados dentro do JavaScript do onclick. */
+      const dadosPessoa = `data-id="${escHtml(r.id)}" data-nome="${escHtml(r.nome || '')}" data-email="${escHtml(r.email || '')}"`;
       if (r.status === 'pendente') {
         acoes.push(`<button class="p-btn p-btn-assinar" onclick="aprovarAcesso('${r.id}')">Aprovar</button>`);
         acoes.push(`<button class="p-btn p-btn-negar"   onclick="abrirModalNegarAcesso('${r.id}')">Recusar</button>`);
-        acoes.push(`<button class="p-btn p-btn-outline" onclick="excluirCadastro('${r.id}','${r.nome?.replace(/'/g,'') || ''}')">Excluir</button>`);
+        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="excluirCadastro(this.dataset.id,this.dataset.nome)">Excluir</button>`);
       } else if (r.status === 'aprovado') {
-        acoes.push(`<button class="p-btn p-btn-outline" onclick="redefinirSenhaUsuario('${r.id}','${escHtml(r.email || '')}','${escHtml(r.nome?.replace(/'/g,'') || '')}')">Redefinir senha</button>`);
+        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="redefinirSenhaUsuario(this.dataset.id,this.dataset.email,this.dataset.nome)">Redefinir senha</button>`);
         acoes.push(`<button class="p-btn p-btn-negar" onclick="revogarAcesso('${r.id}')">Revogar acesso</button>`);
       } else if (r.status === 'recusado') {
         acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
-        acoes.push(`<button class="p-btn p-btn-outline" onclick="excluirCadastro('${r.id}','${r.nome?.replace(/'/g,'') || ''}')">Excluir</button>`);
+        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="excluirCadastro(this.dataset.id,this.dataset.nome)">Excluir</button>`);
       } else if (r.status === 'revogado') {
         acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
       }

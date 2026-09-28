@@ -360,37 +360,12 @@ import { getAuth, onAuthStateChanged }
 import { getFirestore, getDocs, collection }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey:            "AIzaSyB61jtxRJlDu0LhwXOM9c42MEHQWciJh-I",
-  authDomain:        "crv-dpp-sc-v2.firebaseapp.com",
-  projectId:         "crv-dpp-sc-v2",
-  storageBucket:     "crv-dpp-sc-v2.firebasestorage.app",
-  messagingSenderId: "513539683551",
-  appId:             "1:513539683551:web:2fdcdd236f0c37853ae56a"
-};
+import { FIREBASE_CONFIG as firebaseConfig, EMAILS_CRV } from "./js/config-crv.js";
 
 /* Reaproveita a sessão de Auth do site principal (mesmo app default) */
 const app     = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth    = getAuth(app);
 const db      = getFirestore(app);
-
-/*
- * Mesma allowlist de js/firebase.js (EMAILS_CRV). Duplicada aqui como
- * camada extra de defesa no cliente — a proteção real está na regra
- * do Firestore (beneficios_respostas), que deve usar a mesma lista.
- */
-const EMAILS_CRV = [
-  'rodrigo.l.pastore@gmail.com',
-  'ivana.schafer@gmail.com',
-  'brunawlongen@gmail.com',
-  'ricardobritomarques12@gmail.com',
-  'abeljuliana2012@gmail.com',
-  'jessicaveiga9@gmail.com',
-  'day.sestren88@gmail.com',
-  'sepen@pp.sc.gov.br',
-  'leilakfarias@gmail.com',
-  'crv@pp.sc.gov.br'
-];
 
 const accessDenied  = document.getElementById('accessDenied');
 const reportContent = document.getElementById('reportContent');
