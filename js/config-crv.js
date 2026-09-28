@@ -27,6 +27,10 @@ export const EMAILS_CRV = [
   'crv@pp.sc.gov.br'
 ];
 
+// Envio de anexos para o Google Drive da CRV (Apps Script — mesmo usado pela
+// Caixinha e pelo formulário de Benefícios; sem Firebase Storage, que é pago)
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnmN9XVSxUwIB3p-6FLcOb64Qd59NHDiCErAKjeig3SmYE1NjpfNsFnDHm-SH6MN0K6g/exec';
+
 // ── Superintendência Regional ──
 // sr01@pp.sc.gov.br   → e-mail da Superintendência (órgão; usado como "unidade" nas assinaturas e nos avisos push)
 // sr01sr@pp.sc.gov.br → login pessoal do(a) Superintendente

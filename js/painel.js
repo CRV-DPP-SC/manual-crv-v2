@@ -9,6 +9,11 @@ import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente } from "./config-crv.js";
+import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, textoAvisoHtml,
+         formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
+         confirmarLeitura, publicarAviso, alterarArquivado, listarComentarios, contarComentarios,
+         comentarAviso, excluirComentario, excluirAviso, enviarAnexoAviso, anexosHtml,
+         ANEXO_MAX_ARQUIVOS, ANEXO_MAX_MB } from "./avisos.js";
 
 // ── CONFIG FIREBASE ──
 const app  = initializeApp(FIREBASE_CONFIG);
@@ -955,6 +960,8 @@ window.mostrarLandingGrupos = async function() {
       ${_indicadorCard(negado,     'ENCERRADO',             'var(--vermelho)', "carregarAba('historico')", 'Processo encerrado de plano em razão da recusa de assinatura')}
     </div>
 
+    <div class="p-transf-lista" style="max-width:980px;margin-bottom:28px;">${_btnMural()}</div>
+
     <h2 style="font-size:.9rem;font-weight:700;color:var(--txt-1);margin:0 0 12px;">📋 Transferências</h2>
     <div class="p-transf-lista" style="max-width:980px;margin-bottom:${mostraAcesso ? '28px' : '0'};">
       ${linhasTransf.map(_linhaTransf).join('')}
@@ -1752,6 +1759,7 @@ function _btnUsuariosDash() {
       </div>
       <span class="p-transf-arrow">›</span>
     </button>
+    ${_btnMural('margin-top:8px;')}
   </div>`;
 }
 window.abrirUsuariosPainel = function () { carregarAba('acessos'); };
@@ -2635,6 +2643,367 @@ function mostrarErro(msg) {
 // ── INIT ──
 // (dados já carregados via dadosPromise antes do onAuthStateChanged)
 
+// ══════════════════════════════════════════════
+// MURAL DE AVISOS
+// A CRV publica avisos para todos, uma regional ou uma unidade (e perfis).
+// Quem recebe confirma "Li e estou ciente" (janela no site principal:
+// js/avisos-modal.js). Aqui fica o histórico e, para a CRV, a gestão e o
+// comprovante de ciência (👁), agrupado por regional → unidade.
+// ══════════════════════════════════════════════
+let _muralAvisos = [];
+let _muralLidos  = {};
+let _muralContagens = {};
+let _muralFormAberto = false;
+let _muralComentarios = {};   // avisoId → quantidade de comentários visíveis para mim
+
+function _euAvisos() {
+  const email = (usuarioAtual?.email || '').toLowerCase();
+  if (perfilAtual === 'crv')   return { tipo: 'crv', email, nome: email };
+  if (perfilAtual === 'super') return { tipo: 'super', email, nome: 'Superintendente ' + escopoAtual.codigo, srCod: escopoAtual.codigo, unidadeEmail: '' };
+  const un = escopoAtual?.unidade;
+  return { tipo: perfilAtual, email, nome: email, unidadeEmail: escopoAtual?.email || '', srCod: un?.sr || '' };
+}
+
+// Atalho usado na tela inicial e nos painéis da CRV/SR
+function _btnMural(margem) {
+  return `<button class="p-transf-row" onclick="abrirMuralAvisos()" style="max-width:980px;${margem || ''}">
+      <span class="p-transf-icon">📢</span>
+      <div class="p-transf-corpo">
+        <div class="p-transf-titulo">Mural de Avisos</div>
+        <div class="p-transf-sub">${perfilAtual === 'crv' ? 'Publicar avisos e acompanhar quem confirmou a leitura' : 'Avisos da CRV/DPP e histórico'}</div>
+      </div>
+      <span class="p-transf-arrow">›</span>
+    </button>`;
+}
+
+window.abrirMuralAvisos = async function () {
+  const rid = _novaRenderizacao();
+  _abaAtiva = null;
+  _atualizarBreadcrumb();
+  const corpo = document.getElementById('p-corpo');
+  corpo.className = '';
+  corpo.innerHTML = '<div class="p-loading">Carregando avisos…</div>';
+  try {
+    const [avisos, lidos] = await Promise.all([listarAvisos(), meusAvisosLidos(usuarioAtual.uid)]);
+    if (!_renderAtual(rid)) return;
+    _muralAvisos = avisos;
+    _muralLidos  = lidos;
+    _muralContagens = {};
+    _muralComentarios = {};
+    _renderMural();
+    // Contagens sem baixar as listas: comentários (todos) e confirmações (só CRV)
+    const sr = _srComentarios();
+    await Promise.all(avisos.map(async a => {
+      _muralComentarios[a.id] = await contarComentarios(a.id, sr);
+      if (perfilAtual === 'crv') _muralContagens[a.id] = await contarLeituras(a.id);
+    }));
+    if (_renderAtual(rid)) _renderMural();
+  } catch (e) {
+    corpo.innerHTML = `<div class="p-erro-msg">Erro ao carregar avisos: ${escHtml(e.message)}</div>`;
+  }
+};
+
+function _renderMural() {
+  const corpo = document.getElementById('p-corpo');
+  const ehCRV = perfilAtual === 'crv';
+  const eu = _euAvisos();
+  const lista = ehCRV ? _muralAvisos : _muralAvisos.filter(a => avisoNoMeuHistorico(a, eu));
+  const voltar = _ehNavCartoes()
+    ? `<button class="p-bc-btn" onclick="mostrarLandingGrupos()" style="display:flex;align-items:center;gap:5px;margin-bottom:14px;font-size:.82rem;">← Voltar</button>`
+    : `<button class="p-bc-btn" onclick="mostrarDashboard()" style="display:flex;align-items:center;gap:5px;margin-bottom:14px;font-size:.82rem;">← Voltar ao painel</button>`;
+
+  const cards = lista.map(a => {
+    const lidoEm = _muralLidos[a.id];
+    const paraMim = avisoParaMim(a, eu) && a.criadoPor !== eu.email; // quem publicou não confirma o próprio aviso
+    const estado = lidoEm
+      ? `<span style="font-size:.72rem;color:var(--verde);font-weight:600;">✓ Você confirmou a leitura${lidoEm?.toMillis ? ' em ' + formatarDataAviso(lidoEm) : ''}</span>`
+      : paraMim
+        ? `<button class="p-btn p-btn-assinar" onclick="confirmarAvisoMural('${a.id}')">✓ Li e estou ciente</button>`
+        : '';
+    const n = _muralContagens[a.id];
+    const acoesCRV = ehCRV ? `
+      <button class="p-btn p-btn-outline" onclick="verConfirmacoesAviso('${a.id}')" title="Ver quem confirmou a leitura">👁 Confirmações${n != null ? ' (' + n + ')' : ''}</button>
+      <button class="p-btn p-btn-outline" onclick="arquivarAviso('${a.id}', ${a.ativo !== false})">${a.ativo !== false ? '🗄 Arquivar' : '↩ Reativar'}</button>
+      <button class="p-btn p-btn-cancelar" onclick="excluirAvisoMural('${a.id}')" title="Excluir o aviso definitivamente">🗑 Excluir</button>` : '';
+    return `
+    <div class="p-card" style="${a.ativo === false ? 'opacity:.75;' : ''}${a.importante ? 'border-left:4px solid var(--vermelho);' : ''}">
+      <div style="padding:14px 18px 6px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:.95rem;font-weight:700;color:var(--txt-1);">📢 ${escHtml(a.titulo)}</span>
+          ${a.importante ? '<span class="p-status p-status-negado">Importante</span>' : ''}
+          ${a.ativo === false ? '<span class="p-status p-status-cancelado">Arquivado</span>' : ''}
+        </div>
+        <div style="font-size:.72rem;color:var(--txt-3);">
+          ${formatarDataAviso(a.criadoEm)} · por ${escHtml(a.criadoPorNome || a.criadoPor || 'CRV')}
+          ${ehCRV ? ' · Para: ' + escHtml(descreverPublico(a.publico, UNIDADES, SR_INFO)) : ''}
+        </div>
+        <div style="font-size:.85rem;line-height:1.65;color:var(--txt-2);margin-top:10px;">${textoAvisoHtml(a.texto)}</div>
+        ${anexosHtml(a.anexos)}
+      </div>
+      <div class="p-card-acoes" style="align-items:center;">${estado}
+        <button class="p-btn p-btn-outline" onclick="alternarComentariosAviso('${a.id}')">💬 Comentários${_muralComentarios[a.id] != null ? ' (' + _muralComentarios[a.id] + ')' : ''}</button>${acoesCRV}</div>
+      <div id="aviso-conf-${a.id}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;"></div>
+      <div id="aviso-com-${a.id}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;"></div>
+    </div>`;
+  }).join('');
+
+  corpo.innerHTML = `
+    ${voltar}
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0;flex:1;">📢 Mural de Avisos</h2>
+      ${ehCRV ? `<button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="alternarFormAviso()">${_muralFormAberto ? '✕ Fechar' : '+ Novo aviso'}</button>` : ''}
+    </div>
+    ${ehCRV && _muralFormAberto ? _htmlFormAviso() : ''}
+    ${cards || '<div class="p-vazio">Nenhum aviso publicado.</div>'}`;
+}
+
+function _htmlFormAviso() {
+  const est = 'width:100%;box-sizing:border-box;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-input,var(--bg-card));color:var(--txt-1);font-family:inherit;font-size:.84rem;';
+  const srs = Object.keys(SR_INFO).sort();
+  return `
+  <div class="p-card" style="padding:16px 18px;margin-bottom:18px;">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--txt-1);">Novo aviso</div>
+    <label style="font-size:.72rem;color:var(--txt-3);">Título</label>
+    <input id="av-titulo" maxlength="120" style="${est}margin-bottom:10px;" placeholder="Ex.: Nova orientação para pedidos de pernoite">
+    <label style="font-size:.72rem;color:var(--txt-3);">Texto do aviso</label>
+    <textarea id="av-texto" rows="6" style="${est}margin-bottom:10px;resize:vertical;" placeholder="Escreva o aviso…"></textarea>
+    <label style="font-size:.72rem;color:var(--txt-3);">Anexos (opcional — até ${ANEXO_MAX_ARQUIVOS} arquivos de até ${ANEXO_MAX_MB} MB cada)</label>
+    <input type="file" id="av-anexos" multiple style="${est}margin-bottom:10px;">
+    <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:12px;cursor:pointer;">
+      <input type="checkbox" id="av-importante"> ⚠️ Marcar como <strong>importante</strong> (destaque em vermelho)
+    </label>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px;">
+      <div>
+        <label style="font-size:.72rem;color:var(--txt-3);">Enviar para</label>
+        <select id="av-tipo" style="${est}" onchange="document.getElementById('av-reg').style.display=this.value==='regional'?'':'none';document.getElementById('av-un').style.display=this.value==='unidade'?'':'none';">
+          <option value="todos">Todas as unidades e regionais</option>
+          <option value="regional">Uma regional</option>
+          <option value="unidade">Uma unidade</option>
+        </select>
+      </div>
+      <div id="av-reg" style="display:none;">
+        <label style="font-size:.72rem;color:var(--txt-3);">Regional</label>
+        <select id="av-reg-sel" style="${est}">${srs.map(s => `<option value="${s}">${s} — ${escHtml(SR_INFO[s]?.nome || s)}</option>`).join('')}</select>
+      </div>
+      <div id="av-un" style="display:none;">
+        <label style="font-size:.72rem;color:var(--txt-3);">Unidade</label>
+        <select id="av-un-sel" style="${est}">${srs.map(s => `<optgroup label="${s}">${UNIDADES.filter(u => u.sr === s).map(u => `<option value="${escHtml(u.email)}">${escHtml(u.nome)}</option>`).join('')}</optgroup>`).join('')}</select>
+      </div>
+    </div>
+    <div style="font-size:.72rem;color:var(--txt-3);margin-bottom:4px;">Somente para os perfis (deixe todos desmarcados para enviar a todos):</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:14px;">
+      ${Object.entries(PERFIS_AVISO).map(([v, l]) => `<label style="display:flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer;"><input type="checkbox" class="av-perfil" value="${v}"> ${escHtml(l)}</label>`).join('')}
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button class="p-btn p-btn-outline" onclick="alternarFormAviso()">Cancelar</button>
+      <button class="p-btn p-btn-assinar" id="av-publicar" onclick="publicarAvisoMural()">📢 Publicar aviso</button>
+    </div>
+  </div>`;
+}
+
+window.alternarFormAviso = function () { _muralFormAberto = !_muralFormAberto; _renderMural(); };
+
+window.publicarAvisoMural = async function () {
+  const titulo = document.getElementById('av-titulo').value.trim();
+  const texto  = document.getElementById('av-texto').value.trim();
+  const tipo   = document.getElementById('av-tipo').value;
+  const valor  = tipo === 'regional' ? document.getElementById('av-reg-sel').value
+               : tipo === 'unidade'  ? document.getElementById('av-un-sel').value : '';
+  const perfis = [...document.querySelectorAll('.av-perfil:checked')].map(c => c.value);
+  const importante = document.getElementById('av-importante').checked;
+  if (!titulo || !texto) { showToastPainel('Preencha o título e o texto do aviso.'); return; }
+  const arquivos = [...(document.getElementById('av-anexos')?.files || [])];
+  if (arquivos.length > ANEXO_MAX_ARQUIVOS) { showToastPainel('No máximo ' + ANEXO_MAX_ARQUIVOS + ' anexos por aviso.'); return; }
+  const grande = arquivos.find(a => a.size > ANEXO_MAX_MB * 1024 * 1024);
+  if (grande) { showToastPainel('"' + grande.name + '" passa de ' + ANEXO_MAX_MB + ' MB.'); return; }
+  const publico = { tipo, valor, perfis };
+  if (!confirm(`Publicar este aviso?\n\nPara: ${descreverPublico(publico, UNIDADES, SR_INFO)}\n\nOs destinatários verão o aviso ao entrar no sistema e precisarão confirmar a leitura.`)) return;
+  const btn = document.getElementById('av-publicar');
+  btn.disabled = true;
+  try {
+    const anexos = [];
+    for (let i = 0; i < arquivos.length; i++) {
+      btn.textContent = `Enviando anexo ${i + 1} de ${arquivos.length}…`;
+      anexos.push(await enviarAnexoAviso(arquivos[i]));
+    }
+    btn.textContent = 'Publicando…';
+    await publicarAviso({ titulo, texto, importante, publico, anexos }, _euAvisos());
+    _muralFormAberto = false;
+    showToastPainel('Aviso publicado.');
+    abrirMuralAvisos();
+  } catch (e) {
+    showToastPainel('Erro ao publicar: ' + e.message);
+    btn.disabled = false; btn.textContent = '📢 Publicar aviso';
+  }
+};
+
+window.confirmarAvisoMural = async function (id) {
+  try {
+    await confirmarLeitura(id, usuarioAtual.uid, _euAvisos());
+    _muralLidos[id] = { toMillis: () => Date.now() };
+    // Avisa o site principal (sino e janela de entrada), que fica fora deste iframe
+    try { window.parent.dispatchEvent(new window.parent.CustomEvent('crv-aviso-lido', { detail: { id } })); } catch (_) {}
+    showToastPainel('Leitura confirmada.');
+    _renderMural();
+  } catch (e) { showToastPainel('Erro: ' + e.message); }
+};
+
+window.arquivarAviso = async function (id, arquivar) {
+  if (arquivar && !confirm('Arquivar este aviso?\n\nEle deixa de aparecer na janela de quem ainda não confirmou, mas continua no histórico.')) return;
+  try {
+    await alterarArquivado(id, arquivar, _euAvisos());
+    showToastPainel(arquivar ? 'Aviso arquivado.' : 'Aviso reativado.');
+    abrirMuralAvisos();
+  } catch (e) { showToastPainel('Erro: ' + e.message); }
+};
+
+// ── 💬 Comentários do aviso ──
+// Visíveis para todos os destinatários do aviso (e para a CRV).
+function _srComentarios() { return null; } // null = todos os comentários do aviso
+
+function _rotuloAutor(eu) {
+  const un = UNIDADES.find(u => u.email === eu.unidadeEmail);
+  if (eu.tipo === 'crv')   return 'CRV/DPP — ' + (eu.email.split('@')[0]);
+  if (eu.tipo === 'super') return 'Superintendente ' + eu.srCod;
+  if (eu.tipo === 'dir')   return 'Diretor(a) — ' + (un?.nome || '');
+  if (eu.tipo === 'cpen')  return 'Coord. Execução Penal — ' + (un?.nome || '');
+  return (usuarioAtual?.displayName || eu.email) + (un ? ' — ' + un.nome : '');
+}
+
+window.alternarComentariosAviso = async function (id, forcarAbrir) {
+  const box = document.getElementById('aviso-com-' + id);
+  if (!box) return;
+  if (box.style.display !== 'none' && !forcarAbrir) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="p-loading" style="padding:6px 0;">Carregando comentários…</div>';
+  try {
+    const lista = await listarComentarios(id, _srComentarios());
+    const ehCRV = perfilAtual === 'crv';
+    const itens = lista.map(cm => `
+      <div style="padding:8px 10px;border-radius:8px;background:${cm.perfil === 'crv' ? 'var(--azul-50)' : 'var(--surface-2)'};margin-bottom:6px;">
+        <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
+          <span style="font-size:.74rem;font-weight:700;color:var(--txt-1);">${cm.perfil === 'crv' ? '🏛 ' : ''}${escHtml(cm.autorNome || cm.autorEmail)}</span>
+          ${cm.srCod ? `<span style="font-size:.64rem;color:var(--txt-3);">${escHtml(cm.srCod)}</span>` : ''}
+          <span style="font-size:.66rem;color:var(--txt-3);margin-left:auto;">${formatarDataAviso(cm.criadoEm)}</span>
+          ${ehCRV ? `<button onclick="excluirComentarioAviso('${id}','${cm.id}')" title="Remover comentário" style="border:none;background:none;cursor:pointer;font-size:.72rem;color:var(--vermelho);">🗑</button>` : ''}
+        </div>
+        <div style="font-size:.8rem;color:var(--txt-2);line-height:1.55;margin-top:3px;">${textoAvisoHtml(cm.texto)}</div>
+      </div>`).join('');
+    const escopo = 'Visível para todos os destinatários deste aviso e para a CRV/DPP.';
+    box.innerHTML = `
+      ${itens || '<div style="font-size:.76rem;color:var(--txt-3);padding:2px 0 8px;">Nenhum comentário ainda.</div>'}
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-top:6px;">
+        <textarea id="com-texto-${id}" rows="2" maxlength="1500" placeholder="Escrever um comentário…"
+          style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--txt-1);font-family:inherit;font-size:.8rem;resize:vertical;"></textarea>
+        <button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="enviarComentarioAviso('${id}', this)">Comentar</button>
+      </div>
+      <div style="font-size:.66rem;color:var(--txt-3);margin-top:4px;">${escopo}</div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="p-erro-msg">Erro ao carregar comentários: ${escHtml(e.message)}</div>`;
+  }
+};
+
+window.enviarComentarioAviso = async function (id, btn) {
+  const campo = document.getElementById('com-texto-' + id);
+  const texto = (campo?.value || '').trim();
+  if (!texto) return;
+  btn.disabled = true;
+  try {
+    const eu = _euAvisos();
+    await comentarAviso(id, texto, eu, _rotuloAutor(eu));
+    _muralComentarios[id] = (_muralComentarios[id] || 0) + 1;
+    await alternarComentariosAviso(id, true);
+  } catch (e) {
+    showToastPainel('Erro ao comentar: ' + e.message);
+    btn.disabled = false;
+  }
+};
+
+window.excluirComentarioAviso = async function (id, cid) {
+  if (!confirm('Remover este comentário?')) return;
+  try {
+    await excluirComentario(id, cid);
+    _muralComentarios[id] = Math.max(0, (_muralComentarios[id] || 1) - 1);
+    await alternarComentariosAviso(id, true);
+  } catch (e) { showToastPainel('Erro: ' + e.message); }
+};
+window.excluirAvisoMural = async function (id) {
+  const a = _muralAvisos.find(x => x.id === id);
+  if (!confirm(`Excluir definitivamente o aviso "${a?.titulo || ''}"?\n\nSerão apagados também os comentários e o registro de quem confirmou a leitura. Esta ação não pode ser desfeita.\n\nSe quiser só tirá-lo da janela de entrada e manter o histórico, use "Arquivar".`)) return;
+  try {
+    await excluirAviso(id);
+    showToastPainel('Aviso excluído.');
+    abrirMuralAvisos();
+  } catch (e) { showToastPainel('Erro ao excluir: ' + e.message); }
+};
+
+// 👁 Quem confirmou — escondido até clicar; agrupado por regional → unidade (sanfona)
+window.verConfirmacoesAviso = async function (id) {
+  const box = document.getElementById('aviso-conf-' + id);
+  if (!box) return;
+  if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="p-loading" style="padding:6px 0;">Carregando confirmações…</div>';
+  try {
+    const leituras = await listarLeituras(id);
+    box.innerHTML = _htmlConfirmacoes(leituras, _muralAvisos.find(a => a.id === id));
+    box.onclick = ev => {
+      const row = ev.target.closest('[data-grupo]');
+      if (!row) return;
+      const alvo = box.querySelector('#' + row.dataset.grupo);
+      const abrir = alvo.style.display === 'none';
+      // sanfona: ao abrir um grupo, fecha os irmãos do mesmo nível
+      row.parentElement.parentElement.querySelectorAll(`:scope > div > [data-nivel="${row.dataset.nivel}"]`).forEach(r => {
+        if (r !== row) { box.querySelector('#' + r.dataset.grupo).style.display = 'none'; r.querySelector('.seta').style.transform = ''; }
+      });
+      alvo.style.display = abrir ? 'block' : 'none';
+      row.querySelector('.seta').style.transform = abrir ? 'rotate(90deg)' : '';
+    };
+  } catch (e) {
+    box.innerHTML = `<div class="p-erro-msg">Erro ao carregar confirmações: ${escHtml(e.message)}</div>`;
+  }
+};
+
+function _htmlConfirmacoes(leituras, aviso) {
+  if (!leituras.length) return '<div class="p-vazio" style="padding:6px 0;">Ninguém confirmou a leitura ainda.</div>';
+  const n2 = n => String(n).padStart(2, '0');
+  const rotulo = l => ({ dir: 'Diretor(a)', cpen: 'Coord. Execução Penal', super: 'Superintendente' }[l.perfil]) || l.nome || l.email;
+  let seq = 0;
+  const pessoa = l => `
+    <div style="display:flex;gap:8px;padding:4px 6px 4px 26px;font-size:.76rem;">
+      <span style="color:var(--verde);">✓</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(l.email)}">${escHtml(rotulo(l))}</span>
+      <span style="color:var(--txt-3);flex-shrink:0;">${formatarDataAviso(l.confirmadoEm)}</span>
+    </div>`;
+  const grupo = (nivel, titulo, qtd, conteudo) => {
+    const gid = 'cg-' + (++seq) + '-' + Math.random().toString(36).slice(2, 7);
+    return `<div>
+      <div data-grupo="${gid}" data-nivel="${nivel}" style="display:flex;align-items:center;gap:6px;padding:6px ${nivel === 2 ? '6px 6px 16px' : '6px'};cursor:pointer;border-radius:6px;">
+        <span class="seta" style="font-size:.6rem;color:var(--txt-3);transition:transform .15s;">▸</span>
+        <span style="flex:1;font-size:${nivel === 1 ? '.74rem;font-weight:700' : '.74rem'};color:var(--txt-1);">${escHtml(titulo)}</span>
+        <span style="font-size:.66rem;font-weight:700;color:var(--txt-3);">${n2(qtd)}</span>
+      </div>
+      <div id="${gid}" style="display:none;">${conteudo}</div>
+    </div>`;
+  };
+
+  const srs = Object.keys(SR_INFO).sort();
+  let html = srs.map(sr => {
+    const daSr = leituras.filter(l => l.srCod === sr);
+    if (!daSr.length) return '';
+    const superint = daSr.filter(l => !l.unidadeEmail).map(pessoa).join('');
+    const unidades = UNIDADES.filter(u => u.sr === sr).map(u => {
+      const doUn = daSr.filter(l => l.unidadeEmail === u.email);
+      return doUn.length ? grupo(2, u.nome, doUn.length, doUn.map(pessoa).join('')) : '';
+    }).join('');
+    return grupo(1, `${sr} — ${SR_INFO[sr]?.nome || sr}`, daSr.length, superint + unidades);
+  }).join('');
+  const dpp = leituras.filter(l => l.perfil === 'crv');
+  if (dpp.length) html += grupo(1, 'SEJURI/DPP', dpp.length, dpp.map(pessoa).join(''));
+  const outros = leituras.filter(l => l.perfil !== 'crv' && !srs.includes(l.srCod));
+  if (outros.length) html += grupo(1, 'Outros', outros.length, outros.map(pessoa).join(''));
+  return `<div style="font-size:.7rem;color:var(--txt-3);margin-bottom:6px;">${leituras.length} confirmação(ões) — clique na regional e depois na unidade.</div>${html}`;
+}
 // ══════════════════════════════════════════════
 // API EXPORTADA — usada pelo Gerador de Ofícios V2
 // ══════════════════════════════════════════════

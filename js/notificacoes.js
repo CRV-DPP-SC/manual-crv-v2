@@ -9,6 +9,7 @@ import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia } from "./config-crv.js";
+import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
@@ -359,6 +360,9 @@ function _injetarDOM() {
       </div>
 
       <!-- Seção: Assinaturas Pendentes -->
+      <div class="ntf-secao-titulo" id="ntf-sec-av" style="display:none;color:#1e40af;background:#eff6ff;">📢 Avisos — confirme a leitura</div>
+      <div class="ntf-lista-cad" id="ntf-lista-av" style="display:none;"></div>
+
       <div class="ntf-secao-titulo" id="ntf-sec-ass">⏳ Assinaturas Pendentes</div>
       <div class="ntf-lista" id="ntf-lista"></div>
 
@@ -434,6 +438,8 @@ function _injetarDOM() {
 // ════════════════════════════════════════
 let _pendentes     = [];  // assinaturas
 let _cadastros     = [];  // cadastros pendentes
+let _avisos        = [];  // avisos do Mural ainda não confirmados
+let _unsubAvisos   = null;
 let _unsub         = null;
 let _unsubCad      = null;
 let _pendConf      = null;
@@ -511,13 +517,95 @@ function _iniciarListenerCadastros(emailUnidade) {
 function _pararListeners() {
   if (_unsub)    { _unsub();    _unsub    = null; }
   if (_unsubCad) { _unsubCad(); _unsubCad = null; }
+  if (_unsubAvisos) { _unsubAvisos(); _unsubAvisos = null; }
   _pendentes    = [];
   _cadastros    = [];
+  _avisos       = [];
   _emailUsuario = null;
   const btn = document.getElementById('ntf-btn');
   if (btn) btn.classList.add('ntf-oculto');
 }
 
+// ════════════════════════════════════════
+// AVISOS DO MURAL (pendentes de "Li e estou ciente")
+// Ficam no sino até a confirmação. Confirmar aqui ou na janela de entrada
+// (js/avisos-modal.js) atualiza os dois lugares (evento 'crv-aviso-lido').
+// ════════════════════════════════════════
+let _avisosLidos = {};
+let _euAviso = null;
+
+function _montarEuAviso(user) {
+  const email = (user.email || '').toLowerCase();
+  const info = window._presencaInfo;           // site principal (resolvido pelo firebase.js)
+  if (info) return { tipo: info.tipo, email, nome: info.nome, unidadeEmail: info.unidadeEmail || '', srCod: info.srCod || '' };
+  // Outras páginas (ex.: Gerador de Ofícios): perfis institucionais pelo e-mail
+  if (EMAILS_CRV.includes(email)) return { tipo: 'crv', email, nome: email };
+  const sr = srDoSuperintendente(email);
+  if (sr) return { tipo: 'super', email, nome: 'Superintendente ' + sr, srCod: sr, unidadeEmail: '' };
+  const m = email.match(/^(.+?)(dir|cpen)@pp\.sc\.gov\.br$/);
+  if (m) {
+    const unidadeEmail = m[1] + '@pp.sc.gov.br';
+    const lista = window.UNIDADES || (typeof getUns === 'function' ? getUns().map(u => ({ email: u.em, sr: u.sr })) : []);
+    const un = lista.find(u => u.email === unidadeEmail);
+    return { tipo: m[2], email, nome: email, unidadeEmail, srCod: un?.sr || '' };
+  }
+  return null;
+}
+
+function _iniciarAvisos(user, tentativas = 0) {
+  if (_unsubAvisos) { _unsubAvisos(); _unsubAvisos = null; }
+  const eu = _montarEuAviso(user);
+  if (!eu) { if (tentativas < 20) setTimeout(() => _iniciarAvisos(user, tentativas + 1), 500); return; }
+  _euAviso = eu;
+  meusAvisosLidos(user.uid).then(lidos => {
+    _avisosLidos = lidos;
+    _unsubAvisos = ouvirAvisosAtivos(lista => {
+      _avisos = lista.filter(a => avisoParaMim(a, eu) && !_avisosLidos[a.id] && a.criadoPor !== eu.email);
+      _atualizarUI();
+    });
+  });
+}
+
+// Confirmado na janela de entrada → some do sino
+window.addEventListener('crv-aviso-lido', e => {
+  const id = e.detail?.id;
+  if (!id) return;
+  _avisosLidos[id] = true;
+  _avisos = _avisos.filter(a => a.id !== id);
+  _atualizarUI();
+});
+
+function _renderizarAvisos() {
+  const lista = document.getElementById('ntf-lista-av');
+  if (!lista) return;
+  _atualizarSubtitulo();
+  lista.innerHTML = _avisos.map(a => {
+    const resumo = (a.texto || '').length > 180 ? a.texto.slice(0, 180) + '…' : (a.texto || '');
+    return `
+      <div class="ntf-item" style="${a.importante ? 'border-color:#fca5a5;background:#fef2f2;' : ''}">
+        <div class="ntf-item-top">
+          <div class="ntf-item-titulo">${a.importante ? '⚠️ ' : '📢 '}${_esc(a.titulo)}</div>
+          <div style="font-size:.74rem;color:#334155;line-height:1.5;">${textoAvisoHtml(resumo)}</div>
+        </div>
+        <div class="ntf-acoes">
+          <button class="ntf-btn ntf-btn-ass" onclick="_ntfConfirmarAviso('${_esc(a.id)}', this)">✓ Li e estou ciente</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window._ntfConfirmarAviso = async function (id, btn) {
+  if (!_euAviso || !_auth.currentUser) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrando…'; }
+  try {
+    await confirmarLeitura(id, _auth.currentUser.uid, _euAviso);
+    window.dispatchEvent(new CustomEvent('crv-aviso-lido', { detail: { id } }));
+    _ntfToast('✅ Leitura confirmada.');
+  } catch (e) {
+    _ntfToast('Erro ao confirmar: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Li e estou ciente'; }
+  }
+};
 // ════════════════════════════════════════
 // UI
 // ════════════════════════════════════════
@@ -526,7 +614,7 @@ function _atualizarUI() {
   const badge = document.getElementById('ntf-badge');
   if (!btn) return;
 
-  const total = _pendentes.length + _cadastros.length;
+  const total = _pendentes.length + _cadastros.length + _avisos.length;
   btn.classList.remove('ntf-oculto');
   badge.textContent   = total > 0 ? (total > 9 ? '9+' : String(total)) : '';
   badge.style.display = total > 0 ? 'flex' : 'none';
@@ -540,9 +628,12 @@ function _atualizarUI() {
   const temCad  = _cadastros.length > 0;
   if (secCad)  secCad.style.display   = temCad ? '' : 'none';
   if (listaCad) listaCad.style.display = temCad ? '' : 'none';
+  const temAv = _avisos.length > 0;
+  ['ntf-sec-av', 'ntf-lista-av'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = temAv ? '' : 'none'; });
 
   const painel = document.getElementById('ntf-painel');
   if (painel && painel.classList.contains('aberto')) {
+    _renderizarAvisos();
     _renderizarLista();
     _renderizarCadastros();
   }
@@ -556,6 +647,8 @@ function _atualizarSubtitulo() {
   const partes = [];
   if (nA > 0) partes.push(nA + ' assinatura' + (nA > 1 ? 's' : '') + ' pendente' + (nA > 1 ? 's' : ''));
   if (nC > 0) partes.push(nC + ' cadastro' + (nC > 1 ? 's' : '') + ' aguardando');
+  const nV = _avisos.length;
+  if (nV > 0) partes.unshift(nV + ' aviso' + (nV > 1 ? 's' : '') + ' para ler');
   sub.textContent = partes.length > 0 ? partes.join(' · ') : 'Nenhuma pendência no momento';
 }
 
@@ -637,6 +730,7 @@ window._ntfToggle = function() {
   const abrindo = !painel.classList.contains('aberto');
   painel.classList.toggle('aberto');
   if (abrindo) {
+    _renderizarAvisos();
     _renderizarLista();
     _renderizarCadastros();
   }
@@ -947,6 +1041,9 @@ onAuthStateChanged(_auth, user => {
       _iniciarListenerCadastros(emailUnidade);
       _registrarOneSignal(emailUnidade);
     }
+
+    // Avisos do Mural ainda não confirmados
+    _iniciarAvisos(user);
 
     // Guia de configuração de notificações (iPhone)
     setTimeout(_mostrarGuiaNotificacoes, 1500);

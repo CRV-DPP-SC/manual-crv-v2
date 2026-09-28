@@ -252,6 +252,39 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── Mural de Avisos ─────────────────────────────────────────────
+    // Só a CRV publica, arquiva e exclui.
+    match /avisos/{id} {
+      allow read: if membro();
+      allow create, update, delete: if isCRV();
+
+      // Comprovante de ciência: cada um grava só o próprio, uma única vez
+      match /leituras/{uid} {
+        allow create: if membro() && request.auth.uid == uid
+                      && request.resource.data.email == request.auth.token.email.lower();
+        allow read: if isCRV() || (logado() && request.auth.uid == uid);
+        allow update: if false;
+        allow delete: if isCRV();   // ao excluir o aviso
+      }
+
+      // Comentários: qualquer membro escreve em nome próprio; só a CRV remove.
+      // Visíveis para todos os destinatários do aviso.
+      match /comentarios/{cid} {
+        allow read: if membro();
+        allow create: if membro()
+          && request.resource.data.autorEmail == request.auth.token.email.lower()
+          && request.resource.data.texto is string
+          && request.resource.data.texto.size() > 0
+          && request.resource.data.texto.size() <= 1500;
+        allow update: if false;
+        allow delete: if isCRV();
+      }
+    }
+    // Índice pessoal "quais avisos eu já confirmei"
+    match /avisos_lidos/{uid} {
+      allow read, write: if logado() && request.auth.uid == uid;
+    }
+
     // ── Ferramentas internas da CRV ─────────────────────────────────
     match /caixinha_config/{id}      { allow read, write: if isCRV(); }
     match /caixinha_lancamentos/{id} { allow read, write: if isCRV(); }
