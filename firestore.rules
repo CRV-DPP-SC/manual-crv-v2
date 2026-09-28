@@ -110,18 +110,28 @@ service cloud.firestore {
         && request.resource.data.perfil == 'servidor'
         && request.resource.data.aprovadoPor == null;
 
-      // Leitura: o próprio servidor, a CRV, e Diretor/CPEN da unidade
+      // Leitura: o próprio servidor, a CRV (todos), o Superintendente (sua regional)
+      // e Diretor/CPEN da unidade
       allow read: if logado() && (
         request.auth.uid == uid
         || isCRV()
+        || (isSR() && resource.data.srUnidade == srDoSuperintendente())
         || (isGestor() && resource.data.emailUnidade == unidadeDoGestor())
       );
 
-      // Aprovar / recusar / revogar / reabrir: CRV ou Diretor/CPEN da unidade.
+      // ANALISAR (aprovar / recusar / suspender / reabrir): só Diretor/CPEN da unidade.
       // Só os campos de situação podem mudar — ninguém altera CPF/nome alheios.
-      allow update: if (isCRV() || (isGestor() && resource.data.emailUnidade == unidadeDoGestor()))
+      allow update: if isGestor() && resource.data.emailUnidade == unidadeDoGestor()
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status','aprovadoPor','aprovadoEm','motivoRecusa']);
+
+      // MODERAR: CRV (todos) e Superintendente (sua regional) só podem SUSPENDER
+      // quem está aprovado — não aprovam, não recusam, não reabrem.
+      allow update: if (isCRV() || (isSR() && resource.data.srUnidade == srDoSuperintendente()))
+        && resource.data.status == 'aprovado'
+        && request.resource.data.status == 'revogado'
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','aprovadoPor','aprovadoEm']);
 
       // Novo pedido após recusa/revogação: o próprio servidor, voltando a "pendente"
       allow update: if logado() && request.auth.uid == uid
@@ -132,7 +142,9 @@ service cloud.firestore {
              .hasOnly(['nome','cpf','dataNascimento','emailUnidade','nomeUnidade','srUnidade',
                        'status','aprovadoPor','aprovadoEm','motivoRecusa','atualizadoEm']);
 
-      allow delete: if isCRV() || (isGestor() && resource.data.emailUnidade == unidadeDoGestor());
+      allow delete: if isCRV()
+        || (isSR() && resource.data.srUnidade == srDoSuperintendente())
+        || (isGestor() && resource.data.emailUnidade == unidadeDoGestor());
     }
 
     // ── Solicitações de assinatura (ofícios) ────────────────────────

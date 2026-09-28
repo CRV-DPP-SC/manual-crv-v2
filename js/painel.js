@@ -88,6 +88,14 @@ async function resolverPerfil(user) {
   return null;
 }
 
+// ── CONTROLE DE RENDERIZAÇÃO ──
+// Cada tela que carrega dados pega um número. Se o usuário trocar de tela (ex.:
+// escolher uma unidade e logo depois uma regional) antes do carregamento anterior
+// terminar, o resultado atrasado é descartado em vez de sobrescrever a tela atual.
+let _renderSeq = 0;
+function _novaRenderizacao() { return ++_renderSeq; }
+function _renderAtual(id)    { return id === _renderSeq; }
+
 // ── MODO LEITURA ──
 // Ativo quando CRV ou Super está visualizando o painel de outra unidade.
 function modoLeitura() {
@@ -794,6 +802,7 @@ async function _buscarTransferenciasEscopo(escopo) {
 
 // ── Tela intermediária: Pendente(s) de Assinatura(s) / Histórico, para um escopo ──
 window._mostrarSubGrupoTransf = function(escopo) {
+  _novaRenderizacao();
   _grupoAtivo = escopo === 'local' ? 'transf_local' : 'transf_externa';
   _abaAtiva   = null;
   _atualizarBreadcrumb();
@@ -839,7 +848,9 @@ window.abrirTransferenciasEscopo = async function(escopo, sub) {
   corpo.className = '';
   corpo.innerHTML = '<div class="p-loading">Carregando…</div>';
 
+  const rid = _novaRenderizacao();
   const lista = await _buscarTransferenciasEscopo(escopo);
+  if (!_renderAtual(rid)) return;
 
   if (sub === 'pendentes') {
     const filtrada = lista.filter(s => _classeDoc(s) === 'andamento');
@@ -897,12 +908,14 @@ window.mostrarLandingGrupos = async function() {
 
   const unNome = escHtml(escopoAtual?.unidade?.nome || escopoAtual?.n || escopoAtual?.nome || '');
 
+  const rid = _novaRenderizacao();
   const { aguardando, andamento, negado, concluido, externaAndamento } = await _contarSituacaoUnidade();
+  if (!_renderAtual(rid)) return; // o usuário já foi para outra tela
 
   const badgeAc = document.getElementById('p-badge-acessos');
   const nAcessos = badgeAc && badgeAc.style.display !== 'none' ? (parseInt(badgeAc.textContent, 10) || 0) : 0;
   // Cadastros de servidores (com CPF): só Diretor/CPEN da unidade e CRV
-  const mostraAcesso = ['dir', 'cpen'].includes(perfilAtual) || (perfilAtual === 'crv' && modoLeitura());
+  const mostraAcesso = ['dir', 'cpen'].includes(perfilAtual) || (['crv', 'super'].includes(perfilAtual) && modoLeitura());
 
   const linhasTransf = [
     { onclick: `_mostrarSubGrupoTransf('local')`,   icon: '🏢', titulo: `Solicitação de ${unNome || 'Unidade'}`, sub: 'Pedidos originados por esta unidade', badge: andamento },
@@ -964,6 +977,7 @@ window.mostrarLandingGrupos = async function() {
 };
 
 window._mostrarSubGrupo = function(grupoId) {
+  _novaRenderizacao();
   _grupoAtivo = grupoId;
   _abaAtiva   = null;
   _atualizarBreadcrumb();
@@ -1054,9 +1068,11 @@ window.carregarAba = async function (aba) {
 
   try {
     let solicitacoes = [];
+    const rid = _novaRenderizacao();
     const snap = await getDocs(
       query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc'))
     );
+    if (!_renderAtual(rid)) return;
 
     if (aba === 'pendentes') {
       snap.forEach(d => {
@@ -1184,14 +1200,15 @@ function _atualizarBarra() {
     const ids = [..._selAcess];
     const temPend = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return r?.status === 'pendente'; });
     const temAprov = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return r?.status === 'aprovado'; });
-    const temExcl  = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return ['pendente','recusado'].includes(r?.status); });
-    if (temPend)  acoes.insertAdjacentHTML('beforeend',
+    const temExcl  = ids.some(id => { const r = _selAcessData.find(x => x.id === id); return ['pendente','recusado','revogado'].includes(r?.status); });
+    const analisa = _podeAnalisarAcesso(), modera = _podeModerarAcesso();
+    if (temPend && analisa)  acoes.insertAdjacentHTML('beforeend',
       `<button class="p-barra-btn p-barra-btn-apr" onclick="bulkAprovar()">✅ Aprovar selecionados</button>`);
-    if (temPend)  acoes.insertAdjacentHTML('beforeend',
+    if (temPend && analisa)  acoes.insertAdjacentHTML('beforeend',
       `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRecusar()">Recusar selecionados</button>`);
-    if (temAprov) acoes.insertAdjacentHTML('beforeend',
-      `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRevogar()">Revogar selecionados</button>`);
-    if (temExcl)  acoes.insertAdjacentHTML('beforeend',
+    if (temAprov && modera) acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRevogar()">Suspender selecionados</button>`);
+    if (temExcl && modera)  acoes.insertAdjacentHTML('beforeend',
       `<button class="p-barra-btn p-barra-btn-exc" onclick="bulkExcluirAcess()">Excluir selecionados</button>`);
   }
 }
@@ -1349,7 +1366,7 @@ async function _bulkRecusarExec(ids, motivo) {
 window.bulkRevogar = async function() {
   const ids = [..._selAcess].filter(id => _selAcessData.find(x => x.id === id)?.status === 'aprovado');
   if (!ids.length) return;
-  if (!confirm(`Revogar ${ids.length} acesso(s)?`)) return;
+  if (!confirm(`Suspender ${ids.length} acesso(s)?`)) return;
   let ok = 0, err = 0;
   for (const id of ids) {
     try {
@@ -1357,11 +1374,11 @@ window.bulkRevogar = async function() {
       ok++;
     } catch { err++; }
   }
-  selLimpar(); showToastPainel(`${ok} acesso(s) revogado(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
+  selLimpar(); showToastPainel(`${ok} acesso(s) suspenso(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
 };
 
 window.bulkExcluirAcess = async function() {
-  const ids = [..._selAcess].filter(id => ['pendente','recusado'].includes(_selAcessData.find(x => x.id === id)?.status));
+  const ids = [..._selAcess].filter(id => ['pendente','recusado','revogado'].includes(_selAcessData.find(x => x.id === id)?.status));
   if (!ids.length) return;
   if (!confirm(`Excluir permanentemente ${ids.length} cadastro(s)?`)) return;
   let ok = 0, err = 0;
@@ -1724,6 +1741,22 @@ function contarCats(lista) {
   };
 }
 
+// Atalho do painel da CRV / Superintendente para a lista de usuários cadastrados
+function _btnUsuariosDash() {
+  return `<div style="padding:14px 32px 0;">
+    <button class="p-transf-row" onclick="abrirUsuariosPainel()" style="max-width:980px;">
+      <span class="p-transf-icon">👤</span>
+      <div class="p-transf-corpo">
+        <div class="p-transf-titulo">Usuários cadastrados</div>
+        <div class="p-transf-sub">Consultar, suspender ou excluir acessos de servidores</div>
+      </div>
+      <span class="p-transf-arrow">›</span>
+    </button>
+  </div>`;
+}
+window.abrirUsuariosPainel = function () { carregarAba('acessos'); };
+window.mostrarDashboard = function () { mostrarDashboard(); };
+
 async function mostrarDashboard() {
   document.querySelector('.p-abas').style.display = 'none';
   const corpo = document.getElementById('p-corpo');
@@ -1733,7 +1766,9 @@ async function mostrarDashboard() {
   corpo.innerHTML = '<div class="p-loading" style="padding:32px;">Carregando painel…</div>';
   _dashFiltro = { sr: '', un: '', cat: '' };
   try {
+    const rid = _novaRenderizacao();
     const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+    if (!_renderAtual(rid)) return;
     _dashDocs = [];
     snap.forEach(d => {
       const s = { id: d.id, ...d.data() };
@@ -1830,7 +1865,7 @@ function _renderDashCRV(el) {
         ${_summaryCard('cancelado', tot.cancelado, 'Cancelados',   allEmails)}
       </div>
     </div>
-    ${_dashFiltrosHtml(opsSR, opsUN)}
+    ${_btnUsuariosDash()}
     <div class="p-dash-table" style="margin:16px 32px 0;">
       <div class="p-dash-row p-dash-row--header">
         <div class="p-dash-col p-dash-col--nome">Regional / Unidade</div>
@@ -1874,6 +1909,7 @@ function _renderDashSR(el) {
         ${_summaryCard('cancelado', tot.cancelado, 'Cancelados',   emUns)}
       </div>
     </div>
+    ${_btnUsuariosDash()}
     ${_dashFiltrosHtml('', opsUN)}
     <div class="p-dash-table" style="margin:16px 32px 0;">
       <div class="p-dash-row p-dash-row--header">
@@ -2272,106 +2308,207 @@ ${s.conteudo || ''}
 
 // ABA ACESSOS — gestão de cadastros de servidores
 // ══════════════════════════════════════════════
-async function carregarAbaAcessos(el) {
-  try {
-    let q;
+// Quem faz o quê com os cadastros de servidores:
+//   Diretor / CPEN da unidade → analisam: aprovar, recusar, reabrir pedido
+//   CRV e Superintendente     → moderam: veem todos do seu escopo, suspendem e excluem
+function _podeAnalisarAcesso() { return ['dir', 'cpen'].includes(perfilAtual) && !modoLeitura(); }
+function _podeModerarAcesso()  { return _podeAnalisarAcesso() || ['crv', 'super'].includes(perfilAtual); }
 
-    if (modoLeitura()) {
-      // CRV visualizando unidade específica via dropdown
-      q = query(collection(db, 'usuarios_cadastrados'),
-                where('emailUnidade', '==', unidadeSelecionada.email));
+const _STATUS_ACESSO = {
+  pendente: { label: 'Pendente', classe: 'p-status-pendente' },
+  aprovado: { label: 'Aprovado', classe: 'p-status-concluido' },
+  revogado: { label: 'Suspenso', classe: 'p-status-negado' },
+  recusado: { label: 'Recusado', classe: 'p-status-negado' },
+};
+
+let _acessosTodos  = [];
+let _acessosFiltro = { sr: '', un: '', status: '', busca: '' };
+let _acessosEl     = null;
+
+async function carregarAbaAcessos(el) {
+  const rid = _novaRenderizacao();
+  _acessosEl = el;
+  try {
+    const col = collection(db, 'usuarios_cadastrados');
+    let q;
+    if (perfilAtual === 'super') {
+      // Superintendente: só a própria regional (a regra do Firestore exige o filtro por srUnidade)
+      q = modoLeitura()
+        ? query(col, where('srUnidade', '==', escopoAtual.codigo), where('emailUnidade', '==', unidadeSelecionada.email))
+        : query(col, where('srUnidade', '==', escopoAtual.codigo));
+    } else if (modoLeitura()) {
+      q = query(col, where('emailUnidade', '==', unidadeSelecionada.email));      // CRV vendo uma unidade
     } else if (perfilAtual === 'crv') {
-      // CRV em modo geral — vê todos os cadastros
-      q = collection(db, 'usuarios_cadastrados');
+      q = srSelecionada ? query(col, where('srUnidade', '==', srSelecionada)) : col; // CRV: regional ou estado
     } else {
-      // DIR ou CPEN — apenas própria unidade
-      q = query(collection(db, 'usuarios_cadastrados'),
-                where('emailUnidade', '==', escopoAtual.email));
+      q = query(col, where('emailUnidade', '==', escopoAtual.email));             // Diretor / CPEN
     }
 
     const snap = await getDocs(q);
-    const registros = [];
-    snap.forEach(d => registros.push({ id: d.id, ...d.data() }));
-
-    if (!registros.length) {
-      el.innerHTML = '<div class="p-vazio">Nenhum cadastro de servidor encontrado.</div>';
-      return;
-    }
-
-    // Ordena: pendentes primeiro
-    const ordem = { pendente: 0, aprovado: 1, recusado: 2, revogado: 3 };
-    registros.sort((a, b) => (ordem[a.status] ?? 9) - (ordem[b.status] ?? 9));
-
-    _selAcess.clear();
-    _selAcessData = registros;
-    _selCtx = 'acess';
-
-    const cabSel = `<div class="p-sel-header">
-      <label><input type="checkbox" class="p-sel-all-check" data-ctx="acc" onchange="selAccAll(this)"> Selecionar todos (${registros.length})</label>
-    </div>`;
-
-    el.innerHTML = cabSel + registros.map(r => {
-      const info = {
-        pendente: { label: 'Pendente', classe: 'p-status-pendente' },
-        aprovado:  { label: 'Aprovado', classe: 'p-status-concluido' },
-        recusado:  { label: 'Recusado', classe: 'p-status-negado' },
-        revogado:  { label: 'Revogado', classe: 'p-status-negado' },
-      }[r.status] || { label: r.status, classe: 'p-status-andamento' };
-
-      const dataCad = r.criadoEm?.toDate  ? r.criadoEm.toDate().toLocaleDateString('pt-BR')   : '—';
-      const dataApr = r.aprovadoEm?.toDate ? r.aprovadoEm.toDate().toLocaleDateString('pt-BR') : null;
-
-      const acoes = [];
-      /* Nome/e-mail vêm do cadastro (texto livre do usuário) — passados via data-*,
-         nunca interpolados dentro do JavaScript do onclick. */
-      const dadosPessoa = `data-id="${escHtml(r.id)}" data-nome="${escHtml(r.nome || '')}" data-email="${escHtml(r.email || '')}"`;
-      if (r.status === 'pendente') {
-        acoes.push(`<button class="p-btn p-btn-assinar" onclick="aprovarAcesso('${r.id}')">Aprovar</button>`);
-        acoes.push(`<button class="p-btn p-btn-negar"   onclick="abrirModalNegarAcesso('${r.id}')">Recusar</button>`);
-        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="excluirCadastro(this.dataset.id,this.dataset.nome)">Excluir</button>`);
-      } else if (r.status === 'aprovado') {
-        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="redefinirSenhaUsuario(this.dataset.id,this.dataset.email,this.dataset.nome)">Redefinir senha</button>`);
-        acoes.push(`<button class="p-btn p-btn-negar" onclick="revogarAcesso('${r.id}')">Revogar acesso</button>`);
-      } else if (r.status === 'recusado') {
-        acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
-        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="excluirCadastro(this.dataset.id,this.dataset.nome)">Excluir</button>`);
-      } else if (r.status === 'revogado') {
-        acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
-      }
-
-      const cpfFmt = r.cpf ? r.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—';
-      const nascFmt = r.dataNascimento || '—';
-      const iniciais = (r.nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-      return `
-      <div class="p-card p-card-compact" id="acard-${r.id}">
-        <div class="p-card-row" onclick="pAccToggle('${r.id}')">
-          <input type="checkbox" class="p-card-check" data-ctx="acc" onchange="selAccToggle('${r.id}')" onclick="event.stopPropagation()" title="Selecionar">
-          <span class="p-card-avatar">${iniciais}</span>
-          <span class="p-status ${info.classe}" style="flex-shrink:0;">${info.label}</span>
-          <span class="p-card-titulo-row" style="cursor:pointer;">${escHtml(r.nome || '—')}</span>
-          <span class="p-card-meta-row">${escHtml(r.nomeUnidade || '—')} · ${dataCad}</span>
-          <span class="p-card-arrow" id="aarrow-${r.id}">▶</span>
-        </div>
-        <div class="p-card-body" id="acbody-${r.id}" style="display:none;">
-          <div style="padding:10px 16px 6px;display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:.78rem;">
-            <div><span style="color:var(--txt-3);">E-mail:</span> ${escHtml(r.email || '—')}</div>
-            <div><span style="color:var(--txt-3);">CPF:</span> ${escHtml(cpfFmt)}</div>
-            <div><span style="color:var(--txt-3);">Nascimento:</span> ${escHtml(nascFmt)}</div>
-            <div><span style="color:var(--txt-3);">Unidade:</span> ${escHtml(r.nomeUnidade || r.emailUnidade || '—')}</div>
-            ${dataApr ? `<div><span style="color:var(--txt-3);">Ação por:</span> ${escHtml(r.aprovadoPor || '—')} em ${dataApr}</div>` : ''}
-            ${r.motivoRecusa ? `<div style="grid-column:1/-1;color:var(--vermelho);"><span style="color:var(--txt-3);">Motivo recusa:</span> ${escHtml(r.motivoRecusa)}</div>` : ''}
-          </div>
-          ${acoes.length ? `<div class="p-card-acoes">${acoes.join('')}</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-    _atualizarBarra();
-
+    if (!_renderAtual(rid)) return;
+    const ordem = { pendente: 0, aprovado: 1, revogado: 2, recusado: 3 };
+    _acessosTodos = [];
+    snap.forEach(d => _acessosTodos.push({ id: d.id, ...d.data() }));
+    _acessosTodos.sort((a, b) => ((ordem[a.status] ?? 9) - (ordem[b.status] ?? 9))
+                                 || (a.nome || '').localeCompare(b.nome || ''));
+    _renderAcessos();
   } catch (e) {
-    el.innerHTML = `<div class="p-erro-msg">Erro ao carregar acessos: ${e.message}</div>`;
+    el.innerHTML = `<div class="p-erro-msg">Erro ao carregar usuários: ${escHtml(e.message)}</div>`;
   }
 }
 
+function _renderAcessos() {
+  const el = _acessosEl;
+  if (!el) return;
+  const visaoAmpla = ['crv', 'super'].includes(perfilAtual) && !modoLeitura();
+  const f = _acessosFiltro;
+
+  // Unidades do escopo (para o filtro)
+  const srEscopo = perfilAtual === 'super' ? escopoAtual.codigo : (srSelecionada || f.sr);
+  const unidadesFiltro = UNIDADES.filter(u => !srEscopo || u.sr === srEscopo);
+  const opcoes = (lista, atual) => lista.map(([v, l]) => `<option value="${escHtml(v)}"${v === atual ? ' selected' : ''}>${escHtml(l)}</option>`).join('');
+
+  const contar = st => _acessosTodos.filter(r => r.status === st).length;
+  const estilo = 'padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);color:var(--txt-1);font-family:inherit;font-size:.82rem;';
+
+  const filtros = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      ${perfilAtual === 'crv' && visaoAmpla && !srSelecionada ? `
+        <select style="${estilo}" onchange="filtrarAcessos('sr', this.value)">
+          <option value="">Todas as regionais</option>
+          ${opcoes(Object.keys(SR_INFO).sort().map(s => [s, s + ' — ' + (SR_INFO[s]?.nome || s)]), f.sr)}
+        </select>` : ''}
+      ${visaoAmpla ? `
+        <select style="${estilo}" onchange="filtrarAcessos('un', this.value)">
+          <option value="">Todas as unidades</option>
+          ${opcoes(unidadesFiltro.map(u => [u.email, u.nome]), f.un)}
+        </select>` : ''}
+      <select style="${estilo}" onchange="filtrarAcessos('status', this.value)">
+        <option value="">Todas as situações (${_acessosTodos.length})</option>
+        ${opcoes(['pendente', 'aprovado', 'revogado', 'recusado'].map(s => [s, _STATUS_ACESSO[s].label + ' (' + contar(s) + ')']), f.status)}
+      </select>
+      <input type="search" placeholder="🔍 Buscar por nome ou e-mail" value="${escHtml(f.busca)}"
+             oninput="filtrarAcessos('busca', this.value)" style="${estilo}flex:1;min-width:180px;">
+    </div>`;
+
+  const voltar = _ehNavCartoes() ? '' :
+    `<button class="p-bc-btn" onclick="mostrarDashboard()" style="display:flex;align-items:center;gap:5px;margin-bottom:14px;font-size:.82rem;">← Voltar ao painel</button>`;
+  const escopoTxt = perfilAtual === 'super'
+    ? `Servidores das unidades da ${escHtml(SR_INFO[escopoAtual.codigo]?.nome || escopoAtual.codigo)}`
+    : perfilAtual === 'crv' && visaoAmpla
+      ? (srSelecionada ? `Servidores da ${escHtml(SR_INFO[srSelecionada]?.nome || srSelecionada)}` : 'Servidores de todas as unidades do estado')
+      : 'Servidores da unidade';
+  const aviso = _podeAnalisarAcesso() ? '' : `
+    <div style="margin:0 0 12px;padding:9px 12px;border-radius:var(--radius);background:var(--azul-50);border-left:3px solid var(--azul-400);font-size:.76rem;color:var(--txt-2);">
+      A aprovação e a recusa de cadastros são feitas pelo Diretor(a) ou CPEN de cada unidade.
+      Aqui você pode consultar, <strong>suspender</strong> ou <strong>excluir</strong> acessos.
+    </div>`;
+
+  el.innerHTML = `
+    <div>
+      ${voltar}
+      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 2px;">👤 Usuários cadastrados</h2>
+      <p style="font-size:.78rem;color:var(--txt-3);margin:0 0 14px;">${escopoTxt}</p>
+      ${aviso}
+      ${filtros}
+      <div id="p-acessos-lista"></div>
+    </div>`;
+  _renderAcessosLista();
+}
+
+window.filtrarAcessos = function (campo, valor) {
+  _acessosFiltro[campo] = valor;
+  if (campo === 'sr') { _acessosFiltro.un = ''; _renderAcessos(); return; } // atualiza a lista de unidades
+  _renderAcessosLista();
+};
+
+function _renderAcessosLista() {
+  const el = document.getElementById('p-acessos-lista');
+  if (!el) return;
+  const f = _acessosFiltro;
+  const termo = (f.busca || '').trim().toLowerCase();
+  const registros = _acessosTodos.filter(r =>
+    (!f.status || r.status === f.status) &&
+    (!f.un || r.emailUnidade === f.un) &&
+    (!f.sr || r.srUnidade === f.sr) &&
+    (!termo || (r.nome || '').toLowerCase().includes(termo) || (r.email || '').toLowerCase().includes(termo))
+  );
+
+  _selAcess.clear();
+  _selAcessData = registros;
+  _selCtx = 'acess';
+
+  if (!registros.length) {
+    el.innerHTML = `<div class="p-vazio">${_acessosTodos.length ? 'Nenhum usuário com esses filtros.' : 'Nenhum cadastro de servidor encontrado.'}</div>`;
+    _atualizarBarra();
+    return;
+  }
+
+  const analisa = _podeAnalisarAcesso();
+  const modera  = _podeModerarAcesso();
+  const cabSel = `<div class="p-sel-header">
+    <label><input type="checkbox" class="p-sel-all-check" data-ctx="acc" onchange="selAccAll(this)"> Selecionar todos (${registros.length})</label>
+  </div>`;
+
+  el.innerHTML = cabSel + registros.map(r => {
+    const info = _STATUS_ACESSO[r.status] || { label: r.status, classe: 'p-status-andamento' };
+    const dataCad = r.criadoEm?.toDate  ? r.criadoEm.toDate().toLocaleDateString('pt-BR')   : '—';
+    const dataApr = r.aprovadoEm?.toDate ? r.aprovadoEm.toDate().toLocaleDateString('pt-BR') : null;
+
+    /* Nome/e-mail vêm do cadastro (texto livre do usuário) — passados via data-*,
+       nunca interpolados dentro do JavaScript do onclick. */
+    const dadosPessoa = `data-id="${escHtml(r.id)}" data-nome="${escHtml(r.nome || '')}" data-email="${escHtml(r.email || '')}"`;
+    const acoes = [];
+    const btnExcluir = `<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="excluirCadastro(this.dataset.id,this.dataset.nome)">Excluir</button>`;
+    if (r.status === 'pendente') {
+      if (analisa) {
+        acoes.push(`<button class="p-btn p-btn-assinar" onclick="aprovarAcesso('${r.id}')">Aprovar</button>`);
+        acoes.push(`<button class="p-btn p-btn-negar"   onclick="abrirModalNegarAcesso('${r.id}')">Recusar</button>`);
+      }
+      if (modera) acoes.push(btnExcluir);
+    } else if (r.status === 'aprovado') {
+      if (modera) {
+        acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="redefinirSenhaUsuario(this.dataset.id,this.dataset.email,this.dataset.nome)">Redefinir senha</button>`);
+        acoes.push(`<button class="p-btn p-btn-negar" ${dadosPessoa} onclick="revogarAcesso(this.dataset.id,this.dataset.nome)">Suspender acesso</button>`);
+      }
+    } else if (r.status === 'recusado' || r.status === 'revogado') {
+      if (analisa) acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
+      if (modera) acoes.push(btnExcluir);
+    }
+
+    // Superintendente vê o CPF mascarado (LGPD); Diretor/CPEN e CRV veem completo
+    const cpfDig = (r.cpf || '').replace(/\D/g, '');
+    const cpfFmt = !cpfDig ? '—'
+      : perfilAtual === 'super' ? `***.${cpfDig.slice(3, 6)}.${cpfDig.slice(6, 9)}-**`
+      : cpfDig.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    const nascFmt = perfilAtual === 'super' ? '—' : (r.dataNascimento || '—');
+    const iniciais = escHtml((r.nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase());
+    const rotAcao = r.status === 'revogado' ? 'Suspenso por' : r.status === 'recusado' ? 'Recusado por' : 'Aprovado por';
+    return `
+    <div class="p-card p-card-compact" id="acard-${r.id}">
+      <div class="p-card-row" onclick="pAccToggle('${r.id}')">
+        <input type="checkbox" class="p-card-check" data-ctx="acc" onchange="selAccToggle('${r.id}')" onclick="event.stopPropagation()" title="Selecionar">
+        <span class="p-card-avatar">${iniciais}</span>
+        <span class="p-status ${info.classe}" style="flex-shrink:0;">${info.label}</span>
+        <span class="p-card-titulo-row" style="cursor:pointer;">${escHtml(r.nome || '—')}</span>
+        <span class="p-card-meta-row">${escHtml(r.nomeUnidade || '—')} · ${dataCad}</span>
+        <span class="p-card-arrow" id="aarrow-${r.id}">▶</span>
+      </div>
+      <div class="p-card-body" id="acbody-${r.id}" style="display:none;">
+        <div style="padding:10px 16px 6px;display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:.78rem;">
+          <div><span style="color:var(--txt-3);">E-mail:</span> ${escHtml(r.email || '—')}</div>
+          <div><span style="color:var(--txt-3);">CPF:</span> ${escHtml(cpfFmt)}</div>
+          ${perfilAtual === 'super' ? '' : `<div><span style="color:var(--txt-3);">Nascimento:</span> ${escHtml(nascFmt)}</div>`}
+          <div><span style="color:var(--txt-3);">Unidade:</span> ${escHtml(r.nomeUnidade || r.emailUnidade || '—')}</div>
+          ${dataApr ? `<div><span style="color:var(--txt-3);">${rotAcao}:</span> ${escHtml(r.aprovadoPor || '—')} em ${dataApr}</div>` : ''}
+          ${r.motivoRecusa ? `<div style="grid-column:1/-1;color:var(--vermelho);"><span style="color:var(--txt-3);">Motivo recusa:</span> ${escHtml(r.motivoRecusa)}</div>` : ''}
+        </div>
+        ${acoes.length ? `<div class="p-card-acoes">${acoes.join('')}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  _atualizarBarra();
+}
 // ── Aprovar ──
 window.aprovarAcesso = async function (id) {
   try {
@@ -2411,15 +2548,16 @@ window.confirmarNegarAcesso = async function () {
   } catch (e) { showToastPainel('Erro: ' + e.message); }
 };
 
-// ── Revogar (aprovado → revogado) ──
-window.revogarAcesso = async function (id) {
+// ── Suspender (aprovado → revogado) — Diretor/CPEN, CRV e Superintendente ──
+window.revogarAcesso = async function (id, nome) {
+  if (!confirm(`Suspender o acesso de "${nome || 'este usuário'}"?\n\nEle deixa de conseguir entrar no sistema. O Diretor(a) ou CPEN da unidade pode reabrir o pedido depois.`)) return;
   try {
     await updateDoc(doc(db, 'usuarios_cadastrados', id), {
       status:      'revogado',
       aprovadoPor: usuarioAtual.email,
       aprovadoEm:  serverTimestamp(),
     });
-    showToastPainel('Acesso revogado.');
+    showToastPainel('Acesso suspenso.');
     carregarAba('acessos');
   } catch (e) { showToastPainel('Erro: ' + e.message); }
 };

@@ -330,6 +330,9 @@ async function _atualizarBadgeMensagens() {
   } catch (_) {}
   badge.style.display = n > 0 ? '' : 'none';
   badge.textContent = String(n);
+  // Mesmo número no item "Mensagens" do menu lateral (usado no celular)
+  const lateral = document.getElementById('sidebar-msg-count');
+  if (lateral) { lateral.style.display = n > 0 ? '' : 'none'; lateral.textContent = n > 9 ? '9+' : String(n); }
 }
 
 // ── UI ──
@@ -357,6 +360,14 @@ let _conversaAtivaEmail = null;
 
 function _colunaThread() { return document.querySelector('#mensagens-panel .msg-thread-col'); }
 
+// Celular: mostra a coluna da conversa no lugar da lista (ver .vendo-thread no CSS)
+function _entrarNaThread() {
+  document.querySelector('#mensagens-panel .msg-drawer-body')?.classList.add('vendo-thread');
+}
+// Botão "←" que só aparece no celular e volta para a lista
+const BTN_VOLTAR_MOBILE = `<button class="msg-voltar-mobile" title="Voltar para a lista" aria-label="Voltar para a lista" onclick="window._msgVoltarLista && window._msgVoltarLista()">←</button>`;
+window._msgVoltarLista = () => _limparColunaThread();
+
 function _marcarItemAtivoNaLista(email) {
   const col = document.querySelector('#mensagens-panel .msg-lista-col');
   if (!col) return;
@@ -366,6 +377,7 @@ function _marcarItemAtivoNaLista(email) {
 async function _abrirThread(outroEmail, origemRecado) {
   const corpo = _colunaThread();
   if (!corpo) return;
+  _entrarNaThread();
   _conversaAtivaEmail = outroEmail;
   _marcarItemAtivoNaLista(outroEmail);
   corpo.innerHTML = `<div class="msg-thread-vazio">Carregando…</div>`;
@@ -432,6 +444,7 @@ async function _abrirThread(outroEmail, origemRecado) {
 
   corpo.innerHTML = `
     <div class="msg-thread-head" style="display:flex;align-items:center;gap:8px;">
+      ${BTN_VOLTAR_MOBILE}
       <div style="flex:1;min-width:0;"><div class="msg-thread-head-nome" title="${_nomeContato(outroEmail)}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_nomeContato(outroEmail)}</div></div>
       ${botoes}
     </div>
@@ -497,6 +510,7 @@ function escHtmlMsg(s) {
 async function _renderNovoRecado() {
   const corpo = _colunaThread();
   if (!corpo) return;
+  _entrarNaThread();
   _marcarItemAtivoNaLista(null);
 
   const srCods = Object.keys(window.SR_INFO || {}).sort();
@@ -600,6 +614,7 @@ async function _renderNovoRecado() {
 async function _renderNovaConversa() {
   const corpo = _colunaThread();
   if (!corpo) return;
+  _entrarNaThread();
   _marcarItemAtivoNaLista(null);
   const info = window._presencaInfo;
   const ehDpp = info?.tipo === 'crv';
@@ -717,6 +732,7 @@ async function _renderNovaConversa() {
 
 function _limparColunaThread() {
   _conversaAtivaEmail = null;
+  document.querySelector('#mensagens-panel .msg-drawer-body')?.classList.remove('vendo-thread');
   _marcarItemAtivoNaLista(null);
   const corpo = _colunaThread();
   if (corpo) corpo.innerHTML = `<div class="msg-thread-vazio">Selecione uma conversa ou inicie uma nova.</div>`;
@@ -795,6 +811,7 @@ async function _renderListaLateral() {
 async function _renderHistoricoRecados() {
   const corpo = _colunaThread();
   if (!corpo) return;
+  _entrarNaThread();
   _marcarItemAtivoNaLista(null);
   corpo.innerHTML = `<div class="msg-thread-vazio">Carregando…</div>`;
 

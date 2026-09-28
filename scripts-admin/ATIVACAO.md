@@ -53,6 +53,8 @@ Marque **Autenticado** e preencha o e-mail (e `email_verified` quando indicado n
 | 8 | get | `beneficios_respostas/<slug>` | `pr01dir@…` confirmado | ❌ negado |
 | 9 | update `status: 'aprovado'` | `usuarios_cadastrados/<seu uid>` | o próprio servidor pendente | ❌ negado |
 | 10 | get | `diarias_servidores/x` | `sr01sr@…` confirmado | ❌ negado |
+| 11 | get | `usuarios_cadastrados/<servidor da SR01>` | `sr01sr@…` confirmado | ✅ permitido |
+| 12 | update `status: 'aprovado'` | `usuarios_cadastrados/<pendente>` | `rodrigo.l.pastore@gmail.com` | ❌ negado (CRV não aprova) |
 
 ### Depois de publicar, confira no site
 

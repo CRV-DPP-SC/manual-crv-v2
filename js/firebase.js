@@ -58,6 +58,8 @@ function _mostrarTopbarVisitante() {
   area.innerHTML = `<button class="btn-topbar-login" onclick="window._abrirModalLogin()">Entrar</button>`;
   const btnS = document.getElementById('sidebar-btn-senha');
   if (btnS) btnS.style.display = 'none';
+  const btnM = document.getElementById('sidebar-btn-mensagens');
+  if (btnM) btnM.style.display = 'none';
   _mostrarSubMenuCRV(false);
   _mostrarSubMenuPainel(false);
 }
@@ -513,6 +515,8 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   const iniciais = _iniciaisPerfil(user.email || '');
   const btnSenha = document.getElementById('sidebar-btn-senha');
   if (btnSenha) btnSenha.style.display = '';
+  const btnMsg = document.getElementById('sidebar-btn-mensagens');
+  if (btnMsg) btnMsg.style.display = '';
   /* Submenus conforme perfil */
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
   /* Qualquer usuário autenticado (inclusive servidor aprovado) vê Manual/Ferramentas */
@@ -734,7 +738,7 @@ window.fazerLogin = async function () {
 
       if (dados.status === 'revogado') {
         await signOut(auth);
-        erroEl.textContent = 'Seu acesso foi revogado. Entre em contato com o CPEN da sua unidade.';
+        erroEl.textContent = 'Seu acesso está suspenso. Entre em contato com o Diretor(a) ou CPEN da sua unidade.';
         erroEl.style.display = 'block';
         return;
       }

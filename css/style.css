@@ -1178,6 +1178,28 @@ img { max-width: 100%; display: block; }
   .msg-drawer { width: 100%; }
   .msg-lista-col { width: 200px; }
 }
+/* Celular em pé: uma coluna por vez (lista OU conversa), como no WhatsApp.
+   A classe .vendo-thread é colocada pelo js/mensagens.js ao abrir uma conversa. */
+.msg-voltar-mobile { display: none; }
+@media(max-width:600px) {
+  .msg-lista-col { width: 100%; border-right: none; }
+  .msg-thread-col { display: none; }
+  .msg-drawer-body.vendo-thread .msg-lista-col { display: none; }
+  .msg-drawer-body.vendo-thread .msg-thread-col { display: flex; }
+  .msg-voltar-mobile {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--txt-1); font-size: .95rem; cursor: pointer;
+  }
+}
+
+/* Mensagens no menu lateral: só no celular (no computador há o ✉️ na barra de cima) */
+.nav-badge {
+  margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+  background: #dc2626; color: #fff; font-size: .68rem; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+@media(min-width:701px) { #sidebar-btn-mensagens { display: none !important; } }
 .online-grupo-row:hover { background: rgba(0,0,0,.05); }
 .online-grupo-row.aberto {
   background: var(--azul-50, #f0f7ff);
