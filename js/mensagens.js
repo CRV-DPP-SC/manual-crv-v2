@@ -55,9 +55,15 @@ function _ouvirRecados(q) {
 
 function _ouvirConversas() {
   let primeira = true;
+  const ultimaVista = new Map(); // id → ultimaMensagemEm já conhecida (evita toast ao concluir/apagar)
   const q = query(collection(db, 'conversas'), where('participantes', 'array-contains', meuEmail()));
   return onSnapshot(q, snap => {
-    if (primeira) { primeira = false; _atualizarBadgeMensagens(); return; }
+    if (primeira) {
+      primeira = false;
+      snap.forEach(d => ultimaVista.set(d.id, _ms(d.data().ultimaMensagemEm)));
+      _atualizarBadgeMensagens();
+      return;
+    }
     snap.docChanges().forEach(ch => {
       if (ch.type === 'removed') return;
       // Ignora o eco local otimista da nossa própria escrita (ex.: _marcarConversaLida).
@@ -66,10 +72,12 @@ function _ouvirConversas() {
       // toda vez que a própria gaveta marca a conversa como lida.
       if (ch.doc.metadata.hasPendingWrites) return;
       const c = ch.doc.data();
+      const quando = _ms(c.ultimaMensagemEm);
+      const mensagemNova = quando > (ultimaVista.get(ch.doc.id) || 0);
+      ultimaVista.set(ch.doc.id, quando);
+      if (!mensagemNova) return; // só mudou o estado (concluída, lida, histórico apagado)
       const outro = _outroParticipante(c);
-      const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
-      const novaMsg = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
-      if (novaMsg) _mostrarToast(_nomeContatoTexto(outro), c.ultimaMensagemTexto, () => _abrirDireto(outro));
+      if (_naoLida(c)) _mostrarToast(_nomeContatoTexto(outro), c.ultimaMensagemTexto, () => _abrirDireto(outro));
     });
     _atualizarBadgeMensagens();
   }, e => console.error('Erro no listener de conversas:', e));
@@ -207,9 +215,37 @@ async function enviarMensagem(outroEmail, texto, origemRecado) {
   await setDoc(doc(db, 'conversas', id), {
     ultimaMensagemEm: serverTimestamp(),
     ultimaMensagemTexto: texto.trim(),
-    ultimaLeitura: { [meuEmail()]: serverTimestamp() }
+    ultimaLeitura: { [meuEmail()]: serverTimestamp() },
+    encerrada: false            // mensagem nova reabre uma conversa concluída
   }, { merge: true });
   return id;
+}
+
+// ── Concluir conversa / apagar histórico ──
+// "Concluída" vale para os dois participantes (fica registrado quem concluiu e quando).
+// "Apagar histórico" é só para quem apagou: guarda o momento em limpaEm[meuEmail] e
+// esconde da própria tela tudo o que veio antes — o outro participante continua vendo.
+const _ms = ts => ts?.toMillis?.() || 0;
+function _limpaEm(c) { return _ms(c?.limpaEm?.[meuEmail()]); }
+function _visivelParaMim(c) {
+  return !c?.limpaEm?.[meuEmail()] || _ms(c.ultimaMensagemEm) > _limpaEm(c);
+}
+function _naoLida(c) {
+  const ult = _ms(c.ultimaLeitura?.[meuEmail()]);
+  return !!c.ultimaMensagemTexto && _ms(c.ultimaMensagemEm) > ult && _visivelParaMim(c);
+}
+
+async function concluirConversa(outroEmail) {
+  await setDoc(doc(db, 'conversas', convId(meuEmail(), outroEmail)), {
+    encerrada: true, encerradaPor: meuEmail(), encerradaEm: serverTimestamp()
+  }, { merge: true });
+}
+
+async function apagarHistorico(outroEmail) {
+  await setDoc(doc(db, 'conversas', convId(meuEmail(), outroEmail)), {
+    limpaEm:       { [meuEmail()]: serverTimestamp() },
+    ultimaLeitura: { [meuEmail()]: serverTimestamp() }
+  }, { merge: true });
 }
 
 async function _marcarConversaLida(id) {
@@ -280,10 +316,7 @@ async function _atualizarBadgeMensagens() {
     const recados = await _listarRecadosRecebidos();
     n += recados.filter(r => !r.lidoPor?.[meuEmail()]).length;
     const conversas = await _listarConversas();
-    n += conversas.filter(c => {
-      const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
-      return (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
-    }).length;
+    n += conversas.filter(_naoLida).length;
   } catch (_) {}
   badge.style.display = n > 0 ? '' : 'none';
   badge.textContent = String(n);
@@ -328,13 +361,18 @@ async function _abrirThread(outroEmail, origemRecado) {
   corpo.innerHTML = `<div class="msg-thread-vazio">Carregando…</div>`;
 
   const id = convId(meuEmail(), outroEmail);
+  // Dados da conversa (concluída? histórico apagado?). Se ainda não existe, a leitura falha — tudo bem.
+  let conversa = null;
+  try { const s = await getDoc(doc(db, 'conversas', id)); if (s.exists()) conversa = s.data(); } catch (_) {}
   const tarefas = [_listarMensagens(id), _marcarConversaLida(id)];
   let recadoOrigem = null;
   if (origemRecado) {
     tarefas.push(_marcarRecadoLido(origemRecado));
     try { const s = await getDoc(doc(db, 'recados', origemRecado)); if (s.exists()) recadoOrigem = s.data(); } catch (_) {}
   }
-  const [mensagens] = await Promise.all(tarefas);
+  const [todas] = await Promise.all(tarefas);
+  const corte = _limpaEm(conversa);
+  const mensagens = corte ? todas.filter(m => _ms(m.enviadaEm) > corte) : todas;
 
   const bolha = m => {
     const eu = m.de === meuEmail();
@@ -356,13 +394,30 @@ async function _abrirThread(outroEmail, origemRecado) {
       <div style="font-size:.76rem;color:var(--txt-1);margin-top:2px;">${escHtmlMsg(recadoOrigem.texto)}</div>
     </div>` : '';
 
+  const estiloBtn = 'border:1px solid var(--border,#e2e8f0);background:var(--bg-card,#fff);color:var(--txt-2,#334155);border-radius:6px;padding:4px 10px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;';
+  const botoes = conversa ? `
+      ${conversa.encerrada ? '' : `<button class="msg-acao-thread" data-acao="concluir" title="Marcar a situação como resolvida" style="${estiloBtn}">✓ Concluir conversa</button>`}
+      <button class="msg-acao-thread" data-acao="apagar" title="Apagar o histórico só da sua tela" style="${estiloBtn}">🗑 Apagar histórico</button>` : '';
+
+  const concluidaHtml = conversa?.encerrada ? `
+    <div style="margin:8px 12px 0;padding:8px 12px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:.74rem;color:#166534;">
+      ✓ Conversa concluída${conversa.encerradaPor ? ' por <strong>' + escHtmlMsg(conversa.encerradaPor === meuEmail() ? 'você' : _nomeContatoTexto(conversa.encerradaPor)) + '</strong>' : ''}${conversa.encerradaEm ? ' em ' + _formatarData(conversa.encerradaEm) : ''}.
+      Se alguém escrever de novo, ela é reaberta.
+    </div>` : '';
+
+  const vazio = corte
+    ? '<div class="msg-vazio">Histórico apagado da sua tela. Novas mensagens aparecerão aqui.</div>'
+    : '<div class="msg-vazio">Nenhuma mensagem ainda.</div>';
+
   corpo.innerHTML = `
-    <div class="msg-thread-head">
-      <div><div class="msg-thread-head-nome">${_nomeContato(outroEmail)}</div></div>
+    <div class="msg-thread-head" style="display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;min-width:0;"><div class="msg-thread-head-nome">${_nomeContato(outroEmail)}</div></div>
+      ${botoes}
     </div>
+    ${concluidaHtml}
     ${recadoHtml}
     <div class="msg-thread-msgs">
-      ${mensagens.length ? mensagens.map(bolha).join('') : '<div class="msg-vazio">Nenhuma mensagem ainda.</div>'}
+      ${mensagens.length ? mensagens.map(bolha).join('') : vazio}
     </div>
     <div class="msg-thread-input">
       <input type="text" class="msg-thread-campo" placeholder="Escrever uma mensagem…">
@@ -390,6 +445,27 @@ async function _abrirThread(outroEmail, origemRecado) {
   };
   corpo.querySelector('.msg-thread-enviar').onclick = enviar;
   input.addEventListener('keydown', ev => { if (ev.key === 'Enter') enviar(); });
+
+  corpo.querySelectorAll('.msg-acao-thread').forEach(btn => {
+    btn.onclick = async () => {
+      const acao = btn.dataset.acao;
+      if (acao === 'apagar' && !confirm(
+        'Apagar o histórico desta conversa da SUA tela?\n\n' +
+        'A outra pessoa continua vendo as mensagens dela. Mensagens novas voltam a aparecer normalmente.')) return;
+      btn.disabled = true;
+      try {
+        if (acao === 'concluir') await concluirConversa(outroEmail);
+        else await apagarHistorico(outroEmail);
+        _renderListaLateral();
+        if (acao === 'apagar') _limparColunaThread();
+        else await _abrirThread(outroEmail, origemRecado);
+      } catch (e) {
+        console.error('Erro ao atualizar conversa:', e);
+        alert('Não foi possível concluir a ação. Tente novamente em instantes.');
+        btn.disabled = false;
+      }
+    };
+  });
   input.focus();
 }
 
@@ -646,13 +722,12 @@ async function _renderListaLateral() {
 
   const itemConversa = c => {
     const outro = _outroParticipante(c);
-    const ult = c.ultimaLeitura?.[meuEmail()]?.toMillis?.() || 0;
-    const naoLida = (c.ultimaMensagemEm?.toMillis?.() || 0) > ult && c.ultimaMensagemTexto;
+    const naoLida = _naoLida(c);
     return `
-    <div class="msg-item msg-item-conversa" data-email="${escHtmlMsg(outro)}">
+    <div class="msg-item msg-item-conversa" data-email="${escHtmlMsg(outro)}"${c.encerrada ? ' style="opacity:.7;"' : ''}>
       <div class="msg-item-corpo">
         <div class="msg-item-topo">
-          <span class="msg-item-nome ${naoLida ? 'nl' : ''}">${_nomeContato(outro)}</span>
+          <span class="msg-item-nome ${naoLida ? 'nl' : ''}">${c.encerrada ? '✓ ' : ''}${_nomeContato(outro)}</span>
           <span class="msg-item-hora">${_formatarData(c.ultimaMensagemEm)}</span>
         </div>
         <div class="msg-item-prev ${naoLida ? 'nl' : ''}">${escHtmlMsg(c.ultimaMensagemTexto || 'Sem mensagens ainda')}</div>
@@ -661,14 +736,24 @@ async function _renderListaLateral() {
     </div>`;
   };
 
-  const semNada = !recadosNaoLidos.length && !conversas.length;
+  // Conversas com histórico apagado (e sem mensagem nova) somem da lista de quem apagou
+  const visiveis   = conversas.filter(_visivelParaMim);
+  const ativas     = visiveis.filter(c => !c.encerrada);
+  const concluidas = visiveis.filter(c => c.encerrada);
+
+  const semNada = !recadosNaoLidos.length && !visiveis.length;
   col.innerHTML = `
     <div class="msg-acoes">
       <button class="msg-btn-acao msg-btn-novo-recado">+ Recado para toda a unidade</button>
       <button class="msg-btn-acao msg-btn-nova-conversa">+ Nova conversa</button>
     </div>
     ${recadosNaoLidos.length ? `<div class="msg-secao-label">Recados</div>${recadosNaoLidos.map(itemRecado).join('')}` : ''}
-    ${conversas.length ? `<div class="msg-secao-label">Conversas</div>${conversas.map(itemConversa).join('')}` : ''}
+    ${ativas.length ? `<div class="msg-secao-label">Conversas</div>${ativas.map(itemConversa).join('')}` : ''}
+    ${concluidas.length ? `
+      <details style="margin-top:6px;">
+        <summary class="msg-secao-label" style="cursor:pointer;list-style:none;">▸ Concluídas (${concluidas.length})</summary>
+        ${concluidas.map(itemConversa).join('')}
+      </details>` : ''}
     ${semNada ? '<div class="msg-vazio">Nenhuma mensagem ainda. Comece uma conversa acima.</div>' : ''}
     ${recadosTodos.length ? `<button class="msg-btn-acao msg-btn-historico" style="margin-top:10px;color:var(--azul-500);">Ver histórico de recados →</button>` : ''}`;
 
