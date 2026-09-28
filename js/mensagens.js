@@ -14,6 +14,7 @@ const _auth = getAuth(_app);
 const db    = getFirestore(_app);
 
 let _user = null;
+const TS_ESTIMADO = { serverTimestamps: 'estimate' };
 let _unsubListeners = [];
 
 function _pararListenersTempoReal() {
@@ -60,7 +61,7 @@ function _ouvirConversas() {
   return onSnapshot(q, snap => {
     if (primeira) {
       primeira = false;
-      snap.forEach(d => ultimaVista.set(d.id, _ms(d.data().ultimaMensagemEm)));
+      snap.forEach(d => ultimaVista.set(d.id, _ms(d.data(TS_ESTIMADO).ultimaMensagemEm)));
       _atualizarBadgeMensagens();
       return;
     }
@@ -71,7 +72,7 @@ function _ouvirConversas() {
       // então "ultimaLeitura" leria como 0 e disparia um toast falso de "mensagem nova"
       // toda vez que a própria gaveta marca a conversa como lida.
       if (ch.doc.metadata.hasPendingWrites) return;
-      const c = ch.doc.data();
+      const c = ch.doc.data(TS_ESTIMADO);
       const quando = _ms(c.ultimaMensagemEm);
       const mensagemNova = quando > (ultimaVista.get(ch.doc.id) || 0);
       ultimaVista.set(ch.doc.id, quando);
@@ -79,6 +80,7 @@ function _ouvirConversas() {
       const outro = _outroParticipante(c);
       if (_naoLida(c)) _mostrarToast(_nomeContatoTexto(outro), c.ultimaMensagemTexto, () => _abrirDireto(outro));
     });
+    if (document.getElementById('mensagens-panel')) _renderListaLateral();
     _atualizarBadgeMensagens();
   }, e => console.error('Erro no listener de conversas:', e));
 }
@@ -236,7 +238,13 @@ function _naoLida(c) {
 }
 
 async function concluirConversa(outroEmail) {
-  await setDoc(doc(db, 'conversas', convId(meuEmail(), outroEmail)), {
+  const id = convId(meuEmail(), outroEmail);
+  // Marco na própria conversa: vira a barra "Atendimento concluído" entre um
+  // atendimento e o próximo (como um chamado encerrado).
+  await addDoc(collection(db, 'conversas', id, 'mensagens'), {
+    de: meuEmail(), tipo: 'encerramento', texto: 'Atendimento concluído', enviadaEm: serverTimestamp()
+  });
+  await setDoc(doc(db, 'conversas', id), {
     encerrada: true, encerradaPor: meuEmail(), encerradaEm: serverTimestamp()
   }, { merge: true });
 }
@@ -293,7 +301,9 @@ async function _listarConversas() {
   try {
     const snap = await getDocs(query(collection(db, 'conversas'), where('participantes', 'array-contains', meuEmail())));
     const out = [];
-    snap.forEach(d => out.push({ id: d.id, ...d.data() }));
+    // 'estimate': horários gravados pelo servidor e ainda não confirmados (ex.: logo após apagar/concluir)
+    // já vêm com a hora local estimada, em vez de nulos — senão a lista mostraria o estado antigo.
+    snap.forEach(d => out.push({ id: d.id, ...d.data(TS_ESTIMADO) }));
     out.sort((a, b) => (b.ultimaMensagemEm?.toMillis?.() || 0) - (a.ultimaMensagemEm?.toMillis?.() || 0));
     return out;
   } catch (e) { console.error('Erro ao listar conversas:', e); return []; }
@@ -303,7 +313,7 @@ async function _listarMensagens(id) {
   try {
     const snap = await getDocs(query(collection(db, 'conversas', id, 'mensagens'), orderBy('enviadaEm', 'asc'), limit(200)));
     const out = [];
-    snap.forEach(d => out.push(d.data()));
+    snap.forEach(d => out.push(d.data(TS_ESTIMADO)));
     return out;
   } catch (e) { console.error('Erro ao listar mensagens:', e); return []; }
 }
@@ -363,7 +373,7 @@ async function _abrirThread(outroEmail, origemRecado) {
   const id = convId(meuEmail(), outroEmail);
   // Dados da conversa (concluída? histórico apagado?). Se ainda não existe, a leitura falha — tudo bem.
   let conversa = null;
-  try { const s = await getDoc(doc(db, 'conversas', id)); if (s.exists()) conversa = s.data(); } catch (_) {}
+  try { const s = await getDoc(doc(db, 'conversas', id)); if (s.exists()) conversa = s.data(TS_ESTIMADO); } catch (_) {}
   const tarefas = [_listarMensagens(id), _marcarConversaLida(id)];
   let recadoOrigem = null;
   if (origemRecado) {
@@ -378,6 +388,17 @@ async function _abrirThread(outroEmail, origemRecado) {
     const eu = m.de === meuEmail();
     const ms = m.enviadaEm?.toMillis?.();
     const hora = ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    if (m.tipo === 'encerramento') {
+      const quem = eu ? 'você' : _nomeContatoTexto(m.de);
+      return `
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0;width:100%;align-self:stretch;">
+      <span style="flex:1;height:1px;background:#86efac;"></span>
+      <span style="font-size:.68rem;font-weight:700;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:3px 12px;white-space:nowrap;">
+        ✓ Atendimento concluído por ${escHtmlMsg(quem)}${hora ? ' · ' + hora : ''}
+      </span>
+      <span style="flex:1;height:1px;background:#86efac;"></span>
+    </div>`;
+    }
     return `
     <div class="msg-bolha ${eu ? 'msg-bolha-enviada' : 'msg-bolha-recebida'}">
       ${escHtmlMsg(m.texto)}
@@ -394,7 +415,7 @@ async function _abrirThread(outroEmail, origemRecado) {
       <div style="font-size:.76rem;color:var(--txt-1);margin-top:2px;">${escHtmlMsg(recadoOrigem.texto)}</div>
     </div>` : '';
 
-  const estiloBtn = 'border:1px solid var(--border,#e2e8f0);background:var(--bg-card,#fff);color:var(--txt-2,#334155);border-radius:6px;padding:4px 10px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;';
+  const estiloBtn = 'flex-shrink:0;border:1px solid var(--border,#e2e8f0);background:var(--bg-card,#fff);color:var(--txt-2,#334155);border-radius:6px;padding:4px 10px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;';
   const botoes = conversa ? `
       ${conversa.encerrada ? '' : `<button class="msg-acao-thread" data-acao="concluir" title="Marcar a situação como resolvida" style="${estiloBtn}">✓ Concluir conversa</button>`}
       <button class="msg-acao-thread" data-acao="apagar" title="Apagar o histórico só da sua tela" style="${estiloBtn}">🗑 Apagar histórico</button>` : '';
@@ -411,7 +432,7 @@ async function _abrirThread(outroEmail, origemRecado) {
 
   corpo.innerHTML = `
     <div class="msg-thread-head" style="display:flex;align-items:center;gap:8px;">
-      <div style="flex:1;min-width:0;"><div class="msg-thread-head-nome">${_nomeContato(outroEmail)}</div></div>
+      <div style="flex:1;min-width:0;"><div class="msg-thread-head-nome" title="${_nomeContato(outroEmail)}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_nomeContato(outroEmail)}</div></div>
       ${botoes}
     </div>
     ${concluidaHtml}
