@@ -207,6 +207,9 @@ function mostrarPainel() {
     _iniciarListenerPendencias();
     _verificarPendenciasLogin();
   }
+  /* Atalho do menu lateral que chegou antes do login terminar */
+  if (_telaPendente) { const t = _telaPendente; _telaPendente = null; _abrirTela(t); }
+
   /* Notificação de cadastros pendentes: apenas DIR e CPEN da unidade */
   if (['dir', 'cpen'].includes(perfilAtual)) {
     _iniciarListenerAcessosPendentes();
@@ -639,7 +642,28 @@ function trocarUnidade(valor) {
 
 // ── Recebe a escolha de unidade/SR feita no seletor da barra do site principal ──
 // (mesmo iframe, comunicação via postMessage — ver js/firebase.js, _montarSeletorPainelTopbar)
+// ── Atalhos do menu lateral do site principal (js/firebase.js, abrirTelaPainel) ──
+let _telaPendente = null;
+function _abrirTela(tela) {
+  if (tela === 'mural') { abrirMuralAvisos(); return; }
+  if (tela === 'usuarios') {
+    if (['crv', 'super', 'dir', 'cpen'].includes(perfilAtual)) carregarAba('acessos');
+    return;
+  }
+  if (tela === 'transferencias') {
+    // CRV (visão estadual): painel de acompanhamento; demais: pendentes + histórico
+    if (perfilAtual === 'crv' && !modoLeitura()) mostrarDashboard();
+    else _mostrarSubGrupo('transferencias');
+  }
+}
 window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin || !e.data || typeof e.data.crvAbrirTela !== 'string') return;
+  if (!perfilAtual) { _telaPendente = e.data.crvAbrirTela; return; } // login ainda carregando
+  _abrirTela(e.data.crvAbrirTela);
+});
+
+window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin) return;
   if (!e.data || typeof e.data.crvSelecionarUnidade !== 'string') return;
   if (!['crv', 'super'].includes(perfilAtual)) return;
   trocarUnidade(e.data.crvSelecionarUnidade);
@@ -679,7 +703,7 @@ const _GRUPO_DE_ABA = {
   externa_pendentes: 'transf_externa', externa_historico: 'transf_externa',
 };
 const _LABEL_GRUPO = {
-  transferencias: 'Transferências', acesso: 'Controle de Acesso de Usuários', ferramentas: 'Ferramentas',
+  transferencias: 'Transferências - Assinaturas', acesso: 'Controle de Acesso de Usuários', ferramentas: 'Ferramentas',
   transf_local: 'Solicitação da Unidade', transf_externa: 'Solicitação de Outra Unidade',
 };
 const _LABEL_ABA   = {
@@ -962,7 +986,7 @@ window.mostrarLandingGrupos = async function() {
 
     <div class="p-transf-lista" style="max-width:980px;margin-bottom:28px;">${_btnMural()}</div>
 
-    <h2 style="font-size:.9rem;font-weight:700;color:var(--txt-1);margin:0 0 12px;">📋 Transferências</h2>
+    <h2 style="font-size:.9rem;font-weight:700;color:var(--txt-1);margin:0 0 12px;">📋 Transferências - Assinaturas</h2>
     <div class="p-transf-lista" style="max-width:980px;margin-bottom:${mostraAcesso ? '28px' : '0'};">
       ${linhasTransf.map(_linhaTransf).join('')}
     </div>
@@ -1008,7 +1032,7 @@ window._mostrarSubGrupo = function(grupoId) {
     corpo.innerHTML = `
     <div style="padding:24px 32px 40px;">
       ${backBtn}
-      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 20px;">📋 Transferências</h2>
+      <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0 0 20px;">📋 Transferências - Assinaturas</h2>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;max-width:760px;">
         ${itens.map(it => `
           <button class="p-sub-card" onclick="carregarAba('${it.aba}')">

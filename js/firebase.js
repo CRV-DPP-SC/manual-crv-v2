@@ -60,6 +60,8 @@ function _mostrarTopbarVisitante() {
   if (btnS) btnS.style.display = 'none';
   const btnM = document.getElementById('sidebar-btn-mensagens');
   if (btnM) btnM.style.display = 'none';
+  const atalhos = document.getElementById('sidebar-painel-atalhos');
+  if (atalhos) atalhos.style.display = 'none';
   _mostrarSubMenuCRV(false);
   _mostrarSubMenuPainel(false);
 }
@@ -122,6 +124,17 @@ function _posicionarPainelTopbar(panel) {
   const p = document.getElementById('topbar-tree-panel');
   if (p && p.style.display !== 'none') _posicionarPainelTopbar(p);
 }, { passive: true }));
+// ── Atalhos do menu lateral: abre o Painel direto numa tela ('mural' | 'transferencias' | 'usuarios') ──
+window.abrirTelaPainel = function (tela) {
+  const frame = document.getElementById('painel-embed-iframe');
+  if (!frame) return;
+  const jaCarregado = frame.src && frame.src.includes('painel');
+  if (window.navegarPara) window.navegarPara('painel-embed');
+  const enviar = () => frame.contentWindow?.postMessage({ crvAbrirTela: tela }, location.origin);
+  if (jaCarregado) enviar();
+  else frame.addEventListener('load', enviar, { once: true });
+};
+
 // ── Seletor de Unidade/SR na barra do site principal, para CRV e SUPER ──
 // Substitui o antigo seletor interno do iframe do Painel (que ficava num cabeçalho
 // duplicado). Mesmo widget de árvore (com sanfona por SR) usado dentro do Painel,
@@ -517,6 +530,10 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   if (btnSenha) btnSenha.style.display = '';
   const btnMsg = document.getElementById('sidebar-btn-mensagens');
   if (btnMsg) btnMsg.style.display = '';
+  const atalhosP = document.getElementById('sidebar-painel-atalhos');
+  if (atalhosP) atalhosP.style.display = '';
+  const atalhoUs = document.getElementById('sidebar-atalho-usuarios');
+  if (atalhoUs) atalhoUs.style.display = ['crv', 'super', 'dir', 'cpen'].includes(perfil?.tipo) ? '' : 'none';
   /* Submenus conforme perfil */
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
   /* Qualquer usuário autenticado (inclusive servidor aprovado) vê Manual/Ferramentas */

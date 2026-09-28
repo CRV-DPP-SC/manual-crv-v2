@@ -70,6 +70,13 @@
         <span class="nav-icon">🏛️</span> Painel da Unidade
       </button>
 
+      <!-- ── Atalhos do Painel — só para usuários autenticados ── -->
+      <div id="sidebar-painel-atalhos" class="nav-sub-items open" style="display:none;">
+        <button class="nav-sub-item" onclick="abrirTelaPainel('mural')">📢 Mural de Avisos</button>
+        <button class="nav-sub-item" onclick="abrirTelaPainel('transferencias')">✍️ Transferências - Assinaturas</button>
+        <button class="nav-sub-item" id="sidebar-atalho-usuarios" onclick="abrirTelaPainel('usuarios')">👤 Controle de Usuários</button>
+      </div>
+
       <!-- ── Submenu Unidade — só para usuários autenticados (dir, cpen, servidor) ── -->
       <div id="sidebar-painel-sub" style="display:none;">
         <button class="nav-sub-group" onclick="_sidebarToggle('sub-painel-manual',this)">
@@ -886,7 +893,7 @@
 <button id="btnTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
 
 <script src="js/app.js?v=2" defer></script>
-<script type="module" src="js/firebase.js?v=15"></script>
+<script type="module" src="js/firebase.js?v=16"></script>
 <script type="module" src="js/notificacoes.js?v=7"></script>
 <script type="module" src="js/mensagens.js?v=13"></script>
 <script type="module" src="js/avisos-modal.js?v=3"></script>
