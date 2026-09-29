@@ -149,7 +149,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="RETORNO"  onclick="selMod('RETORNO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Saída Temporária - Unidade Diversa<small>Reeducando que se apresentou em unidade diversa da origem</small></div></div>
           <div class="ri" data-v="COMPLEXO" onclick="selMod('COMPLEXO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Transferência dentro do Mesmo Complexo Prisional<small>Movimentação entre unidades do mesmo complexo</small></div></div>
           <div class="ri" data-v="RETMD"    onclick="selMod('RETMD')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de MD<small>Retorno à unidade de origem após transferência provisória (Medida Disciplinar)</small></div></div>
-          <div class="ri" data-v="RETPERNOITE" onclick="selMod('RETPERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Pernoite<small>Retorno à unidade de origem após consulta médica e pernoite em unidade diversa</small></div></div>
+          <div class="ri" data-v="RETPERNOITE" onclick="selMod('RETPERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Pernoite<small>Retorno à unidade de origem após pernoite em unidade diversa (consulta, audiência ou outro)</small></div></div>
           <div class="ri" data-v="REGIME"   onclick="selMod('REGIME')"><div class="rd"><div class="rdi"></div></div><div class="rl">Alteração do Regime<small>Transferência decorrente de decisão judicial de progressão/regressão de regime</small></div></div>
           <div class="ri" data-v="CONVIVIO" onclick="selMod('CONVIVIO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Falta de Convívio na Unidade de Origem<small>Dificuldade de convívio entre o(a) reeducando(a) e demais colegas de cárcere</small></div></div>
           <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
@@ -207,6 +207,20 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
       </div>
     </div>
 
+    <!-- 5b. FINALIDADE DO PERNOITE (Retorno de Pernoite) -->
+    <div class="sec off" id="s5r">
+      <div class="sec-head"><div class="sec-num">2</div>Pernoite concedido para</div>
+      <div class="sec-body">
+        <div class="rg" id="gFinR">
+          <div class="ri" data-v="consulta" onclick="selFinR('consulta')"><div class="rd"><div class="rdi"></div></div><div class="rl">🏥 Apoio para Consulta Médica</div></div>
+          <div class="ri" data-v="audiencia" onclick="selFinR('audiencia')"><div class="rd"><div class="rdi"></div></div><div class="rl">⚖️ Apoio para Audiência</div></div>
+          <div class="ri" data-v="__outro" onclick="selFinR('__outro')"><div class="rd"><div class="rdi"></div></div><div class="rl">✏️ Apoio para outros</div></div>
+        </div>
+        <input id="iFinR" class="inp" type="text" placeholder="Ex.: apoio à realização de exame de imagem" style="display:none" oninput="S.finRCustom=this.value;render()">
+        <small id="hFinR" style="display:none;color:var(--texto2);font-size:.75rem;margin-top:6px">O texto digitado completa a frase “…pernoite autorizado em unidade diversa, concedido para ___”.</small>
+      </div>
+    </div>
+
     <!-- 6. SGPe -->
     <div class="sec off" id="s6">
       <div class="sec-head"><div class="sec-num">6</div>Nº do Processo SGPe</div>
@@ -248,7 +262,8 @@ var S = {
   mod:null, sub:null,
   pad:null,
   prazo:null, prazoCustom:'',
-  fin:null, finCustom:'', sgpe:''
+  fin:null, finCustom:'', sgpe:'',
+  finR:null, finRCustom:''
 };
 
 // ── SELEÇÃO ───────────────────────────────────────────────────
@@ -258,8 +273,19 @@ function selMod(v){
   g('iPrazo').style.display='none'; g('iPrazo').value='';
   g('iFin').style.display='none'; g('iFin').value='';
   g('iSgpe').value='';
+  S.finR=null; S.finRCustom=''; rg('gFinR',null);
+  g('iFinR').style.display='none'; g('iFinR').value=''; g('hFinR').style.display='none';
   rg('gMod',v);
   ui(); render();
+}
+function selFinR(v){
+  S.finR=v; S.finRCustom='';
+  rg('gFinR',v);
+  var inp=g('iFinR');
+  inp.style.display=v==='__outro'?'block':'none';
+  g('hFinR').style.display=v==='__outro'?'block':'none';
+  if(v==='__outro'){inp.value='';inp.focus();}
+  render();
 }
 function selSub(v){ S.sub=v; rg('gSub',v); render(); }
 function selPad(v){ S.pad=v; rg('gPad',v); render(); }
@@ -287,6 +313,7 @@ function ui(){
   sec('s4pad', m==='I');
   sec('s4', m==='I');
   sec('s5', m==='PERNOITE');
+  sec('s5r', m==='RETPERNOITE');
   sec('s6', (m==='PERNOITE' && S.fin==='__transferencia') || m==='INTERESTADUAL');
 }
 function sec(id,on){ g(id).classList.toggle('off',!on); g(id).style.display=on?'':'none'; }
@@ -397,13 +424,18 @@ function gerar(){
     };
   }
 
-  // RETORNO DE PERNOITE (após consulta médica/pernoite em unidade diversa)
+  // RETORNO DE PERNOITE (pernoite concedido para apoio a consulta médica, audiência ou outro motivo)
   if(m==='RETPERNOITE'){
-    var sub='Retorno de Pernoite — Art. 21, inciso III';
+    var ROT={consulta:'Apoio para Consulta Médica',audiencia:'Apoio para Audiência',__outro:'Apoio para outros'};
+    var sub='Retorno de Pernoite'+(S.finR?' ('+ROT[S.finR]+')':'')+' — Art. 21, inciso III';
+    if(!S.finR) return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:null};
+    var finTxt=S.finR==='consulta'?'apoio à realização de consulta médica'
+              :S.finR==='audiencia'?'apoio ao comparecimento em audiência'
+              :(S.finRCustom.trim().replace(/[.;,\s]+$/,'')||'(finalidade não informada)');
     return {
       badge:'✅ DEFERIDO', bc:'bdef', subtit:sub,
-      txt:['Trata-se de pedido de transferência em razão do retorno do(a) reeducando(a) à unidade prisional de origem, após a realização de consulta médica e o término do pernoite autorizado em unidade diversa.',
-           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por se tratar de mera recondução do(a) reeducando(a) à unidade prisional de origem, em decorrência do encerramento da finalidade que motivou a transferência provisória.',
+      txt:['Trata-se de pedido de transferência em razão do retorno do(a) reeducando(a) à unidade prisional de origem, após o término do pernoite autorizado em unidade diversa, concedido para '+finTxt+'.',
+           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por se tratar de mera recondução do(a) reeducando(a) à unidade prisional de origem, em decorrência do encerramento da finalidade que motivou o pernoite.',
            PCOM,
            'A unidade prisional que recebeu provisoriamente o(a) reeducando(a) deverá encaminhá-lo(a) à unidade de origem juntamente com seus pertences pessoais, itens de higiene e uniformes eventualmente utilizados durante o período de permanência.'].join('\n\n')
     };
