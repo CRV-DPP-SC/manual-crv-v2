@@ -2538,7 +2538,9 @@ function _renderAcessosLista() {
     const cpfFmt = !cpfDig ? '—'
       : perfilAtual === 'super' ? `***.${cpfDig.slice(3, 6)}.${cpfDig.slice(6, 9)}-**`
       : cpfDig.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    const nascFmt = perfilAtual === 'super' ? '—' : (r.dataNascimento || '—');
+    // Gravada como aaaa-mm-dd (campo de data do formulário) → exibe dd/mm/aaaa
+    const nascFmt = perfilAtual === 'super' ? '—'
+      : (r.dataNascimento || '').replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1') || '—';
     const iniciais = escHtml((r.nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase());
     const rotAcao = r.status === 'revogado' ? 'Suspenso por' : r.status === 'recusado' ? 'Recusado por' : 'Aprovado por';
     return `
