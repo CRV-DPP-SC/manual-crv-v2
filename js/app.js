@@ -61,6 +61,7 @@ const NOMES_SECAO = {
   legislacao: 'Legislação',
   unidades:   'Unidades Prisionais',
   restrito:   'CRV',
+  guia:       'Instruções de Uso',
 };
 
 function navegarPara(id) {

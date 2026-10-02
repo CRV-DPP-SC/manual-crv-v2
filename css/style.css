@@ -1349,3 +1349,75 @@ img { max-width: 100%; display: block; }
   color: #92400e;
 }
 [data-tema="escuro"] .modal-aviso { color: var(--dourado); }
+
+/* ══════════════════════════════════════════════
+   TREINAMENTO (menu › Ferramentas › Treinamento) — js/treinamento.js
+══════════════════════════════════════════════ */
+.nav-sub-item-treinamento { color: #fbbf24; font-weight: 600; }
+.nav-sub-item-treinamento:hover { color: #fde68a; }
+
+.trein-modal-header { background: linear-gradient(135deg, #78350f, #b45309); }
+.trein-opcao {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 14px 16px; border-radius: 12px; cursor: pointer; text-align: left;
+  border: 1.5px solid var(--border-card); background: var(--surface-2);
+  color: var(--txt-1); font-family: inherit; text-decoration: none;
+  transition: border-color .15s, background .15s;
+}
+.trein-opcao:hover { border-color: #d97706; background: var(--amarelo-light); }
+.trein-opcao strong { display: block; font-size: .92rem; }
+.trein-opcao small { display: block; font-size: .76rem; color: var(--txt-3); margin-top: 2px; }
+.trein-opcao-icone {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: #b45309; color: #fff; font-size: 1rem; font-weight: 700;
+}
+
+#trein-app { width: 100%; max-width: 1280px; min-width: 0; margin: 0 auto; padding: 22px 28px 28px; box-sizing: border-box; }
+@media (max-width: 767px) { #trein-app { padding: 16px 12px 20px; } }
+.trein-topo, .trein-modulos, .trein-palco, .trein-rodape { min-width: 0; max-width: 100%; }
+.trein-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.trein-titulo { font-size: 1.15rem; font-weight: 700; color: var(--txt-1); margin: 0; }
+.trein-sub { font-size: .78rem; color: var(--txt-3); margin: 4px 0 0; }
+.trein-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.trein-btn {
+  padding: 7px 14px; border-radius: 8px; font-size: .8rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border-card); background: var(--bg-card); color: var(--txt-1);
+  font-family: inherit; text-decoration: none;
+}
+.trein-btn:hover { border-color: #d97706; }
+.trein-modulos { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; scrollbar-width: thin; }
+.trein-mod {
+  flex: none; padding: 6px 12px; border-radius: 999px; font-size: .76rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border-card); background: var(--bg-card); color: var(--txt-2); font-family: inherit; white-space: nowrap;
+}
+.trein-mod:hover { border-color: #d97706; }
+.trein-mod.ativo { background: #b45309; border-color: #b45309; color: #fff; }
+.trein-palco {
+  position: relative; background: #0b1b33; border-radius: 12px; overflow: hidden;
+  box-shadow: var(--shadow-lg); aspect-ratio: 16 / 9; max-height: calc(100vh - 250px);
+  margin: 0 auto; user-select: none;
+}
+.trein-palco img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.trein-palco:fullscreen { max-height: none; border-radius: 0; aspect-ratio: auto; background: #000; }
+.trein-seta {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 64px; border: none; border-radius: 10px; cursor: pointer;
+  background: rgba(10,22,40,.55); color: #fff; font-size: 2rem; line-height: 1;
+  opacity: .75; transition: opacity .15s, background .15s;
+}
+.trein-seta:hover { opacity: 1; background: rgba(10,22,40,.8); }
+.trein-seta:disabled { opacity: 0; pointer-events: none; }
+.trein-seta-esq { left: 10px; }
+.trein-seta-dir { right: 10px; }
+.trein-rodape { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.trein-barra { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+#trein-progresso { height: 100%; width: 0; background: #d97706; transition: width .2s; }
+#trein-contador { font-size: .8rem; font-weight: 600; color: var(--txt-2); white-space: nowrap; }
+.trein-aviso { color: var(--txt-3); font-size: .85rem; }
+.trein-bloqueado { max-width: 420px; margin: 60px auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--txt-2); }
+.trein-bloqueado p { margin: 0; font-size: .9rem; }
+@media (max-width: 767px) {
+  .trein-seta { width: 34px; height: 48px; font-size: 1.5rem; }
+  .trein-palco { max-height: none; }
+}

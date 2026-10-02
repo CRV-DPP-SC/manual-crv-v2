@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Procedimentos Operacionais da CRV — Central de Regulação de Vagas. Polícia Penal de Santa Catarina." />
   <title>Procedimentos Operacionais CRV — Polícia Penal SC</title>
-  <link rel="stylesheet" href="css/style.css?v=5" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800;900&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="icon" href="img/brasao.png" />
@@ -86,13 +86,13 @@
           <button class="nav-sub-item" onclick="navegarPara('hipoteses')">📌 Hipóteses</button>
           <button class="nav-sub-item" onclick="navegarPara('fluxo')">🔄 Fluxo Operacional</button>
           <button class="nav-sub-item" onclick="navegarPara('documentos')">📂 Documentos Necessários</button>
+          <button class="nav-sub-item nav-sub-item-treinamento" onclick="abrirEscolhaTreinamento()">📘 Instruções de Uso</button>
         </div>
         <button class="nav-sub-group" onclick="_sidebarToggle('sub-painel-ferramentas',this)">
           <span>🛠️ Ferramentas</span><span class="nav-sub-arrow">▶</span>
         </button>
         <div class="nav-sub-items" id="sub-painel-ferramentas">
-          <button class="nav-sub-item nav-sub-item-destaque" onclick="abrirGeradorOficios()">⚙️ Gerador de Ofícios</button>
-        </div>
+          <button class="nav-sub-item nav-sub-item-destaque" onclick="abrirGeradorOficios()">⚙️ Gerador de Ofícios</button>        </div>
       </div>
 
       <button class="nav-item nav-item-restrito" data-secao="restrito" onclick="abrirAreaRestrita()">
@@ -652,6 +652,13 @@
       <iframe id="painel-embed-iframe" src="" style="width:100%;height:calc(100vh - 62px);border:none;display:block;"></iframe>
     </section>
 
+    <!-- ══════════════════════════════════════════
+         GUIA — Instruções de Uso (visualizador de slides) — js/treinamento.js
+    ══════════════════════════════════════════ -->
+    <section id="guia" class="secao">
+      <div id="trein-app"></div>
+    </section>
+
     <!-- ══ RODAPÉ ══ -->
     <footer class="rodape">
       <div class="rodape-inner">
@@ -892,7 +899,8 @@
 <!-- Botão topo -->
 <button id="btnTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo">↑</button>
 
-<script src="js/app.js?v=2" defer></script>
+<script src="js/app.js?v=3" defer></script>
+<script src="js/treinamento.js?v=3" defer></script>
 <script type="module" src="js/firebase.js?v=16"></script>
 <script type="module" src="js/notificacoes.js?v=7"></script>
 <script type="module" src="js/mensagens.js?v=13"></script>
