@@ -106,6 +106,7 @@ service cloud.firestore {
       allow create: if logado()
         && request.auth.uid == uid
         && request.resource.data.email == meuEmail()
+        && !meuEmail().matches('.*@pp[.]sc[.]gov[.]br$')   // cadastro pessoal não usa e-mail institucional
         && request.resource.data.status == 'pendente'
         && request.resource.data.perfil == 'servidor'
         && request.resource.data.aprovadoPor == null;
@@ -141,6 +142,13 @@ service cloud.firestore {
         && request.resource.data.status == 'revogado'
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status','aprovadoPor','aprovadoEm']);
+
+      // Meu Cadastro: depois de confirmar a troca de e-mail (link do Firebase), o próprio
+      // servidor atualiza o e-mail do cadastro para o novo — e só isso.
+      allow update: if logado() && request.auth.uid == uid
+        && request.resource.data.email == meuEmail()
+        && !meuEmail().matches('.*@pp[.]sc[.]gov[.]br$')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email','atualizadoEm']);
 
       // Novo pedido após recusa/revogação: o próprio servidor, voltando a "pendente"
       allow update: if logado() && request.auth.uid == uid

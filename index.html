@@ -147,7 +147,7 @@
         <span id="sidebar-msg-count" class="nav-badge" style="display:none;"></span>
       </button>
       <button class="nav-item" id="sidebar-btn-senha" style="display:none;" onclick="_abrirModalSenha()">
-        <span class="nav-icon">🔑</span> Alterar Senha
+        <span class="nav-icon">👤</span> Meu Cadastro
       </button>
     </div>
     <div class="sidebar-rodape">
@@ -685,14 +685,38 @@
 </div>
 
 
-<!-- ══ MODAL ALTERAR SENHA ══ -->
+<!-- ══ MODAL MEU CADASTRO (dados, e-mail e senha) ══ -->
 <div id="modal-senha" class="modal-overlay" onclick="if(event.target===this)_fecharModalSenha()" style="display:none;">
-  <div class="modal-box" style="max-width:400px;">
+  <div class="modal-box" style="max-width:440px;">
     <div class="modal-header">
-      <div><h3>🔑 Alterar Senha</h3><p>Informe sua senha atual e a nova senha</p></div>
+      <div><h3>👤 Meu Cadastro</h3><p>Seus dados de acesso ao portal</p></div>
       <button class="modal-fechar" onclick="_fecharModalSenha()">✕</button>
     </div>
     <div class="modal-body">
+      <div id="meucad-dados" style="font-size:.82rem;line-height:1.7;color:var(--txt-2);background:var(--surface-2);border-radius:10px;padding:12px 14px;margin-bottom:18px;"></div>
+
+      <!-- Alterar e-mail: só para servidores (cadastro com e-mail pessoal) -->
+      <div id="meucad-email-bloco" style="display:none;margin-bottom:18px;">
+        <div style="font-size:.8rem;font-weight:700;color:var(--txt-1);margin-bottom:8px;">✉️ Alterar e-mail</div>
+        <div class="form-group">
+          <label class="form-label">Novo e-mail pessoal</label>
+          <input id="meucad-email-novo" type="email" class="form-input" placeholder="seu.nome@gmail.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sua senha atual (para confirmar)</label>
+          <div class="form-input-wrap">
+            <input id="meucad-email-senha" type="password" class="form-input" placeholder="••••••••" />
+            <button class="form-input-eye" onclick="toggleSenhaVis('meucad-email-senha')">👁</button>
+          </div>
+        </div>
+        <div id="meucad-email-erro" class="form-erro"></div>
+        <div id="meucad-email-ok" style="display:none;font-size:.78rem;color:var(--verde,#15803d);background:rgba(21,128,61,.08);border-radius:8px;padding:9px 11px;margin-bottom:10px;"></div>
+        <button id="btn-alterar-email" class="btn-primario" onclick="confirmarAlteracaoEmail()">Enviar link de confirmação</button>
+        <p class="form-hint" style="margin-top:6px;">A troca só vale depois que você clicar no link enviado ao novo e-mail. Não use e-mail @pp.sc.gov.br.</p>
+      </div>
+      <div id="meucad-email-bloqueado" style="display:none;font-size:.76rem;color:var(--txt-3);margin:-6px 0 16px;"></div>
+
+      <div style="font-size:.8rem;font-weight:700;color:var(--txt-1);margin-bottom:8px;">🔑 Alterar senha</div>
       <div class="form-group">
         <label class="form-label">Senha atual</label>
         <div class="form-input-wrap">
@@ -901,7 +925,7 @@
 
 <script src="js/app.js?v=3" defer></script>
 <script src="js/treinamento.js?v=3" defer></script>
-<script type="module" src="js/firebase.js?v=16"></script>
+<script type="module" src="js/firebase.js?v=17"></script>
 <script type="module" src="js/notificacoes.js?v=7"></script>
 <script type="module" src="js/mensagens.js?v=13"></script>
 <script type="module" src="js/avisos-modal.js?v=3"></script>

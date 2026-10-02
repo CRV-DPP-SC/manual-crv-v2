@@ -5,7 +5,7 @@
 import { initializeApp }               from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
          updatePassword, reauthenticateWithCredential, EmailAuthProvider,
-         sendPasswordResetEmail, onAuthStateChanged, signOut }
+         sendPasswordResetEmail, onAuthStateChanged, signOut, verifyBeforeUpdateEmail }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where,
          serverTimestamp, getCountFromServer }
@@ -561,17 +561,106 @@ function _mostrarTopbarUsuario(user, labelOverride) {
 }
 
 
-/* ── Modal alterar senha ── */
-window._abrirModalSenha = function() {
-  ['senha-atual','senha-nova','senha-confirmar'].forEach(id => {
+/* E-mails @pp.sc.gov.br são de funções/órgãos: não podem ser usados em cadastro pessoal */
+const RE_EMAIL_INSTITUCIONAL = /@pp\.sc\.gov\.br$/i;
+
+/* ── Modal Meu Cadastro (dados + e-mail + senha) ── */
+window._abrirModalSenha = async function() {
+  ['senha-atual','senha-nova','senha-confirmar','meucad-email-novo','meucad-email-senha'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  const err = document.getElementById('senha-erro'); if (err) err.textContent = '';
+  ['senha-erro','meucad-email-erro'].forEach(id => { const el = document.getElementById(id); if (el) { el.textContent = ''; el.style.display = 'none'; } });
+  const ok = document.getElementById('meucad-email-ok'); if (ok) ok.style.display = 'none';
   const btn = document.getElementById('btn-alterar-senha');
   if (btn) { btn.disabled = false; btn.textContent = 'Salvar nova senha'; }
+  const btnE = document.getElementById('btn-alterar-email');
+  if (btnE) { btnE.disabled = false; btnE.textContent = 'Enviar link de confirmação'; }
   const modal = document.getElementById('modal-senha');
-  if (modal) { modal.style.display = 'flex'; setTimeout(() => document.getElementById('senha-atual')?.focus(), 80); }
+  if (modal) modal.style.display = 'flex';
+
+  // Dados da conta
+  const dados = document.getElementById('meucad-dados');
+  const blocoEmail = document.getElementById('meucad-email-bloco');
+  const bloqueado = document.getElementById('meucad-email-bloqueado');
+  if (!usuarioAtual || !dados) return;
+  const perfil = _resolverPerfil(usuarioAtual.email);
+  const linha = (rot, val) => `<div><span style="color:var(--txt-3);">${rot}:</span> <strong style="color:var(--txt-1);">${escHtml(val || '—')}</strong></div>`;
+  if (perfil) {
+    // Conta da função (Diretor, CPEN, Superintendente) ou da equipe CRV: e-mail fixo
+    dados.innerHTML = linha('E-mail', usuarioAtual.email) + linha('Perfil', perfil.label);
+    blocoEmail.style.display = 'none';
+    bloqueado.style.display = 'block';
+    bloqueado.textContent = perfil.tipo === 'crv'
+      ? 'O e-mail da equipe CRV está ligado à lista de acesso da CRV. Para trocá-lo, fale com o administrador do portal.'
+      : 'Este é o e-mail da função: ele não muda. Quando muda o titular, troque apenas a senha.';
+  } else {
+    dados.innerHTML = linha('E-mail', usuarioAtual.email) + '<div style="color:var(--txt-3);">Carregando…</div>';
+    blocoEmail.style.display = 'block';
+    bloqueado.style.display = 'none';
+    try {
+      const s = await getDoc(doc(db, 'usuarios_cadastrados', usuarioAtual.uid));
+      const c = s.exists() ? s.data() : {};
+      dados.innerHTML = linha('Nome', c.nome) + linha('E-mail', usuarioAtual.email)
+        + linha('Unidade', c.nomeUnidade) + linha('Perfil', 'Servidor(a)');
+    } catch (_) {
+      dados.innerHTML = linha('E-mail', usuarioAtual.email) + linha('Perfil', 'Servidor(a)');
+    }
+  }
 };
+
+/* ── Alterar e-mail (só servidor): o Firebase envia um link ao NOVO e-mail ── */
+window.confirmarAlteracaoEmail = async function() {
+  const novo  = (document.getElementById('meucad-email-novo')?.value || '').trim().toLowerCase();
+  const senha = document.getElementById('meucad-email-senha')?.value || '';
+  const err = document.getElementById('meucad-email-erro');
+  const ok  = document.getElementById('meucad-email-ok');
+  const btn = document.getElementById('btn-alterar-email');
+  const _erro = msg => { if (err) { err.textContent = msg; err.style.display = 'block'; } };
+  if (err) { err.textContent = ''; err.style.display = 'none'; }
+  if (ok) ok.style.display = 'none';
+
+  if (!usuarioAtual) return _erro('Sessão expirada. Faça login novamente.');
+  if (_resolverPerfil(usuarioAtual.email)) return _erro('O e-mail desta conta não pode ser alterado.');
+  if (!novo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)) return _erro('Informe um e-mail válido.');
+  if (RE_EMAIL_INSTITUCIONAL.test(novo)) return _erro('Use um e-mail pessoal. E-mails @pp.sc.gov.br não podem ser usados no cadastro.');
+  if (novo === (usuarioAtual.email || '').toLowerCase()) return _erro('Este já é o seu e-mail.');
+  if (!senha) return _erro('Informe sua senha atual.');
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
+  try {
+    await reauthenticateWithCredential(usuarioAtual, EmailAuthProvider.credential(usuarioAtual.email, senha));
+    await verifyBeforeUpdateEmail(usuarioAtual, novo);
+    if (ok) {
+      ok.innerHTML = `Enviamos um link para <strong>${escHtml(novo)}</strong>. Abra esse e-mail e clique no link para concluir a troca. Depois, entre no portal com o novo e-mail.`;
+      ok.style.display = 'block';
+    }
+    document.getElementById('meucad-email-senha').value = '';
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar link de confirmação'; }
+  } catch (e) {
+    const msgs = {
+      'auth/wrong-password':       'Senha atual incorreta.',
+      'auth/invalid-credential':   'Senha atual incorreta.',
+      'auth/email-already-in-use': 'Este e-mail já está em uso por outra conta.',
+      'auth/invalid-email':        'E-mail inválido.',
+      'auth/too-many-requests':    'Muitas tentativas. Aguarde alguns minutos.',
+      'auth/requires-recent-login':'Por segurança, saia e entre de novo antes de trocar o e-mail.',
+    };
+    _erro(msgs[e.code] || 'Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar link de confirmação'; }
+  }
+};
+
+/* Depois que o servidor confirma a troca de e-mail, o cadastro passa a mostrar o novo endereço */
+async function _sincronizarEmailCadastro(user) {
+  if (!user || _resolverPerfil(user.email)) return;
+  try {
+    const ref = doc(db, 'usuarios_cadastrados', user.uid);
+    const s = await getDoc(ref);
+    if (s.exists() && (s.data().email || '').toLowerCase() !== (user.email || '').toLowerCase()) {
+      await setDoc(ref, { email: (user.email || '').toLowerCase(), atualizadoEm: serverTimestamp() }, { merge: true });
+    }
+  } catch (_) { /* sem permissão ou offline: tenta de novo no próximo login */ }
+}
 
 window._fecharModalSenha = function() {
   const modal = document.getElementById('modal-senha');
@@ -584,7 +673,7 @@ window.confirmarAlteracaoSenha = async function() {
   const confirmar = (document.getElementById('senha-confirmar')?.value || '').trim();
   const err = document.getElementById('senha-erro');
   const btn = document.getElementById('btn-alterar-senha');
-  const _erro = msg => { if (err) err.textContent = msg; };
+  const _erro = msg => { if (err) { err.textContent = msg; err.style.display = 'block'; } };
 
   if (!atual)          return _erro('Informe a senha atual.');
   if (nova.length < 8) return _erro('A nova senha deve ter pelo menos 8 caracteres.');
@@ -624,6 +713,7 @@ onAuthStateChanged(auth, (user) => {
 
   if (user) {
     _mostrarTopbarUsuario(user);
+    _sincronizarEmailCadastro(user);
     const info = document.getElementById('restrito-usuario-info');
     if (info) info.textContent = 'Conectado como: ' + (user.email || '');
     _sincronizarUnidadesFirestore();
@@ -901,6 +991,10 @@ window.fazerCadastro = async function () {
   }
   if (_resolverPerfil(email)) {
     erroEl.textContent = 'Este é um e-mail institucional. Use o login normal acima.';
+    erroEl.style.display = 'block'; return;
+  }
+  if (RE_EMAIL_INSTITUCIONAL.test(email)) {
+    erroEl.textContent = 'Use o seu e-mail pessoal (Gmail, Hotmail…). E-mails @pp.sc.gov.br não podem ser usados no cadastro de servidor.';
     erroEl.style.display = 'block'; return;
   }
   if (!_validarCPF(cpf)) {
