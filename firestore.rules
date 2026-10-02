@@ -125,9 +125,18 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status','aprovadoPor','aprovadoEm','motivoRecusa']);
 
-      // MODERAR: CRV (todos) e Superintendente (sua regional) só podem SUSPENDER
-      // quem está aprovado — não aprovam, não recusam, não reabrem.
-      allow update: if (isCRV() || (isSR() && resource.data.srUnidade == srDoSuperintendente()))
+      // CRV (todos os cadastros): analisa como o Diretor/CPEN (aprovar, recusar,
+      // suspender, reabrir) e pode MOVER o servidor de unidade. Nome/CPF/e-mail
+      // continuam intocáveis.
+      allow update: if isCRV()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','aprovadoPor','aprovadoEm','motivoRecusa',
+                       'emailUnidade','nomeUnidade','srUnidade','unidadeAlteradaPor','unidadeAlteradaEm'])
+        && request.resource.data.status in ['pendente','aprovado','recusado','revogado'];
+
+      // MODERAR: Superintendente (sua regional) só pode SUSPENDER
+      // quem está aprovado — não aprova, não recusa, não reabre.
+      allow update: if (isSR() && resource.data.srUnidade == srDoSuperintendente())
         && resource.data.status == 'aprovado'
         && request.resource.data.status == 'revogado'
         && request.resource.data.diff(resource.data).affectedKeys()

@@ -54,7 +54,9 @@ Marque **Autenticado** e preencha o e-mail (e `email_verified` quando indicado n
 | 9 | update `status: 'aprovado'` | `usuarios_cadastrados/<seu uid>` | o próprio servidor pendente | ❌ negado |
 | 10 | get | `diarias_servidores/x` | `sr01sr@…` confirmado | ❌ negado |
 | 11 | get | `usuarios_cadastrados/<servidor da SR01>` | `sr01sr@…` confirmado | ✅ permitido |
-| 12 | update `status: 'aprovado'` | `usuarios_cadastrados/<pendente>` | `rodrigo.l.pastore@gmail.com` | ❌ negado (CRV não aprova) |
+| 12 | update `status: 'aprovado'` | `usuarios_cadastrados/<pendente>` | `rodrigo.l.pastore@gmail.com` | ✅ permitido (CRV aprova) |
+| 13 | update `emailUnidade` (mover de unidade) | `usuarios_cadastrados/<qualquer>` | `rodrigo.l.pastore@gmail.com` | ✅ permitido |
+| 14 | update `status: 'aprovado'` | `usuarios_cadastrados/<pendente da SR01>` | `sr01sr@…` confirmado | ❌ negado (Superintendente não aprova) |
 
 ### Depois de publicar, confira no site
 

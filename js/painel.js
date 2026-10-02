@@ -1239,6 +1239,9 @@ function _atualizarBarra() {
       `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRecusar()">Recusar selecionados</button>`);
     if (temAprov && modera) acoes.insertAdjacentHTML('beforeend',
       `<button class="p-barra-btn p-barra-btn-neg" onclick="bulkRevogar()">Suspender selecionados</button>`);
+    const temSusp = ids.some(id => _selAcessData.find(x => x.id === id)?.status === 'revogado');
+    if (temSusp && analisa) acoes.insertAdjacentHTML('beforeend',
+      `<button class="p-barra-btn p-barra-btn-apr" onclick="bulkReativar()">Reativar selecionados</button>`);
     if (temExcl && modera)  acoes.insertAdjacentHTML('beforeend',
       `<button class="p-barra-btn p-barra-btn-exc" onclick="bulkExcluirAcess()">Excluir selecionados</button>`);
   }
@@ -1406,6 +1409,19 @@ window.bulkRevogar = async function() {
     } catch { err++; }
   }
   selLimpar(); showToastPainel(`${ok} acesso(s) suspenso(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
+};
+window.bulkReativar = async function() {
+  const ids = [..._selAcess].filter(id => _selAcessData.find(x => x.id === id)?.status === 'revogado');
+  if (!ids.length) return;
+  if (!confirm(`Reativar ${ids.length} acesso(s)?`)) return;
+  let ok = 0, err = 0;
+  for (const id of ids) {
+    try {
+      await updateDoc(doc(db, 'usuarios_cadastrados', id), { status: 'aprovado', aprovadoPor: usuarioAtual.email, aprovadoEm: serverTimestamp(), motivoRecusa: null });
+      ok++;
+    } catch { err++; }
+  }
+  selLimpar(); showToastPainel(`${ok} acesso(s) reativado(s)${err ? ` · ${err} erro(s)` : ''}.`); carregarAba('acessos');
 };
 
 window.bulkExcluirAcess = async function() {
@@ -2342,9 +2358,12 @@ ${s.conteudo || ''}
 // ══════════════════════════════════════════════
 // Quem faz o quê com os cadastros de servidores:
 //   Diretor / CPEN da unidade → analisam: aprovar, recusar, reabrir pedido
-//   CRV e Superintendente     → moderam: veem todos do seu escopo, suspendem e excluem
-function _podeAnalisarAcesso() { return ['dir', 'cpen'].includes(perfilAtual) && !modoLeitura(); }
-function _podeModerarAcesso()  { return _podeAnalisarAcesso() || ['crv', 'super'].includes(perfilAtual); }
+//   CRV                       → analisa como Diretor/CPEN (em qualquer unidade) e também
+//                               move o servidor de unidade. Não recebe notificação de cadastros.
+//   Superintendente           → modera: vê a regional, suspende e exclui
+function _podeAnalisarAcesso() { return perfilAtual === 'crv' || (['dir', 'cpen'].includes(perfilAtual) && !modoLeitura()); }
+function _podeModerarAcesso()  { return _podeAnalisarAcesso() || perfilAtual === 'super'; }
+function _podeMoverUnidade()   { return perfilAtual === 'crv'; }
 
 const _STATUS_ACESSO = {
   pendente: { label: 'Pendente', classe: 'p-status-pendente' },
@@ -2492,6 +2511,7 @@ function _renderAcessosLista() {
     const dadosPessoa = `data-id="${escHtml(r.id)}" data-nome="${escHtml(r.nome || '')}" data-email="${escHtml(r.email || '')}"`;
     const acoes = [];
     const btnExcluir = `<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="excluirCadastro(this.dataset.id,this.dataset.nome)">Excluir</button>`;
+    const btnMover = `<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="abrirMoverUnidade(this.dataset.id,this.dataset.nome)">Mover de unidade</button>`;
     if (r.status === 'pendente') {
       if (analisa) {
         acoes.push(`<button class="p-btn p-btn-assinar" onclick="aprovarAcesso('${r.id}')">Aprovar</button>`);
@@ -2503,10 +2523,15 @@ function _renderAcessosLista() {
         acoes.push(`<button class="p-btn p-btn-outline" ${dadosPessoa} onclick="redefinirSenhaUsuario(this.dataset.id,this.dataset.email,this.dataset.nome)">Redefinir senha</button>`);
         acoes.push(`<button class="p-btn p-btn-negar" ${dadosPessoa} onclick="revogarAcesso(this.dataset.id,this.dataset.nome)">Suspender acesso</button>`);
       }
-    } else if (r.status === 'recusado' || r.status === 'revogado') {
+    } else if (r.status === 'revogado') {
+      // Suspenso: Diretor/CPEN da unidade e CRV reativam direto (volta a "aprovado")
+      if (analisa) acoes.push(`<button class="p-btn p-btn-assinar" ${dadosPessoa} onclick="reativarAcesso(this.dataset.id,this.dataset.nome)">Reativar acesso</button>`);
+      if (modera) acoes.push(btnExcluir);
+    } else if (r.status === 'recusado') {
       if (analisa) acoes.push(`<button class="p-btn p-btn-outline" onclick="reativarPendente('${r.id}')">Reabrir pedido</button>`);
       if (modera) acoes.push(btnExcluir);
     }
+    if (_podeMoverUnidade()) acoes.push(btnMover);
 
     // Superintendente vê o CPF mascarado (LGPD); Diretor/CPEN e CRV veem completo
     const cpfDig = (r.cpf || '').replace(/\D/g, '');
@@ -2582,7 +2607,7 @@ window.confirmarNegarAcesso = async function () {
 
 // ── Suspender (aprovado → revogado) — Diretor/CPEN, CRV e Superintendente ──
 window.revogarAcesso = async function (id, nome) {
-  if (!confirm(`Suspender o acesso de "${nome || 'este usuário'}"?\n\nEle deixa de conseguir entrar no sistema. O Diretor(a) ou CPEN da unidade pode reabrir o pedido depois.`)) return;
+  if (!confirm(`Suspender o acesso de "${nome || 'este usuário'}"?\n\nEle deixa de conseguir entrar no sistema. O Diretor(a) ou CPEN da unidade, ou a CRV, pode reativar depois.`)) return;
   try {
     await updateDoc(doc(db, 'usuarios_cadastrados', id), {
       status:      'revogado',
@@ -2590,6 +2615,21 @@ window.revogarAcesso = async function (id, nome) {
       aprovadoEm:  serverTimestamp(),
     });
     showToastPainel('Acesso suspenso.');
+    carregarAba('acessos');
+  } catch (e) { showToastPainel('Erro: ' + e.message); }
+};
+
+// ── Reativar (suspenso → aprovado) — Diretor/CPEN da unidade e CRV ──
+window.reativarAcesso = async function (id, nome) {
+  if (!confirm(`Reativar o acesso de "${nome || 'este usuário'}"?\n\nEle volta a conseguir entrar no sistema.`)) return;
+  try {
+    await updateDoc(doc(db, 'usuarios_cadastrados', id), {
+      status:       'aprovado',
+      aprovadoPor:  usuarioAtual.email,
+      aprovadoEm:   serverTimestamp(),
+      motivoRecusa: null,
+    });
+    showToastPainel('Acesso reativado.');
     carregarAba('acessos');
   } catch (e) { showToastPainel('Erro: ' + e.message); }
 };
@@ -2624,6 +2664,62 @@ window.reativarPendente = async function (id) {
     showToastPainel('Pedido reaberto. Aguardando nova aprovação.');
     carregarAba('acessos');
   } catch (e) { showToastPainel('Erro: ' + e.message); }
+};
+
+// ── Mover de unidade (só CRV) — o cadastro continua com a mesma situação ──
+window.abrirMoverUnidade = function (id, nome) {
+  const r = _acessosTodos.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('p-modal-mover')?.remove();
+  const srs = [...new Set(UNIDADES.map(u => u.sr))].sort();
+  const opcoes = srs.map(sr => `<optgroup label="${escHtml(sr + ' — ' + (SR_INFO[sr]?.nome || sr))}">${
+    UNIDADES.filter(u => u.sr === sr).map(u =>
+      `<option value="${escHtml(u.email)}"${u.email === r.emailUnidade ? ' selected' : ''}>${escHtml(u.nome)}</option>`).join('')
+  }</optgroup>`).join('');
+  const m = document.createElement('div');
+  m.id = 'p-modal-mover';
+  m.className = 'p-modal';
+  m.style.display = 'flex';
+  m.innerHTML = `
+    <div class="p-modal-box" style="max-width:480px;">
+      <div class="p-modal-header"><h3>🔀 Mover de unidade</h3><button class="p-modal-fechar" onclick="document.getElementById('p-modal-mover').remove()">✕</button></div>
+      <div class="p-modal-body">
+        <p style="font-size:.82rem;color:var(--txt-2);margin:0 0 10px;">Servidor(a): <strong>${escHtml(nome || r.nome || '')}</strong><br>
+          Unidade atual: <strong>${escHtml(r.nomeUnidade || r.emailUnidade || '—')}</strong></p>
+        <label style="font-size:.78rem;font-weight:600;color:var(--txt-2);">Nova unidade</label>
+        <select id="p-mover-unidade" style="width:100%;margin-top:6px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);color:var(--txt-1);font-family:inherit;font-size:.84rem;">${opcoes}</select>
+        <p style="font-size:.74rem;color:var(--txt-3);margin:10px 0 0;">A situação do cadastro (aprovado, pendente…) não muda. O Diretor(a)/CPEN da nova unidade passa a ver este servidor.</p>
+      <div class="p-modal-acoes">
+        <button class="p-btn p-btn-outline" onclick="document.getElementById('p-modal-mover').remove()">Cancelar</button>
+        <button class="p-btn p-btn-assinar" id="p-mover-ok" onclick="confirmarMoverUnidade('${escHtml(id)}')">Mover</button>
+      </div>
+      </div>
+    </div>`;
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  document.body.appendChild(m);
+};
+window.confirmarMoverUnidade = async function (id) {
+  const r = _acessosTodos.find(x => x.id === id);
+  const destino = UNIDADES.find(u => u.email === document.getElementById('p-mover-unidade')?.value);
+  if (!r || !destino) return;
+  if (destino.email === r.emailUnidade) { showToastPainel('O servidor já está nessa unidade.'); return; }
+  const btn = document.getElementById('p-mover-ok');
+  if (btn) { btn.disabled = true; btn.textContent = 'Movendo…'; }
+  try {
+    await updateDoc(doc(db, 'usuarios_cadastrados', id), {
+      emailUnidade:       destino.email,
+      nomeUnidade:        destino.nome,
+      srUnidade:          destino.sr,
+      unidadeAlteradaPor: usuarioAtual.email,
+      unidadeAlteradaEm:  serverTimestamp(),
+    });
+    document.getElementById('p-modal-mover')?.remove();
+    showToastPainel(`Servidor movido para ${destino.nome}.`);
+    carregarAba('acessos');
+  } catch (e) {
+    showToastPainel('Erro: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Mover'; }
+  }
 };
 
 // ── Excluir permanentemente (pendente ou recusado) ──
