@@ -78,21 +78,73 @@ function _registrarOneSignal(email, emailUnidade) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal) {
     setTimeout(async () => {
+      // 1) Vincula o aparelho à pessoa ANTES de tudo (não depende da permissão)
       try {
-        // Se ainda não tem permissão, pede ao sistema
-        if (!OneSignal.Notifications.permission) {
-          await OneSignal.Notifications.requestPermission();
-        }
-        // Garante opt-in na assinatura push
-        await OneSignal.User.PushSubscription.optIn();
         await OneSignal.login(emailCanonico(email));
         if (emailUnidade) await OneSignal.User.addTag('emailUnidade', emailUnidade);
         else              await OneSignal.User.removeTag('emailUnidade');
       } catch (e) {
-        console.warn('[OneSignal registro]', e.message);
+        console.warn('[OneSignal vínculo]', e.message);
       }
+      // 2) Permissão + inscrição. No iPhone o pedido só funciona com um toque
+      //    do usuário: se não der certo sozinho, mostra o botão "Ativar notificações".
+      try {
+        if (OneSignal.Notifications.permission) {
+          await OneSignal.User.PushSubscription.optIn();
+        } else if (!_ehIOS()) {
+          await OneSignal.Notifications.requestPermission();
+          if (OneSignal.Notifications.permission) await OneSignal.User.PushSubscription.optIn();
+        }
+      } catch (e) {
+        console.warn('[OneSignal permissão]', e.message);
+      }
+      _talvezMostrarBotaoAtivarPush(OneSignal);
     }, 3000);
   });
+}
+
+function _ehIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad recente
+}
+
+// Faixa "Ativar notificações neste aparelho" — aparece enquanto o aparelho
+// não estiver inscrito. O toque no botão é o que o iPhone exige para liberar.
+function _talvezMostrarBotaoAtivarPush(OneSignal) {
+  let suportado = true;
+  try { suportado = OneSignal.Notifications.isPushSupported(); } catch (_) {}
+  const inscrito = OneSignal.Notifications.permission && OneSignal.User.PushSubscription.optedIn;
+  document.getElementById('crv-ativar-push')?.remove();
+  if (!suportado || inscrito || sessionStorage.getItem('crv_ativar_push_fechado')) return;
+  if (Notification.permission === 'denied') return; // bloqueado: só pelas configurações do aparelho
+
+  const faixa = document.createElement('div');
+  faixa.id = 'crv-ativar-push';
+  faixa.style.cssText = 'position:fixed;left:12px;right:12px;bottom:14px;z-index:9600;max-width:460px;margin:0 auto;background:#1e3a5f;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-family:inherit;font-size:.84rem;';
+  faixa.innerHTML = `
+    <span style="font-size:1.3rem;">🔔</span>
+    <span style="flex:1;line-height:1.4;">Receba avisos e mensagens do portal neste aparelho.</span>
+    <button id="crv-ativar-push-ok" style="border:none;border-radius:8px;background:#22c55e;color:#fff;font-weight:700;padding:8px 12px;font-family:inherit;font-size:.8rem;cursor:pointer;white-space:nowrap;">Ativar notificações</button>
+    <button id="crv-ativar-push-x" title="Agora não" style="border:none;background:none;color:#fff;opacity:.7;font-size:1.1rem;cursor:pointer;padding:0 2px;">✕</button>`;
+  document.body.appendChild(faixa);
+  faixa.querySelector('#crv-ativar-push-x').onclick = () => {
+    sessionStorage.setItem('crv_ativar_push_fechado', '1');
+    faixa.remove();
+  };
+  faixa.querySelector('#crv-ativar-push-ok').onclick = async () => {
+    try {
+      await OneSignal.Notifications.requestPermission();   // dentro do toque: o iPhone aceita
+      if (OneSignal.Notifications.permission) {
+        await OneSignal.User.PushSubscription.optIn();
+        faixa.remove();
+        window.showToast && showToast('🔔 Notificações ativadas neste aparelho.');
+      } else {
+        window.showToast && showToast('Notificações não permitidas. Libere nos Ajustes do aparelho.');
+      }
+    } catch (e) {
+      window.showToast && showToast('Não foi possível ativar: ' + e.message);
+    }
+  };
 }
 
 // Ao sair: desvincula o dispositivo (outra pessoa pode usar o mesmo computador)
