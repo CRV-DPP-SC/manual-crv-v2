@@ -1,14 +1,14 @@
 // ================================================
 // CRV — Widget Global de Notificações
 // js/notificacoes.js
-// Cobre: assinaturas pendentes + cadastros pendentes + push FCM
+// Cobre: assinaturas pendentes + cadastros pendentes + avisos + push (OneSignal)
 // ================================================
 import { getApps, initializeApp }   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario } from "./config-crv.js?v=3";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=3";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=2";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
@@ -68,29 +68,38 @@ function _tocarSom() {
 // ════════════════════════════════════════
 // ONESIGNAL — PUSH NOTIFICATIONS
 // ════════════════════════════════════════
-function _registrarOneSignal(emailUnidade) {
+// Vincula este dispositivo à PESSOA logada (External ID = e-mail; sr01@ e sr01sr@
+// viram o mesmo, sr01sr@). O bot (notificacoes-bot) usa isso para mandar push de
+// avisos do Mural e de mensagens/recados a quem é destinatário.
+// A tag "emailUnidade" (assinaturas e cadastros pendentes) fica só para
+// Diretor(a), CPEN e Superintendente; nos demais perfis ela é removida.
+function _registrarOneSignal(email, emailUnidade) {
   if (!('Notification' in window)) return;
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal) {
-    try {
-      // Solicita permissão e registra assinatura
-      setTimeout(async () => {
-        try {
-          // Se ainda não tem permissão, pede ao sistema
-          if (!OneSignal.Notifications.permission) {
-            await OneSignal.Notifications.requestPermission();
-          }
-          // Garante opt-in na assinatura push
-          await OneSignal.User.PushSubscription.optIn();
-          // Marca a unidade para filtrar envios
-          await OneSignal.User.addTag('emailUnidade', emailUnidade);
-        } catch (e) {
-          console.warn('[OneSignal registro]', e.message);
+    setTimeout(async () => {
+      try {
+        // Se ainda não tem permissão, pede ao sistema
+        if (!OneSignal.Notifications.permission) {
+          await OneSignal.Notifications.requestPermission();
         }
-      }, 3000);
-    } catch (e) {
-      console.warn('[OneSignal]', e.message);
-    }
+        // Garante opt-in na assinatura push
+        await OneSignal.User.PushSubscription.optIn();
+        await OneSignal.login(emailCanonico(email));
+        if (emailUnidade) await OneSignal.User.addTag('emailUnidade', emailUnidade);
+        else              await OneSignal.User.removeTag('emailUnidade');
+      } catch (e) {
+        console.warn('[OneSignal registro]', e.message);
+      }
+    }, 3000);
+  });
+}
+
+// Ao sair: desvincula o dispositivo (outra pessoa pode usar o mesmo computador)
+function _desvincularOneSignal() {
+  if (!window.OneSignalDeferred) return;
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    try { if (OneSignal.User?.externalId) await OneSignal.logout(); } catch (_) {}
   });
 }
 
@@ -1035,12 +1044,13 @@ onAuthStateChanged(_auth, user => {
       _iniciarListener(user.email);
     }
 
-    // Listener de cadastros + push OneSignal (somente CPEN/DIR)
+    // Listener de cadastros (Diretor, CPEN e SR)
     const emailUnidade = _getEmailUnidade(user.email);
-    if (emailUnidade) {
-      _iniciarListenerCadastros(emailUnidade);
-      _registrarOneSignal(emailUnidade);
-    }
+    if (emailUnidade) _iniciarListenerCadastros(emailUnidade);
+
+    // Push no celular/computador: todos os perfis (avisos e mensagens);
+    // assinaturas e cadastros só para quem tem emailUnidade
+    _registrarOneSignal(user.email, emailUnidade);
 
     // Avisos do Mural ainda não confirmados
     _iniciarAvisos(user);
@@ -1050,5 +1060,6 @@ onAuthStateChanged(_auth, user => {
 
   } else {
     _pararListeners();
+    _desvincularOneSignal();
   }
 });
