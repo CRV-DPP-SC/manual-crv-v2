@@ -13,7 +13,8 @@ import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, text
          formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
          confirmarLeitura, publicarAviso, alterarArquivado, listarComentarios, contarComentarios,
          comentarAviso, excluirComentario, excluirAviso, enviarAnexoAviso, anexosHtml,
-         ANEXO_MAX_ARQUIVOS, ANEXO_MAX_MB } from "./avisos.js";
+         editarAviso, avisoExpirado, expiraEmMs,
+         ANEXO_MAX_ARQUIVOS, ANEXO_MAX_MB } from "./avisos.js?v=2";
 
 // ── CONFIG FIREBASE ──
 const app  = initializeApp(FIREBASE_CONFIG);
@@ -2776,7 +2777,17 @@ let _muralAvisos = [];
 let _muralLidos  = {};
 let _muralContagens = {};
 let _muralFormAberto = false;
+let _muralEditandoId = null;  // id do aviso em edição (null = novo aviso)
 let _muralComentarios = {};   // avisoId → quantidade de comentários visíveis para mim
+
+// ms → "2026-10-20T14:00" (valor do <input type="datetime-local">, no fuso local)
+function _dtLocalAviso(ms) {
+  const d = new Date(ms), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function _fmtExpiraAviso(ms) {
+  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 function _euAvisos() {
   const email = (usuarioAtual?.email || '').toLowerCase();
@@ -2843,22 +2854,28 @@ function _renderMural() {
         ? `<button class="p-btn p-btn-assinar" onclick="confirmarAvisoMural('${a.id}')">✓ Li e estou ciente</button>`
         : '';
     const n = _muralContagens[a.id];
+    const expMs = expiraEmMs(a);
+    const expirado = avisoExpirado(a);
     const acoesCRV = ehCRV ? `
+      <button class="p-btn p-btn-outline" onclick="editarAvisoMural('${a.id}')" title="Editar o aviso">✏️ Editar</button>
       <button class="p-btn p-btn-outline" onclick="verConfirmacoesAviso('${a.id}')" title="Ver quem confirmou a leitura">👁 Confirmações${n != null ? ' (' + n + ')' : ''}</button>
       <button class="p-btn p-btn-outline" onclick="arquivarAviso('${a.id}', ${a.ativo !== false})">${a.ativo !== false ? '🗄 Arquivar' : '↩ Reativar'}</button>
       <button class="p-btn p-btn-cancelar" onclick="excluirAvisoMural('${a.id}')" title="Excluir o aviso definitivamente">🗑 Excluir</button>` : '';
     return `
-    <div class="p-card" style="${a.ativo === false ? 'opacity:.75;' : ''}${a.importante ? 'border-left:4px solid var(--vermelho);' : ''}">
+    <div class="p-card" style="${a.ativo === false || expirado ? 'opacity:.75;' : ''}${a.importante ? 'border-left:4px solid var(--vermelho);' : ''}">
       <div style="padding:14px 18px 6px;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
           <span style="font-size:.95rem;font-weight:700;color:var(--txt-1);">📢 ${escHtml(a.titulo)}</span>
           ${a.importante ? '<span class="p-status p-status-negado">Importante</span>' : ''}
           ${a.ativo === false ? '<span class="p-status p-status-cancelado">Arquivado</span>' : ''}
+          ${a.ativo !== false && expirado ? '<span class="p-status p-status-cancelado">Expirado</span>' : ''}
         </div>
         <div style="font-size:.72rem;color:var(--txt-3);">
           ${formatarDataAviso(a.criadoEm)} · por ${escHtml(a.criadoPorNome || a.criadoPor || 'CRV')}
+          ${a.editadoEm ? ' · editado em ' + formatarDataAviso(a.editadoEm) : ''}
           ${ehCRV ? ' · Para: ' + escHtml(descreverPublico(a.publico, UNIDADES, SR_INFO)) : ''}
         </div>
+        ${expMs !== null ? `<div style="font-size:.72rem;color:${expirado ? 'var(--txt-3)' : 'var(--azul-600)'};font-weight:600;margin-top:2px;">⏳ ${expirado ? 'Expirou em' : 'Válido até'} ${_fmtExpiraAviso(expMs)}</div>` : ''}
         <div style="font-size:.85rem;line-height:1.65;color:var(--txt-2);margin-top:10px;">${textoAvisoHtml(a.texto)}</div>
         ${anexosHtml(a.anexos)}
       </div>
@@ -2875,57 +2892,86 @@ function _renderMural() {
       <h2 style="font-size:1rem;font-weight:700;color:var(--txt-1);margin:0;flex:1;">📢 Mural de Avisos</h2>
       ${ehCRV ? `<button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="alternarFormAviso()">${_muralFormAberto ? '✕ Fechar' : '+ Novo aviso'}</button>` : ''}
     </div>
-    ${ehCRV && _muralFormAberto ? _htmlFormAviso() : ''}
+    ${ehCRV && _muralFormAberto ? _htmlFormAviso(_muralEditandoId ? _muralAvisos.find(x => x.id === _muralEditandoId) : null) : ''}
     ${cards || '<div class="p-vazio">Nenhum aviso publicado.</div>'}`;
 }
 
-function _htmlFormAviso() {
+// a = aviso em edição (preenche o formulário) ou null para um aviso novo
+function _htmlFormAviso(a) {
   const est = 'width:100%;box-sizing:border-box;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-input,var(--bg-card));color:var(--txt-1);font-family:inherit;font-size:.84rem;';
   const srs = Object.keys(SR_INFO).sort();
+  const p = a?.publico || { tipo: 'todos', valor: '', perfis: [] };
+  const sel = cond => cond ? ' selected' : '';
+  const expMs = a ? expiraEmMs(a) : null;
+  const anexosAtuais = (a?.anexos || []).map((x, i) => `
+      <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:4px;cursor:pointer;">
+        <input type="checkbox" class="av-anexo-manter" value="${i}" checked> 📎 ${escHtml(x.nome)}
+      </label>`).join('');
   return `
-  <div class="p-card" style="padding:16px 18px;margin-bottom:18px;">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--txt-1);">Novo aviso</div>
+  <div class="p-card" id="av-form" style="padding:16px 18px;margin-bottom:18px;${a ? 'border:2px solid var(--azul-400);' : ''}">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:10px;color:var(--txt-1);">${a ? '✏️ Editar aviso' : 'Novo aviso'}</div>
     <label style="font-size:.72rem;color:var(--txt-3);">Título</label>
-    <input id="av-titulo" maxlength="120" style="${est}margin-bottom:10px;" placeholder="Ex.: Nova orientação para pedidos de pernoite">
+    <input id="av-titulo" maxlength="120" style="${est}margin-bottom:10px;" placeholder="Ex.: Nova orientação para pedidos de pernoite" value="${escHtml(a?.titulo || '')}">
     <label style="font-size:.72rem;color:var(--txt-3);">Texto do aviso</label>
-    <textarea id="av-texto" rows="6" style="${est}margin-bottom:10px;resize:vertical;" placeholder="Escreva o aviso…"></textarea>
-    <label style="font-size:.72rem;color:var(--txt-3);">Anexos (opcional — até ${ANEXO_MAX_ARQUIVOS} arquivos de até ${ANEXO_MAX_MB} MB cada)</label>
+    <textarea id="av-texto" rows="6" style="${est}margin-bottom:10px;resize:vertical;" placeholder="Escreva o aviso…">${escHtml(a?.texto || '')}</textarea>
+    ${anexosAtuais ? `<div style="font-size:.72rem;color:var(--txt-3);margin-bottom:4px;">Anexos atuais (desmarque para remover):</div>${anexosAtuais}` : ''}
+    <label style="font-size:.72rem;color:var(--txt-3);">${a ? 'Adicionar anexos' : 'Anexos'} (opcional — até ${ANEXO_MAX_ARQUIVOS} arquivos de até ${ANEXO_MAX_MB} MB cada)</label>
     <input type="file" id="av-anexos" multiple style="${est}margin-bottom:10px;">
-    <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:12px;cursor:pointer;">
-      <input type="checkbox" id="av-importante"> ⚠️ Marcar como <strong>importante</strong> (destaque em vermelho)
+    <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" id="av-importante"${a?.importante ? ' checked' : ''}> ⚠️ Marcar como <strong>importante</strong> (destaque em vermelho)
     </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;margin-bottom:6px;cursor:pointer;">
+      <input type="checkbox" id="av-expira-chk"${expMs !== null ? ' checked' : ''} onchange="document.getElementById('av-expira-box').style.display=this.checked?'':'none'"> ⏳ Definir <strong>data e horário de expiração</strong>
+    </label>
+    <div id="av-expira-box" style="display:${expMs !== null ? '' : 'none'};margin:0 0 12px 24px;">
+      <input type="datetime-local" id="av-expira" style="${est}max-width:240px;" value="${expMs !== null ? _dtLocalAviso(expMs) : ''}">
+      <div style="font-size:.7rem;color:var(--txt-3);margin-top:4px;">O aviso fica ativo até essa data e horário. Depois disso, sai da janela de entrada e do sino, mas continua no histórico do Mural.</div>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px;">
       <div>
         <label style="font-size:.72rem;color:var(--txt-3);">Enviar para</label>
         <select id="av-tipo" style="${est}" onchange="document.getElementById('av-reg').style.display=this.value==='regional'?'':'none';document.getElementById('av-un').style.display=this.value==='unidade'?'':'none';">
-          <option value="todos">Todas as unidades e regionais</option>
-          <option value="regional">Uma regional</option>
-          <option value="unidade">Uma unidade</option>
+          <option value="todos"${sel(p.tipo === 'todos')}>Todas as unidades e regionais</option>
+          <option value="regional"${sel(p.tipo === 'regional')}>Uma regional</option>
+          <option value="unidade"${sel(p.tipo === 'unidade')}>Uma unidade</option>
         </select>
       </div>
-      <div id="av-reg" style="display:none;">
+      <div id="av-reg" style="display:${p.tipo === 'regional' ? '' : 'none'};">
         <label style="font-size:.72rem;color:var(--txt-3);">Regional</label>
-        <select id="av-reg-sel" style="${est}">${srs.map(s => `<option value="${s}">${s} — ${escHtml(SR_INFO[s]?.nome || s)}</option>`).join('')}</select>
+        <select id="av-reg-sel" style="${est}">${srs.map(s => `<option value="${s}"${sel(p.tipo === 'regional' && p.valor === s)}>${s} — ${escHtml(SR_INFO[s]?.nome || s)}</option>`).join('')}</select>
       </div>
-      <div id="av-un" style="display:none;">
+      <div id="av-un" style="display:${p.tipo === 'unidade' ? '' : 'none'};">
         <label style="font-size:.72rem;color:var(--txt-3);">Unidade</label>
-        <select id="av-un-sel" style="${est}">${srs.map(s => `<optgroup label="${s}">${UNIDADES.filter(u => u.sr === s).map(u => `<option value="${escHtml(u.email)}">${escHtml(u.nome)}</option>`).join('')}</optgroup>`).join('')}</select>
+        <select id="av-un-sel" style="${est}">${srs.map(s => `<optgroup label="${s}">${UNIDADES.filter(u => u.sr === s).map(u => `<option value="${escHtml(u.email)}"${sel(p.tipo === 'unidade' && p.valor === u.email)}>${escHtml(u.nome)}</option>`).join('')}</optgroup>`).join('')}</select>
       </div>
     </div>
     <div style="font-size:.72rem;color:var(--txt-3);margin-bottom:4px;">Somente para os perfis (deixe todos desmarcados para enviar a todos):</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:14px;">
-      ${Object.entries(PERFIS_AVISO).map(([v, l]) => `<label style="display:flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer;"><input type="checkbox" class="av-perfil" value="${v}"> ${escHtml(l)}</label>`).join('')}
+      ${Object.entries(PERFIS_AVISO).map(([v, l]) => `<label style="display:flex;align-items:center;gap:6px;font-size:.8rem;cursor:pointer;"><input type="checkbox" class="av-perfil" value="${v}"${(p.perfis || []).includes(v) ? ' checked' : ''}> ${escHtml(l)}</label>`).join('')}
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <button class="p-btn p-btn-outline" onclick="alternarFormAviso()">Cancelar</button>
-      <button class="p-btn p-btn-assinar" id="av-publicar" onclick="publicarAvisoMural()">📢 Publicar aviso</button>
+      <button class="p-btn p-btn-assinar" id="av-publicar" onclick="publicarAvisoMural()">${a ? '💾 Salvar alterações' : '📢 Publicar aviso'}</button>
     </div>
   </div>`;
 }
 
-window.alternarFormAviso = function () { _muralFormAberto = !_muralFormAberto; _renderMural(); };
+window.alternarFormAviso = function () {
+  // Com a edição aberta, "+ Novo aviso"/"Cancelar" fecha o formulário
+  _muralFormAberto = _muralEditandoId ? false : !_muralFormAberto;
+  _muralEditandoId = null;
+  _renderMural();
+};
+
+window.editarAvisoMural = function (id) {
+  _muralEditandoId = id;
+  _muralFormAberto = true;
+  _renderMural();
+  document.getElementById('av-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 window.publicarAvisoMural = async function () {
+  const editando = _muralEditandoId ? _muralAvisos.find(x => x.id === _muralEditandoId) : null;
   const titulo = document.getElementById('av-titulo').value.trim();
   const texto  = document.getElementById('av-texto').value.trim();
   const tipo   = document.getElementById('av-tipo').value;
@@ -2934,28 +2980,49 @@ window.publicarAvisoMural = async function () {
   const perfis = [...document.querySelectorAll('.av-perfil:checked')].map(c => c.value);
   const importante = document.getElementById('av-importante').checked;
   if (!titulo || !texto) { showToastPainel('Preencha o título e o texto do aviso.'); return; }
+
+  let expiraEm = null;
+  if (document.getElementById('av-expira-chk').checked) {
+    const v = document.getElementById('av-expira').value;
+    if (!v) { showToastPainel('Informe a data e o horário de expiração.'); return; }
+    expiraEm = new Date(v);   // "AAAA-MM-DDTHH:MM" é interpretado no fuso local
+    if (isNaN(expiraEm) || expiraEm.getTime() <= Date.now()) {
+      showToastPainel('A data e o horário de expiração devem estar no futuro.'); return;
+    }
+  }
+
+  const manter = editando
+    ? [...document.querySelectorAll('.av-anexo-manter:checked')].map(c => editando.anexos[+c.value]).filter(Boolean)
+    : [];
   const arquivos = [...(document.getElementById('av-anexos')?.files || [])];
-  if (arquivos.length > ANEXO_MAX_ARQUIVOS) { showToastPainel('No máximo ' + ANEXO_MAX_ARQUIVOS + ' anexos por aviso.'); return; }
+  if (manter.length + arquivos.length > ANEXO_MAX_ARQUIVOS) { showToastPainel('No máximo ' + ANEXO_MAX_ARQUIVOS + ' anexos por aviso.'); return; }
   const grande = arquivos.find(a => a.size > ANEXO_MAX_MB * 1024 * 1024);
   if (grande) { showToastPainel('"' + grande.name + '" passa de ' + ANEXO_MAX_MB + ' MB.'); return; }
   const publico = { tipo, valor, perfis };
-  if (!confirm(`Publicar este aviso?\n\nPara: ${descreverPublico(publico, UNIDADES, SR_INFO)}\n\nOs destinatários verão o aviso ao entrar no sistema e precisarão confirmar a leitura.`)) return;
+  const linhaExpira = expiraEm ? `\nVálido até: ${_fmtExpiraAviso(expiraEm.getTime())}` : '';
+  const pergunta = editando
+    ? `Salvar as alterações deste aviso?\n\nPara: ${descreverPublico(publico, UNIDADES, SR_INFO)}${linhaExpira}\n\nAs confirmações de leitura já registradas são mantidas.`
+    : `Publicar este aviso?\n\nPara: ${descreverPublico(publico, UNIDADES, SR_INFO)}${linhaExpira}\n\nOs destinatários verão o aviso ao entrar no sistema e precisarão confirmar a leitura.`;
+  if (!confirm(pergunta)) return;
   const btn = document.getElementById('av-publicar');
+  const rotuloBtn = btn.textContent;
   btn.disabled = true;
   try {
-    const anexos = [];
+    const anexos = [...manter];
     for (let i = 0; i < arquivos.length; i++) {
       btn.textContent = `Enviando anexo ${i + 1} de ${arquivos.length}…`;
       anexos.push(await enviarAnexoAviso(arquivos[i]));
     }
-    btn.textContent = 'Publicando…';
-    await publicarAviso({ titulo, texto, importante, publico, anexos }, _euAvisos());
+    btn.textContent = editando ? 'Salvando…' : 'Publicando…';
+    if (editando) await editarAviso(editando.id, { titulo, texto, importante, publico, anexos, expiraEm }, _euAvisos());
+    else          await publicarAviso({ titulo, texto, importante, publico, anexos, expiraEm }, _euAvisos());
     _muralFormAberto = false;
-    showToastPainel('Aviso publicado.');
+    _muralEditandoId = null;
+    showToastPainel(editando ? 'Aviso atualizado.' : 'Aviso publicado.');
     abrirMuralAvisos();
   } catch (e) {
-    showToastPainel('Erro ao publicar: ' + e.message);
-    btn.disabled = false; btn.textContent = '📢 Publicar aviso';
+    showToastPainel((editando ? 'Erro ao salvar: ' : 'Erro ao publicar: ') + e.message);
+    btn.disabled = false; btn.textContent = rotuloBtn;
   }
 };
 

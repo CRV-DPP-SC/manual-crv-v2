@@ -28,12 +28,25 @@ export const PERFIS_AVISO = {
   crv:      'Equipe CRV/DPP',
 };
 
+/** Data de expiração em ms (ou null se o aviso não expira) */
+export function expiraEmMs(a) {
+  const e = a?.expiraEm;
+  if (!e) return null;
+  return e.toMillis ? e.toMillis() : (e instanceof Date ? e.getTime() : null);
+}
+
+/** Aviso com data de expiração já vencida */
+export function avisoExpirado(a) {
+  const ms = expiraEmMs(a);
+  return ms !== null && ms <= Date.now();
+}
+
 /**
  * "eu" = { tipo: 'crv'|'super'|'dir'|'cpen'|'servidor', email, nome, unidadeEmail, srCod }
- * Diz se um aviso ATIVO é destinado a este usuário.
+ * Diz se um aviso ATIVO (e não expirado) é destinado a este usuário.
  */
 export function avisoParaMim(a, eu) {
-  if (!a || !eu || a.ativo === false) return false;
+  if (!a || !eu || a.ativo === false || avisoExpirado(a)) return false;
   const p = a.publico || { tipo: 'todos' };
   if (Array.isArray(p.perfis) && p.perfis.length && !p.perfis.includes(eu.tipo)) return false;
   if (p.tipo === 'regional') return !!eu.srCod && eu.srCod === p.valor;
@@ -41,9 +54,9 @@ export function avisoParaMim(a, eu) {
   return true; // todos
 }
 
-/** Aviso aparece no histórico do usuário (inclusive arquivados que eram para ele) */
+/** Aviso aparece no histórico do usuário (inclusive arquivados/expirados que eram para ele) */
 export function avisoNoMeuHistorico(a, eu) {
-  return avisoParaMim({ ...a, ativo: true }, eu);
+  return avisoParaMim({ ...a, ativo: true, expiraEm: null }, eu);
 }
 
 /** Texto legível dos destinatários, ex.: "Diretores(as) · SR02 — Sul" */
@@ -116,14 +129,30 @@ export async function listarAvisos() {
   return out;
 }
 
-/** Acompanha em tempo real os avisos ativos (para a janela aparecer mesmo com o site aberto) */
+/**
+ * Acompanha em tempo real os avisos ativos (para a janela aparecer mesmo com o site aberto).
+ * Quando um aviso chega na data de expiração, chama o callback de novo, para que ele
+ * saia da janela/sino sem precisar recarregar a página.
+ */
 export function ouvirAvisosAtivos(callback) {
-  return onSnapshot(query(collection(db(), 'avisos'), where('ativo', '==', true)), snap => {
+  let timer = null;
+  const entregar = out => {
+    callback(out);
+    clearTimeout(timer);
+    const agora = Date.now();
+    const proxima = Math.min(...out.map(expiraEmMs).filter(ms => ms !== null && ms > agora));
+    if (isFinite(proxima)) {
+      // setTimeout aceita no máximo ~24 dias; reavalia em etapas de até 1 dia
+      timer = setTimeout(() => entregar(out), Math.min(proxima - agora + 1000, 86400000));
+    }
+  };
+  const unsub = onSnapshot(query(collection(db(), 'avisos'), where('ativo', '==', true)), snap => {
     const out = [];
     snap.forEach(d => out.push({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
     out.sort((a, b) => (a.criadoEm?.toMillis?.() || 0) - (b.criadoEm?.toMillis?.() || 0)); // mais antigo primeiro
-    callback(out);
+    entregar(out);
   }, e => console.error('Erro ao acompanhar avisos:', e));
+  return () => { clearTimeout(timer); unsub(); };
 }
 
 /** Mapa { avisoId: Timestamp } dos avisos que este usuário já confirmou */
@@ -167,14 +196,26 @@ export async function confirmarLeitura(avisoId, uid, eu) {
   }
 }
 
-/** Só a equipe CRV publica (a regra do Firestore garante) */
-export async function publicarAviso({ titulo, texto, importante, publico, anexos }, eu) {
+/** Só a equipe CRV publica (a regra do Firestore garante). expiraEm: Date ou null (não expira) */
+export async function publicarAviso({ titulo, texto, importante, publico, anexos, expiraEm }, eu) {
   return addDoc(collection(db(), 'avisos'), {
     titulo: titulo.trim(), texto: texto.trim(), importante: !!importante,
     anexos: anexos || [],
     publico: { tipo: publico.tipo || 'todos', valor: publico.valor || '', perfis: publico.perfis || [] },
+    expiraEm: expiraEm || null,
     criadoPor: eu.email, criadoPorNome: eu.nome || eu.email,
     criadoEm: serverTimestamp(), ativo: true,
+  });
+}
+
+/** Edição (só CRV): altera o conteúdo; as confirmações de leitura já feitas são mantidas */
+export async function editarAviso(avisoId, { titulo, texto, importante, publico, anexos, expiraEm }, eu) {
+  await updateDoc(doc(db(), 'avisos', avisoId), {
+    titulo: titulo.trim(), texto: texto.trim(), importante: !!importante,
+    anexos: anexos || [],
+    publico: { tipo: publico.tipo || 'todos', valor: publico.valor || '', perfis: publico.perfis || [] },
+    expiraEm: expiraEm || null,
+    editadoPor: eu.email, editadoEm: serverTimestamp(),
   });
 }
 

@@ -24,6 +24,7 @@ export const EMAILS_CRV = [
   'day.sestren88@gmail.com',
   'sepen@pp.sc.gov.br',
   'leilakfarias@gmail.com',
+  'wanessaemerim@gmail.com',
   'crv@pp.sc.gov.br'
 ];
 

@@ -63,7 +63,7 @@ Marque **Autenticado** e preencha o e-mail (e `email_verified` quando indicado n
 - Diretor/CPEN: Painel abre, lista de assinaturas, aprovar um servidor.
 - Superintendente (`sr0Xsr@`): Painel da regional, assinar.
 - Servidor aprovado: login e Gerador de Ofícios.
-- CRV: Caixinha, Viagens, Diárias, Escala, Benefícios, editor de unidades.
+- CRV: Caixinha, Viagens, Diárias, Benefícios, editor de unidades.
 - Mensagens e recados (inclusive marcar recado como lido).
 
 Se algo for negado indevidamente: abra o console do navegador (F12) — o erro `permission-denied` indica qual coleção — e volte temporariamente às regras antigas.

@@ -538,7 +538,6 @@ function _mostrarTopbarUsuario(user, labelOverride) {
   _mostrarSubMenuCRV(perfil?.tipo === 'crv');
   /* Qualquer usuário autenticado (inclusive servidor aprovado) vê Manual/Ferramentas */
   _mostrarSubMenuPainel(true);
-  _mostrarEscalaPlantaoNova(user.email);
 
   area.innerHTML = `
     <div class="topbar-user-info">
@@ -1412,11 +1411,6 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-titulo">Escala de Plantão ↗</div>
         <div class="grupo-item-sub">Acesso à escala da equipe</div>
       </div>
-      <div class="grupo-item" id="card-escala-nova" style="display:none;" onclick="_abrirFerramenta('escala-plantao.html','🗓️ Escala de Plantão (nova)')">
-        <div class="grupo-item-icon">🗓️</div>
-        <div class="grupo-item-titulo">Escala de Plantão (nova)</div>
-        <div class="grupo-item-sub">Versão interna, em desenvolvimento</div>
-      </div>
       <div class="grupo-item" onclick="_abrirFerramenta('caixinha-controle.html','☕ Caixinha do Setor')">
         <div class="grupo-item-icon">☕</div>
         <div class="grupo-item-titulo">Caixinha do Setor</div>
@@ -1507,19 +1501,6 @@ window._sidebarToggle = function(subId, btn) {
 function _mostrarSubMenuCRV(show) {
   const sub = document.getElementById('sidebar-crv-sub');
   if (sub) sub.style.display = show ? 'block' : 'none';
-}
-
-/*
- * Escala de Plantão (nova) — em teste, visível só pro Rodrigo por enquanto.
- * Quando liberar pro resto da equipe do CRV, trocar essa checagem por
- * perfil?.tipo === 'crv' (igual o resto do menu CRV).
- */
-function _mostrarEscalaPlantaoNova(email) {
-  const liberado = (email || '').toLowerCase() === 'rodrigo.l.pastore@gmail.com';
-  ['nav-escala-nova', 'card-escala-nova'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = liberado ? '' : 'none';
-  });
 }
 
 function _mostrarSubMenuPainel(show) {

@@ -37,7 +37,7 @@ service cloud.firestore {
       return logado() && meuEmail() in [
         'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
         'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-        'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'
+        'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','wanessaemerim@gmail.com','crv@pp.sc.gov.br'
       ];
     }
     function isSR() {
@@ -308,10 +308,6 @@ service cloud.firestore {
     match /controle_viagens/{id}     { allow read, write: if isCRV(); }
     match /diarias_servidores/{id}   { allow read, write: if isCRV(); }   // CPF e dados bancários
     match /diarias_viagens/{id}      { allow read, write: if isCRV(); }
-    match /escala_servidores/{id}    { allow read, write: if isCRV(); }
-    match /escala_excecoes/{id}      { allow read, write: if isCRV(); }
-    match /escala_extras/{id}        { allow read, write: if isCRV(); }
-    match /escala_observacoes/{id}   { allow read, write: if isCRV(); }
 
     // sistema_estado (bot de notificações): sem acesso pelo site — o bot usa
     // conta de serviço, que não passa por estas regras.

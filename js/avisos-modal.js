@@ -10,7 +10,7 @@ import { getApps, getApp, initializeApp } from "https://www.gstatic.com/firebase
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { FIREBASE_CONFIG, escHtml } from "./config-crv.js";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura,
-         textoAvisoHtml, formatarDataAviso, anexosHtml } from "./avisos.js";
+         textoAvisoHtml, formatarDataAviso, anexosHtml, expiraEmMs } from "./avisos.js?v=2";
 
 const auth = getAuth(getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG));
 
@@ -81,7 +81,8 @@ function _mostrarProximo(eu) {
           <div style="font-size:1rem;font-weight:700;">${a.importante ? '⚠️ ' : ''}${escHtml(a.titulo)}</div>
         </div>
       </div>
-      <div style="padding:16px 18px;overflow-y:auto;font-size:.88rem;line-height:1.65;">${textoAvisoHtml(a.texto)}${anexosHtml(a.anexos)}</div>
+      <div style="padding:16px 18px;overflow-y:auto;font-size:.88rem;line-height:1.65;">${textoAvisoHtml(a.texto)}${anexosHtml(a.anexos)}${
+        expiraEmMs(a) !== null ? `<div style="margin-top:10px;font-size:.76rem;font-weight:600;color:var(--azul-600,#1d4ed8);">⏳ Válido até ${new Date(expiraEmMs(a)).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>` : ''}</div>
       <div style="padding:10px 18px;border-top:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="flex:1;font-size:.72rem;color:var(--txt-3,#64748b);">Publicado por ${escHtml(a.criadoPorNome || a.criadoPor || 'CRV')}${a.criadoEm ? ' em ' + formatarDataAviso(a.criadoEm) : ''}</span>
         <button id="aviso-ok" style="padding:9px 18px;border:none;border-radius:8px;background:#15803d;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit;">✓ Li e estou ciente</button>

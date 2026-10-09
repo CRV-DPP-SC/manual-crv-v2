@@ -9,7 +9,7 @@ import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia } from "./config-crv.js";
-import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js";
+import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=2";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
