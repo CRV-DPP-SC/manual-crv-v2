@@ -8,6 +8,7 @@ import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
          query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=3";
+import { definirContador } from "./badge-app.js";
 
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const _auth = getAuth(_app);
@@ -334,6 +335,7 @@ async function _atualizarBadgeMensagens() {
   } catch (_) {}
   badge.style.display = n > 0 ? '' : 'none';
   badge.textContent = String(n);
+  definirContador('mensagens', n);   // número no ícone do app
   // Mesmo número no item "Mensagens" do menu lateral (usado no celular)
   const lateral = document.getElementById('sidebar-msg-count');
   if (lateral) { lateral.style.display = n > 0 ? '' : 'none'; lateral.textContent = n > 9 ? '9+' : String(n); }

@@ -10,6 +10,7 @@ import { getFirestore, collection, query, orderBy, where,
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=3";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=2";
+import { definirContador, limparContador } from "./badge-app.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
@@ -676,6 +677,7 @@ function _atualizarUI() {
   if (!btn) return;
 
   const total = _pendentes.length + _cadastros.length + _avisos.length;
+  definirContador('notificacoes', total);   // número no ícone do app
   btn.classList.remove('ntf-oculto');
   badge.textContent   = total > 0 ? (total > 9 ? '9+' : String(total)) : '';
   badge.style.display = total > 0 ? 'flex' : 'none';
@@ -1113,5 +1115,6 @@ onAuthStateChanged(_auth, user => {
   } else {
     _pararListeners();
     _desvincularOneSignal();
+    limparContador();
   }
 });
