@@ -10,7 +10,7 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where,
          serverTimestamp, getCountFromServer }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente } from "./config-crv.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente } from "./config-crv.js?v=3";
 
 const app  = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);

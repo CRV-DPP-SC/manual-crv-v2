@@ -1,17 +1,18 @@
 /* ============================================================
    CRV — Contas institucionais (Diretor, CPEN, Superintendente)
 
-   1. Lista todas as contas ...dir@, ...cpen@ e sr0Xsr@pp.sc.gov.br.
+   1. Lista todas as contas ...dir@, ...cpen@, sr0Xsr@ e sr0X@pp.sc.gov.br
+      (Superintendente: os dois e-mails da regional valem igualmente).
    2. Marca como "e-mail confirmado" as que correspondem a uma unidade
       real (ou a uma SR). As regras do Firestore só reconhecem esses
       perfis com e-mail confirmado — isso impede contas falsas criadas
       por terceiros de ganharem o perfil.
    3. Aponta contas suspeitas (padrão institucional, mas sem unidade
       correspondente) e contas esperadas que ainda não existem.
-   4. Com --criar-sr, cria os logins sr01sr@ … sr08sr@ que faltarem,
+   4. Com --criar-sr, cria os logins sr01sr@ … sr08sr@ e sr01@ … sr08@ que faltarem,
       já confirmados e com senha aleatória que ninguém conhece. Cada
       Superintendente define a própria senha em "Esqueci minha senha"
-      na tela de login do site (o link chega na caixa sr0Xsr@).
+      na tela de login do site (o link chega na própria caixa de e-mail).
 
    Uso:  node contas-institucionais.js [--criar-sr] [--executar]
    ============================================================ */
@@ -50,11 +51,14 @@ rodar(async () => {
     esperadas.set(p + 'dir' + DOMINIO,  'Diretor(a) — ' + nome);
     esperadas.set(p + 'cpen' + DOMINIO, 'CPEN — ' + nome);
   });
-  SRS.forEach(sr => esperadas.set(sr.toLowerCase() + 'sr' + DOMINIO, 'Superintendente — ' + sr));
+  SRS.forEach(sr => {
+    esperadas.set(sr.toLowerCase() + 'sr' + DOMINIO, 'Superintendente — ' + sr + ' (e-mail do titular)');
+    esperadas.set(sr.toLowerCase() + DOMINIO,        'Superintendente — ' + sr + ' (e-mail da Superintendência)');
+  });
 
   const contas = await listarTodas(auth);
   const porEmail = new Map(contas.filter(u => u.email).map(u => [u.email.toLowerCase(), u]));
-  const rePadrao = /^(.+?)(dir|cpen)@pp\.sc\.gov\.br$|^sr0[1-8]sr@pp\.sc\.gov\.br$/;
+  const rePadrao = /^(.+?)(dir|cpen)@pp\.sc\.gov\.br$|^sr0[1-8](sr)?@pp\.sc\.gov\.br$/;
 
   const confirmar = [], jaConfirmadas = [], suspeitas = [];
   for (const u of contas) {
@@ -64,7 +68,6 @@ rodar(async () => {
     (u.emailVerified ? jaConfirmadas : confirmar).push(u);
   }
   const faltando = [...esperadas.keys()].filter(e => !porEmail.has(e));
-  const antigasSR = SRS.map(sr => sr.toLowerCase() + DOMINIO).filter(e => porEmail.has(e));
 
   console.log(`Contas institucionais legítimas encontradas: ${confirmar.length + jaConfirmadas.length} de ${esperadas.size} esperadas`);
   console.log(`  já confirmadas: ${jaConfirmadas.length}`);
@@ -77,8 +80,9 @@ rodar(async () => {
     suspeitas.forEach(u => console.log(`    • ${u.email.padEnd(32)} criada ${fmt(u.metadata.creationTime)} · último login ${fmt(u.metadata.lastSignInTime)}`));
   }
 
-  const faltandoSR = faltando.filter(e => /^sr0[1-8]sr@/.test(e));
-  const faltandoUn = faltando.filter(e => !/^sr0[1-8]sr@/.test(e));
+  const RE_SR = /^sr0[1-8](sr)?@/;
+  const faltandoSR = faltando.filter(e => RE_SR.test(e));
+  const faltandoUn = faltando.filter(e => !RE_SR.test(e));
   if (faltandoUn.length) {
     console.log(`\nContas de unidade que AINDA NÃO EXISTEM (${faltandoUn.length}) — crie no Console quando a unidade for usar o Painel:`);
     faltandoUn.forEach(e => console.log(`    • ${e.padEnd(32)} ${esperadas.get(e)}`));
@@ -87,10 +91,6 @@ rodar(async () => {
     console.log(`\nLogins de Superintendente que ainda não existem (${faltandoSR.length}):`);
     faltandoSR.forEach(e => console.log(`    • ${e}`));
     if (!CRIAR_SR) console.log('  → rode a tarefa "criar-logins-superintendentes" para criá-los.');
-  }
-  if (antigasSR.length) {
-    console.log(`\nContas antigas de Superintendência (${antigasSR.length}): ${antigasSR.join(', ')}`);
-    console.log('  Deixam de ter perfil de Superintendente (agora é sr0Xsr@). Podem ser desativadas no Console.');
   }
 
   if (!EXECUTAR) { rodape(); return; }

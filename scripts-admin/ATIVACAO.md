@@ -12,7 +12,7 @@ Sempre rode primeiro **sem** marcar "executar" (simulação), leia o resultado e
 ## Passo 1 — Publicar o site (código + workflow)
 
 Envie tudo ao GitHub. Isso publica o site **e** faz aparecer o workflow "Admin CRV".
-A partir daqui o perfil de Superintendente é `sr0Xsr@`: as contas antigas `sr0X@` deixam de ter acesso ao Painel.
+O perfil de Superintendente vale para os dois e-mails da regional: `sr0Xsr@` (titular) e `sr0X@` (Superintendência) têm o mesmo acesso.
 **Combine com os Superintendentes** — até o Passo 3 eles ficam sem login para assinar.
 (As regras antigas do Firestore continuam valendo até o Passo 5, então nada mais quebra.)
 
@@ -25,7 +25,7 @@ Tarefa **`contas-institucionais`**.
 ## Passo 3 — Criar os logins dos Superintendentes
 
 Tarefa **`criar-logins-superintendentes`** (simulação, depois executar).
-Cada Superintendente: abrir o site → **Entrar** → digitar `sr0Xsr@pp.sc.gov.br` → **"Esqueci minha senha / definir senha"** → seguir o link recebido.
+Cada Superintendente: abrir o site → **Entrar** → digitar `sr0Xsr@pp.sc.gov.br` ou `sr0X@pp.sc.gov.br` → **"Esqueci minha senha / definir senha"** → seguir o link recebido.
 
 ## Passo 4 — Migrações de dados
 
@@ -61,7 +61,7 @@ Marque **Autenticado** e preencha o e-mail (e `email_verified` quando indicado n
 ### Depois de publicar, confira no site
 
 - Diretor/CPEN: Painel abre, lista de assinaturas, aprovar um servidor.
-- Superintendente (`sr0Xsr@`): Painel da regional, assinar.
+- Superintendente (`sr0Xsr@` e `sr0X@`): Painel da regional, assinar, mensagens.
 - Servidor aprovado: login e Gerador de Ofícios.
 - CRV: Caixinha, Viagens, Diárias, Benefícios, editor de unidades.
 - Mensagens e recados (inclusive marcar recado como lido).

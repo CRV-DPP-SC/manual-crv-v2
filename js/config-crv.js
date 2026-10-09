@@ -33,11 +33,25 @@ export const EMAILS_CRV = [
 export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnmN9XVSxUwIB3p-6FLcOb64Qd59NHDiCErAKjeig3SmYE1NjpfNsFnDHm-SH6MN0K6g/exec';
 
 // ── Superintendência Regional ──
-// sr01@pp.sc.gov.br   → e-mail da Superintendência (órgão; usado como "unidade" nas assinaturas e nos avisos push)
-// sr01sr@pp.sc.gov.br → login pessoal do(a) Superintendente
-export const RE_SUPERINTENDENTE = /^(sr0[1-8])sr@pp\.sc\.gov\.br$/;
+// sr01@pp.sc.gov.br   → e-mail da Superintendência (órgão; também usado como "unidade" nas assinaturas e nos avisos push)
+// sr01sr@pp.sc.gov.br → e-mail do(a) Superintendente
+// Os DOIS logins valem igualmente como Superintendente da regional (mesmo acesso,
+// mesmas assinaturas e mesma caixa de mensagens). Internamente, o endereço
+// "oficial" de uma SR é o sr01sr@ (ver emailCanonico).
+export const RE_SUPERINTENDENTE = /^(sr0[1-8])(?:sr)?@pp\.sc\.gov\.br$/;
 
-/** 'sr03sr@pp.sc.gov.br' → 'SR03' (ou null se não for Superintendente) */
+/** 'sr01@…' ou 'sr01sr@…' → 'sr01sr@pp.sc.gov.br'; outros e-mails ficam como estão (minúsculos) */
+export function emailCanonico(email) {
+  const e = (email || '').toLowerCase();
+  const m = e.match(RE_SUPERINTENDENTE);
+  return m ? m[1] + 'sr@pp.sc.gov.br' : e;
+}
+/** Mesmo titular? (sr01@ e sr01sr@ contam como a mesma pessoa) */
+export function mesmoUsuario(a, b) {
+  return !!a && !!b && emailCanonico(a) === emailCanonico(b);
+}
+
+/** 'sr03sr@pp.sc.gov.br' ou 'sr03@pp.sc.gov.br' → 'SR03' (ou null se não for Superintendente) */
 export function srDoSuperintendente(email) {
   const m = (email || '').toLowerCase().match(RE_SUPERINTENDENTE);
   return m ? m[1].toUpperCase() : null;

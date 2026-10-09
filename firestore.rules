@@ -10,7 +10,7 @@ rules_version = '2';
 //
 // Perfis:
 //   CRV              → lista fixa (igual a js/config-crv.js)
-//   Superintendente  → sr01sr@ … sr08sr@pp.sc.gov.br   (e-mail confirmado)
+//   Superintendente  → sr01sr@ … sr08sr@ OU sr01@ … sr08@pp.sc.gov.br (e-mail confirmado)
 //   Diretor(a)       → xxxdir@pp.sc.gov.br              (e-mail confirmado)
 //   CPEN             → xxxcpen@pp.sc.gov.br             (e-mail confirmado)
 //   Servidor         → e-mail pessoal com cadastro APROVADO em usuarios_cadastrados
@@ -40,8 +40,17 @@ service cloud.firestore {
         'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','wanessaemerim@gmail.com','crv@pp.sc.gov.br'
       ];
     }
+    // Superintendente: sr01sr@ (e-mail do titular) OU sr01@ (e-mail da Superintendência) —
+    // os dois logins valem igualmente.
     function isSR() {
-      return logado() && confirmado() && meuEmail().matches('^sr0[1-8]sr@pp[.]sc[.]gov[.]br$');
+      return logado() && confirmado() && ehEmailSR(meuEmail());
+    }
+    function ehEmailSR(e) {
+      return e.matches('^sr0[1-8](sr)?@pp[.]sc[.]gov[.]br$');
+    }
+    // 'sr01@…' ou 'sr01sr@…' → 'sr01sr@pp.sc.gov.br' (endereço único da SR nas conversas)
+    function canonico(e) {
+      return ehEmailSR(e.lower()) ? 'sr' + e.lower().split('@')[0].split('sr')[1] + 'sr@pp.sc.gov.br' : e;
     }
     function isDir() {
       return logado() && confirmado() && meuEmail().matches('^.+dir@pp[.]sc[.]gov[.]br$');
@@ -60,9 +69,9 @@ service cloud.firestore {
     function unidadeDoGestor() {
       return meuEmail().replace('(dir|cpen)@pp[.]sc[.]gov[.]br$', '@pp.sc.gov.br');
     }
-    // 'sr03sr@pp.sc.gov.br' → 'SR03'
+    // 'sr03sr@pp.sc.gov.br' ou 'sr03@pp.sc.gov.br' → 'SR03'
     function srDoSuperintendente() {
-      return meuEmail().split('sr@')[0].upper();
+      return 'SR' + meuEmail().split('@')[0].split('sr')[1];
     }
 
     // Servidor com e-mail pessoal: só vale com cadastro APROVADO
@@ -192,11 +201,19 @@ service cloud.firestore {
 
     // ── Mensagens ───────────────────────────────────────────────────
     function msgEhInstitucional(email) {
-      return email.matches('^sr0[1-8]sr@pp[.]sc[.]gov[.]br$')
+      return ehEmailSR(email)
           || email.matches('^.+(cpen|dir)@pp[.]sc[.]gov[.]br$');
     }
+    // Sou eu? (o Superintendente aparece nas conversas sempre como sr0Xsr@)
+    function souEu(e) {
+      return e == request.auth.token.email || (isSR() && e == canonico(meuEmail()));
+    }
+    function souParticipante(participantes) {
+      return request.auth.token.email in participantes
+          || (isSR() && canonico(meuEmail()) in participantes);
+    }
     function outroParticipante(participantes) {
-      return participantes[0] == request.auth.token.email ? participantes[1] : participantes[0];
+      return souEu(participantes[0]) ? participantes[1] : participantes[0];
     }
     function parValido(outro) {
       return isCRV()
@@ -213,7 +230,7 @@ service cloud.firestore {
     }
     function recadoValido(recadoId, meuOutro) {
       let r = get(/databases/$(database)/documents/recados/$(recadoId)).data;
-      return r.de == meuOutro && podeReceberRecado(r);
+      return canonico(r.de) == meuOutro && podeReceberRecado(r);
     }
 
     match /recados/{id} {
@@ -233,9 +250,9 @@ service cloud.firestore {
     }
 
     match /conversas/{id} {
-      allow read, update: if membro() && request.auth.token.email in resource.data.participantes;
+      allow read, update: if membro() && souParticipante(resource.data.participantes);
       allow create: if membro()
-        && request.auth.token.email in request.resource.data.participantes
+        && souParticipante(request.resource.data.participantes)
         && request.resource.data.participantes.size() == 2
         && (
           request.resource.data.origemRecado == null
@@ -245,9 +262,9 @@ service cloud.firestore {
 
       match /mensagens/{msgId} {
         allow read: if membro()
-          && request.auth.token.email in get(/databases/$(database)/documents/conversas/$(id)).data.participantes;
+          && souParticipante(get(/databases/$(database)/documents/conversas/$(id)).data.participantes);
         allow create: if membro()
-          && request.auth.token.email in get(/databases/$(database)/documents/conversas/$(id)).data.participantes
+          && souParticipante(get(/databases/$(database)/documents/conversas/$(id)).data.participantes)
           && request.resource.data.de == request.auth.token.email;
       }
     }

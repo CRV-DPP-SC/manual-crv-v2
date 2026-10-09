@@ -7,7 +7,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
          query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente } from "./config-crv.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=3";
 
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const _auth = getAuth(_app);
@@ -46,7 +46,7 @@ function _ouvirRecados(q) {
     snap.docChanges().forEach(ch => {
       if (ch.type !== 'added') return;
       const r = { id: ch.doc.id, ...ch.doc.data() };
-      if (r.de !== meuEmail() && !r.lidoPor?.[meuEmail()]) {
+      if (!mesmoUsuario(r.de, meuEmail()) && !r.lidoPor?.[meuEmail()]) {
         _mostrarToast('Recado — ' + (r.deNome || r.de), r.texto, () => _abrirDireto(r.de, r.id));
       }
     });
@@ -86,6 +86,7 @@ function _ouvirConversas() {
 }
 
 function _abrirDireto(outroEmail, origemRecado) {
+  outroEmail = emailCanonico(outroEmail);
   document.getElementById('online-panel')?.remove();
   _criarPainelMensagens();
   _renderListaLateral();
@@ -117,8 +118,11 @@ onAuthStateChanged(_auth, user => {
 });
 
 // ── Utilitários ──
-const meuEmail = () => (_user?.email || '').toLowerCase();
-const convId = (a, b) => [a, b].sort().join('__');
+// meuEmail(): endereço usado nas conversas (sr01@ e sr01sr@ viram o mesmo, sr01sr@).
+// meuLogin(): e-mail real da conta — exigido pelas regras no campo "de".
+const meuLogin = () => (_user?.email || '').toLowerCase();
+const meuEmail = () => emailCanonico(meuLogin());
+const convId = (a, b) => [emailCanonico(a), emailCanonico(b)].sort().join('__');
 
 function _rotuloPerfil(email) {
   const e = (email || '').toLowerCase();
@@ -190,7 +194,7 @@ async function _buscarServidores(termo) {
 async function enviarRecado(destinoTipo, destino, texto) {
   if (!_user || !texto.trim()) return;
   await addDoc(collection(db, 'recados'), {
-    de: meuEmail(), deNome: window._presencaInfo?.nome || meuEmail(),
+    de: meuLogin(), deNome: window._presencaInfo?.nome || meuEmail(),
     destinoTipo, destino, texto: texto.trim(), enviadoEm: serverTimestamp()
   });
 }
@@ -202,7 +206,7 @@ async function _garantirConversa(outroEmail, origemRecado) {
   // trava (resource vem nulo) e derrubaria isso com permissão negada. O
   // Firestore já distingue create/update sozinho a partir do setDoc abaixo.
   await setDoc(ref, {
-    participantes: [meuEmail(), outroEmail].sort(),
+    participantes: [meuEmail(), emailCanonico(outroEmail)].sort(),
     origemRecado: origemRecado || null
   }, { merge: true });
   return id;
@@ -212,7 +216,7 @@ async function enviarMensagem(outroEmail, texto, origemRecado) {
   if (!_user || !texto.trim()) return;
   const id = await _garantirConversa(outroEmail, origemRecado);
   await addDoc(collection(db, 'conversas', id, 'mensagens'), {
-    de: meuEmail(), texto: texto.trim(), enviadaEm: serverTimestamp()
+    de: meuLogin(), texto: texto.trim(), enviadaEm: serverTimestamp()
   });
   await setDoc(doc(db, 'conversas', id), {
     ultimaMensagemEm: serverTimestamp(),
@@ -242,7 +246,7 @@ async function concluirConversa(outroEmail) {
   // Marco na própria conversa: vira a barra "Atendimento concluído" entre um
   // atendimento e o próximo (como um chamado encerrado).
   await addDoc(collection(db, 'conversas', id, 'mensagens'), {
-    de: meuEmail(), tipo: 'encerramento', texto: 'Atendimento concluído', enviadaEm: serverTimestamp()
+    de: meuLogin(), tipo: 'encerramento', texto: 'Atendimento concluído', enviadaEm: serverTimestamp()
   });
   await setDoc(doc(db, 'conversas', id), {
     encerrada: true, encerradaPor: meuEmail(), encerradaEm: serverTimestamp()
@@ -337,7 +341,7 @@ async function _atualizarBadgeMensagens() {
 
 // ── UI ──
 function _outroParticipante(conversa) {
-  return (conversa.participantes || []).find(e => e !== meuEmail()) || '';
+  return (conversa.participantes || []).find(e => !mesmoUsuario(e, meuEmail())) || '';
 }
 
 /* Retorna texto JÁ ESCAPADO — pronto para innerHTML */
@@ -375,6 +379,7 @@ function _marcarItemAtivoNaLista(email) {
 }
 
 async function _abrirThread(outroEmail, origemRecado) {
+  outroEmail = emailCanonico(outroEmail);   // sr01@ e sr01sr@ = mesma conversa
   const corpo = _colunaThread();
   if (!corpo) return;
   _entrarNaThread();
@@ -397,7 +402,7 @@ async function _abrirThread(outroEmail, origemRecado) {
   const mensagens = corte ? todas.filter(m => _ms(m.enviadaEm) > corte) : todas;
 
   const bolha = m => {
-    const eu = m.de === meuEmail();
+    const eu = mesmoUsuario(m.de, meuEmail());
     const ms = m.enviadaEm?.toMillis?.();
     const hora = ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
     if (m.tipo === 'encerramento') {
@@ -434,7 +439,7 @@ async function _abrirThread(outroEmail, origemRecado) {
 
   const concluidaHtml = conversa?.encerrada ? `
     <div style="margin:8px 12px 0;padding:8px 12px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:.74rem;color:#166534;">
-      ✓ Conversa concluída${conversa.encerradaPor ? ' por <strong>' + escHtmlMsg(conversa.encerradaPor === meuEmail() ? 'você' : _nomeContatoTexto(conversa.encerradaPor)) + '</strong>' : ''}${conversa.encerradaEm ? ' em ' + _formatarData(conversa.encerradaEm) : ''}.
+      ✓ Conversa concluída${conversa.encerradaPor ? ' por <strong>' + escHtmlMsg(mesmoUsuario(conversa.encerradaPor, meuEmail()) ? 'você' : _nomeContatoTexto(conversa.encerradaPor)) + '</strong>' : ''}${conversa.encerradaEm ? ' em ' + _formatarData(conversa.encerradaEm) : ''}.
       Se alguém escrever de novo, ela é reaberta.
     </div>` : '';
 

@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia } from "./config-crv.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario } from "./config-crv.js?v=3";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=2";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
@@ -465,7 +465,7 @@ function _iniciarListener(email) {
       // Mesma regra do Painel: uma negativa de qualquer envolvido encerra o processo.
       if ((s.assinantes || []).some(a => a.status === 'negado')) return;
       const minha = (s.assinantes || []).find(
-        a => a.email === email && a.status === 'pendente'
+        a => mesmoUsuario(a.email, email) && a.status === 'pendente'
       );
       if (minha) pend.push(s);
     });
@@ -789,7 +789,7 @@ window._ntfAssinar = async function() {
     const snap = await getDoc(ref);
     if (!snap.exists()) throw new Error('Documento não encontrado.');
     const assinantes = (snap.data().assinantes || []).map(a =>
-      a.email === _emailUsuario
+      mesmoUsuario(a.email, _emailUsuario)
         ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() }
         : a
     );
@@ -835,7 +835,7 @@ window._ntfNegar = async function() {
     const snap = await getDoc(ref);
     if (!snap.exists()) throw new Error('Documento não encontrado.');
     const assinantes = (snap.data().assinantes || []).map(a =>
-      a.email === _emailUsuario
+      mesmoUsuario(a.email, _emailUsuario)
         ? { ...a, status: 'negado', motivo, dataAcao: new Date().toISOString() }
         : a
     );

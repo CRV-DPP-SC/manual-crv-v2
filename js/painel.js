@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendP
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente } from "./config-crv.js";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario } from "./config-crv.js?v=3";
 import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, textoAvisoHtml,
          formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
          confirmarLeitura, publicarAviso, alterarArquivado, listarComentarios, contarComentarios,
@@ -234,7 +234,7 @@ function _iniciarListenerPendencias() {
       // Negativa de qualquer envolvido encerra o processo — não é mais pendência de ninguém.
       if ((s.assinantes || []).some(a => a.status === 'negado')) return;
       const minha = (s.assinantes || []).find(a =>
-        a.email === usuarioAtual.email && a.status === 'pendente'
+        mesmoUsuario(a.email, usuarioAtual.email) && a.status === 'pendente'
       );
       if (minha) pendentes.push(s);
     });
@@ -340,7 +340,7 @@ async function _verificarPendenciasLogin() {
       // Negativa de qualquer envolvido encerra o processo — não é mais pendência de ninguém.
       if ((s.assinantes || []).some(a => a.status === 'negado')) return;
       const minha = (s.assinantes || []).find(a =>
-        a.email === usuarioAtual.email && a.status === 'pendente'
+        mesmoUsuario(a.email, usuarioAtual.email) && a.status === 'pendente'
       );
       if (minha) pendentes.push(s);
     });
@@ -774,7 +774,7 @@ async function _contarSituacaoUnidade() {
         );
         if (temPendente) resultado.aguardando++;
       } else if (podeAssinar()) {
-        const minhaAssinatura = (s.assinantes || []).find(a => a.email === usuarioAtual.email);
+        const minhaAssinatura = (s.assinantes || []).find(a => mesmoUsuario(a.email, usuarioAtual.email));
         if (minhaAssinatura?.status === 'pendente') resultado.aguardando++;
       }
     }
@@ -789,7 +789,7 @@ async function _contarSituacaoUnidade() {
       else if (cat === 'concluido') resultado.concluido++;
     } else if (cat === 'andamento') {
       const envolvido = (s.assinantes || []).some(a =>
-        unids.includes(a.emailUnidade) || (!modoLeitura() && a.email === usuarioAtual.email)
+        unids.includes(a.emailUnidade) || (!modoLeitura() && mesmoUsuario(a.email, usuarioAtual.email))
       );
       if (envolvido) resultado.externaAndamento++;
     }
@@ -821,7 +821,7 @@ async function _buscarTransferenciasEscopo(escopo) {
     if (escopo === 'local' && (origemLocal || criadoPorMim)) { lista.push(s); return; }
     if (escopo === 'externa' && !origemLocal) {
       const envolvido = (s.assinantes || []).some(a =>
-        unids.includes(a.emailUnidade) || (!modoLeitura() && a.email === usuarioAtual.email)
+        unids.includes(a.emailUnidade) || (!modoLeitura() && mesmoUsuario(a.email, usuarioAtual.email))
       );
       if (envolvido) lista.push(s);
     }
@@ -1123,7 +1123,7 @@ window.carregarAba = async function (aba) {
         } else if (podeAssinar()) {
           // Painel próprio: mostra docs pendentes para O usuário logado assinar
           const minhaAssinatura = (s.assinantes || []).find(
-            a => a.email === usuarioAtual.email
+            a => mesmoUsuario(a.email, usuarioAtual.email)
           );
           if (minhaAssinatura?.status === 'pendente') solicitacoes.push(s);
         }
@@ -1144,7 +1144,7 @@ window.carregarAba = async function (aba) {
         const s = { id: d.id, ...d.data() };
         const envolvido = (s.assinantes || []).some(a =>
           unids.includes(a.emailUnidade) ||
-          (!modoLeitura() && a.email === usuarioAtual.email)
+          (!modoLeitura() && mesmoUsuario(a.email, usuarioAtual.email))
         );
         if (envolvido || unids.includes(s.emailUnidadeOrigem)) solicitacoes.push(s);
       });
@@ -1158,7 +1158,7 @@ window.carregarAba = async function (aba) {
         if (calcularStatusGeral(s.assinantes || [], s.statusGeral).classe !== 'negado') return;
         const envolvido = (s.assinantes || []).some(a =>
           unids.includes(a.emailUnidade) ||
-          (!modoLeitura() && a.email === usuarioAtual.email)
+          (!modoLeitura() && mesmoUsuario(a.email, usuarioAtual.email))
         );
         if (envolvido || unids.includes(s.emailUnidadeOrigem)) solicitacoes.push(s);
       });
@@ -1169,7 +1169,7 @@ window.carregarAba = async function (aba) {
         if (s.statusGeral !== 'cancelado') return;
         const envolvido = (s.assinantes || []).some(a =>
           unids.includes(a.emailUnidade) ||
-          (!modoLeitura() && a.email === usuarioAtual.email)
+          (!modoLeitura() && mesmoUsuario(a.email, usuarioAtual.email))
         );
         if (envolvido || unids.includes(s.emailUnidadeOrigem)) solicitacoes.push(s);
       });
@@ -1214,7 +1214,7 @@ function _atualizarBarra() {
     /* Assinar em massa: só nas pendentes onde o usuário pode assinar */
     const podeFirmarAlgum = ids.some(id => {
       const s = _selSolsData.find(x => x.id === id);
-      return s && podeAssinar() && (s.assinantes || []).find(a => a.email === usuarioAtual.email && a.status === 'pendente');
+      return s && podeAssinar() && (s.assinantes || []).find(a => mesmoUsuario(a.email, usuarioAtual.email) && a.status === 'pendente');
     });
     if (podeFirmarAlgum) acoes.insertAdjacentHTML('beforeend',
       `<button class="p-barra-btn p-barra-btn-ass" onclick="bulkAssinar()">✅ Assinar selecionados</button>`);
@@ -1298,7 +1298,7 @@ function _atualizarSelAll(ctx) {
 window.bulkAssinar = async function() {
   const ids = [..._selSols].filter(id => {
     const s = _selSolsData.find(x => x.id === id);
-    return s && podeAssinar() && (s.assinantes || []).find(a => a.email === usuarioAtual.email && a.status === 'pendente');
+    return s && podeAssinar() && (s.assinantes || []).find(a => mesmoUsuario(a.email, usuarioAtual.email) && a.status === 'pendente');
   });
   if (!ids.length) return;
   if (!confirm(`Assinar ${ids.length} documento(s) selecionado(s)?`)) return;
@@ -1309,7 +1309,7 @@ window.bulkAssinar = async function() {
       const snap = await getDoc(ref);
       if (!snap.exists()) { err++; continue; }
       const assinantes = (snap.data().assinantes || []).map(a =>
-        a.email === usuarioAtual.email ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() } : a
+        mesmoUsuario(a.email, usuarioAtual.email) ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() } : a
       );
       await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
       ok++;
@@ -1502,7 +1502,7 @@ function renderizarLista(el, lista, tipo) {
   el.innerHTML = cabSel + lista.map(s => {
     const data        = s.criadoEm?.toDate ? s.criadoEm.toDate().toLocaleDateString('pt-BR') : '—';
     const statusGeral = calcularStatusGeral(s.assinantes || [], s.statusGeral);
-    const minhaAssin  = (s.assinantes || []).find(a => a.email === usuarioAtual.email);
+    const minhaAssin  = (s.assinantes || []).find(a => mesmoUsuario(a.email, usuarioAtual.email));
     const podeFirmar  = podeAssinar() && minhaAssin?.status === 'pendente';
     const cancelInfo  = s.statusGeral === 'cancelado' && s.cancelamento;
     const cancelDt    = cancelInfo
@@ -1640,7 +1640,7 @@ window.assinarOficio = async function (id) {
 
 async function _executarAssinatura(ref, snap) {
   const assinantes = (snap.data().assinantes || []).map(a =>
-    a.email === usuarioAtual.email
+    mesmoUsuario(a.email, usuarioAtual.email)
       ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() }
       : a
   );
@@ -1690,7 +1690,7 @@ window.confirmarNegar = async function () {
     const ref  = doc(db, 'solicitacoes', id);
     const snap = await getDoc(ref);
     const assinantes = (snap.data().assinantes || []).map(a =>
-      a.email === usuarioAtual.email
+      mesmoUsuario(a.email, usuarioAtual.email)
         ? { ...a, status: 'negado', motivo, dataAcao: new Date().toISOString() }
         : a
     );

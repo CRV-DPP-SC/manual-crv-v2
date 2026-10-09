@@ -75,7 +75,7 @@ function navegarPara(id) {
   /* Carrega o iframe do painel ao navegar para a seção */
   if (id === 'painel-embed') {
     const fr = document.getElementById('painel-embed-iframe');
-    if (fr && !fr.src.includes('painel')) fr.src = 'painel.html?v=16'; // versão: troque junto com a do painel.js (evita página antiga em cache)
+    if (fr && !fr.src.includes('painel')) fr.src = 'painel.html?v=17'; // versão: troque junto com a do painel.js (evita página antiga em cache)
   }
 
   document.querySelectorAll('.nav-item').forEach(a => {
