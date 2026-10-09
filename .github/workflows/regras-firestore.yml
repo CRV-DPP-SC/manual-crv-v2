@@ -1,0 +1,60 @@
+name: Regras do Firestore
+
+# Publica o firestore.rules no projeto crv-dpp-sc-v2.
+# - Automático: a cada envio ao GitHub que altere o firestore.rules.
+#   Só publica se as regras no ar vierem de uma versão do repositório
+#   (ninguém editou direto no Console); senão para e mostra a diferença.
+# - Manual: Actions → "Regras do Firestore" → Run workflow
+#   (sem "executar" = só mostra a diferença; "forcar" ignora a trava).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - firestore.rules
+      - scripts-admin/publicar-regras.js
+      - .github/workflows/regras-firestore.yml
+  workflow_dispatch:
+    inputs:
+      executar:
+        description: 'Publicar de verdade (desmarcado = só mostra a diferença)'
+        type: boolean
+        default: false
+      forcar:
+        description: 'Publicar mesmo se as regras no ar foram editadas no Console'
+        type: boolean
+        default: false
+
+concurrency: regras-firestore
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Versões anteriores do firestore.rules
+        run: |
+          mkdir -p /tmp/historico
+          for c in $(git log --format=%h -- firestore.rules); do
+            git show "$c:firestore.rules" > "/tmp/historico/$c.rules" 2>/dev/null || true
+          done
+          ls /tmp/historico | wc -l
+      - run: npm install --no-audit --no-fund
+        working-directory: scripts-admin
+      - name: Publicar regras
+        working-directory: scripts-admin
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EVENTO: ${{ github.event_name }}
+          EXECUTAR: ${{ inputs.executar }}
+          FORCAR: ${{ inputs.forcar }}
+        run: |
+          FLAGS="--historico /tmp/historico"
+          if [ "$EVENTO" = "push" ] || [ "$EXECUTAR" = "true" ]; then FLAGS="$FLAGS --executar"; fi
+          if [ "$FORCAR" = "true" ]; then FLAGS="$FLAGS --forcar"; fi
+          node publicar-regras.js $FLAGS
