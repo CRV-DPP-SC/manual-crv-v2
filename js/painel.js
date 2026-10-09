@@ -2835,6 +2835,12 @@ window.abrirMuralAvisos = async function () {
     _muralLidos  = lidos;
     _muralContagens = {};
     _muralComentarios = {};
+    // Autor de avisos antigos (de antes do registro automático): entra na lista de confirmações
+    const eu = _euAvisos();
+    await Promise.all(avisos.filter(a => a.criadoPor === eu.email && !lidos[a.id]).map(async a => {
+      try { await confirmarLeitura(a.id, usuarioAtual.uid, eu); _muralLidos[a.id] = { toMillis: () => Date.now() }; } catch (_) {}
+    }));
+    if (!_renderAtual(rid)) return;
     _renderMural();
     // Contagens sem baixar as listas: comentários (todos) e confirmações (só CRV)
     const sr = _srComentarios();
@@ -2859,13 +2865,11 @@ function _renderMural() {
 
   const cards = lista.map(a => {
     const lidoEm = _muralLidos[a.id];
-    // Quem publicou também pode registrar a ciência pelo Mural (a janela de entrada não insiste com o autor)
-    const paraMim = avisoParaMim(a, eu) || (a.criadoPor === eu.email && a.ativo !== false && !avisoExpirado(a));
-    const estado = lidoEm
-      ? `<span style="font-size:.72rem;color:var(--verde);font-weight:600;">✓ Você confirmou a leitura${lidoEm?.toMillis ? ' em ' + formatarDataAviso(lidoEm) : ''}</span>`
-      : paraMim
-        ? `<button class="p-btn p-btn-assinar" onclick="confirmarAvisoMural('${a.id}')">✓ Li e estou ciente</button>`
-        : '';
+    const paraMim = avisoParaMim(a, eu) && a.criadoPor !== eu.email; // o autor é registrado automaticamente
+    // Quem já confirmou aparece só na lista de Confirmações (sem aviso em verde no card)
+    const estado = !lidoEm && paraMim
+      ? `<button class="p-btn p-btn-assinar" onclick="confirmarAvisoMural('${a.id}')">✓ Li e estou ciente</button>`
+      : '';
     const n = _muralContagens[a.id];
     const expMs = expiraEmMs(a);
     const expirado = avisoExpirado(a);
