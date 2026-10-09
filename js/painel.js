@@ -2785,6 +2785,18 @@ function _dtLocalAviso(ms) {
   const d = new Date(ms), p = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+// Avisos expandidos no Mural (os demais ficam recolhidos, só com o título)
+const _muralAbertos = new Set();
+window.alternarAvisoMural = function (id) {
+  const corpo = document.getElementById('aviso-corpo-' + id);
+  const seta  = document.getElementById('aviso-seta-' + id);
+  if (!corpo) return;
+  const abrir = corpo.style.display === 'none';
+  corpo.style.display = abrir ? 'block' : 'none';
+  if (seta) seta.style.transform = abrir ? 'rotate(90deg)' : '';
+  if (abrir) _muralAbertos.add(id); else _muralAbertos.delete(id);
+};
+
 function _fmtExpiraAviso(ms) {
   return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -2847,7 +2859,8 @@ function _renderMural() {
 
   const cards = lista.map(a => {
     const lidoEm = _muralLidos[a.id];
-    const paraMim = avisoParaMim(a, eu) && a.criadoPor !== eu.email; // quem publicou não confirma o próprio aviso
+    // Quem publicou também pode registrar a ciência pelo Mural (a janela de entrada não insiste com o autor)
+    const paraMim = avisoParaMim(a, eu) || (a.criadoPor === eu.email && a.ativo !== false && !avisoExpirado(a));
     const estado = lidoEm
       ? `<span style="font-size:.72rem;color:var(--verde);font-weight:600;">✓ Você confirmou a leitura${lidoEm?.toMillis ? ' em ' + formatarDataAviso(lidoEm) : ''}</span>`
       : paraMim
@@ -2861,28 +2874,38 @@ function _renderMural() {
       <button class="p-btn p-btn-outline" onclick="verConfirmacoesAviso('${a.id}')" title="Ver quem confirmou a leitura">👁 Confirmações${n != null ? ' (' + n + ')' : ''}</button>
       <button class="p-btn p-btn-outline" onclick="arquivarAviso('${a.id}', ${a.ativo !== false})">${a.ativo !== false ? '🗄 Arquivar' : '↩ Reativar'}</button>
       <button class="p-btn p-btn-cancelar" onclick="excluirAvisoMural('${a.id}')" title="Excluir o aviso definitivamente">🗑 Excluir</button>` : '';
+    const aberto = _muralAbertos.has(a.id);
+    const pendente = paraMim && !lidoEm;
     return `
     <div class="p-card" style="${a.ativo === false || expirado ? 'opacity:.75;' : ''}${a.importante ? 'border-left:4px solid var(--vermelho);' : ''}">
-      <div style="padding:14px 18px 6px;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-          <span style="font-size:.95rem;font-weight:700;color:var(--txt-1);">📢 ${escHtml(a.titulo)}</span>
-          ${a.importante ? '<span class="p-status p-status-negado">Importante</span>' : ''}
-          ${a.ativo === false ? '<span class="p-status p-status-cancelado">Arquivado</span>' : ''}
-          ${a.ativo !== false && expirado ? '<span class="p-status p-status-cancelado">Expirado</span>' : ''}
+      <div onclick="alternarAvisoMural('${a.id}')" title="${aberto ? 'Recolher' : 'Abrir'} aviso" style="padding:12px 18px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;">
+        <span id="aviso-seta-${a.id}" style="font-size:.7rem;color:var(--txt-3);margin-top:5px;transition:transform .15s;${aberto ? 'transform:rotate(90deg);' : ''}">▶</span>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">
+            <span style="font-size:.95rem;font-weight:700;color:var(--txt-1);">📢 ${escHtml(a.titulo)}</span>
+            ${a.importante ? '<span class="p-status p-status-negado">Importante</span>' : ''}
+            ${pendente ? '<span class="p-status p-status-pendente">Confirmar leitura</span>' : ''}
+            ${a.ativo === false ? '<span class="p-status p-status-cancelado">Arquivado</span>' : ''}
+            ${a.ativo !== false && expirado ? '<span class="p-status p-status-cancelado">Expirado</span>' : ''}
+          </div>
+          <div style="font-size:.72rem;color:var(--txt-3);">
+            ${formatarDataAviso(a.criadoEm)} · por ${escHtml(a.criadoPorNome || a.criadoPor || 'CRV')}
+            ${a.editadoEm ? ' · editado em ' + formatarDataAviso(a.editadoEm) : ''}
+            ${ehCRV ? ' · Para: ' + escHtml(descreverPublico(a.publico, UNIDADES, SR_INFO)) : ''}
+          </div>
+          ${expMs !== null ? `<div style="font-size:.72rem;color:${expirado ? 'var(--txt-3)' : 'var(--azul-600)'};font-weight:600;margin-top:2px;">⏳ ${expirado ? 'Expirou em' : 'Válido até'} ${_fmtExpiraAviso(expMs)}</div>` : ''}
         </div>
-        <div style="font-size:.72rem;color:var(--txt-3);">
-          ${formatarDataAviso(a.criadoEm)} · por ${escHtml(a.criadoPorNome || a.criadoPor || 'CRV')}
-          ${a.editadoEm ? ' · editado em ' + formatarDataAviso(a.editadoEm) : ''}
-          ${ehCRV ? ' · Para: ' + escHtml(descreverPublico(a.publico, UNIDADES, SR_INFO)) : ''}
-        </div>
-        ${expMs !== null ? `<div style="font-size:.72rem;color:${expirado ? 'var(--txt-3)' : 'var(--azul-600)'};font-weight:600;margin-top:2px;">⏳ ${expirado ? 'Expirou em' : 'Válido até'} ${_fmtExpiraAviso(expMs)}</div>` : ''}
-        <div style="font-size:.85rem;line-height:1.65;color:var(--txt-2);margin-top:10px;">${textoAvisoHtml(a.texto)}</div>
-        ${anexosHtml(a.anexos)}
       </div>
-      <div class="p-card-acoes" style="align-items:center;">${estado}
-        <button class="p-btn p-btn-outline" onclick="alternarComentariosAviso('${a.id}')">💬 Comentários${_muralComentarios[a.id] != null ? ' (' + _muralComentarios[a.id] + ')' : ''}</button>${acoesCRV}</div>
-      <div id="aviso-conf-${a.id}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;"></div>
-      <div id="aviso-com-${a.id}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;"></div>
+      <div id="aviso-corpo-${a.id}" style="display:${aberto ? 'block' : 'none'};">
+        <div style="padding:0 18px 6px 40px;">
+          <div style="font-size:.85rem;line-height:1.65;color:var(--txt-2);">${textoAvisoHtml(a.texto)}</div>
+          ${anexosHtml(a.anexos)}
+        </div>
+        <div class="p-card-acoes" style="align-items:center;">${estado}
+          <button class="p-btn p-btn-outline" onclick="alternarComentariosAviso('${a.id}')">💬 Comentários${_muralComentarios[a.id] != null ? ' (' + _muralComentarios[a.id] + ')' : ''}</button>${acoesCRV}</div>
+        <div id="aviso-conf-${a.id}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;"></div>
+        <div id="aviso-com-${a.id}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;"></div>
+      </div>
     </div>`;
   }).join('');
 
@@ -3014,8 +3037,13 @@ window.publicarAvisoMural = async function () {
       anexos.push(await enviarAnexoAviso(arquivos[i]));
     }
     btn.textContent = editando ? 'Salvando…' : 'Publicando…';
-    if (editando) await editarAviso(editando.id, { titulo, texto, importante, publico, anexos, expiraEm }, _euAvisos());
-    else          await publicarAviso({ titulo, texto, importante, publico, anexos, expiraEm }, _euAvisos());
+    if (editando) {
+      await editarAviso(editando.id, { titulo, texto, importante, publico, anexos, expiraEm }, _euAvisos());
+    } else {
+      const ref = await publicarAviso({ titulo, texto, importante, publico, anexos, expiraEm }, _euAvisos());
+      // Quem publica já está ciente: entra na lista de confirmações
+      try { await confirmarLeitura(ref.id, usuarioAtual.uid, _euAvisos()); } catch (_) {}
+    }
     _muralFormAberto = false;
     _muralEditandoId = null;
     showToastPainel(editando ? 'Aviso atualizado.' : 'Aviso publicado.');
