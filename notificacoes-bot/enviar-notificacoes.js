@@ -60,8 +60,14 @@ async function _enviar(corpoReq, descricao) {
     body: JSON.stringify({ app_id: ONESIGNAL_APP_ID, target_channel: 'push', ...corpoReq }),
   });
   const txt = await resp.text();
-  if (!resp.ok) console.warn('[OneSignal] falha —', descricao, resp.status, txt);
+  let json = {};
+  try { json = JSON.parse(txt); } catch (_) {}
+  if (!resp.ok) { console.warn('[OneSignal] falha —', descricao, resp.status, txt); return; }
+  // 200 sem "id" = o OneSignal não achou nenhum aparelho inscrito para esse destino
+  if (!json.id) console.warn('[OneSignal] NENHUM APARELHO inscrito —', descricao, '—', corpoReq.headings.en, '—', JSON.stringify(json.errors || json));
   else          console.log('[OneSignal] enviado —', descricao, '—', corpoReq.headings.en);
+  const invalidos = json.errors?.invalid_aliases?.external_id;
+  if (invalidos?.length) console.log('   sem aparelho vinculado:', invalidos.join(', '));
 }
 
 async function enviarPushUnidade({ emailUnidade, titulo, corpo, tag, url }) {
@@ -84,7 +90,7 @@ async function enviarPushPessoas({ emails, titulo, corpo, tag, url }) {
       contents: { en: corpo },
       url: url || URL_SITE,
       data: { tag, url: url || URL_SITE },
-    }, lote.length + ' pessoa(s)');
+    }, lote.length <= 5 ? lote.join(', ') : lote.length + ' pessoa(s)');
   }
 }
 
