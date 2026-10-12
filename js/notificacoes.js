@@ -425,6 +425,9 @@ function _injetarDOM() {
       <div class="ntf-secao-titulo" id="ntf-sec-av" style="display:none;color:#1e40af;background:#eff6ff;">📢 Avisos — confirme a leitura</div>
       <div class="ntf-lista-cad" id="ntf-lista-av" style="display:none;"></div>
 
+      <div class="ntf-secao-titulo" id="ntf-sec-tr" style="display:none;color:#0369a1;background:#f0f9ff;">⇄ Escala de plantão — aguardando sua resposta</div>
+      <div class="ntf-lista-cad" id="ntf-lista-tr" style="display:none;"></div>
+
       <div class="ntf-secao-titulo" id="ntf-sec-ass">⏳ Assinaturas Pendentes</div>
       <div class="ntf-lista" id="ntf-lista"></div>
 
@@ -580,6 +583,8 @@ function _pararListeners() {
   if (_unsub)    { _unsub();    _unsub    = null; }
   if (_unsubCad) { _unsubCad(); _unsubCad = null; }
   if (_unsubAvisos) { _unsubAvisos(); _unsubAvisos = null; }
+  if (_unsubTrocas) { _unsubTrocas(); _unsubTrocas = null; }
+  _trocas       = [];
   _pendentes    = [];
   _cadastros    = [];
   _avisos       = [];
@@ -587,6 +592,98 @@ function _pararListeners() {
   const btn = document.getElementById('ntf-btn');
   if (btn) btn.classList.add('ntf-oculto');
 }
+
+// ════════════════════════════════════════
+// TROCAS DE PLANTÃO (Escala de Plantão — pedidos feitos a mim)
+// Aceitar/Recusar abre a Escala, que confere as regras (48h, limite de
+// trocas) e exige o motivo da recusa.
+// ════════════════════════════════════════
+let _trocas       = [];
+let _unsubTrocas  = null;
+let _primeiraTr   = true;
+
+function _iniciarTrocas(email) {
+  if (_unsubTrocas) { _unsubTrocas(); _unsubTrocas = null; }
+  _primeiraTr = true;
+  const q = query(
+    collection(_db, 'escala_eventos'),
+    where('solicitadoEmail', '==', (email || '').toLowerCase()),
+    where('status', '==', 'pendente')
+  );
+  _unsubTrocas = onSnapshot(q, snap => {
+    const antes = _trocas.length;
+    _trocas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(t => ['permuta', 'movimentacao', 'extra'].includes(t.tipo))
+      .sort((a, b) => (a.criadoEm || 0) - (b.criadoEm || 0));
+    // Plantões extras marcados juntos viram um aviso só (com todos os horários)
+    const lotes = {};
+    _trocas = _trocas.filter(t => {
+      if (t.tipo !== 'extra' || !t.lote) return true;
+      if (lotes[t.lote]) { lotes[t.lote].horarios.push(t.horario); return false; }
+      t.horarios = [t.horario]; lotes[t.lote] = t; return true;
+    });
+    if (_primeiraTr) _primeiraTr = false;
+    else if (_trocas.length > antes) { _tocarSom(); _ntfToast('⇄ Novo pedido na Escala de Plantão!'); }
+    _atualizarUI();
+  }, () => { _trocas = []; _atualizarUI(); });
+}
+
+function _dataBr(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '—'; }
+
+function _renderizarTrocas() {
+  const lista = document.getElementById('ntf-lista-tr');
+  if (!lista) return;
+  _atualizarSubtitulo();
+  const HOR = { D08: '08:00 às 16:00', D10: '10:00 às 18:00', D12: '12:00 às 20:00', D16: '16:00 às 00:00', N22: '22:00 às 06:00', N00: '00:00 às 08:00' };
+  lista.innerHTML = _trocas.map(t => t.tipo === 'extra' ? `
+    <div class="ntf-item" style="border-color:#fde68a;background:#fefce8;">
+      <div class="ntf-item-top">
+        <div class="ntf-item-titulo">⏱️ ${_esc(t.solicitanteNome || t.criadoPor)} marcou plantão extra para você</div>
+        <div style="font-size:.74rem;color:#334155;line-height:1.5;">
+          <b>${_dataBr(t.dia)}</b> · ${(t.horarios || [t.horario]).map(h => _esc(HOR[h] || h)).join(' · ')}
+          ${t.obs ? '<br><i>"' + _esc(t.obs) + '"</i>' : ''}
+        </div>
+      </div>
+      <div class="ntf-acoes">
+        <button class="ntf-btn ntf-btn-ass" onclick="_ntfTroca('${_esc(t.id)}','aceitar')">✅ Aceitar</button>
+        <button class="ntf-btn ntf-btn-neg" onclick="_ntfTroca('${_esc(t.id)}','recusar')">❌ Recusar</button>
+      </div>
+    </div>` : t.tipo === 'movimentacao' ? `
+    <div class="ntf-item" style="border-color:#fde68a;background:#fffbeb;">
+      <div class="ntf-item-top">
+        <div class="ntf-item-titulo">✋ ${_esc(t.solicitanteNome || t.criadoPor)} quer movimentar você</div>
+        <div style="font-size:.74rem;color:#334155;line-height:1.5;">
+          ${t.de ? 'De <b>' + _dataBr(t.de) + '</b> para <b>' + _dataBr(t.para) + '</b>.' : 'Plantão extra em <b>' + _dataBr(t.para) + '</b>.'}
+          ${t.motivo ? '<br><i>"' + _esc(t.motivo) + '"</i>' : ''}
+        </div>
+      </div>
+      <div class="ntf-acoes">
+        <button class="ntf-btn ntf-btn-ass" onclick="_ntfTroca('${_esc(t.id)}','aceitar')">✅ Autorizar</button>
+        <button class="ntf-btn ntf-btn-neg" onclick="_ntfTroca('${_esc(t.id)}','recusar')">❌ Negar</button>
+      </div>
+    </div>` : `
+    <div class="ntf-item" style="border-color:#bae6fd;background:#f0f9ff;">
+      <div class="ntf-item-top">
+        <div class="ntf-item-titulo">⇄ ${_esc(t.solicitanteNome || t.solicitanteEmail)} pediu troca de plantão</div>
+        <div style="font-size:.74rem;color:#334155;line-height:1.5;">
+          Você trabalha <b>${_dataBr(t.dia1)}</b> e ${_esc(t.solicitanteNome || 'o colega')} trabalha <b>${_dataBr(t.dia2)}</b>.
+          ${t.obs ? '<br><i>"' + _esc(t.obs) + '"</i>' : ''}
+        </div>
+      </div>
+      <div class="ntf-acoes">
+        <button class="ntf-btn ntf-btn-ass" onclick="_ntfTroca('${_esc(t.id)}','aceitar')">✅ Aceitar</button>
+        <button class="ntf-btn ntf-btn-neg" onclick="_ntfTroca('${_esc(t.id)}','recusar')">❌ Recusar</button>
+      </div>
+    </div>`).join('');
+}
+
+window._ntfTroca = function (id, acao) {
+  const url = 'escala-plantao.html?troca=' + encodeURIComponent(id) + '&acao=' + acao;
+  const painel = document.getElementById('ntf-painel');
+  if (painel) painel.classList.remove('aberto');
+  if (typeof window._abrirFerramenta === 'function') window._abrirFerramenta(url, '📅 Escala de Plantão');
+  else location.href = url;
+};
 
 // ════════════════════════════════════════
 // AVISOS DO MURAL (pendentes de "Li e estou ciente")
@@ -676,7 +773,7 @@ function _atualizarUI() {
   const badge = document.getElementById('ntf-badge');
   if (!btn) return;
 
-  const total = _pendentes.length + _cadastros.length + _avisos.length;
+  const total = _pendentes.length + _cadastros.length + _avisos.length + _trocas.length;
   definirContador('notificacoes', total);   // número no ícone do app
   btn.classList.remove('ntf-oculto');
   badge.textContent   = total > 0 ? (total > 9 ? '9+' : String(total)) : '';
@@ -693,10 +790,13 @@ function _atualizarUI() {
   if (listaCad) listaCad.style.display = temCad ? '' : 'none';
   const temAv = _avisos.length > 0;
   ['ntf-sec-av', 'ntf-lista-av'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = temAv ? '' : 'none'; });
+  const temTr = _trocas.length > 0;
+  ['ntf-sec-tr', 'ntf-lista-tr'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = temTr ? '' : 'none'; });
 
   const painel = document.getElementById('ntf-painel');
   if (painel && painel.classList.contains('aberto')) {
     _renderizarAvisos();
+    _renderizarTrocas();
     _renderizarLista();
     _renderizarCadastros();
   }
@@ -712,6 +812,8 @@ function _atualizarSubtitulo() {
   if (nC > 0) partes.push(nC + ' cadastro' + (nC > 1 ? 's' : '') + ' aguardando');
   const nV = _avisos.length;
   if (nV > 0) partes.unshift(nV + ' aviso' + (nV > 1 ? 's' : '') + ' para ler');
+  const nT = _trocas.length;
+  if (nT > 0) partes.unshift(nT + ' pedido' + (nT > 1 ? 's' : '') + ' da escala para responder');
   sub.textContent = partes.length > 0 ? partes.join(' · ') : 'Nenhuma pendência no momento';
 }
 
@@ -794,6 +896,7 @@ window._ntfToggle = function() {
   painel.classList.toggle('aberto');
   if (abrindo) {
     _renderizarAvisos();
+    _renderizarTrocas();
     _renderizarLista();
     _renderizarCadastros();
   }
@@ -1108,6 +1211,10 @@ onAuthStateChanged(_auth, user => {
 
     // Avisos do Mural ainda não confirmados
     _iniciarAvisos(user);
+
+    // Trocas de plantão pedidas a mim (Escala de Plantão — só equipe CRV)
+    // (pré-lançamento: mesma lista de escala-plantao.html / firestore.rules)
+    if (['rodrigo.l.pastore@gmail.com'].includes((user.email || '').toLowerCase())) _iniciarTrocas(user.email);
 
     // Guia de configuração de notificações (iPhone)
     setTimeout(_mostrarGuiaNotificacoes, 1500);

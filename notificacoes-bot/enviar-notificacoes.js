@@ -10,6 +10,7 @@
    • Por PESSOA — External ID = e-mail (aplicado pelo site em
        js/notificacoes.js com OneSignal.login; sr01@ e sr01sr@ viram sr01sr@):
        avisos do Mural, mensagens do chat e recados.
+       Também: pedidos de troca de plantão (Escala) e as respostas.
    A equipe CRV não recebe assinaturas/cadastros; recebe avisos e mensagens.
 
    Por privacidade, o push de mensagem/recado diz só QUEM escreveu
@@ -252,6 +253,80 @@ async function processarRecados(desde) {
   }
 }
 
+// ── Escala de Plantão: pedidos de troca e respostas ──
+// escala_eventos guarda criadoEm/respondidoEm em milissegundos (Date.now()).
+const HORARIOS_EXTRA = { D08: '08:00 às 16:00', D10: '10:00 às 18:00', D12: '12:00 às 20:00', D16: '16:00 às 00:00', N22: '22:00 às 06:00', N00: '00:00 às 08:00' };
+const dataBr = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '—';
+async function processarTrocasPlantao(desde) {
+  const ms = desde.toMillis();
+  const [novos, respondidos] = await Promise.all([
+    db.collection('escala_eventos').where('criadoEm', '>', ms).get(),
+    db.collection('escala_eventos').where('respondidoEm', '>', ms).get(),
+  ]);
+  const lotesAvisados = new Set();   // extras marcados juntos: um push só
+  for (const doc of novos.docs) {
+    const t = doc.data();
+    if (t.lote) { if (lotesAvisados.has('n' + t.lote)) continue; lotesAvisados.add('n' + t.lote); }
+    if (t.tipo === 'movimentacao' && t.status === 'pendente' && t.solicitadoEmail) {
+      await enviarPushPessoas({
+        emails: [t.solicitadoEmail],
+        titulo: '✋ Movimentação na escala',
+        corpo:  `${t.solicitanteNome || t.criadoPor} quer movimentar você: ${t.de ? dataBr(t.de) + ' → ' : 'plantão extra em '}${dataBr(t.para)}. Abra o portal para autorizar ou negar.`,
+        tag:    'mov-' + doc.id,
+      });
+      continue;
+    }
+    if (t.tipo === 'extra' && t.status === 'pendente' && t.solicitadoEmail) {
+      await enviarPushPessoas({
+        emails: [t.solicitadoEmail],
+        titulo: '⏱️ Plantão extra marcado para você',
+        corpo:  `${t.solicitanteNome || t.criadoPor} marcou plantão extra para você em ${dataBr(t.dia)} (${novos.docs.map(d => d.data()).filter(x => t.lote ? x.lote === t.lote : x === t).map(x => HORARIOS_EXTRA[x.horario] || x.horario).join(", ") || HORARIOS_EXTRA[t.horario]}). Abra o portal para aceitar ou recusar.`,
+        tag:    'extra-' + doc.id,
+      });
+      continue;
+    }
+    if (t.tipo !== 'permuta' || t.status !== 'pendente' || !t.solicitadoEmail) continue;
+    await enviarPushPessoas({
+      emails: [t.solicitadoEmail],
+      titulo: '⇄ Pedido de troca de plantão',
+      corpo:  `${t.solicitanteNome || t.solicitanteEmail}: você trabalha ${dataBr(t.dia1)} e ele(a) trabalha ${dataBr(t.dia2)}. Abra o portal para aceitar ou recusar.`,
+      tag:    'troca-' + doc.id,
+    });
+  }
+  for (const doc of respondidos.docs) {
+    const t = doc.data();
+    if (t.lote) { if (lotesAvisados.has('r' + t.lote)) continue; lotesAvisados.add('r' + t.lote); }
+    if (t.tipo === 'extra' && ['aprovada', 'negada'].includes(t.status) && t.criadoPor && t.solicitadoEmail) {
+      await enviarPushPessoas({
+        emails: [t.criadoPor],
+        titulo: t.status === 'aprovada' ? '✅ Plantão extra aceito' : '❌ Plantão extra recusado',
+        corpo:  `${t.solicitadoNome || t.servidorEmail} ${t.status === 'aprovada' ? 'aceitou' : 'recusou'} o plantão extra de ${dataBr(t.dia)}.`
+                + (t.motivoRecusa ? ' Motivo: ' + t.motivoRecusa : ''),
+        tag:    'extra-resp-' + doc.id,
+      });
+      continue;
+    }
+    if (t.tipo === 'movimentacao' && ['aprovada', 'negada'].includes(t.status) && t.criadoPor) {
+      await enviarPushPessoas({
+        emails: [t.criadoPor],
+        titulo: t.status === 'aprovada' ? '✅ Movimentação autorizada' : '❌ Movimentação negada',
+        corpo:  `${t.solicitadoNome || t.servidorEmail} ${t.status === 'aprovada' ? 'autorizou' : 'negou'} a movimentação para ${dataBr(t.para)}.`
+                + (t.motivoRecusa ? ' Motivo: ' + t.motivoRecusa : ''),
+        tag:    'mov-resp-' + doc.id,
+      });
+      continue;
+    }
+    if (t.tipo !== 'permuta' || !['aceita', 'recusada'].includes(t.status) || !t.solicitanteEmail) continue;
+    await enviarPushPessoas({
+      emails: [t.solicitanteEmail],
+      titulo: t.status === 'aceita' ? '✅ Troca de plantão aceita' : '❌ Troca de plantão recusada',
+      corpo:  `${t.solicitadoNome || t.solicitadoEmail} ${t.status === 'aceita' ? 'aceitou' : 'recusou'} a troca de ${dataBr(t.dia1)} por ${dataBr(t.dia2)}.`
+              + (t.motivoRecusa ? ' Motivo: ' + t.motivoRecusa : ''),
+      tag:    'troca-resp-' + doc.id,
+    });
+  }
+}
+
 async function main() {
   const estadoRef = db.collection(ESTADO_DOC[0]).doc(ESTADO_DOC[1]);
   const estadoSnap = await estadoRef.get();
@@ -264,7 +339,7 @@ async function main() {
     : admin.firestore.Timestamp.fromMillis(agora.toMillis() - 24 * 60 * 60 * 1000);
 
   // Cada etapa independente: a falha de uma não impede as outras
-  const etapas = { processarCadastros, processarSolicitacoes, processarAvisos, processarMensagens, processarRecados };
+  const etapas = { processarCadastros, processarSolicitacoes, processarAvisos, processarMensagens, processarRecados, processarTrocasPlantao };
   const resultados = await Promise.allSettled(Object.values(etapas).map(f => f(desde)));
   let falhou = false;
   resultados.forEach((r, i) => {

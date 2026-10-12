@@ -326,6 +326,26 @@ service cloud.firestore {
     match /diarias_servidores/{id}   { allow read, write: if isCRV(); }   // CPF e dados bancários
     match /diarias_viagens/{id}      { allow read, write: if isCRV(); }
 
+    // ── Escala de Plantão (escala-plantao.html) ─────────────────────
+    // A escala-base é calculada na página; aqui ficam só os lançamentos.
+    // Todos os usuários com acesso têm as mesmas opções (trocas, movimentações,
+    // ausências, folgas, extras, créditos). Excluir = marcar "excluido" (update).
+    // PRÉ-LANÇAMENTO: só o e-mail abaixo acessa. Para liberar à equipe CRV,
+    // troque o corpo da função por:  return isCRV();
+    function escalaUsuario() {
+      return isCRV() && meuEmail() in ['rodrigo.l.pastore@gmail.com'];
+    }
+    match /escala_eventos/{id} {
+      allow read, create, update: if escalaUsuario();
+      allow delete: if false;          // nada é apagado: a exclusão fica registrada
+    }
+    // Confirmação de presença: cada um confirma o próprio plantão
+    match /escala_confirmacoes/{id} {
+      allow read: if escalaUsuario();
+      allow create: if escalaUsuario() && request.resource.data.email == meuEmail();
+      allow delete: if escalaUsuario() && resource.data.email == meuEmail();
+    }
+
     // sistema_estado (bot de notificações): sem acesso pelo site — o bot usa
     // conta de serviço, que não passa por estas regras.
   }

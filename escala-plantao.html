@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escala de Plantão — CRV/DPP</title>
+<style>
+:root{
+  --az:#1a2a4a; --azc:#3b82f6; --vd:#0f6e56; --cin:#6b7280; --bg:#f4f6f9; --br:#fff; --bd:#e5e7eb;
+  --A:#3b82f6; --B:#16a34a; --C:#ea580c; --D:#9333ea;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2937;min-height:100vh}
+
+/* ─── HEADER ─────────────────────────────────────────────────────── */
+.hdr{background:var(--az);color:#fff;padding:.8rem 1.3rem;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:.6rem;position:sticky;top:0;z-index:200;box-shadow:0 2px 14px rgba(0,0,0,.3)}
+.hdr-t{font-size:1rem;font-weight:700}
+.hdr-a{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center}
+.eu-chip{font-size:.74rem;background:rgba(255,255,255,.12);padding:.25rem .6rem;border-radius:20px}
+.hdr select{font-family:inherit;font-size:.75rem;padding:.25rem .4rem;border-radius:6px;border:none}
+
+/* ─── BOTÕES ─────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;border:none;border-radius:7px;
+  font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.bp{background:var(--azc);color:#fff}.bp:hover:not(:disabled){background:#2563eb}
+.bv{background:var(--vd);color:#fff}.bv:hover:not(:disabled){background:#0a5240}
+.bn{background:#fff;color:var(--az);border:1.5px solid var(--az)}.bn:hover:not(:disabled){background:#f0f4ff}
+.br2{background:#dc2626;color:#fff}.br2:hover:not(:disabled){background:#b91c1c}
+.bamb{background:#f59e0b;color:#fff}.bamb:hover:not(:disabled){background:#d97706}
+.bsm{padding:.26rem .55rem;font-size:.73rem}
+.bic{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.bic:hover{background:rgba(255,255,255,.22)}
+
+.fbs{font-size:.7rem;padding:.22rem .55rem;border-radius:20px;font-weight:700}
+.fbok{background:#d1fae5;color:#065f46}.fberr{background:#fee2e2;color:#991b1b}.fbld{background:#fef3c7;color:#92400e}
+.demo{background:#fde68a;color:#78350f}
+
+.wrap{max-width:1280px;margin:0 auto;padding:1.1rem 1rem}
+
+/* ─── TABS ───────────────────────────────────────────────────────── */
+.tabs{display:flex;gap:0;margin-bottom:1rem;border-bottom:2px solid var(--bd);overflow-x:auto;align-items:center}
+.tab-acoes{margin-left:auto;display:flex;gap:.4rem;padding:0 .2rem .3rem;flex-shrink:0}
+.tab{padding:.55rem 1.1rem;font-size:.85rem;font-weight:600;color:var(--cin);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;display:flex;align-items:center;gap:.35rem}
+.tab.on{color:var(--az);border-bottom-color:var(--az)}
+.tab:hover:not(.on){color:var(--az);background:#f0f4ff}
+.tab .bdg{background:#dc2626;color:#fff;font-size:.65rem;border-radius:20px;padding:.05rem .4rem}
+.pane{display:none}.pane.on{display:block}
+
+/* ─── BARRA DO MÊS ───────────────────────────────────────────────── */
+.mbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem}
+.mbar h2{font-size:1.25rem;color:var(--az);min-width:190px}
+.mbar select{padding:.38rem .6rem;border:1.5px solid var(--bd);border-radius:7px;font-family:inherit;font-size:.82rem}
+.mbar .esp{flex:1}
+.chk{font-size:.8rem;color:#374151;display:flex;align-items:center;gap:.3rem;cursor:pointer;user-select:none}
+
+/* ─── LEGENDA ────────────────────────────────────────────────────── */
+.leg{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.74rem;color:#4b5563;margin-bottom:.8rem;
+  background:var(--br);border:1.5px solid var(--bd);border-radius:10px;padding:.55rem .8rem}
+.leg span{display:inline-flex;align-items:center;gap:.3rem}
+
+/* ─── CALENDÁRIO ─────────────────────────────────────────────────── */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.cal-h{font-size:.74rem;font-weight:700;color:var(--cin);text-align:center;padding:.3rem 0;text-transform:uppercase;letter-spacing:.04em}
+.dia{min-width:0;background:var(--br);border:1.5px solid var(--bd);border-radius:10px;min-height:112px;padding:.4rem .45rem .3rem;
+  display:flex;flex-direction:column;cursor:pointer;transition:border-color .12s,box-shadow .12s;position:relative}
+.dia:hover{border-color:var(--azc);box-shadow:0 2px 10px rgba(59,130,246,.15)}
+.dia.vazio{background:transparent;border:none;cursor:default;box-shadow:none}
+.dia.passado{background:#fafafa}
+.dia.passado .dia-n{color:#9ca3af}
+.dia.hoje{border-color:var(--az);box-shadow:inset 0 0 0 1px var(--az)}
+.dia.meu{background:#eff6ff;border-color:#93c5fd}
+.dia-top{display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem}
+.dia-n{font-weight:800;font-size:.95rem;color:var(--az)}
+.dia-sem{display:none;font-size:.75rem;color:var(--cin)}
+.dia-hoje{font-size:.6rem;background:var(--az);color:#fff;border-radius:20px;padding:.05rem .35rem;font-weight:700}
+.let{margin-left:auto;width:22px;height:22px;border-radius:50%;color:#fff;font-size:.72rem;font-weight:800;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.let-A{background:var(--A)}.let-B{background:var(--B)}.let-C{background:var(--C)}.let-D{background:var(--D)}
+.dia-lista{flex:1;display:flex;flex-direction:column;gap:2px}
+.dia-tot{align-self:flex-end;font-size:.66rem;color:var(--cin);font-weight:700;margin-top:.15rem}
+.dia-pend{position:absolute;top:.35rem;right:2.1rem;font-size:.7rem}
+
+.p{display:flex;align-items:center;gap:.25rem;font-size:.72rem;line-height:1.25;white-space:nowrap;overflow:hidden}
+.p-ic{width:1em;text-align:center;flex-shrink:0;font-size:.78rem}
+.p-ic.perm{color:#0369a1;font-weight:800}
+.p-nome{overflow:hidden;text-overflow:ellipsis;font-weight:600;color:#1f2937}
+.p.eu .p-nome{color:#1d4ed8}
+.p.aus .p-nome{font-style:italic;color:#b45309;font-weight:500}
+.p.folga .p-nome{text-decoration:line-through;color:#9ca3af;font-weight:500}
+.ok{color:#16a34a;font-weight:800;font-size:.78rem}
+.ok.tard{color:#d97706}
+.cf-lista{display:flex;flex-direction:column;gap:.3rem;max-height:260px;overflow-y:auto;border:1.5px solid var(--bd);border-radius:9px;padding:.5rem .7rem}
+.fg .cf-dia,.cf-dia{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:.5rem;font-size:.84rem;font-weight:400;color:#1f2937;cursor:pointer;width:auto}
+.fg .cf-dia input,.cf-dia input{width:16px;height:16px;margin:0;padding:0;flex:0 0 auto;accent-color:var(--vd)}
+.cf-dia .let{margin-left:0}
+.dot-aus{color:#d97706}
+
+.chip{font-size:.6rem;font-weight:700;padding:.05rem .32rem;border-radius:5px;border:1px solid;flex-shrink:0}
+.g-BC1{background:#fef9c3;color:#854d0e;border-color:#fde047}
+.g-BC2{background:#dbeafe;color:#1e40af;border-color:#93c5fd}
+.g-CD1{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}
+.g-DA1{background:#dcfce7;color:#166534;border-color:#86efac}
+.g-DA2{background:#ffedd5;color:#9a3412;border-color:#fdba74}
+.g-A{background:#e0f2fe;color:#075985;border-color:#7dd3fc}
+.g-CO{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
+.p.extra{font-size:.64rem;font-style:italic}
+.p.extra .p-nome{color:#a16207;font-weight:400}
+.p.extra.pend{opacity:.55}
+.hx{font-size:.58rem;font-weight:400;font-style:italic;background:#fef9c3;color:#a16207;border-radius:4px;padding:0 .25rem;flex-shrink:0}
+.dia-rod{display:flex;justify-content:space-between;align-items:flex-end;margin-top:.15rem}
+.dia-rod .dia-tot{align-self:auto;margin-top:0}
+.dia-ext{font-size:.66rem;color:#a16207;font-weight:700;font-style:italic}
+.x-hor{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;border:1.5px solid var(--bd);border-radius:9px;padding:.6rem .75rem}
+.x-hor>div{display:flex;flex-direction:column;gap:.35rem;font-size:.82rem}
+.x-hor b{font-size:.76rem;color:var(--az)}
+.x-hor label{display:flex;align-items:center;gap:.4rem;cursor:pointer;font-weight:500;color:#1f2937}
+.x-hor label:has(input:disabled){color:#9ca3af;text-decoration:line-through;cursor:not-allowed}
+@media(max-width:520px){.x-hor{grid-template-columns:1fr}}
+.filtro-esc{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;margin-top:.8rem;background:var(--br);border:1.5px solid var(--bd);border-radius:10px;padding:.55rem .9rem;font-size:.82rem;font-weight:600;color:var(--az)}
+.filtro-esc select{padding:.38rem .6rem;border:1.5px solid var(--bd);border-radius:7px;font-family:inherit;font-size:.82rem}
+.filtro-esc label{display:flex;align-items:center;gap:.35rem;cursor:pointer;user-select:none}
+.filtro-esc input{width:16px;height:16px;accent-color:var(--azc);cursor:pointer}
+
+/* Celular: o calendário vira agenda (um dia por linha) */
+@media(max-width:720px){
+  .cal{grid-template-columns:1fr}
+  .cal-h,.dia.vazio{display:none}
+  .dia{min-height:0}
+  .dia-sem{display:inline}
+  .p{font-size:.8rem}
+  .dia-pend{right:2.3rem}
+}
+
+/* ─── CARTÕES / LISTAS ───────────────────────────────────────────── */
+.card{background:var(--br);border:1.5px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem}
+.card h3{font-size:.92rem;color:var(--az);margin-bottom:.7rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.card h3 .sub{font-weight:500;color:var(--cin);font-size:.78rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem;margin-bottom:1rem}
+.sc{background:var(--br);border:1.5px solid var(--bd);border-radius:10px;padding:.8rem 1rem;text-align:center}
+.sc-clk{cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.sc-clk:hover{border-color:var(--azc);box-shadow:0 2px 10px rgba(59,130,246,.15)}
+.clk{cursor:pointer;color:#1d4ed8;font-weight:700;text-decoration:underline dotted;text-underline-offset:3px}
+.clk:hover{color:#1e40af;text-decoration-style:solid}
+.sn{font-size:1.7rem;font-weight:800;color:var(--az);line-height:1}
+.sl{font-size:.7rem;color:var(--cin);margin-top:.25rem;font-weight:500}
+.lin{display:flex;align-items:center;gap:.6rem;padding:.55rem 0;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.lin:last-child{border-bottom:none}
+.lin-tx{flex:1;min-width:220px;font-size:.83rem;color:#374151}
+.lin-tx small{display:block;color:var(--cin);font-size:.73rem;margin-top:.1rem}
+.lin-ac{display:flex;gap:.3rem;flex-wrap:wrap}
+.nodata{text-align:center;padding:1.3rem;color:var(--cin);font-size:.84rem}
+.st{font-size:.68rem;font-weight:700;padding:.12rem .45rem;border-radius:20px;white-space:nowrap}
+.st-pendente{background:#fef3c7;color:#92400e}.st-aceita{background:#d1fae5;color:#065f46}
+.st-recusada,.st-cancelada,.st-anulada{background:#f3f4f6;color:#6b7280}
+.st-disp{background:#d1fae5;color:#065f46}.st-usada{background:#e5e7eb;color:#4b5563}.st-prev{background:#e0f2fe;color:#075985}
+.st-inv{background:#fee2e2;color:#991b1b}
+
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{background:var(--az);color:#fff;text-align:left;padding:.55rem .7rem;font-size:.73rem;font-weight:600}
+td{padding:.5rem .7rem;border-bottom:1px solid var(--bd);vertical-align:top}
+.tbl{overflow-x:auto;border:1.5px solid var(--bd);border-radius:10px;background:#fff}
+.num{text-align:center}
+
+/* ─── MODAL ──────────────────────────────────────────────────────── */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;padding:1rem}
+.ov.on{display:flex}
+.mdl{background:#fff;border-radius:14px;width:100%;max-width:620px;max-height:93vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.mhdr{background:var(--az);color:#fff;padding:.9rem 1.2rem;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:10;border-radius:14px 14px 0 0;gap:.6rem}
+.mt{font-size:.92rem;font-weight:700}
+.mx{background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1}
+.mbody{padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.85rem}
+.mft{padding:.9rem 1.2rem;background:#f8faff;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;
+  gap:.45rem;border-radius:0 0 14px 14px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:.28rem}
+.fg label{font-size:.78rem;font-weight:600;color:var(--az)}
+.fg input,.fg select,.fg textarea{padding:.48rem .7rem;border:1.5px solid var(--bd);border-radius:7px;font-size:.84rem;font-family:inherit;color:#1f2937;background:#fff}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--azc)}
+.fg textarea{resize:vertical;min-height:64px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:520px){.frow{grid-template-columns:1fr}}
+.aviso{font-size:.8rem;border-radius:8px;padding:.6rem .8rem;line-height:1.45}
+.aviso-conf{margin:.8rem 0 .2rem;border:1.5px solid #fcd34d}
+.av-err{background:#fee2e2;color:#991b1b}.av-ok{background:#d1fae5;color:#065f46}
+.av-inf{background:#eff6ff;color:#1e3a8a}.av-amb{background:#fef3c7;color:#92400e}
+.pd{border:1.5px solid var(--bd);border-radius:10px;padding:.6rem .75rem;display:flex;flex-direction:column;gap:.4rem}
+.pd-top{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:.86rem;font-weight:700}
+.pd-info{font-size:.76rem;color:#4b5563;line-height:1.45}
+.pd-ac{display:flex;gap:.3rem;flex-wrap:wrap}
+
+/* ─── MODO MOVIMENTAR (arrastar) ─────────────────────────────────── */
+.mov-banner{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;background:#fef3c7;
+  border:1.5px solid #fcd34d;color:#78350f;border-radius:10px;padding:.55rem .8rem;font-size:.8rem;margin-bottom:.8rem}
+.mov-ac{display:flex;gap:.4rem}
+.p.arrasta{cursor:grab;border:1px dashed #f59e0b;border-radius:5px;padding:0 .2rem;background:#fffbeb}
+.p.arrasta:active{cursor:grabbing}
+.p.sel{background:#f59e0b;border-style:solid}.p.sel .p-nome{color:#fff}
+.dia.alvo{cursor:copy}
+.dia.sobre{border-color:#f59e0b;box-shadow:0 0 0 2px #fcd34d;background:#fffbeb}
+
+/* ─── FORMULÁRIO DE AUSÊNCIA ─────────────────────────────────────── */
+.aus-tipos{display:flex;flex-direction:column;gap:.4rem}
+.aus-tipo{display:flex;align-items:center;gap:.6rem;border:1.5px solid var(--bd);border-radius:9px;padding:.5rem .7rem;cursor:pointer;font-size:.82rem}
+.aus-tipo:has(input:checked){border-color:var(--azc);background:#eff6ff}
+.aus-tipo input{accent-color:var(--azc)}
+.aus-tipo small{display:block;color:var(--cin);font-size:.72rem}
+.aus-ic{font-size:1.1rem}
+.aus-horas{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:9px;padding:.6rem .75rem;display:flex;flex-direction:column;gap:.35rem}
+.aus-horas>label{font-size:.78rem;font-weight:600;color:var(--az)}
+.aus-horas small{font-size:.72rem;color:#1e40af}
+.aus-hl{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;font-size:.8rem}
+.aus-hl input{width:80px;padding:.35rem .5rem;border:1.5px solid var(--bd);border-radius:7px;font-family:inherit}
+.aus-per{display:flex;gap:1.2rem;font-size:.82rem}
+.aus-per label,.aus-sv label{display:flex;align-items:center;gap:.35rem;cursor:pointer;font-weight:500;color:#1f2937}
+.aus-sv{display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;font-size:.8rem;border:1.5px solid var(--bd);border-radius:9px;padding:.55rem .7rem}
+@media(max-width:520px){.aus-sv{grid-template-columns:1fr}}
+
+/* ─── HISTÓRICO DO MÊS ───────────────────────────────────────────── */
+.hist-card{margin-top:1rem}
+.ger-bar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem}
+.ger-bar select{padding:.34rem .55rem;border:1.5px solid var(--bd);border-radius:7px;font-family:inherit;font-size:.8rem}
+.ger-lista{max-height:420px;overflow-y:auto}
+.resumo-card{margin-top:1rem;margin-bottom:0}
+@media print{.resumo-card{display:none}}
+.hist-n{background:#e5e7eb;color:#374151;font-size:.7rem;border-radius:20px;padding:.05rem .5rem}
+.hist-card h3 select{margin-left:auto;padding:.3rem .5rem;border:1.5px solid var(--bd);border-radius:7px;font-family:inherit;font-size:.78rem}
+.hist{max-height:460px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding-right:.2rem}
+.hi{border:1.5px solid;border-radius:10px;padding:.6rem .8rem;display:flex;gap:.6rem;align-items:flex-start}
+.hi-ic{font-size:1rem;line-height:1.3;width:1.2em;text-align:center}
+.hi-c{flex:1;min-width:0}
+.hi-t{font-size:.84rem;font-weight:700;color:#1f2937;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.hi-tag{font-size:.64rem;font-weight:700;border:1.5px solid;border-radius:20px;padding:.02rem .45rem;background:#fff}
+.hi-d{font-size:.78rem;color:#374151;margin-top:.15rem}
+.hi-m{font-size:.78rem;color:#4b5563;font-style:italic;margin-top:.15rem}
+.hi-q{font-size:.7rem;color:#6b7280;margin-top:.25rem}
+.hi-del{background:none;border:none;cursor:pointer;font-size:.9rem;opacity:.55;padding:.1rem .2rem}
+.hi-del:hover{opacity:1}
+.hi-movimentacao{background:#f0fdfa;border-color:#99f6e4}.hi-movimentacao .hi-tag{color:#0f766e;border-color:#5eead4}
+.hi-permuta{background:#eff6ff;border-color:#bfdbfe}.hi-permuta .hi-tag{color:#1d4ed8;border-color:#93c5fd}
+.hi-folga{background:#f0fdf4;border-color:#bbf7d0}.hi-folga .hi-tag{color:#15803d;border-color:#86efac}
+.hi-ausencia{background:#fffbeb;border-color:#fde68a}.hi-ausencia .hi-tag{color:#b45309;border-color:#fcd34d}
+.hi-extra{background:#f0fdfa;border-color:#99f6e4}.hi-extra .hi-tag{color:#0f766e;border-color:#5eead4}
+.hi.inativo{opacity:.6}
+.hi.negado{background:#fef2f2;border-color:#fca5a5}.hi.negado .hi-tag{color:#b91c1c;border-color:#fca5a5}.hi.negado .hi-t,.hi.negado .hi-d{color:#991b1b}
+@media print{.hist-card{display:none}}
+
+#toast{position:fixed;bottom:1.3rem;left:50%;transform:translateX(-50%) translateY(140px);background:#1a2a4a;color:#fff;
+  padding:.6rem 1.2rem;border-radius:8px;font-size:.8rem;font-weight:600;box-shadow:0 4px 18px rgba(0,0,0,.25);
+  transition:transform .3s;z-index:10000;max-width:92vw;text-align:center;pointer-events:none}
+#toast.vis{transform:translateX(-50%) translateY(0)}
+#bloqueio{max-width:520px;margin:3rem auto;text-align:center;font-size:.92rem;color:#374151}
+
+/* ─── FOLHA PARA IMPRESSÃO / PDF (montada fora da tela) ───────────────── */
+.folha-print{position:fixed;left:-10000px;top:0;width:1500px;background:#fff;padding:18px 20px;font-family:'Segoe UI',system-ui,sans-serif;color:#1f2937}
+.fp-top{display:flex;justify-content:space-between;align-items:baseline;font-size:20px;color:#1a2a4a;margin-bottom:10px}
+.fp-top span{font-size:22px;font-weight:800}
+.fp-rod{display:flex;justify-content:space-between;gap:1rem;font-size:11px;color:#6b7280;margin-top:8px}
+.cal.cal-print{grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:4px}
+.cal-print .cal-h{display:block!important}
+.cal-print .dia.vazio{display:flex!important}
+.cal-print .dia{min-height:96px;cursor:default;box-shadow:none!important}
+.cal-print .dia.meu{background:#fff;border-color:var(--bd)}
+.cal-print .dia-sem,.cal-print .dia-pend{display:none!important}
+.cal-print .p{font-size:12px}.cal-print .p.extra{font-size:11px}
+.cal-print .dia.passado{background:#fff}.cal-print .dia.passado .dia-n{color:var(--az)}
+.cal-print .dia.hoje{border-color:var(--bd);box-shadow:none}.cal-print .dia-hoje{display:none}
+.cal-print .p.eu .p-nome{color:#1f2937}
+
+/* ─── IMPRESSÃO ──────────────────────────────────────────────────── */
+.so-print{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body{background:#fff}
+  .hdr,.tabs,.mbar .nao-print,.ov,#toast,.leg{display:none!important}
+  .pane{display:none!important}#pane-cal{display:block!important}
+  .so-print{display:block;font-size:.8rem;color:#374151;margin-bottom:.4rem}
+  .wrap{max-width:none;padding:0}
+  .cal{grid-template-columns:repeat(7,1fr)!important;gap:3px}
+  .cal-h{display:block!important}.dia.vazio{display:flex!important}
+  .dia{min-height:88px;break-inside:avoid;box-shadow:none!important}
+  .dia.meu{background:#fff;border-color:var(--bd)}
+  .dia-sem{display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+<script>(function(){var t=localStorage.getItem('crv-tema');if(t)document.documentElement.setAttribute('data-tema',t);})();window.addEventListener('message',function(e){if(e.data&&e.data.crvTema)document.documentElement.setAttribute('data-tema',e.data.crvTema);});</script>
+<style>[data-tema="escuro"] body{filter:invert(1) hue-rotate(180deg);background:#111 !important;}[data-tema="escuro"] img,[data-tema="escuro"] canvas{filter:invert(1) hue-rotate(180deg);}</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<div class="hdr">
+  <div class="hdr-t">📅 Escala de Plantão — CRV/DPP</div>
+  <div class="hdr-a">
+    <span class="fbs fbld" id="fbSt">⏳ Conectando...</span>
+    <span id="modoBox" style="display:none"></span>
+    <span id="demoBox" style="display:none"></span>
+    <span class="eu-chip" id="euChip"></span>
+    <button class="btn bic bsm" onclick="imprimir()" title="Imprimir o mês">🖨️ Imprimir</button>
+    <button class="btn bic bsm" onclick="baixarPDF()" title="Baixar o mês em PDF">⬇ Baixar PDF</button>
+    <button class="btn bic bsm" onclick="telaCheia()" title="Tela cheia">⛶</button>
+  </div>
+</div>
+
+<div id="bloqueio" style="display:none"></div>
+
+<div class="wrap" id="app" style="display:none">
+
+  <div class="tabs">
+    <div class="tab on" data-tab="cal" onclick="aba('cal')">🗓️ Escala</div>
+    <div class="tab" data-tab="perm" onclick="aba('perm')">⇄ Troca de Plantão <span class="bdg" id="bdgPerm" style="display:none"></span></div>
+    <div class="tab" data-tab="folga" onclick="aba('folga')">🌴 Controle de 8º Plantão <span class="bdg" id="bdgFolga" style="display:none"></span></div>
+    <span class="tab-acoes" id="btnAcoes" style="display:none">
+      <button class="btn bv bsm" onclick="confirmarHoje()" title="Confirmar presença no plantão de hoje">✓ Confirmar Presença</button>
+      <button class="btn bamb bsm" onclick="abrirAus()" title="Cadastrar ausência (servidor continua escalado)">• Cadastrar ausência</button>
+      <button class="btn bv bsm" onclick="abrirExtra()" title="Plantão extra de 8h em dia de folga (até 5 por mês)">⏱️ Marcar Plantão Extra</button>
+      <button class="btn bamb bsm" id="btnMovModo" onclick="modoMovimentar()" title="Arraste um nome para outro dia">✋ Movimentar</button>
+    </span>
+  </div>
+
+  <!-- Barra do mês (comum a todas as abas) -->
+  <div class="mbar">
+    <button class="btn bn bsm nao-print" onclick="mudarMes(-1)" title="Mês anterior">‹</button>
+    <h2 id="mesTitulo"></h2>
+    <button class="btn bn bsm nao-print" onclick="mudarMes(1)" title="Próximo mês">›</button>
+    <select id="mesSel" class="nao-print" onchange="irMes(this.value)"></select>
+    <button class="btn bn bsm nao-print" onclick="irHoje()">Hoje</button>
+    <span class="esp"></span>
+    <label class="chk nao-print" id="chkMeusBox"><input type="checkbox" id="chkMeus" checked onchange="renderCal()"> Destacar meus plantões</label>
+  </div>
+
+  <!-- ═══ ESCALA (CALENDÁRIO) ═══ -->
+  <div class="pane on" id="pane-cal">
+    <div class="leg">
+      <span><b class="let let-A" style="width:18px;height:18px;font-size:.62rem">A</b><b class="let let-B" style="width:18px;height:18px;font-size:.62rem">B</b><b class="let let-C" style="width:18px;height:18px;font-size:.62rem">C</b><b class="let let-D" style="width:18px;height:18px;font-size:.62rem">D</b> Plantão do dia</span>
+      <span><b class="p-ic perm">⇄</b> Permuta entre servidores</span>
+      <span>✋ Movimentado (por quem cadastrou)</span>
+      <span><i style="color:#b45309">• Itálico</i> Escalado, ausente</span>
+      <span>🏖️ Férias · 🩺 Afastamento (nome fica, não conta no total)</span>
+      <span><s style="color:#9ca3af">Riscado</s> 🌴 Folga (8º plantão ou banco de horas)</span>
+      <span><b class="ok">✓</b> Presença confirmada</span>
+      <span>⏳ Permuta pendente</span>
+    </div>
+    <div class="mov-banner" id="movBanner" style="display:none">
+      <span>✋ <b>Modo movimentar:</b> arraste um nome para outro dia (no celular: toque no nome e depois no dia). Em seguida informe o motivo.</span>
+      <span class="mov-ac">
+      <button class="btn br2 bsm" onclick="modoMovimentar(false)">Concluir</button></span>
+    </div>
+    <div class="so-print" id="printTitulo"></div>
+    <div class="cal" id="cal"></div>
+    <div class="aviso av-amb aviso-conf nao-print">⚠️ <b>Importante:</b> o controle da folga do 8º plantão considera <b>somente os plantões com presença confirmada</b>. Confirme sua presença no dia de cada plantão (botão <b>✓ Confirmar Presença</b>) — plantão sem confirmação não conta para a folga.</div>
+    <div class="filtro-esc nao-print" id="filtroEsc">
+      <label><input type="checkbox" id="fTodos" checked onchange="filtroMarcar('todos')"> Todos</label>
+      <label><input type="checkbox" id="fOrd" checked onchange="filtroMarcar()"> Plantões ordinários</label>
+      <label><input type="checkbox" id="fExt" checked onchange="filtroMarcar()"> Plantão extra</label>
+    </div>
+
+    <div class="card resumo-card"><h3>📊 Resumo do mês por servidor</h3><div id="coordResumo"></div></div>
+    <div class="card hist-card">
+      <h3>💬 Histórico do mês <span class="hist-n" id="histN">0</span>
+        <select id="histFiltro" onchange="renderHistorico()">
+          <option value="">Todos</option><option value="permuta">⇄ Permutas</option><option value="movimentacao">✋ Movimentações</option>
+          <option value="folga">🌴 Folgas do 8º plantão</option><option value="ausencia">• Ausências</option><option value="extra">⏱️ Plantões extras</option><option value="credito">8️⃣ Créditos de 8º plantão</option>
+        </select></h3>
+      <div class="hist" id="hist"></div>
+    </div>
+  </div>
+
+
+  <!-- ═══ PERMUTAS ═══ -->
+  <div class="pane" id="pane-perm">
+    <div class="card" id="permNovaBox">
+      <h3>⇄ Solicitar troca de plantão <span class="sub" id="permCont"></span></h3>
+      <div class="pd-info" style="margin-bottom:.6rem">
+        Você trabalha num plantão do colega e o colega trabalha num plantão seu, no mesmo mês (eventualmente no mês seguinte, ex.: 31/10 por 02/11). A observação é obrigatória.
+        Cada servidor pode fazer até <b>2 permutas por mês como solicitante</b> e <b>2 como solicitado</b>.
+        Ninguém pode ficar mais de <b>48h seguidas</b> por permuta. A permuta só vale depois que o colega aceitar.
+      </div>
+      <button class="btn bp" onclick="abrirPermuta()">＋ Nova troca</button>
+    </div>
+    <div class="card"><h3>📥 Aguardando minha resposta</h3><div id="permParaMim"></div></div>
+    <div class="card"><h3>📤 Minhas solicitações <span class="sub">(mês selecionado)</span></h3><div id="permMinhas"></div></div>
+  </div>
+
+  <!-- ═══ FOLGAS ═══ -->
+  <div class="pane" id="pane-folga">
+    <div class="card">
+      <h3>🌴 Folga do 8º plantão</h3>
+      <div class="aviso av-amb aviso-conf">⚠️ <b>Importante:</b> o controle da folga do 8º plantão considera <b>somente os plantões com presença confirmada</b>. Confirme sua presença no dia de cada plantão (botão <b>✓ Confirmar Presença</b>) — plantão sem confirmação não conta para a folga.</div>
+      <div class="pd-info" style="margin-bottom:.6rem">
+        Quem fizer <b>8 plantões ou mais no mês</b> (com presença confirmada) ganha <b>1 folga</b>. A folga fica disponível depois do 8º plantão,
+        é cumulativa e o sistema usa sempre a <b>mais antiga</b>. Para usar, cadastre a folga num dia em que você está escalado.
+      </div>
+      <button class="btn bv" id="btnFolga" onclick="abrirFolga()">＋ Cadastrar folga</button>
+    </div>
+    <div class="card">
+      <h3>⚙️ Gerenciar Lançamentos <span class="sub">Folgas, férias, afastamentos e créditos de 8º plantão</span></h3>
+      <div class="ger-bar">
+        <button class="btn bv bsm" onclick="gerAdicionar()">＋ Adicionar</button>
+        <select id="gerServ" onchange="renderGerenciar()"></select>
+        <select id="gerTipo" onchange="renderGerenciar()">
+          <option value="">Todos os tipos</option><option value="folga">🌴 Folgas</option>
+          <option value="afast">🏖️ Férias / 🩺 Afastamentos</option><option value="credito">8️⃣ Créditos de 8º plantão</option>
+        </select>
+      </div>
+      <div id="gerLista"></div>
+    </div>
+    <div class="stats" id="folgaStats"></div>
+    <div class="card"><h3>Meu banco de folgas</h3><div id="folgaBanco"></div></div>
+    <div class="card"><h3>Banco de folgas da equipe</h3><div id="folgaEquipe"></div></div>
+  </div>
+
+</div>
+
+<div class="ov" id="ov" onclick="if(event.target===this)fecharModal()">
+  <div class="mdl" id="mdl"></div>
+</div>
+<div id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<script type="module">
+import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import{getFirestore,collection,addDoc,updateDoc,deleteDoc,setDoc,doc,onSnapshot}
+  from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import{FIREBASE_CONFIG,ehCRV,escHtml as esc}from"./js/config-crv.js";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO DA ESCALA
+// ═══════════════════════════════════════════════════════════════════════════
+// Grupos: dupla de plantões seguidos (48x144) com duas turmas que se alternam
+// a cada 4 dias, ou plantão simples (24x72).
+const SERVIDORES=[
+  {id:'ivana',   nome:'IVANA',   email:'ivana.schafer@gmail.com',          grupo:'C+D1', g:'CD1', regime:'48x144'},
+  {id:'rodrigo', nome:'RODRIGO', email:'rodrigo.l.pastore@gmail.com',      grupo:'D+A1', g:'DA1', regime:'48x144'},
+  {id:'bruna',   nome:'BRUNA',   email:'brunawlongen@gmail.com',           grupo:'A',    g:'A',   regime:'24x72'},
+  {id:'ricardo', nome:'RICARDO', email:'ricardobritomarques12@gmail.com',  grupo:'B+C2', g:'BC2', regime:'48x144'},
+  {id:'dayanne', nome:'DAYANNE', email:'day.sestren88@gmail.com',          grupo:'B+C1', g:'BC1', regime:'48x144'},
+  {id:'juliana', nome:'JULIANA', email:'abeljuliana2012@gmail.com',        grupo:'D+A2', g:'DA2', regime:'48x144'},
+  {id:'wanessa', nome:'WANESSA', email:'wanessaemerim@gmail.com',          grupo:'B+C1', g:'BC1', regime:'48x144'},
+];
+// Quem pode movimentar, lançar ausência e desfazer lançamentos (mesma lista em firestore.rules)
+// Todos os usuários da CRV têm as mesmas opções (sem perfil de coordenação à parte).
+
+const INICIO='2026-10-01', FIM='2027-12-31';
+const REF_LETRA='2026-10-01';          // 01/10/2026 = plantão D
+const ANCORA_CICLO='2027-02-03';       // posição 0 do ciclo de 8 dias
+// Ciclo de 8 dias (posição → quem trabalha), conferido com out/2026–mar/2027
+const CICLO=[
+  ['bruna','juliana'],    // A — D+A2 (2º dia)
+  ['ricardo'],            // B — B+C2 (1º dia)
+  ['ricardo','ivana'],    // C — B+C2 (2º) · C+D1 (1º)
+  ['ivana','rodrigo'],    // D — C+D1 (2º) · D+A1 (1º)
+  ['bruna','rodrigo'],    // A — D+A1 (2º)
+  ['dayanne','wanessa'],  // B — B+C1 (1º)
+  ['dayanne','wanessa'],  // C — B+C1 (2º)
+  ['juliana'],            // D — D+A2 (1º)
+];
+const MAX_SOLICITANTE=2, MAX_SOLICITADO=2, PLANTOES_FOLGA=8, MAX_SEGUIDOS=2;
+// Tipos de ausência (mesmos do sistema anterior)
+const AUS_TIPOS={
+  instrutor:{ic:"🏛️",nome:"Convocação ACAPS – Instrutor",sub:"Atuação como instrutor ACAPS"},
+  aluno:    {ic:"📗",nome:"Convocação ACAPS – Aluno",sub:"Participação como aluno ACAPS"},
+  curso:    {ic:"📘",nome:"Participação em curso – Aluno",sub:"Sem convocação formal"},
+  viagem:   {ic:"🚐",nome:"Viagem a trabalho",sub:"Viagem ou missão fora do setor"},
+  outros:   {ic:"📋",nome:"Convocação outros",sub:"Outras convocações gerais"},
+  ferias:   {ic:"🏖️",nome:"Férias",sub:"Período de férias — informe a data de início e de fim",afasta:true},
+  afastamento:{ic:"🩺",nome:"Afastamento",sub:"Licença médica, licenças e outros afastamentos — data de início e de fim",afasta:true},
+};
+const ausDias=e=>e.dias||[e.dia];
+const ausNome=e=>AUS_TIPOS[e.categoria]?.nome||"Ausência";
+// Férias e afastamento: o nome fica na escala, mas a pessoa NÃO conta no total do dia
+const ehAfast=a=>!!(a&&AUS_TIPOS[a.categoria]?.afasta);
+const icAus=a=>AUS_TIPOS[a.categoria]?.afasta?AUS_TIPOS[a.categoria].ic:'•';
+const ausTexto=e=>`${ausNome(e)}${ehAfast(e)&&e.ini?` (${br(num(e.ini))} a ${br(num(e.fim))})`:""}${e.horas?` (${e.horas}h)`:""}${e.motivo?": "+e.motivo:""}`;
+const horasInstrutor=(sid,m)=>eventos.filter(e=>e.tipo==="ausencia"&&e.servidor===sid&&e.horas&&ausDias(e).some(d=>d.startsWith(m))).reduce((t,e)=>t+e.horas,0);
+const ausPeriodo=e=>{const d=ausDias(e);return d.length>1?`${d.map(x=>br(num(x))).join(", ")}`:dPl(d[0]);};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATAS (dias inteiros em UTC, sem horário de verão)
+// ═══════════════════════════════════════════════════════════════════════════
+const DIA_MS=864e5;
+const num=s=>{const[y,m,d]=s.split('-').map(Number);return Date.UTC(y,m-1,d)/DIA_MS;};
+const isoDe=n=>new Date(n*DIA_MS).toISOString().slice(0,10);
+const mod=(a,b)=>((a%b)+b)%b;
+const N_INI=num(INICIO), N_FIM=num(FIM), N_LET=num(REF_LETRA), N_ANC=num(ANCORA_CICLO);
+const letra=n=>'ABCD'[mod(n-N_LET+3,4)];
+const base=n=>CICLO[mod(n-N_ANC,8)];
+const hojeISO=(()=>{const t=new Date();return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;})();
+const N_HOJE=num(hojeISO);
+const SEM=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const SEM_L=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const dsem=n=>new Date(n*DIA_MS).getUTCDay();
+const br=n=>{const s=isoDe(n);return`${s.slice(8)}/${s.slice(5,7)}`;};
+const brAno=n=>{const s=isoDe(n);return`${s.slice(8)}/${s.slice(5,7)}/${s.slice(0,4)}`;};
+const nomeMes=m=>`${MESES[+m.slice(5)-1]} ${m.slice(0,4)}`;
+const diasDoMes=m=>{const[y,mm]=m.split('-').map(Number);const a=Date.UTC(y,mm-1,1)/DIA_MS,b=Date.UTC(y,mm,1)/DIA_MS;
+  const r=[];for(let n=Math.max(a,N_INI);n<Math.min(b,N_FIM+1);n++)r.push(n);return r;};
+const MESES_LISTA=(()=>{const r=[];let[y,m]=INICIO.split('-').map(Number);
+  while(`${y}-${String(m).padStart(2,'0')}`<=FIM.slice(0,7)){r.push(`${y}-${String(m).padStart(2,'0')}`);if(++m>12){m=1;y++;}}return r;})();
+const proxMes=m=>{let[y,mm]=m.split("-").map(Number);if(++mm>12){mm=1;y++;}return`${y}-${String(mm).padStart(2,"0")}`;};
+// Equipe CRV que pode marcar plantão extra: os 7 da escala + a coordenadora
+// (horário comercial, não aparece na escala ordinária).
+const EQUIPE=[...SERVIDORES,{id:'jessica',nome:'JÉSSICA',email:'jessicaveiga9@gmail.com',grupo:'Coord.',g:'CO',regime:'comercial'}];
+const SV=Object.fromEntries(EQUIPE.map(s=>[s.id,s]));
+const svDoEmail=e=>EQUIPE.find(s=>s.email===(e||'').toLowerCase());
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════════════════════════════════
+let eventosTodos=[];          // tudo, inclusive excluídos (para o histórico)
+let eventos=[];               // lançamentos válidos (sem os excluídos)
+let editId=null;              // lançamento em edição: sai do cálculo até salvar/cancelar
+function aplicarEventos(){eventos=eventosTodos.filter(e=>!e.excluido&&e.id!==editId);recalcular();}
+let confirmacoes=new Map();   // "AAAA-MM-DD_servidor" → {em, justificativa}
+let mapa=new Map();           // dia → [{sid, marca, ev, aus, folga}]
+let meuEmail='', meuSid=null, souCoord=false;
+let mesAtual=MESES_LISTA.includes(hojeISO.slice(0,7))?hojeISO.slice(0,7):MESES_LISTA[0];
+let abaAtual='cal';
+let movModo=false, movSel=null;   // modo "arrastar para movimentar"
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ARMAZENAMENTO — Firestore (normal) ou navegador (modo teste: ?demo)
+// ═══════════════════════════════════════════════════════════════════════════
+// Pré-lançamento: só estes e-mails veem a nova escala (e o modo teste no site).
+// Para liberar à equipe: esvaziar a lista (ou usar EMAILS_CRV) e ajustar firestore.rules.
+const LIBERADA=['rodrigo.l.pastore@gmail.com'];
+const QUER_DEMO=new URLSearchParams(location.search).has('demo');
+const LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+let store;
+
+function storeFirestore(db){
+  const cEv=collection(db,'escala_eventos'), cCf=collection(db,'escala_confirmacoes');
+  return{
+    escutar(){
+      let ok=0;const pronto=()=>{if(++ok===2)fbSt('ok');};
+      onSnapshot(cEv,s=>{eventosTodos=s.docs.map(d=>({id:d.id,...d.data()}));aplicarEventos();pronto();},erroFB);
+      onSnapshot(cCf,s=>{confirmacoes=new Map(s.docs.map(d=>[d.id,d.data()]));renderTudo();pronto();},erroFB);
+    },
+    add:o=>addDoc(cEv,o),
+    upd:(id,o)=>updateDoc(doc(cEv,id),o),
+    del:id=>deleteDoc(doc(cEv,id)),
+    confirmar:(dia,sid,just)=>setDoc(doc(cCf,`${dia}_${sid}`),{dia,servidor:sid,email:meuEmail,em:Date.now(),justificativa:just||null}),
+    desconfirmar:(dia,sid)=>deleteDoc(doc(cCf,`${dia}_${sid}`)),
+  };
+}
+function storeDemo(){
+  const K='crv-escala-demo-v1';
+  const ler=()=>{try{return JSON.parse(localStorage.getItem(K))||{ev:[],cf:[]};}catch{return{ev:[],cf:[]};}};
+  const gravar=d=>{localStorage.setItem(K,JSON.stringify(d));carregar();};
+  const carregar=()=>{const d=ler();eventosTodos=d.ev;confirmacoes=new Map(d.cf.map(x=>typeof x==='string'?[x,{}]:[x.id,x]));aplicarEventos();};
+  return{
+    escutar(){carregar();addEventListener('storage',e=>{if(e.key===K)carregar();});fbSt('demo');},
+    add:async o=>{const d=ler();d.ev.push({id:'d'+Date.now()+Math.random().toString(36).slice(2,6),...o});gravar(d);},
+    upd:async(id,o)=>{const d=ler();const e=d.ev.find(x=>x.id===id);if(e)Object.assign(e,o);gravar(d);},
+    del:async id=>{const d=ler();d.ev=d.ev.filter(x=>x.id!==id);gravar(d);},
+    confirmar:async(dia,sid,just)=>{const d=ler(),id=`${dia}_${sid}`;d.cf=d.cf.filter(x=>(x.id||x)!==id);
+      d.cf.push({id,dia,servidor:sid,email:meuEmail,em:Date.now(),justificativa:just||null});gravar(d);},
+    desconfirmar:async(dia,sid)=>{const d=ler();d.cf=d.cf.filter(x=>(x.id||x)!==`${dia}_${sid}`);gravar(d);},
+    limpar(){localStorage.removeItem(K);carregar();},
+  };
+}
+function erroFB(e){console.error(e);fbSt('err');
+  toast(e.code==='permission-denied'?'⛔ Sem permissão no banco. As regras do Firestore da escala já foram publicadas?':'Erro ao ler a escala: '+(e.message||e));}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CÁLCULO DA ESCALA EFETIVA (base + lançamentos, em ordem cronológica)
+// ═══════════════════════════════════════════════════════════════════════════
+const ordemEv=e=>e.respondidoEm||e.criadoEm;
+const movValida=e=>!e.status||e.status==='aprovada';
+const MOV_PEND=e=>e.tipo==='movimentacao'&&e.status==='pendente';
+const EXT_PEND=e=>e.tipo==='extra'&&e.status==='pendente';
+const PEDIDO_PEND=e=>MOV_PEND(e)||EXT_PEND(e);
+// Plantão extra: 8h, só em dia de folga, até 5 por mês (remunerado, facultativo)
+const HORARIOS={
+  D08:{per:'Diurno', t:'08:00 às 16:00'}, D10:{per:'Diurno', t:'10:00 às 18:00'},
+  D12:{per:'Diurno', t:'12:00 às 20:00'}, D16:{per:'Diurno', t:'16:00 às 00:00'},
+  N22:{per:'Noturno',t:'22:00 às 06:00'}, N00:{per:'Noturno',t:'00:00 às 08:00'},
+};
+const ORD_HOR=Object.keys(HORARIOS), MAX_EXTRAS=5;
+const extrasAtivos=()=>eventos.filter(e=>e.tipo==='extra'&&(e.status==='aprovada'||e.status==='pendente'));
+const extrasDoDia=d=>extrasAtivos().filter(e=>e.dia===d).sort((a,b)=>ORD_HOR.indexOf(a.horario)-ORD_HOR.indexOf(b.horario));
+const contExtras=(sid,m,ign)=>extrasAtivos().filter(e=>e.servidor===sid&&e.dia.startsWith(m)&&e.id!==ign).length;
+const temExtra=(sid,d)=>extrasAtivos().some(e=>e.servidor===sid&&e.dia===d);
+const horTexto=h=>`${HORARIOS[h].per} ${HORARIOS[h].t}`;
+// Extras marcados juntos (mesmo "lote") aparecem numa linha só
+const chaveLote=e=>e.lote||`${e.servidor}|${e.dia}|${e.criadoPor}|${Math.floor((e.criadoEm||0)/5000)}`;
+const chaveGrupo=e=>e.tipo!=='extra'?e.id:[chaveLote(e),e.status,e.canceladoEm||'',e.respondidoEm||''].join('|');
+const grupoDe=e=>{if(e.tipo!=='extra'||e.excluido)return[e];
+  const g=eventos.filter(x=>x.tipo==='extra'&&chaveGrupo(x)===chaveGrupo(e)).sort((a,b)=>ORD_HOR.indexOf(a.horario)-ORD_HOR.indexOf(b.horario));
+  return g.length?g:[e];};
+const umPorGrupo=l=>{const vistos=new Set();return l.filter(e=>{const k=chaveGrupo(e);if(vistos.has(k))return false;vistos.add(k);return true;});};
+const horariosTexto=g=>g.map(x=>horTexto(x.horario)).join(' · ');
+// Conflito de horários (em horas absolutas: o 22h–06h invade o dia seguinte)
+// 00h–08h é a madrugada seguinte ao dia marcado (começa às 24h)
+const HINI={D08:8,D10:10,D12:12,D16:16,N22:22,N00:24};
+const intervalo=(d,h)=>{const a=num(d)*24+HINI[h];return[a,a+8];};
+const conflitam=(d1,h1,d2,h2)=>{const[a,b]=intervalo(d1,h1),[c,e]=intervalo(d2,h2);return a<e&&c<b;};
+// Extras já marcados do servidor no dia anterior, no dia e no seguinte
+const extrasVizinhos=(sid,d)=>extrasAtivos().filter(e=>e.servidor===sid&&Math.abs(num(e.dia)-num(d))<=1);
+function recalcular(){
+  mapa=new Map();
+  for(let n=N_INI;n<=N_FIM;n++)mapa.set(n,base(n).map(sid=>({sid,marca:null,ev:null,aus:null,folga:null})));
+  const tira=(n,sid)=>{const l=mapa.get(n);if(!l)return;const i=l.findIndex(e=>e.sid===sid);if(i>=0)l.splice(i,1);};
+  const poe=(n,sid,marca,ev)=>{const l=mapa.get(n);if(!l||l.some(e=>e.sid===sid))return;l.push({sid,marca,ev,aus:null,folga:null});};
+  const achar=(n,sid)=>(mapa.get(n)||[]).find(e=>e.sid===sid);
+  [...eventos].sort((a,b)=>ordemEv(a)-ordemEv(b)).forEach(ev=>{
+    if(ev.tipo==='permuta'&&ev.status==='aceita'){
+      const n1=num(ev.dia1),n2=num(ev.dia2);
+      tira(n1,ev.solicitante);poe(n1,ev.solicitado,'permuta',ev);
+      tira(n2,ev.solicitado);poe(n2,ev.solicitante,'permuta',ev);
+    }else if(ev.tipo==='movimentacao'&&movValida(ev)){
+      if(ev.de)tira(num(ev.de),ev.servidor);
+      poe(num(ev.para),ev.servidor,'mov',ev);
+    }else if(ev.tipo==='ausencia'){
+      ausDias(ev).forEach(d=>{const e=achar(num(d),ev.servidor);if(e)e.aus=ev;});
+    }else if(ev.tipo==='folga'){
+      const e=achar(num(ev.dia),ev.servidor);if(e)e.folga=ev;
+    }
+  });
+  const ordem=Object.fromEntries(SERVIDORES.map((s,i)=>[s.id,i]));
+  mapa.forEach(l=>l.sort((a,b)=>ordem[a.sid]-ordem[b.sid]));
+  renderTudo();
+  if(trocaDaUrl)abrirTrocaDaUrl();
+}
+const entrada=(n,sid)=>(mapa.get(n)||[]).find(e=>e.sid===sid);
+// Trabalha no dia? (folga não conta; fora do período usa a escala-base)
+const trabalha=(sid,n)=>mapa.has(n)?!!(mapa.get(n).find(e=>e.sid===sid&&!e.folga)):base(n).includes(sid);
+const presentes=n=>(mapa.get(n)||[]).filter(e=>!e.folga&&!ehAfast(e.aus));
+const diasDe=(sid,m)=>diasDoMes(m).filter(n=>trabalha(sid,n));
+
+// Maior sequência de dias seguidos que inclui o dia "n", com alterações simuladas
+function seguidos(sid,n,alt){
+  const t=d=>{const a=alt.find(x=>x.sid===sid&&x.n===d);return a?a.on:trabalha(sid,d);};
+  if(!t(n))return 0;let c=1;
+  for(let d=n-1;t(d);d--)c++;
+  for(let d=n+1;t(d);d++)c++;
+  return c;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERMUTAS — regras
+// ═══════════════════════════════════════════════════════════════════════════
+const PERM_ATIVAS=['pendente','aceita'];
+function contPermutas(sid,mes,ignorar){
+  const l=eventos.filter(e=>e.tipo==='permuta'&&e.mes===mes&&PERM_ATIVAS.includes(e.status)&&e.id!==ignorar);
+  return{solicitante:l.filter(e=>e.solicitante===sid).length,solicitado:l.filter(e=>e.solicitado===sid).length};
+}
+function validarPermuta(p,ignorar){
+  const er=[];
+  if(!p.solicitante||!p.solicitado||!p.dia1||!p.dia2)return['Preencha todos os campos.'];
+  const n1=num(p.dia1),n2=num(p.dia2),A=SV[p.solicitante].nome,B=SV[p.solicitado].nome;
+  if(p.solicitante===p.solicitado)er.push('Escolha outro servidor.');
+  {const m1=p.dia1.slice(0,7),m2=p.dia2.slice(0,7);if(m2!==m1&&m2!==proxMes(m1))er.push('O plantão do colega precisa ser do mesmo mês ou do mês seguinte.');}
+  if(n1<N_HOJE||n2<N_HOJE)er.push('Não é possível permutar dias que já passaram.');
+  if(n1===n2)er.push('Os dias precisam ser diferentes.');
+  if(temExtra(p.solicitado,p.dia1))er.push(`${B} tem plantão extra marcado em ${br(n1)}.`);
+  if(temExtra(p.solicitante,p.dia2))er.push(`${A} tem plantão extra marcado em ${br(n2)}.`);
+  if(!trabalha(p.solicitante,n1))er.push(`${A} não está escalado(a) em ${br(n1)}.`);
+  if(trabalha(p.solicitado,n1)||entrada(n1,p.solicitado))er.push(`${B} já está escalado(a) em ${br(n1)}.`);
+  if(!trabalha(p.solicitado,n2))er.push(`${B} não está escalado(a) em ${br(n2)}.`);
+  if(trabalha(p.solicitante,n2)||entrada(n2,p.solicitante))er.push(`${A} já está escalado(a) em ${br(n2)}.`);
+  if(entrada(n1,p.solicitante)?.folga||entrada(n2,p.solicitado)?.folga)er.push('Dia com folga cadastrada não pode ser permutado.');
+  const mes=p.dia1.slice(0,7),cA=contPermutas(p.solicitante,mes,ignorar),cB=contPermutas(p.solicitado,mes,ignorar);
+  if(cA.solicitante>=MAX_SOLICITANTE)er.push(`${A} já usou as ${MAX_SOLICITANTE} permutas como solicitante em ${nomeMes(mes)}.`);
+  if(cB.solicitado>=MAX_SOLICITADO)er.push(`${B} já usou as ${MAX_SOLICITADO} permutas como solicitado(a) em ${nomeMes(mes)}.`);
+  // Permuta pendente envolvendo os mesmos dias
+  const outra=eventos.find(e=>e.tipo==='permuta'&&e.status==='pendente'&&e.id!==ignorar&&
+    [[e.solicitante,e.dia1],[e.solicitado,e.dia2]].some(([s,d])=>(s===p.solicitante&&d===p.dia1)||(s===p.solicitado&&d===p.dia2)));
+  if(outra)er.push(`Já existe permuta pendente envolvendo o dia ${br(num(outra.dia1))} ou ${br(num(outra.dia2))}.`);
+  if(er.length)return er;
+  // Regra das 48h (só por iniciativa própria — a coordenação não passa por aqui)
+  const alt=[{sid:p.solicitante,n:n1,on:false},{sid:p.solicitado,n:n1,on:true},{sid:p.solicitado,n:n2,on:false},{sid:p.solicitante,n:n2,on:true}];
+  const sA=seguidos(p.solicitante,n2,alt),sB=seguidos(p.solicitado,n1,alt);
+  if(sA>MAX_SEGUIDOS)er.push(`${A} ficaria ${sA} plantões seguidos (${sA*24}h). O máximo por permuta é 48h.`);
+  if(sB>MAX_SEGUIDOS)er.push(`${B} ficaria ${sB} plantões seguidos (${sB*24}h). O máximo por permuta é 48h.`);
+  return er;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FOLGAS DO 8º PLANTÃO — créditos calculados pela escala; uso = lançamento "folga"
+// ═══════════════════════════════════════════════════════════════════════════
+// Plantões do mês para o crédito: só os REALIZADOS (presença confirmada, no dia
+// ou depois com justificativa) + os dias de folga cadastrada (a folga é
+// compensação e não tira o direito do mês). Plantão extra não conta.
+const plantoesCredito=(sid,m)=>diasDoMes(m).filter(n=>{const e=entrada(n,sid);return e&&(e.folga||confirmacoes.has(`${isoDe(n)}_${sid}`));});
+function bancoFolgas(sid){
+  const creditos=[];
+  MESES_LISTA.forEach(m=>{const d=plantoesCredito(sid,m);
+    if(d.length>=PLANTOES_FOLGA&&d[PLANTOES_FOLGA-1]<=N_HOJE)creditos.push({mes:m,qtd:d.length,libera:d[PLANTOES_FOLGA-1],folga:null});});
+  // créditos lançados à mão (ex.: meses antes da escala); podem já vir como utilizados
+  eventos.filter(e=>e.tipo==='credito'&&e.servidor===sid).forEach(e=>creditos.push({mes:e.mes,qtd:null,manual:e,
+    libera:num(e.mes+'-01'),folga:e.usadoEm?{id:e.id,dia:e.usadoEm,motivo:e.motivo,criadoPor:e.criadoPor,criadoEm:e.criadoEm,servidor:sid,manual:true}:null}));
+  creditos.sort((a,b)=>a.mes.localeCompare(b.mes));
+  const folgas=eventos.filter(e=>e.tipo==='folga'&&e.servidor===sid&&!folgaBanco(e)).sort((a,b)=>a.criadoEm-b.criadoEm);
+  const semCredito=[];
+  folgas.forEach(f=>{const c=creditos.find(c=>c.mes===f.creditoMes&&!c.folga);if(c)c.folga=f;else semCredito.push(f);});
+  creditos.forEach(c=>c.status=c.folga?'usada':'disp');
+  return{creditos,folgas,semCredito,
+    disponiveis:creditos.filter(c=>c.status==='disp')};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDERIZAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+// ── Primeira letra maiúscula nos títulos/rótulos da interface ──────────────
+// Artigos, preposições e conjunções ficam minúsculos (exceto no início).
+// Só mexe em textos da interface; nomes, siglas e o que o usuário digita ficam como estão.
+const MINUSC=new Set(['a','o','as','os','à','às','ao','aos','de','do','da','dos','das','e','em','no','na','nos','nas','por','para','com','ou','se','que','sem']);
+function tc(txt){
+  let primeira=true;
+  return txt.replace(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’]*/g,(p,pos)=>{
+    const antes=txt.slice(0,pos);
+    if(/[A-Za-zÀ-ÿ]\($/.test(antes)){primeira=false;return p;}   // plural grudado: "(s)", "(es)", "(is)"
+    const ini=primeira||/[—–:\/]\s*$|(^|\s)\(\s*$/.test(antes);primeira=false;
+    if(p===p.toUpperCase())return p;          // siglas, nomes e letra do plantão (A, B, C, D)
+    if(!ini&&MINUSC.has(p.toLowerCase()))return p.toLowerCase();
+    return p.charAt(0).toUpperCase()+p.slice(1);
+  });
+}
+const SEL_UI='.tab,h2,h3,h3 .sub,th,th small,.fg>label,.btn,.mt,.hi-tag,.st,.sl,.leg span,.filtro-esc label,.x-hor b,.aus-tipo b,.aus-tipo small,.cf-dia>span:not(.let),.cal-h,.dia-sem,.pd-top,.aus-per label,.chk,.mov-banner b';
+function capitalizarUI(raiz){
+  (raiz||document).querySelectorAll(SEL_UI).forEach(el=>{
+    el.childNodes.forEach(nd=>{if(nd.nodeType===3&&nd.nodeValue.trim())nd.nodeValue=tc(nd.nodeValue);});
+  });
+}
+function renderTudo(){
+  renderMesBar();renderCal();renderHistorico();renderPermutas();renderFolgas();renderCoord();renderBadges();capitalizarUI();
+}
+function renderMesBar(){
+  document.getElementById('mesTitulo').textContent=nomeMes(mesAtual);
+  const s=document.getElementById('mesSel');
+  if(!s.options.length)s.innerHTML=MESES_LISTA.map(m=>`<option value="${m}">${nomeMes(m)}</option>`).join('');
+  s.value=mesAtual;
+}
+function pessoaHTML(e,n){
+  const s=SV[e.sid],conf=confirmacoes.has(`${isoDe(n)}_${e.sid}`),cfj=confirmacoes.get(`${isoDe(n)}_${e.sid}`)?.justificativa;
+  const ic=e.folga?'🌴':ehAfast(e.aus)?`<span title="${ausNome(e.aus)}">${icAus(e.aus)}</span>`:e.marca==='mov'?'✋':e.marca==='permuta'?'<span class="perm">⇄</span>':e.aus?'<span class="dot-aus">•</span>':'';
+  const tit=e.folga?folgaNome(e.folga)+': '+(e.folga.motivo||''):e.aus?'Ausente — '+ausTexto(e.aus):e.marca==='mov'?'Movimentado por '+quem(e.ev.criadoPor):e.marca==='permuta'?'Permuta':'';
+  const arr=movModo&&!e.folga;
+  const sel=movSel&&movSel.sid===e.sid&&movSel.de===isoDe(n);
+  return`<div class="p ${e.sid===meuSid?'eu':''} ${e.aus?'aus':''} ${e.folga?'folga':''} ${arr?'arrasta':''} ${sel?'sel':''}" title="${esc(arr?'Arraste para outro dia':tit)}"${arr?` draggable="true" ondragstart="movDragStart(event,'${e.sid}','${isoDe(n)}')" onclick="movTocarNome(event,'${e.sid}','${isoDe(n)}')"`:''}>
+    <span class="p-ic ${e.marca==='permuta'&&!e.folga?'perm':''}">${ic}</span><span class="p-nome">${s.nome}</span>
+    <span class="chip g-${s.g}">${s.grupo}</span>${conf&&!e.folga?`<span class="ok ${cfj?'tard':''}" title="${cfj?esc('Confirmada fora do dia — justificativa: '+cfj):'Presença confirmada'}">✓</span>`:''}</div>`;
+}
+function extraHTML(e){
+  const pend=e.status==='pendente';
+  return`<div class="p extra ${pend?'pend':''} ${e.servidor===meuSid?'eu':''}" title="Plantão extra · ${horTexto(e.horario)}${pend?' · aguardando aceite':''}">
+    <span class="p-nome">${HORARIOS[e.horario].t} - ${SV[e.servidor].nome}</span>${pend?'<span>⏳</span>':''}</div>`;
+}
+function renderCal(){
+  const dias=diasDoMes(mesAtual),el=document.getElementById('cal');
+  const meus=document.getElementById('chkMeus').checked&&meuSid;
+  let h=SEM.map(d=>`<div class="cal-h">${d}</div>`).join('');
+  const[y,m]=mesAtual.split('-').map(Number);
+  const primeiro=Date.UTC(y,m-1,1)/DIA_MS;
+  for(let i=0;i<dsem(primeiro);i++)h+='<div class="dia vazio"></div>';
+  // dias do mês fora do período (antes de out/2026) ficam vazios
+  for(let n=primeiro;n<dias[0];n++)h+='<div class="dia vazio"></div>';
+  const pend=eventos.filter(e=>e.tipo==='permuta'&&e.status==='pendente');
+  const pendMov=eventos.filter(MOV_PEND);
+  const vOrd=document.getElementById('fOrd').checked,vExt=document.getElementById('fExt').checked;
+  const filtro=vOrd&&vExt?'todos':vOrd?'ord':vExt?'extra':'nada';
+  dias.forEach(n=>{
+    const l=mapa.get(n)||[],L=letra(n),d=isoDe(n);
+    const cls=[n<N_HOJE?'passado':'',n===N_HOJE?'hoje':'',meus&&l.some(e=>e.sid===meuSid&&!e.folga)?'meu':''].join(' ');
+    const ex=vExt?extrasDoDia(d):[],ords=vOrd?l:[];
+    const temPend=pend.some(e=>e.dia1===d||e.dia2===d)||pendMov.some(e=>e.de===d||e.para===d)||ex.some(EXT_PEND);
+    h+=`<div class="dia ${cls} ${movModo?'alvo':''}" onclick="${movModo?`movTocarDia('${d}')`:`abrirDia('${d}')`}"${movModo?` ondragover="movDragOver(event)" ondragleave="this.classList.remove('sobre')" ondrop="movDrop(event,'${d}')"`:''}>
+      ${temPend?'<span class="dia-pend" title="Troca ou movimentação aguardando resposta">⏳</span>':''}
+      <div class="dia-top"><span class="dia-n">${+d.slice(8)}</span><span class="dia-sem">${SEM_L[dsem(n)]}</span>
+        ${n===N_HOJE?'<span class="dia-hoje">HOJE</span>':''}<span class="let let-${L}" title="Plantão ${L}">${L}</span></div>
+      <div class="dia-lista">${ords.map(e=>pessoaHTML(e,n)).join('')}${ex.map(extraHTML).join('')}</div>
+      <div class="dia-rod"><span class="dia-tot" title="Servidores no plantão ordinário">${vOrd?presentes(n).length:''}</span>
+        <span class="dia-ext" title="Plantões extras no dia">${ex.length||''}</span></div></div>`;
+  });
+  el.innerHTML=h;
+  document.getElementById('printTitulo').textContent=`Escala de Plantão CRV/DPP — ${nomeMes(mesAtual)} · impresso em ${brAno(N_HOJE)}`;
+}
+
+function descricaoEntrada(e,n){
+  const r=[];
+  if(e.marca==='permuta'){const o=e.ev.solicitante===e.sid?e.ev.solicitado:e.ev.solicitante;
+    const outroDia=e.ev.solicitante===e.sid?e.ev.dia1:e.ev.dia2;
+    r.push(`⇄ Permuta com ${SV[o].nome} (no Lugar do Dia ${br(num(outroDia))})`);}
+  if(e.marca==='mov')r.push(`✋ Movimentado por ${esc(quem(e.ev.criadoPor))}${e.ev.de?` (era ${br(num(e.ev.de))})`:' (plantão extra)'}${e.ev.motivo?' — '+esc(e.ev.motivo):''}`);
+  if(e.aus)r.push(ehAfast(e.aus)?`${icAus(e.aus)} ${esc(ausTexto(e.aus))} — não conta no total do dia`:`• Ausente — ${esc(ausTexto(e.aus))}`);
+  if(e.folga)r.push(`🌴 ${folgaNome(e.folga)}${folgaBanco(e.folga)?'':` (crédito de ${nomeMes(e.folga.creditoMes)})`}${e.folga.motivo?' — '+esc(e.folga.motivo):''}`);
+  const cf=confirmacoes.get(`${isoDe(n)}_${e.sid}`);
+  if(cf){const dt=new Date(cf.em),em=cf.em>1?` (em ${dt.toLocaleDateString('pt-BR')}, às ${dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})})`:'';
+    r.push(cf.justificativa?`✓ Presença Confirmada Fora do Dia${em}<br>📝 Justificativa: "${esc(cf.justificativa)}"`:`✓ Presença Confirmada${em}`);}
+  return r.join('<br>');
+}
+
+function linhaPermuta(e,acoes){
+  return`<div class="lin"><div class="lin-tx">
+    <b>${SV[e.solicitante].nome}</b> solicitou troca${e.solicitado===meuSid?' com você':` com <b>${SV[e.solicitado].nome}</b>`}:
+    ${SV[e.solicitante].nome} trabalha ${br(num(e.dia2))} (plantão de ${SV[e.solicitado].nome}) ⇄
+    ${SV[e.solicitado].nome} trabalha ${br(num(e.dia1))} (plantão de ${SV[e.solicitante].nome})
+    <small>Pedida em ${new Date(e.criadoEm).toLocaleString('pt-BR')}${e.obs?' — '+esc(e.obs):''}${e.motivoRecusa?`<br>Recusada: "${esc(e.motivoRecusa)}"`:''}</small></div>
+    <span class="st st-${e.status}">${e.status.toUpperCase()}</span><div class="lin-ac">${acoes||''}</div></div>`;
+}
+function renderPermutas(){
+  document.getElementById('permNovaBox').style.display=meuSid?'':'none';
+  const doMes=eventos.filter(e=>e.tipo==='permuta'&&e.mes===mesAtual).sort((a,b)=>b.criadoEm-a.criadoEm);
+  if(meuSid){const c=contPermutas(meuSid,mesAtual);
+    document.getElementById('permCont').textContent=`${nomeMes(mesAtual)}: ${c.solicitante}/${MAX_SOLICITANTE} como solicitante · ${c.solicitado}/${MAX_SOLICITADO} como solicitado`;}
+  const paraMim=eventos.filter(e=>e.tipo==='permuta'&&e.status==='pendente'&&e.solicitado===meuSid).sort((a,b)=>a.criadoEm-b.criadoEm);
+  const movMim=umPorGrupo(eventos.filter(e=>PEDIDO_PEND(e)&&e.servidor===meuSid).sort((a,b)=>a.criadoEm-b.criadoEm));
+  document.getElementById('permParaMim').innerHTML=(paraMim.length||movMim.length)?paraMim.map(e=>linhaPermuta(e,
+    `<button class="btn bsm bv" onclick="responderPermuta('${e.id}',true)">Aceitar</button>
+     <button class="btn bsm br2" onclick="responderPermuta('${e.id}',false)">Recusar</button>`)).join('')
+    +movMim.map(e=>`<div class="lin"><div class="lin-tx">${e.tipo==='extra'?'⏱️':'✋'} <b>${esc(quem(e.criadoPor))}</b> ${pedidoTexto(e)}
+      <small>${esc(e.motivo||'')}</small></div><span class="st st-pendente">PENDENTE</span><div class="lin-ac">
+      <button class="btn bsm bv" onclick="responderMov('${e.id}',true)">${e.tipo==='extra'?'Aceitar':'Autorizar'}</button>
+      <button class="btn bsm br2" onclick="responderMov('${e.id}',false)">${e.tipo==='extra'?'Recusar':'Negar'}</button></div></div>`).join('')
+    :'<div class="nodata">Nenhum pedido pendente.</div>';
+  const minhas=doMes.filter(e=>e.solicitante===meuSid);
+  document.getElementById('permMinhas').innerHTML=minhas.length?minhas.map(e=>linhaPermuta(e,
+    e.status==='pendente'?`<button class="btn bsm bn" onclick="cancelarPermuta('${e.id}')">Cancelar pedido</button>`:'')).join(''):'<div class="nodata">Nenhuma solicitação neste mês.</div>';
+}
+
+function tabelaCreditos(bf){
+  if(!bf.creditos.length&&!bf.semCredito.length)return'<div class="nodata">Nenhuma folga gerada ainda (nenhum mês com 8 plantões realizados — presença confirmada).</div>';
+  let h=`<div class="tbl"><table><tr><th>Mês do crédito</th><th class="num">Plantões</th><th>Situação</th><th>Usada em</th><th></th></tr>`;
+  bf.creditos.forEach(c=>{
+    h+=`<tr><td>${nomeMes(c.mes)}${c.manual?' <span class="st st-prev" title="Lançado manualmente">MANUAL</span>':''}</td><td class="num">${c.qtd??'—'}</td>
+      <td><span class="st st-${c.status}">${{disp:'DISPONÍVEL',usada:'USADA'}[c.status]}</span></td>
+      <td>${c.folga?brAno(num(c.folga.dia)):'—'}</td>
+      <td>${c.folga&&!c.folga.manual&&(souCoord||(c.folga.servidor===meuSid&&num(c.folga.dia)>=N_HOJE))?`<button class="btn bsm bn" onclick="cancelarFolga('${c.folga.id}')">Cancelar folga</button>`:''}</td></tr>`;
+  });
+  bf.semCredito.forEach(f=>{h+=`<tr><td>${nomeMes(f.creditoMes)}</td><td class="num">—</td><td><span class="st st-inv">SEM CRÉDITO</span></td>
+    <td>${brAno(num(f.dia))}</td><td>${souCoord?`<button class="btn bsm bn" onclick="cancelarFolga('${f.id}')">Cancelar folga</button>`:''}</td></tr>`;});
+  return h+'</table></div>';
+}
+// Número clicável: abre o detalhe (só quando há algo para mostrar)
+const clk=(v,tipo,sid,txt)=>v?`<span class="clk" onclick="event.stopPropagation();detalhe('${tipo}','${sid}')" title="Ver detalhes">${txt??v}</span>`:(txt??v);
+// ── Gerenciar: lista + adicionar / editar / excluir ──
+const ehGerenciavel=e=>e.tipo==='folga'||e.tipo==='credito'||(e.tipo==='ausencia'&&ehAfast(e));
+const dataLanc=e=>e.tipo==='folga'?e.dia:e.tipo==='ausencia'?(e.ini||ausDias(e)[0]):e.tipo==='credito'?(e.usadoEm||e.mes+'-01'):'';
+function renderGerenciar(){
+  const ss=document.getElementById('gerServ');
+  if(!ss.options.length)ss.innerHTML='<option value="">Todos os servidores</option>'+SERVIDORES.map(s=>`<option value="${s.id}">${s.nome}</option>`).join('');
+  const sf=ss.value,tf=document.getElementById('gerTipo').value;
+  const l=eventos.filter(e=>ehGerenciavel(e)&&(!sf||e.servidor===sf)&&(!tf||(tf==='afast'?e.tipo==='ausencia':e.tipo===tf)))
+    .sort((a,b)=>dataLanc(b).localeCompare(dataLanc(a)));
+  document.getElementById('gerLista').innerHTML=l.length?`<div class="ger-lista">${l.map(e=>`<div class="lin"><div class="lin-tx">${resumoLanc(e)}
+      <small>Cadastrado por ${esc(quem(e.criadoPor))} em ${quando(e.criadoEm)}${e.editadoEm?` · editado por ${esc(quem(e.editadoPor))} em ${quando(e.editadoEm)}`:''}</small></div>
+      <div class="lin-ac"><button class="btn bsm bn" onclick="gerEditar('${e.id}')">✏️ Editar</button><button class="btn bsm br2" onclick="desfazer('${e.id}')">🗑️ Excluir</button></div></div>`).join('')}</div>`
+    :'<div class="nodata">Nenhum lançamento.</div>';
+}
+window.renderGerenciar=renderGerenciar;
+window.gerAdicionar=()=>modal('＋ Adicionar',`<div class="aus-tipos">
+    <label class="aus-tipo" onclick="abrirFolga(true)"><span class="aus-ic">🌴</span><span><b>Folga</b><small>8º plantão ou banco de horas</small></span></label>
+    <label class="aus-tipo" onclick="abrirAus('','','ferias')"><span class="aus-ic">🏖️</span><span><b>Férias</b><small>Período de férias</small></span></label>
+    <label class="aus-tipo" onclick="abrirAus('','','afastamento')"><span class="aus-ic">🩺</span><span><b>Afastamento</b><small>Licença médica, licenças e outros afastamentos</small></span></label>
+    <label class="aus-tipo" onclick="abrirCredito()"><span class="aus-ic">8️⃣</span><span><b>Crédito de 8º plantão</b><small>Lançamento manual (ex.: meses anteriores à escala), disponível ou já utilizado</small></span></label>
+  </div>`);
+window.gerEditar=id=>{
+  const e=eventos.find(x=>x.id===id);if(!e)return;
+  editId=id;aplicarEventos();            // o próprio lançamento sai do cálculo enquanto é editado
+  if(e.tipo==='folga')abrirFolga(true,e.dia,e.servidor,e);
+  else if(e.tipo==='ausencia')abrirAus(e.servidor,e.ini||ausDias(e)[0],e.categoria,e);
+  else if(e.tipo==='credito')abrirCredito(e);
+};
+const marcaEdicao=()=>({editadoEm:Date.now(),editadoPor:meuEmail});
+
+// Crédito manual de 8º plantão
+window.abrirCredito=ed=>{
+  const ms=[];{let[y,m]=[2026,3];while(`${y}-${String(m).padStart(2,'0')}`<=FIM.slice(0,7)){ms.push(`${y}-${String(m).padStart(2,'0')}`);if(++m>12){m=1;y++;}}}
+  modal(ed?'✏️ Editar crédito de 8º plantão':'8️⃣ Crédito de 8º plantão (manual)',`
+    <div class="frow">
+      <div class="fg"><label>Servidor</label><select id="crServ">${opcoesServ(ed?.servidor||SERVIDORES[0].id)}</select></div>
+      <div class="fg"><label>Mês de referência</label><select id="crMes">${ms.map(m=>`<option value="${m}" ${m===(ed?.mes||'')?'selected':''}>${nomeMesLongo(m)}</option>`).join('')}</select></div>
+    </div>
+    <div class="fg"><label>Situação</label><div class="aus-per">
+      <label><input type="radio" name="crSit" value="disp" ${ed?.usadoEm?'':'checked'} onchange="document.getElementById('crUsoBox').style.display='none'"> Disponível</label>
+      <label><input type="radio" name="crSit" value="usado" ${ed?.usadoEm?'checked':''} onchange="document.getElementById('crUsoBox').style.display=''"> Já utilizado</label></div></div>
+    <div class="fg" id="crUsoBox" style="${ed?.usadoEm?'':'display:none'}"><label>Utilizado em</label><input type="date" id="crUso" value="${ed?.usadoEm||''}"></div>
+    <div class="fg"><label>Justificativa (obrigatória)</label><textarea id="crMot" maxlength="300" placeholder="Ex.: 8 plantões em agosto/2026 (antes do sistema)">${esc(ed?.motivo||'')}</textarea></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bv" onclick="salvarCredito()">${ed?'Salvar alterações':'Lançar crédito'}</button>`);
+};
+window.salvarCredito=async()=>{
+  const sid=val('crServ'),mes=val('crMes'),usado=document.querySelector('input[name=crSit]:checked').value==='usado',uso=val('crUso'),mot=val('crMot').trim();
+  if(!mot)return toast('Preencha a justificativa.');
+  if(usado&&!uso)return toast('Informe a data em que foi utilizado.');
+  const dados={tipo:'credito',servidor:sid,servidorEmail:SV[sid].email,mes,usadoEm:usado?uso:null,motivo:mot};
+  try{if(editId){await store.upd(editId,{...dados,...marcaEdicao()});}
+    else await store.add({...dados,criadoEm:Date.now(),criadoPor:meuEmail});
+    const ed=!!editId;editId=null;fecharModal();toast(ed?'Crédito atualizado.':'Crédito lançado.');}
+  catch(e){toast('Erro: '+(e.message||e));}
+};
+
+function renderFolgas(){
+  renderGerenciar();
+  document.getElementById('btnFolga').style.display=meuSid?'':'none';
+  const st=document.getElementById('folgaStats'),bx=document.getElementById('folgaBanco');
+  if(meuSid){const bf=bancoFolgas(meuSid),us=bf.creditos.filter(c=>c.status==='usada').length,pl=diasDoMes(mesAtual).filter(n=>entrada(n,meuSid)).length;
+    const card=(v,l,tipo)=>`<div class="sc ${v?'sc-clk':''}" ${v?`onclick="detalhe('${tipo}','${meuSid}')" title="Ver detalhes"`:''}><div class="sn">${v}</div><div class="sl">${l}${v?' ›':''}</div></div>`;
+    st.innerHTML=card(bf.disponiveis.length,'Disponíveis','disp')+card(us,'Usadas','usadas')
+      +card(pl,`Plantões em ${MESES[+mesAtual.slice(5)-1].toLowerCase()}`,'plantoes');
+    bx.innerHTML=tabelaCreditos(bf);
+  }else{st.innerHTML='';bx.innerHTML='<div class="nodata">Seu login não está ligado a nenhum servidor da escala.</div>';}
+  let h=`<div class="tbl"><table><tr><th>Servidor</th><th class="num">Disponíveis</th><th class="num">Usadas</th><th>Próxima a usar</th></tr>`;
+  SERVIDORES.forEach(s=>{const bf=bancoFolgas(s.id),us=bf.creditos.filter(c=>c.status==='usada').length;
+    h+=`<tr><td><b>${s.nome}</b> <span class="chip g-${s.g}">${s.grupo}</span></td><td class="num">${clk(bf.disponiveis.length,'disp',s.id)}</td>
+      <td class="num">${clk(us,'usadas',s.id)}</td>
+      <td>${bf.disponiveis[0]?'Crédito de '+nomeMes(bf.disponiveis[0].mes):'—'}</td></tr>`;});
+  document.getElementById('folgaEquipe').innerHTML=h+'</table></div>';
+}
+
+function renderCoord(){
+  const dias=diasDoMes(mesAtual);
+  let h=`<div class="tbl"><table><tr><th>Servidor</th><th class="num">Plantões</th><th class="num">Plantões realizados<br><small style="font-weight:400">(presença confirmada)</small></th><th class="num">Troca – solicitante</th><th class="num">Troca – solicitado</th><th class="num">Folga(s) 8º plantão disponível(is)</th><th class="num">Plantões extras</th></tr>`;
+  EQUIPE.forEach(s=>{const d=dias.filter(n=>trabalha(s.id,n)),c=contPermutas(s.id,mesAtual);
+    const cf=d.filter(n=>confirmacoes.has(`${isoDe(n)}_${s.id}`)).length,ex=contExtras(s.id,mesAtual);
+    h+=`<tr><td><b>${s.nome}</b> <span class="chip g-${s.g}">${s.grupo}</span></td>
+      <td class="num">${clk(d.length,'plantoes',s.id)}</td>
+      <td class="num">${clk(d.length,'conf',s.id,`${cf}/${d.length}`)}</td>
+      <td class="num">${clk(c.solicitante,'solicitante',s.id,`${c.solicitante}/${MAX_SOLICITANTE}`)}</td>
+      <td class="num">${clk(c.solicitado,'solicitado',s.id,`${c.solicitado}/${MAX_SOLICITADO}`)}</td>
+      <td class="num">${clk(bancoFolgas(s.id).disponiveis.length,'disp',s.id)}</td>
+      <td class="num">${clk(ex,'extras',s.id,`${ex}/${MAX_EXTRAS}`)}</td></tr>`;});
+  document.getElementById('coordResumo').innerHTML=h+'</table><div class="pd-info" style="padding:.5rem .7rem">Clique nos números sublinhados para ver o detalhe.</div></div>';
+}
+
+// ── Detalhe dos números (cartões e tabelas) ────────────────────────────────
+window.detalhe=(tipo,sid)=>{
+  const s=SV[sid],m=mesAtual,lin=(a,b,c='')=>`<div class="lin"><div class="lin-tx">${a}${b?`<small>${b}</small>`:''}</div>${c}</div>`;
+  let tit='',c='',rod='';
+  if(tipo==='disp'||tipo==='usadas'){
+    const bf=bancoFolgas(sid),l=bf.creditos.filter(x=>x.status===(tipo==='disp'?'disp':'usada'));
+    tit=`🌴 ${s.nome} — folgas do 8º plantão ${tipo==='disp'?'disponíveis':'usadas'}`;
+    c=l.map((x,i)=>tipo==='disp'
+      ?lin(`<b>Crédito de ${nomeMes(x.mes)}</b>${i===0?' <span class="st st-disp">PRÓXIMA A USAR</span>':''}`,x.qtd!=null?`${x.qtd} plantões no mês · liberada em ${brAno(x.libera)}`:`Lançado manualmente${x.manual?.motivo?' — "'+esc(x.manual.motivo)+'"':''}`)
+      :lin(`<b>Crédito de ${nomeMes(x.mes)}</b> → folga em ${SEM_L[dsem(num(x.folga.dia))]}, ${brAno(num(x.folga.dia))}`,
+        `${x.folga.motivo?'"'+esc(x.folga.motivo)+'" · ':''}Cadastrada por ${esc(quem(x.folga.criadoPor))} em ${quando(x.folga.criadoEm)}`)).join('');
+    if(tipo==='disp')rod=`<button class="btn bv" onclick="abrirFolga(${sid===meuSid?'false':'true'},'','${sid}')">🌴 Cadastrar folga</button>`;
+  }
+  if(tipo==='plantoes'||tipo==='conf'){
+    const d=diasDoMes(m).filter(n=>trabalha(sid,n));
+    tit=`🗓️ ${s.nome} — ${tipo==='conf'?'plantões realizados (presença confirmada) em':'plantões em'} ${nomeMes(m)}`;
+    c=d.map(n=>{const e=entrada(n,sid),cf=confirmacoes.get(`${isoDe(n)}_${sid}`);
+      const st=cf?(cf.justificativa?'<span class="st st-pendente">CONFIRMADA FORA DO DIA</span>':'<span class="st st-aceita">CONFIRMADA</span>')
+        :n>N_HOJE?'<span class="st st-prev">A REALIZAR</span>':n===N_HOJE?'<span class="st st-pendente">HOJE · PENDENTE</span>':'<span class="st st-inv">NÃO CONFIRMADA</span>';
+      return lin(`<span class="let let-${letra(n)}" style="width:18px;height:18px;font-size:.6rem">${letra(n)}</span> <b>${SEM_L[dsem(n)]}, ${brAno(n)}</b>`,
+        descricaoEntrada(e,n)||'Plantão da escala',tipo==='conf'?st:'');}).join('');
+  }
+  if(tipo==='solicitante'||tipo==='solicitado'){
+    const l=eventos.filter(e=>e.tipo==='permuta'&&e.mes===m&&PERM_ATIVAS.includes(e.status)&&e[tipo]===sid);
+    tit=`⇄ ${s.nome} — trocas como ${tipo} em ${nomeMes(m)}`;
+    c=l.map(e=>lin(`<b>${SV[e.solicitante].nome}</b> trabalha ${brAno(num(e.dia2))} · <b>${SV[e.solicitado].nome}</b> trabalha ${brAno(num(e.dia1))}`,
+      `${e.obs?'"'+esc(e.obs)+'" · ':''}Pedida em ${quando(e.criadoEm)}`,`<span class="st st-${e.status}">${e.status.toUpperCase()}</span>`)).join('');
+  }
+  if(tipo==='extras'){
+    const l=umPorGrupo(extrasAtivos().filter(e=>e.servidor===sid&&e.dia.startsWith(m)).sort((a,b)=>a.dia.localeCompare(b.dia)));
+    tit=`⏱️ ${s.nome} — plantões extras em ${nomeMes(m)}`;
+    c=l.map(e=>{const g=grupoDe(e);return lin(`<b>${SEM_L[dsem(num(e.dia))]}, ${brAno(num(e.dia))}</b> · ${g.map(x=>HORARIOS[x.horario].t).join(' · ')}`,
+      `${e.obs?'"'+esc(e.obs)+'" · ':''}Marcado por ${esc(quem(e.criadoPor))} em ${quando(e.criadoEm)}`,
+      `<span class="st ${e.status==='pendente'?'st-pendente':'st-aceita'}">${g.length} × 8h${e.status==='pendente'?' · PENDENTE':''}</span>`);}).join('');
+  }
+  if(tipo==='horas'){
+    const l=eventos.filter(e=>e.tipo==='ausencia'&&e.servidor===sid&&e.horas&&ausDias(e).some(d=>d.startsWith(m)));
+    tit=`🏛️ ${s.nome} — horas como instrutor ACAPS em ${nomeMes(m)}`;
+    c=l.map(e=>lin(`<b>${e.horas}h</b> · ${ausPeriodo(e)}`,esc(e.motivo||''))).join('');
+  }
+  modal(tit,c||'<div class="nodata">Nada para mostrar.</div>',rod?`<button class="btn bn" onclick="fecharModal()">Fechar</button>${rod}`:'');
+};
+// Histórico do mês: tudo o que foi lançado (com quem cadastrou e quando)
+const quem=e=>{const s=svDoEmail(e);return s?s.nome:(e||'—');};
+const quando=t=>t?new Date(t).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+const dPl=d=>`${brAno(num(d))} (Pl. ${letra(num(d))})`;
+function eventosDoMes(m){
+  return eventosTodos.filter(e=>{
+    if(e.tipo==='credito')return new Date(e.criadoEm).toISOString().slice(0,7)===m;
+    if(e.tipo==='permuta')return e.mes===m||e.dia2.startsWith(m);
+    const ds=e.tipo==='movimentacao'?[e.de,e.para]:e.tipo==='ausencia'?ausDias(e):[e.dia];
+    return ds.some(d=>d&&d.startsWith(m));
+  });
+}
+function renderHistorico(){
+  const f=document.getElementById('histFiltro').value;
+  const l0=eventosDoMes(mesAtual).sort((a,b)=>(b.respondidoEm||b.criadoEm)-(a.respondidoEm||a.criadoEm));
+  const l=l0.filter(e=>!f||e.tipo===f);
+  document.getElementById('histN').textContent=umPorGrupo(l).length;
+  document.getElementById('hist').innerHTML=htmlHistorico(l);
+}
+function htmlHistorico(l){
+  l=umPorGrupo(l);
+  return l.length?l.map(e=>{
+    const g=grupoDe(e),ids=g.map(x=>x.id).join(',');
+    let ic,tit,tag,det,mot=e.motivo||e.obs||'',extra='',del='',inativo=false;
+    if(e.tipo==='credito'){
+      ic='8️⃣';tit=SV[e.servidor].nome;tag='Crédito 8º plantão · manual';
+      det=`Crédito de ${nomeMesLongo(e.mes)}${e.usadoEm?` · já utilizado em ${brAno(num(e.usadoEm))}`:' · disponível'}`;
+      if(souCoord&&!e.excluido)del=`<button class="hi-del" title="Excluir" onclick="desfazer('${e.id}')">🗑️</button>`;
+    }else if(e.tipo==='permuta'){
+      ic='⇄';tag=`Permuta · ${e.status}`;inativo=!PERM_ATIVAS.includes(e.status);
+      tit=`${SV[e.solicitante].nome} ⇄ ${SV[e.solicitado].nome}`;
+      det=`${SV[e.solicitante].nome} trabalha ${dPl(e.dia2)} · ${SV[e.solicitado].nome} trabalha ${dPl(e.dia1)}`;
+      if(e.respondidoEm)extra=` · ${{aceita:'Aceita',recusada:'Recusada',cancelada:'Cancelada',anulada:'Anulada'}[e.status]||e.status} por ${esc(quem(e.respondidoPor))} em ${quando(e.respondidoEm)}`;
+      if(e.motivoRecusa)extra+=` — motivo: "${esc(e.motivoRecusa)}"`;
+      if(souCoord&&PERM_ATIVAS.includes(e.status))del=`<button class="hi-del" title="Anular permuta" onclick="anularPermuta('${e.id}')">🗑️</button>`;
+    }else{
+      const s=SV[e.servidor];tit=s.nome;
+      if(e.tipo==='movimentacao'){ic='✋';det=e.de?`De ${dPl(e.de)} → ${dPl(e.para)}`:`Plantão extra em ${dPl(e.para)}`;
+        tag=e.status?`Movido · ${{pendente:'aguardando autorização',aprovada:'autorizada',negada:'negada'}[e.status]||e.status}`:'Movido';
+        inativo=e.status==='negada';
+        if(e.respondidoEm)extra=` · ${e.status==='aprovada'?'Autorizada':'Negada'} por ${esc(quem(e.respondidoPor))} em ${quando(e.respondidoEm)}`;
+        if(e.motivoRecusa)extra+=` — motivo: "${esc(e.motivoRecusa)}"`;}
+      if(e.tipo==='extra'){ic='⏱️';det=`${dPl(e.dia)} · ${horariosTexto(g)}`;
+        tag=`Plantão extra · ${{pendente:'aguardando aceite',aprovada:'confirmado',negada:'recusado',cancelada:'desmarcado'}[e.status]||e.status}`;
+        inativo=e.status==='negada'||e.status==='cancelada';
+        if(e.respondidoEm)extra=` · ${e.motivoRecusa?'Recusado':'Aceito'} por ${esc(quem(e.respondidoPor))} em ${quando(e.respondidoEm)}`;
+        if(e.motivoRecusa)extra+=` — motivo: "${esc(e.motivoRecusa)}"`;
+        if(e.canceladoEm)extra+=` · Desmarcado por ${esc(quem(e.canceladoPor))} em ${quando(e.canceladoEm)} — justificativa: "${esc(e.motivoCancelamento)}"`;}
+      if(e.tipo==='ausencia'){ic=icAus(e);tag=ausNome(e)+(e.horas?` · ${e.horas}h`:"");det=`Ausente em ${ausPeriodo(e)} — continua escalado(a)`;}
+      if(e.tipo==='folga'){ic='🌴';tag=folgaBanco(e)?"Folga · banco de horas":"Folga · 8º plantão";det=`Folga em ${dPl(e.dia)}${folgaBanco(e)?"":` · crédito de ${nomeMes(e.creditoMes)}`}`;}
+      if(e.tipo==='extra')del=souCoord&&['aprovada','pendente'].includes(e.status)?`<button class="hi-del" title="Desmarcar" onclick="desmarcarExtra('${ids}')">🗑️</button>`:'';
+      else if(souCoord)del=`<button class="hi-del" title="Desfazer" onclick="desfazer('${e.id}')">🗑️</button>`;
+      else if(e.tipo==='folga'&&e.servidor===meuSid&&num(e.dia)>=N_HOJE)del=`<button class="hi-del" title="Cancelar folga" onclick="cancelarFolga('${e.id}')">🗑️</button>`;
+    }
+    if(e.editadoEm)extra+=` · Editado por ${esc(quem(e.editadoPor))} em ${quando(e.editadoEm)}`;
+    if(e.excluido){del='';tag+=' · excluído';extra+=` · Excluído por ${esc(quem(e.excluidoPor))} em ${quando(e.excluidoEm)} — justificativa: "${esc(e.motivoExclusao)}"`;}
+    const negado=e.excluido||['negada','recusada'].includes(e.status)||(e.tipo==='extra'&&e.status==='cancelada');
+    return`<div class="hi hi-${e.tipo} ${negado?'negado':inativo?'inativo':''}"><span class="hi-ic">${ic}</span><div class="hi-c">
+      <div class="hi-t">${tit} <span class="hi-tag">${tag}</span></div>
+      <div class="hi-d">${det}</div>${mot?`<div class="hi-m">"${esc(mot)}"</div>`:''}
+      <div class="hi-q">Cadastrado por ${esc(quem(e.criadoPor))} em ${quando(e.criadoEm)}${extra}</div></div>${del}</div>`;
+  }).join(''):'<div class="nodata">Nenhum lançamento neste mês.</div>';
+}
+window.renderHistorico=renderHistorico;
+
+function renderBadges(){
+  const p=umPorGrupo(eventos.filter(e=>(e.tipo==='permuta'&&e.status==='pendente'&&e.solicitado===meuSid)||(PEDIDO_PEND(e)&&e.servidor===meuSid))).length;
+  const b=document.getElementById('bdgPerm');b.textContent=p;b.style.display=p?'':'none';
+  const f=meuSid?bancoFolgas(meuSid).disponiveis.length:0;
+  const g=document.getElementById('bdgFolga');g.textContent=f;g.style.display=f?'':'none';g.style.background='#0f6e56';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NAVEGAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+window.aba=t=>{abaAtual=t;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on',x.id==='pane-'+t));};
+window.mudarMes=d=>{const i=MESES_LISTA.indexOf(mesAtual)+d;if(i>=0&&i<MESES_LISTA.length){mesAtual=MESES_LISTA[i];renderTudo();}};
+window.irMes=m=>{mesAtual=m;renderTudo();};
+window.irHoje=()=>{if(MESES_LISTA.includes(hojeISO.slice(0,7))){mesAtual=hojeISO.slice(0,7);renderTudo();}};
+window.renderCal=renderCal;
+// Filtro abaixo do calendário: "Todos" marca/desmarca os dois; os dois marcados = Todos
+window.filtroMarcar=q=>{const t=document.getElementById('fTodos'),o=document.getElementById('fOrd'),x=document.getElementById('fExt');
+  if(q==='todos'){o.checked=x.checked=t.checked;}else t.checked=o.checked&&x.checked;
+  renderCal();};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+function modal(titulo,corpo,rodape){
+  document.getElementById('mdl').innerHTML=`<div class="mhdr"><span class="mt">${titulo}</span><button class="mx" onclick="fecharModal()">×</button></div>
+    <div class="mbody">${corpo}</div>${rodape?`<div class="mft">${rodape}</div>`:''}`;
+  document.getElementById('ov').classList.add('on');
+  capitalizarUI(document.getElementById('mdl'));
+}
+window.fecharModal=()=>{document.getElementById('ov').classList.remove('on');if(editId){editId=null;aplicarEventos();}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharModal();});
+const opcoesServ=(sel,filtro)=>SERVIDORES.filter(filtro||(()=>true)).map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${s.nome} (${s.grupo})</option>`).join('');
+const optDia=(n,sel)=>`<option value="${isoDe(n)}" ${isoDe(n)===sel?'selected':''}>${SEM[dsem(n)]} ${brAno(n)} · plantão ${letra(n)}</option>`;
+const val=id=>document.getElementById(id)?.value||'';
+const caixaErros=(el,er,okMsg)=>{el.className='aviso '+(er.length?'av-err':'av-ok');el.innerHTML=er.length?er.map(esc).join('<br>'):okMsg;};
+
+// ── Dia ────────────────────────────────────────────────────────────────────
+window.abrirDia=d=>{
+  const n=num(d),l=mapa.get(n)||[],fut=n>=N_HOJE;
+  const pend=eventos.filter(e=>e.tipo==='permuta'&&e.status==='pendente'&&(e.dia1===d||e.dia2===d));
+  let c=l.map(e=>{const s=SV[e.sid],conf=confirmacoes.has(`${d}_${e.sid}`),eu=e.sid===meuSid;
+    let ac='';
+    if(eu&&!e.folga){
+      if(!conf&&n<=N_HOJE)ac+=`<button class="btn bsm bv" onclick="confirmar('${d}','${e.sid}',true)">✓ Confirmar presença${n<N_HOJE?' (fora do dia)':''}</button>`;
+      if(conf&&n===N_HOJE)ac+=`<button class="btn bsm bn" onclick="confirmar('${d}','${e.sid}',false)">Desfazer confirmação</button>`;
+      if(fut)ac+=`<button class="btn bsm bp" onclick="abrirPermuta('${d}')">⇄ Solicitar troca</button>`;
+    }
+    if(!e.folga)ac+=e.aus?`<button class="btn bsm bn" onclick="desfazer('${e.aus.id}')">Remover ausência</button>`
+                         :`<button class="btn bsm bn" onclick="abrirAus('${e.sid}','${d}')">• Cadastrar ausência</button>`;
+    if(!e.folga)ac+=`<button class="btn bsm bn" onclick="abrirFolga(${eu?'false':'true'},'${d}','${e.sid}')">🌴 Folga</button>`;
+    if(souCoord){
+      if(!e.folga)ac+=`<button class="btn bsm bamb" onclick="abrirMov('${e.sid}','${d}')">✋ Movimentar</button>`;
+      if(e.marca==='mov')ac+=`<button class="btn bsm br2" onclick="desfazer('${e.ev.id}')">Desfazer movimentação</button>`;
+    }
+    return`<div class="pd"><div class="pd-top">${s.nome} <span class="chip g-${s.g}">${s.grupo}</span>${conf&&!e.folga?` <span class="ok ${confirmacoes.get(`${d}_${e.sid}`)?.justificativa?'tard':''}">✓</span>`:''}</div>
+      ${descricaoEntrada(e,n)?`<div class="pd-info">${descricaoEntrada(e,n)}</div>`:''}${ac?`<div class="pd-ac">${ac}</div>`:''}</div>`;}).join('');
+  if(!l.length)c='<div class="nodata">Ninguém escalado neste dia.</div>';
+  const exd=extrasDoDia(d);
+  if(exd.length)c+=`<div class="pd"><div class="pd-top">⏱️ Plantões extras</div>${exd.map(e=>`
+    <div class="pd-info" style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+      ${HORARIOS[e.horario].t} - <b>${SV[e.servidor].nome}</b>${e.status==='pendente'?' · ⏳ aguardando aceite':''}
+      ${e.obs?`— <i>${esc(e.obs)}</i>`:''}
+      ${e.status==='pendente'&&e.servidor===meuSid?`<button class="btn bsm bv" onclick="responderMov('${e.id}',true)">Aceitar</button><button class="btn bsm br2" onclick="responderMov('${e.id}',false)">Recusar</button>`:''}
+      ${souCoord?`<button class="btn bsm bn" onclick="desmarcarExtra('${e.id}')">Desmarcar</button>`:''}</div>`).join('')}</div>`;
+  if(pend.length)c+=`<div class="aviso av-amb">⏳ Troca Pendente: ${pend.map(e=>`${SV[e.solicitante].nome} solicitou troca com ${SV[e.solicitado].nome}: ${SV[e.solicitante].nome} (${brAno(num(e.dia1))}) ⇄ ${SV[e.solicitado].nome} (${brAno(num(e.dia2))})`).join('; ')}</div>`;
+  const pm=eventos.filter(e=>MOV_PEND(e)&&(e.de===d||e.para===d));
+  if(pm.length)c+=`<div class="aviso av-amb">⏳ Movimentação Aguardando Autorização: ${pm.map(e=>`${SV[e.servidor].nome} (${movTexto(e)})`).join('; ')}</div>`;
+  modal(`${SEM_L[dsem(n)]}, ${brAno(n)} · Plantão ${letra(n)} · ${presentes(n).length} servidor(es)`,c,
+    souCoord?`<button class="btn bv" onclick="abrirExtra('','${d}')">⏱️ Marcar plantão extra neste dia</button>`:'');
+};
+
+// ── Confirmação de presença ────────────────────────────────────────────────
+// No dia: confirma direto. Depois do dia: exige justificativa. Antes do dia: não pode.
+window.confirmar=async(d,sid,sim,just)=>{
+  if(sid!==meuSid)return toast('Só o próprio servidor confirma a presença.');
+  const n=num(d);
+  if(sim&&n>N_HOJE)return toast('A presença só pode ser confirmada no dia do plantão.');
+  if(sim&&n<N_HOJE&&!just)return modal('✓ Confirmar presença fora do dia',`
+    <div class="pd-info">Plantão de <b>${SEM_L[dsem(n)]}, ${brAno(n)}</b> (plantão ${letra(n)}). A confirmação deveria ter sido feita no dia.</div>
+    <div class="fg"><label>Justificativa (obrigatória) — por que não confirmou no dia?</label>
+      <textarea id="cjMot" maxlength="300" oninput="document.getElementById('cjBtn').disabled=!this.value.trim()"></textarea></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bv" id="cjBtn" disabled onclick="confirmar('${d}','${sid}',true,val('cjMot').trim())">✓ Confirmar presença</button>`);
+  try{await(sim?store.confirmar(d,sid,just):store.desconfirmar(d,sid));toast(sim?'✓ Presença confirmada.':'Confirmação desfeita.');
+    fecharModal();}
+  catch(e){toast('Erro: '+(e.message||e));}
+};
+window.val=val;
+// Botão do menu: confirma o plantão de hoje
+// Botão do menu: confirma de uma vez o plantão de hoje e/ou os anteriores
+// pendentes (os anteriores exigem justificativa, uma só para todos os marcados)
+window.confirmarHoje=()=>{
+  if(!meuSid)return toast('Seu login não está ligado a nenhum servidor da escala.');
+  const ok=n=>confirmacoes.has(`${isoDe(n)}_${meuSid}`);
+  const pend=[];for(let n=N_INI;n<N_HOJE;n++)if(trabalha(meuSid,n)&&!ok(n))pend.push(n);
+  const hoje=trabalha(meuSid,N_HOJE)&&!ok(N_HOJE);
+  if(!hoje&&!pend.length)return modal('✓ Confirmar presença',
+    `<div class="aviso av-ok">${trabalha(meuSid,N_HOJE)?`Presença de hoje (${brAno(N_HOJE)}) já confirmada.`:`Você não está escalado(a) hoje (${brAno(N_HOJE)}).`} Não há plantões anteriores pendentes.</div>`,
+    `<button class="btn bn" onclick="fecharModal()">Fechar</button>`);
+  const item=(n,tag)=>`<label class="cf-dia"><input type="checkbox" value="${isoDe(n)}" checked onchange="cfAtualizar()">
+    <span class="let let-${letra(n)}" style="width:18px;height:18px;font-size:.6rem">${letra(n)}</span>
+    <span>${SEM_L[dsem(n)]}, ${brAno(n)}</span>${tag?` <span class="st st-aceita">${tag}</span>`:''}</label>`;
+  modal('✓ Confirmar presença',`
+    ${hoje?`<div class="fg"><label>Hoje</label><div class="cf-lista" id="cfHoje">${item(N_HOJE,'HOJE')}</div></div>`
+          :`<div class="pd-info">Você não está escalado(a) hoje (${brAno(N_HOJE)})${trabalha(meuSid,N_HOJE)?' ou já confirmou':''}.</div>`}
+    ${pend.length?`<div class="fg"><label>Plantões anteriores sem confirmação (${pend.length})
+        <a href="#" style="float:right;font-weight:500" onclick="event.preventDefault();const l=[...document.querySelectorAll('#cfPend input')],t=l.every(i=>i.checked);l.forEach(i=>i.checked=!t);cfAtualizar()">Selecionar/Desmarcar todos</a></label>
+      <div class="cf-lista" id="cfPend">${pend.map(n=>item(n)).join('')}</div></div>
+      <div class="fg" id="cfJustBox"><label>Justificativa (obrigatória para os dias anteriores) — por que não confirmou no dia?</label>
+        <textarea id="cfJust" maxlength="300" oninput="cfAtualizar()"></textarea></div>`:''}
+    <div id="cfMsg" class="aviso av-inf"></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bv" id="cfBtn" onclick="cfSalvar()">✓ Confirmar</button>`);
+  cfAtualizar();
+};
+const cfSel=id=>[...document.querySelectorAll(`#${id} input:checked`)].map(i=>i.value);
+window.cfAtualizar=()=>{
+  const h=cfSel('cfHoje'),p=cfSel('cfPend'),j=val('cfJust').trim(),msg=document.getElementById('cfMsg'),bx=document.getElementById('cfJustBox');
+  if(bx)bx.style.display=p.length?'':'none';
+  const falta=p.length&&!j,nada=!h.length&&!p.length;
+  msg.className='aviso '+(nada||falta?'av-amb':'av-ok');
+  msg.textContent=nada?'Marque pelo menos um dia.':falta?'Preencha a justificativa para confirmar os dias anteriores.'
+    :`Serão confirmados ${h.length+p.length} plantão(ões)${p.length?`, sendo ${p.length} fora do dia (com justificativa)`:''}.`;
+  document.getElementById('cfBtn').disabled=nada||!!falta;
+};
+window.cfSalvar=async()=>{
+  const h=cfSel('cfHoje'),p=cfSel('cfPend'),j=val('cfJust').trim();
+  if(p.length&&!j)return toast('Preencha a justificativa.');
+  try{for(const d of h)await store.confirmar(d,meuSid);
+    for(const d of p)await store.confirmar(d,meuSid,j);
+    fecharModal();toast(`✓ ${h.length+p.length} presença(s) confirmada(s).`);}
+  catch(e){toast('Erro: '+(e.message||e));}
+};
+
+// ── Troca de plantão (sempre permuta) ──────────────────────────────────────
+// Meu plantão: só os do mês em tela (futuros). Plantão do colega: mesmo mês
+// ou, eventualmente, o mês seguinte (ex.: 31/10 por 02/11).
+window.abrirPermuta=(d1)=>{
+  if(!meuSid)return toast('Seu login não está ligado a nenhum servidor da escala.');
+  const mes=d1?d1.slice(0,7):mesAtual;
+  const meusDias=diasDoMes(mes).filter(n=>n>=N_HOJE&&trabalha(meuSid,n));
+  if(!meusDias.length)return toast(`Você não tem plantões disponíveis para troca em ${nomeMes(mes)}.`);
+  if(!d1||!meusDias.includes(num(d1)))d1=isoDe(meusDias[0]);
+  modal(`⇄ Solicitar troca de plantão — ${nomeMes(mes)}`,`
+    <div class="fg"><label>Meu plantão (o colega trabalha por mim)</label>
+      <select id="pDia1" onchange="permAtualizar('dia1')">${meusDias.map(n=>optDia(n,d1)).join('')}</select></div>
+    <div class="fg"><label>Dia que eu vou trabalhar</label><select id="pDia2" onchange="permAtualizar('dia2')"></select></div>
+    <div class="fg"><label>Colega escalado nesse dia</label><select id="pColega" onchange="permAtualizar()"></select></div>
+    <div class="fg"><label>Observação (obrigatória)</label><textarea id="pObs" maxlength="300" oninput="permAtualizar()" placeholder="Ex.: troca por questões particulares"></textarea></div>
+    <div id="pMsg" class="aviso av-inf">Escolha o dia.</div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bp" id="pBtn" disabled onclick="enviarPermuta()">Enviar pedido</button>`);
+  permAtualizar('dia1');
+};
+// Colegas escalados no dia (sem mim)
+const colegasNoDia=n=>(mapa.get(n)||[]).filter(e=>!e.folga&&e.sid!==meuSid).map(e=>e.sid);
+window.permAtualizar=(nivel)=>{
+  const d1=val('pDia1'),s2=document.getElementById('pDia2'),sc=document.getElementById('pColega'),msg=document.getElementById('pMsg'),btn=document.getElementById('pBtn');
+  if(nivel==='dia1'){
+    // Dias do mesmo mês ou do mês seguinte em que não estou escalado e há colega escalado
+    const m=d1.slice(0,7),grupos=[m,proxMes(m)].filter(x=>MESES_LISTA.includes(x)).map(mm=>{
+      const ds=diasDoMes(mm).filter(n=>n>=N_HOJE&&!entrada(n,meuSid)&&colegasNoDia(n).length);
+      return ds.length?`<optgroup label="${nomeMes(mm)}${mm!==m?' (mês seguinte)':''}">${ds.map(n=>
+        `<option value="${isoDe(n)}">${SEM[dsem(n)]} ${brAno(n)} · plantão ${letra(n)} · ${colegasNoDia(n).map(s=>SV[s].nome).join(', ')}</option>`).join('')}</optgroup>`:'';}).join('');
+    s2.innerHTML='<option value="">— escolha o dia —</option>'+grupos;
+  }
+  if(nivel==='dia1'||nivel==='dia2'){
+    const d2=val('pDia2'),cs=d2?colegasNoDia(num(d2)):[];
+    sc.innerHTML=!d2?'<option value="">— escolha o dia primeiro —</option>'
+      :(cs.length>1?'<option value="">— escolha o colega —</option>':'')+cs.map(s=>`<option value="${s}">${SV[s].nome} (${SV[s].grupo})</option>`).join('');
+  }
+  const col=val('pColega'),c=contPermutas(meuSid,d1.slice(0,7));
+  if(!col||!val('pDia2')){btn.disabled=true;msg.className='aviso av-inf';
+    msg.innerHTML=`Você usou ${c.solicitante}/${MAX_SOLICITANTE} trocas como solicitante em ${nomeMes(d1.slice(0,7))}.`;return;}
+  const er=validarPermuta({solicitante:meuSid,dia1:d1,solicitado:col,dia2:val('pDia2')});
+  if(!er.length&&!val('pObs').trim())er.push('Preencha a observação.');
+  caixaErros(msg,er,`✓ Troca válida: <b>${SV[col].nome}</b> trabalha ${br(num(d1))} e você trabalha ${br(num(val('pDia2')))}. ${SV[col].nome} precisa aceitar.`);
+  btn.disabled=!!er.length;
+};
+window.enviarPermuta=async()=>{
+  const p={solicitante:meuSid,dia1:val('pDia1'),solicitado:val('pColega'),dia2:val('pDia2')},obs=val('pObs').trim();
+  const er=validarPermuta(p);if(!obs)er.push('Preencha a observação.');if(er.length)return toast(er[0]);
+  try{await store.add({tipo:'permuta',...p,mes:p.dia1.slice(0,7),status:'pendente',obs,
+      solicitanteEmail:SV[p.solicitante].email,solicitadoEmail:SV[p.solicitado].email,solicitanteNome:SV[p.solicitante].nome,solicitadoNome:SV[p.solicitado].nome,criadoEm:Date.now(),criadoPor:meuEmail});
+    fecharModal();toast(`⇄ Pedido enviado para ${SV[p.solicitado].nome}.`);}
+  catch(e){toast('Erro: '+(e.message||e));}
+};
+window.responderPermuta=async(id,aceitar)=>{
+  const e=eventos.find(x=>x.id===id);if(!e)return toast('Pedido de troca não encontrado.');
+  if(e.status!=='pendente')return toast(`Este pedido já foi ${e.status}.`);
+  const resumo=`<b>${SV[e.solicitante].nome}</b> pediu: você trabalha <b>${brAno(num(e.dia1))}</b> (plantão ${letra(num(e.dia1))}) e ${SV[e.solicitante].nome} trabalha <b>${brAno(num(e.dia2))}</b> (plantão ${letra(num(e.dia2))}).${e.obs?`<br><i>"${esc(e.obs)}"</i>`:''}`;
+  if(aceitar){const er=validarPermuta(e,id);
+    if(er.length)return modal('Não é possível aceitar',`<div class="pd-info">${resumo}</div><div class="aviso av-err">${er.map(esc).join('<br>')}</div><div class="pd-info">A escala mudou desde o pedido. Você pode recusar a troca.</div>`,
+      `<button class="btn bn" onclick="fecharModal()">Fechar</button><button class="btn br2" onclick="responderPermuta('${id}',false)">Recusar</button>`);
+    return modal('⇄ Aceitar troca de plantão',`<div class="pd-info">${resumo}</div><div class="aviso av-ok">✓ A troca respeita as regras. Ao aceitar, a escala é atualizada para todos.</div>`,
+      `<button class="btn bn" onclick="fecharModal()">Voltar</button><button class="btn bv" onclick="confirmarResposta('${id}',true)">✅ Aceitar troca</button>`);
+  }
+  modal('⇄ Recusar troca de plantão',`<div class="pd-info">${resumo}</div>
+    <div class="fg"><label>Motivo da recusa (obrigatório)</label><textarea id="rMot" maxlength="300" oninput="document.getElementById('rBtn').disabled=!this.value.trim()"></textarea></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Voltar</button><button class="btn br2" id="rBtn" disabled onclick="confirmarResposta('${id}',false)">❌ Recusar troca</button>`);
+};
+window.confirmarResposta=async(id,aceitar)=>{
+  const mot=aceitar?'':val('rMot').trim();
+  if(!aceitar&&!mot)return toast('Informe o motivo da recusa.');
+  try{await store.upd(id,{status:aceitar?'aceita':'recusada',respondidoEm:Date.now(),respondidoPor:meuEmail,...(aceitar?{}:{motivoRecusa:mot})});
+    fecharModal();toast(aceitar?'✓ Troca aceita — a escala foi atualizada.':'Troca recusada.');}
+  catch(er){toast('Erro: '+(er.message||er));}
+};
+// Vindo do sininho do portal: ?troca=ID&acao=aceitar|recusar
+let trocaDaUrl=new URLSearchParams(location.search);
+function abrirTrocaDaUrl(){
+  const id=trocaDaUrl?.get('troca');if(!id)return;
+  const e=eventos.find(x=>x.id===id);if(!e)return;
+  const acao=trocaDaUrl.get('acao');trocaDaUrl=null;
+  if(e.tipo==='movimentacao'||e.tipo==='extra'){mesAtual=(e.dia||e.de||e.para).slice(0,7);aba('perm');renderTudo();
+    if(e.servidor!==meuSid)return toast('Este pedido não é seu.');
+    return responderMov(id,acao!=='recusar');}
+  mesAtual=e.mes;aba('perm');renderTudo();
+  if(e.solicitado!==meuSid)return toast('Este pedido de troca não é para você.');
+  responderPermuta(id,acao!=='recusar');
+}
+window.cancelarPermuta=async id=>{if(!confirm('Cancelar este pedido de permuta?'))return;
+  try{await store.upd(id,{status:'cancelada',respondidoEm:Date.now(),respondidoPor:meuEmail});toast('Pedido cancelado.');}catch(e){toast('Erro: '+(e.message||e));}};
+window.anularPermuta=async id=>{if(!confirm('Anular esta permuta? Os dois servidores voltam aos plantões originais e ela deixa de contar no limite.'))return;
+  try{await store.upd(id,{status:'anulada',respondidoEm:Date.now(),respondidoPor:meuEmail});toast('Permuta anulada.');}catch(e){toast('Erro: '+(e.message||e));}};
+
+// ── Folga: 8º plantão (crédito controlado) ou banco de horas (controle de cada um) ──
+const folgaBanco=e=>e.origem==='banco';
+const folgaNome=e=>folgaBanco(e)?'Folga (Banco de Horas)':'Folga do 8º Plantão';
+window.abrirFolga=(paraOutro,dia,quem,ed)=>{
+  if(!paraOutro&&!meuSid)return toast('Seu login não está ligado a nenhum servidor da escala.');
+  const sid=paraOutro?(quem||SERVIDORES[0].id):meuSid;
+  modal(ed?'✏️ Editar folga':'🌴 Cadastrar folga',`
+    <div class="fg"><label>Tipo de folga</label><div class="aus-tipos">
+      <label class="aus-tipo"><input type="radio" name="fOrig" value="oitavo" checked onchange="folgaAtualizar(true)"><span class="aus-ic">8️⃣</span>
+        <span><b>8º plantão</b><small>Usa o crédito mais antigo do banco de folgas</small></span></label>
+      <label class="aus-tipo"><input type="radio" name="fOrig" value="banco" onchange="folgaAtualizar(true)"><span class="aus-ic">⏱️</span>
+        <span><b>Banco de horas</b><small>Compensação de horas excedentes (ex.: viagem, convocação) — controle de cada servidor</small></span></label>
+    </div></div>
+    ${paraOutro?`<div class="fg"><label>Servidor</label><select id="fServ" onchange="folgaAtualizar()">${opcoesServ(sid)}</select></div>`:''}
+    <div class="fg"><label>Dia da folga (um plantão em que está escalado)</label><select id="fDia" onchange="folgaAtualizar(true)"></select></div>
+    <div class="fg"><label>Observação (obrigatória)</label><textarea id="fObs" maxlength="300" placeholder="Ex.: compensação da viagem a Chapecó de 03 a 05/10"></textarea></div>
+    <div id="fMsg" class="aviso av-inf"></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bv" id="fBtn" disabled onclick="salvarFolga()">${ed?'Salvar alterações':'Cadastrar folga'}</button>`);
+  document.getElementById('fDia').dataset.pre=dia||'';
+  if(ed){document.querySelector(`input[name=fOrig][value=${folgaBanco(ed)?'banco':'oitavo'}]`).checked=true;document.getElementById('fObs').value=ed.motivo||'';}
+  folgaAtualizar();
+};
+window.folgaAtualizar=(soMsg)=>{
+  const sid=document.getElementById('fServ')?val('fServ'):meuSid,sel=document.getElementById('fDia');
+  const banco=document.querySelector('input[name=fOrig]:checked').value==='banco';
+  const bf=bancoFolgas(sid),msg=document.getElementById('fMsg'),btn=document.getElementById('fBtn');
+  if(!soMsg){const ds=[];
+    for(let n=N_INI;n<=N_FIM&&ds.length<200;n++){const e=entrada(n,sid);if(e&&!e.folga)ds.push(n);}
+    const pre=sel.dataset.pre||isoDe(ds.find(n=>n>=N_HOJE)??ds[0]??0);
+    sel.innerHTML=ds.map(n=>optDia(n,pre)).join('')||'<option value="">— sem plantões —</option>';}
+  if(!val('fDia')){btn.disabled=true;msg.className='aviso av-inf';msg.textContent='Nenhum plantão disponível.';return;}
+  if(banco){sel.dataset.credito='';btn.disabled=false;msg.className='aviso av-inf';
+    msg.innerHTML='Folga de <b>banco de horas</b>: não usa crédito do 8º plantão. O controle das horas é de cada servidor — descreva na observação o que está sendo compensado.';return;}
+  const n=num(val('fDia'));
+  // usa sempre o crédito mais antigo, já liberado até o dia da folga
+  const c=bf.creditos.find(c=>!c.folga&&c.libera<=n);
+  if(!c){btn.disabled=true;msg.className='aviso av-err';msg.innerHTML=`${SV[sid].nome} não tem folga do 8º plantão disponível.`;sel.dataset.credito='';return;}
+  sel.dataset.credito=c.mes;btn.disabled=false;msg.className='aviso av-ok';
+  msg.innerHTML=`Será usado o crédito mais antigo: <b>${nomeMes(c.mes)}</b> (${c.qtd!=null?c.qtd+" plantões":"lançado manualmente"}). Restarão ${bf.disponiveis.length-1} folga(s) disponível(is).`;
+};
+window.salvarFolga=async()=>{
+  const sid=document.getElementById('fServ')?val('fServ'):meuSid,d=val('fDia'),cr=document.getElementById('fDia').dataset.credito;
+  const origem=document.querySelector('input[name=fOrig]:checked').value;
+  if(!d||(origem==='oitavo'&&!cr))return;
+  if(!val('fObs').trim())return toast('Preencha a observação.');
+  if(!confirm(`${editId?'Salvar folga':'Cadastrar folga'} (${origem==='banco'?'banco de horas':'8º plantão'}) de ${SV[sid].nome} em ${brAno(num(d))}?`))return;
+  const dados={tipo:'folga',origem,servidor:sid,servidorEmail:SV[sid].email,dia:d,creditoMes:origem==='banco'?null:cr,motivo:val('fObs').trim()};
+  try{if(editId)await store.upd(editId,{...dados,...marcaEdicao()});
+    else await store.add({...dados,criadoEm:Date.now(),criadoPor:meuEmail});
+    const ed=!!editId;editId=null;fecharModal();toast(ed?'🌴 Folga atualizada.':'🌴 Folga cadastrada.');}catch(e){toast('Erro: '+(e.message||e));}
+};
+window.cancelarFolga=id=>desfazer(id);
+
+// ── Coordenação: movimentação e ausência ──────────────────────────────────
+window.abrirMov=(sid,de,para,arrastado)=>{
+  if(!souCoord)return;
+  modal(arrastado?'✋ Confirmar movimentação':'✋ Movimentar servidor',`
+    ${arrastado?`<div class="aviso av-inf" style="font-size:.88rem">✋ <b>${SV[sid].nome}</b>: ${SEM_L[dsem(num(de))]} ${brAno(num(de))} (plantão ${letra(num(de))}) → <b>${SEM_L[dsem(num(para))]} ${brAno(num(para))}</b> (plantão ${letra(num(para))})</div>`:''}
+    <div ${arrastado?'style="display:none"':''}>
+    <div class="fg"><label>Servidor</label><select id="mServ" onchange="movAtualizar()">${opcoesServ(sid||SERVIDORES[0].id)}</select></div>
+    <div class="frow">
+      <div class="fg"><label>Sai do dia</label><input type="date" id="mDe" min="${INICIO}" max="${FIM}" value="${de||''}" onchange="movAtualizar()"></div>
+      <div class="fg"><label>Vai para o dia</label><input type="date" id="mPara" min="${INICIO}" max="${FIM}" value="${para||''}" onchange="movAtualizar()"></div>
+    </div>
+    </div>
+    <div class="fg"><label>Motivo (obrigatório)</label><textarea id="mMot" maxlength="300" placeholder="Ex.: necessidade do serviço, viagem…"></textarea></div>
+    <div id="mMsg" class="aviso av-inf">Movimentação: não conta no limite de trocas e não verifica as 48h. Se for outro servidor, ele(a) precisa autorizar.</div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bamb" id="mBtn" onclick="salvarMov()">Salvar</button>`);
+  movAtualizar();
+  if(arrastado)setTimeout(()=>document.getElementById('mMot')?.focus(),50);
+};
+function errosMov(){
+  const sid=val('mServ'),de=val('mDe'),para=val('mPara'),er=[];
+  if(!para)er.push('Informe o dia de destino.');
+  if(de&&!trabalha(sid,num(de)))er.push(`${SV[sid].nome} não está escalado(a) em ${brAno(num(de))}.`);
+  if(!de)er.push('Informe o dia de onde o servidor sai.');
+  if(para&&temExtra(sid,para))er.push(`${SV[sid].nome} tem plantão extra marcado em ${brAno(num(para))}.`);
+  if(para&&entrada(num(para),sid))er.push(`${SV[sid].nome} já está escalado(a) em ${brAno(num(para))}.`);
+  if(para&&(para<INICIO||para>FIM))er.push('Dia fora do período da escala.');
+  return er;
+}
+window.movAtualizar=()=>{
+  const er=errosMov(),msg=document.getElementById('mMsg'),sid=val('mServ'),para=val('mPara');
+  if(er.length){caixaErros(msg,er);}
+  else{const alt=[{sid,n:num(para),on:true}];if(val('mDe'))alt.push({sid,n:num(val('mDe')),on:false});
+    const s=seguidos(sid,num(para),alt);
+    msg.className='aviso '+(s>MAX_SEGUIDOS?'av-amb':'av-ok');
+    msg.innerHTML=s>MAX_SEGUIDOS?`⚠️ ${SV[sid].nome} ficará ${s} plantões seguidos (${s*24}h). Permitido na movimentação (a regra das 48h vale só para trocas).`:'✓ Movimentação válida.';}
+  document.getElementById('mBtn').disabled=!!er.length;
+};
+// ── Modo movimentar: arrastar o nome para outro dia (ou tocar nome → dia) ──
+window.modoMovimentar=on=>{
+  movModo=on===undefined?!movModo:on;movSel=null;
+  if(movModo)aba('cal');
+  document.getElementById('movBanner').style.display=movModo?'':'none';
+  document.getElementById('btnMovModo').textContent=movModo?'✋ Sair do movimentar':'✋ Movimentar';
+  renderCal();
+};
+function movPara(para){
+  const s=movSel;movSel=null;renderCal();
+  if(!s||s.de===para)return;
+  if(entrada(num(para),s.sid))return toast(`${SV[s.sid].nome} já está escalado(a) em ${brAno(num(para))}.`);
+  abrirMov(s.sid,s.de,para,true);
+}
+window.movDragStart=(ev,sid,de)=>{movSel={sid,de};ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',sid);};
+window.movDragOver=ev=>{ev.preventDefault();ev.currentTarget.classList.add('sobre');};
+window.movDrop=(ev,para)=>{ev.preventDefault();ev.currentTarget.classList.remove('sobre');movPara(para);};
+window.movTocarNome=(ev,sid,de)=>{ev.stopPropagation();
+  movSel=movSel&&movSel.sid===sid&&movSel.de===de?null:{sid,de};renderCal();
+  if(movSel)toast(`${SV[sid].nome} (${br(num(de))}) selecionado — toque no dia de destino.`);};
+window.movTocarDia=d=>{if(movSel)movPara(d);else toast('Arraste um nome ou toque nele para selecionar.');};
+
+window.salvarMov=async()=>{
+  if(errosMov().length)return;
+  if(!val('mMot').trim())return toast('Preencha o motivo.');
+  const sid=val('mServ'),proprio=sid===meuSid;
+  try{await store.add({tipo:'movimentacao',servidor:sid,servidorEmail:SV[sid].email,de:val('mDe')||null,para:val('mPara'),
+      motivo:val('mMot').trim(),status:proprio?'aprovada':'pendente',
+      ...(proprio?{}:{solicitadoEmail:SV[sid].email,solicitadoNome:SV[sid].nome,solicitanteNome:quem(meuEmail)}),
+      criadoEm:Date.now(),criadoPor:meuEmail});
+    fecharModal();toast(proprio?'✋ Movimentação lançada.':`✋ Enviada para ${SV[sid].nome} autorizar.`);}
+  catch(e){toast('Erro: '+(e.message||e));}
+};
+const movTexto=e=>e.de?`${brAno(num(e.de))} → ${brAno(num(e.para))}`:`plantão extra em ${brAno(num(e.para))}`;
+// Quem foi movimentado por outra pessoa autoriza ou nega (negar exige motivo)
+const pedidoTexto=e=>e.tipo==='extra'
+  ?`marcou plantão extra para você: ${brAno(num(e.dia))} · ${horariosTexto(grupoDe(e))}`
+  :`quer movimentar você: ${movTexto(e)}`;
+// Quem foi movimentado (ou teve extra marcado) por outra pessoa aceita ou recusa (recusa exige motivo)
+window.responderMov=(id,autorizar)=>{
+  const e=eventos.find(x=>x.id===id);if(!e)return toast('Pedido não encontrado.');
+  if(e.status!=='pendente')return toast('Este pedido já foi respondido.');
+  const ext=e.tipo==='extra',nomeP=ext?'plantão extra':'movimentação';
+  const resumo=`<b>${esc(quem(e.criadoPor))}</b> ${pedidoTexto(e)}.${(e.motivo||e.obs)?`<br><i>"${esc(e.motivo||e.obs)}"</i>`:''}`;
+  if(autorizar){
+    const er=[];
+    if(ext){
+      if(entrada(num(e.dia),e.servidor))er.push(`Você está escalado(a) em ${brAno(num(e.dia))} — o extra só pode ser em dia de folga.`);
+      const g=grupoDe(e),gi=g.map(x=>x.id),m=e.dia.slice(0,7);
+      const ja=extrasAtivos().filter(x=>x.servidor===e.servidor&&x.dia.startsWith(m)&&!gi.includes(x.id)).length;
+      if(ja+g.length>MAX_EXTRAS)er.push(`Você já tem ${ja} plantão(ões) extra(s) em ${nomeMes(m)}; com mais ${g.length} passaria do limite de ${MAX_EXTRAS}.`);
+    }else{
+      if(e.de&&!trabalha(e.servidor,num(e.de)))er.push(`Você não está mais escalado(a) em ${brAno(num(e.de))}.`);
+      if(entrada(num(e.para),e.servidor))er.push(`Você já está escalado(a) em ${brAno(num(e.para))}.`);
+    }
+    if(er.length)return modal('Não é possível aceitar',`<div class="pd-info">${resumo}</div><div class="aviso av-err">${er.join('<br>')}</div>`,
+      `<button class="btn bn" onclick="fecharModal()">Fechar</button><button class="btn br2" onclick="responderMov('${id}',false)">Recusar</button>`);
+    return modal(`${ext?'⏱️':'✋'} Aceitar ${nomeP}`,`<div class="pd-info">${resumo}</div><div class="aviso av-ok">Ao aceitar, a escala é atualizada para todos.</div>`,
+      `<button class="btn bn" onclick="fecharModal()">Voltar</button><button class="btn bv" onclick="confirmarMov('${id}',true)">✅ Aceitar</button>`);
+  }
+  modal(`${ext?'⏱️':'✋'} Recusar ${nomeP}`,`<div class="pd-info">${resumo}</div>
+    <div class="fg"><label>Motivo (obrigatório)</label><textarea id="rMot" maxlength="300" oninput="document.getElementById('rBtn').disabled=!this.value.trim()"></textarea></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Voltar</button><button class="btn br2" id="rBtn" disabled onclick="confirmarMov('${id}',false)">❌ Recusar</button>`);
+};
+window.confirmarMov=async(id,autorizar)=>{
+  const mot=autorizar?'':val('rMot').trim();
+  if(!autorizar&&!mot)return toast('Informe o motivo.');
+  const e=eventos.find(x=>x.id===id),agora=Date.now();
+  try{for(const x of (e?grupoDe(e):[{id}]))await store.upd(x.id,{status:autorizar?'aprovada':'negada',respondidoEm:agora,respondidoPor:meuEmail,...(autorizar?{}:{motivoRecusa:mot})});
+    fecharModal();toast(autorizar?'✓ Aceito — a escala foi atualizada.':'Recusado.');}
+  catch(er){toast('Erro: '+(er.message||er));}
+};
+
+// ── Plantão extra (8h, em dia de folga, até 5 por mês) ─────────────────────
+window.abrirExtra=(sid,dia)=>{
+  if(!souCoord)return;
+  sid=sid||meuSid||EQUIPE[0].id;
+  const opH=per=>ORD_HOR.filter(k=>HORARIOS[k].per===per).map(k=>`<label><input type="checkbox" value="${k}" onchange="extraAtualizar()"> ${HORARIOS[k].t}</label>`).join('');
+  modal('⏱️ Marcar plantão extra',`
+    <div class="frow">
+      <div class="fg"><label>Servidor</label><select id="xServ" onchange="extraAtualizar()">
+        ${EQUIPE.map(s=>`<option value="${s.id}" ${s.id===sid?'selected':''}>${s.nome}${s.id==='jessica'?' (coordenação)':''}</option>`).join('')}</select></div>
+      <div class="fg"><label>Dia</label><input type="date" id="xDia" min="${INICIO}" max="${FIM}" value="${dia||''}" onchange="extraAtualizar()"></div>
+    </div>
+    <div class="fg"><label>Horário(s) — 8 horas cada (pode marcar mais de um)</label><div class="x-hor" id="xHor">
+      <div><b>Diurno</b>${opH('Diurno')}</div><div><b>Noturno</b>${opH('Noturno')}</div></div></div>
+    <div class="fg"><label>Observação (opcional)</label><textarea id="xObs" maxlength="300"></textarea></div>
+    <div id="xMsg" class="aviso av-inf"></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bv" id="xBtn" disabled onclick="salvarExtra()">Marcar</button>`);
+  extraAtualizar();
+};
+const horsMarcados=()=>[...document.querySelectorAll('#xHor input:checked')].map(i=>i.value);
+function errosExtra(){
+  const sid=val('xServ'),d=val('xDia'),hs=horsMarcados(),er=[];
+  if(!d)er.push('Informe o dia.');
+  else if(d<INICIO||d>FIM)er.push('Dia fora do período da escala.');
+  if(!hs.length)er.push('Marque pelo menos um horário.');
+  if(d&&entrada(num(d),sid))er.push(`${SV[sid].nome} está escalado(a) em ${brAno(num(d))}. O plantão extra só pode ser marcado em dia de folga.`);
+  if(d)hs.forEach((h,i)=>{
+    const c=extrasVizinhos(sid,d).find(e=>!(e.dia===d&&e.horario===h)&&conflitam(d,h,e.dia,e.horario));
+    if(c)er.push(`${HORARIOS[h].t} conflita com ${HORARIOS[c.horario].t} já marcado em ${br(num(c.dia))}.`);
+    hs.slice(i+1).forEach(x=>{if(conflitam(d,h,d,x))er.push(`${HORARIOS[h].t} e ${HORARIOS[x].t} se sobrepõem.`);});
+  });
+  if(d)hs.filter(h=>extrasAtivos().some(e=>e.servidor===sid&&e.dia===d&&e.horario===h))
+    .forEach(h=>er.push(`${HORARIOS[h].t} já está marcado para ${SV[sid].nome} nesse dia.`));
+  if(d){const ja=contExtras(sid,d.slice(0,7));
+    if(ja+hs.length>MAX_EXTRAS)er.push(`${SV[sid].nome} já tem ${ja} plantão(ões) extra(s) em ${nomeMes(d.slice(0,7))}; com ${hs.length} marcado(s) passaria do limite de ${MAX_EXTRAS}.`);}
+  return er;
+}
+window.extraAtualizar=()=>{
+  const sid=val('xServ'),d=val('xDia'),er=errosExtra(),msg=document.getElementById('xMsg');
+  const hs=horsMarcados();
+  // horário já marcado fica desabilitado
+  const viz=d?extrasVizinhos(sid,d):[];
+  document.querySelectorAll('#xHor input').forEach(i=>{
+    const h=i.value,ja=viz.some(e=>e.dia===d&&e.horario===h);
+    const choqueMarcado=!ja&&viz.find(e=>conflitam(d,h,e.dia,e.horario));
+    const choqueSel=!i.checked&&hs.find(x=>x!==h&&conflitam(d,h,d,x));
+    const bloq=!!d&&(ja||!!choqueMarcado||!!choqueSel);
+    i.disabled=bloq;if(bloq)i.checked=false;
+    i.parentElement.title=!d?'':ja?'Já marcado':choqueMarcado?`Conflita com ${HORARIOS[choqueMarcado.horario].t} de ${br(num(choqueMarcado.dia))}`:choqueSel?`Conflita com ${HORARIOS[choqueSel].t}`:'';});
+  const cont=d?`${SV[sid].nome}: ${contExtras(sid,d.slice(0,7))}/${MAX_EXTRAS} plantões extras em ${nomeMes(d.slice(0,7))}${hs.length?` (+${hs.length} agora)`:''}.`:'';
+  if(er.length){msg.className='aviso av-err';msg.innerHTML=er.map(esc).join('<br>')+(cont?`<br><small>${cont}</small>`:'');}
+  else{msg.className='aviso av-ok';msg.innerHTML=`✓ ${cont}`+(sid!==meuSid?`<br>${SV[sid].nome} precisa aceitar.`:'');}
+  document.getElementById('xBtn').disabled=!!er.length;
+};
+// Desmarcar: não apaga, fica no histórico com justificativa (obrigatória)
+window.desmarcarExtra=id=>{
+  const g=id.split(',').map(i=>eventos.find(x=>x.id===i)).filter(Boolean),e=g[0];if(!e)return;
+  modal('⏱️ Desmarcar plantão extra',`<div class="pd-info"><b>${SV[e.servidor].nome}</b> · ${brAno(num(e.dia))} · ${horariosTexto(g)}</div>
+    <div class="fg"><label>Justificativa (obrigatória)</label><textarea id="dMot" maxlength="300" oninput="document.getElementById('dBtn').disabled=!this.value.trim()"></textarea></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Voltar</button><button class="btn br2" id="dBtn" disabled onclick="confirmarDesmarcar('${id}')">Desmarcar</button>`);
+  setTimeout(()=>document.getElementById('dMot')?.focus(),50);
+};
+window.confirmarDesmarcar=async id=>{
+  const mot=val('dMot').trim();if(!mot)return toast('Informe a justificativa.');
+  const agora=Date.now();
+  try{for(const i of id.split(','))await store.upd(i,{status:'cancelada',canceladoEm:agora,canceladoPor:meuEmail,motivoCancelamento:mot});
+    fecharModal();toast('Plantão extra desmarcado.');}catch(er){toast('Erro: '+(er.message||er));}
+};
+window.salvarExtra=async()=>{
+  if(errosExtra().length)return;
+  const sid=val('xServ'),proprio=sid===meuSid,hs=horsMarcados();
+  const lote='L'+Date.now()+Math.random().toString(36).slice(2,6);
+  try{for(const h of hs)await store.add({tipo:'extra',lote,servidor:sid,servidorEmail:SV[sid].email,dia:val('xDia'),horario:h,obs:val('xObs').trim(),
+      status:proprio?'aprovada':'pendente',
+      ...(proprio?{}:{solicitadoEmail:SV[sid].email,solicitadoNome:SV[sid].nome,solicitanteNome:quem(meuEmail)}),
+      criadoEm:Date.now(),criadoPor:meuEmail});
+    fecharModal();toast(proprio?`⏱️ ${hs.length} plantão(ões) extra(s) marcado(s).`:`⏱️ Enviado para ${SV[sid].nome} aceitar.`);}
+  catch(e){toast('Erro: '+(e.message||e));}
+};
+// ── Ausência (servidor continua escalado, mas fora do setor) ─────────
+window.abrirAus=(sid,dia,tipoIni,ed)=>{
+  if(!souCoord)return;
+  modal(ed?'✏️ Editar ausência':'• Registrar ausência',`
+    <div class="fg"><label>Tipo de evento</label><div class="aus-tipos">
+      ${Object.entries(AUS_TIPOS).map(([k,t],i)=>`<label class="aus-tipo"><input type="radio" name="aTipo" value="${k}" ${i===0?'checked':''} onchange="ausAtualizar()">
+        <span class="aus-ic">${t.ic}</span><span><b>${t.nome}</b><small>${t.sub}</small></span></label>`).join('')}</div></div>
+    <div class="aus-horas" id="aHorasBox">
+      <label>🕐 Carga horária de instrução (horas)</label>
+      <div class="aus-hl"><input type="number" id="aHoras" min="0" max="999" placeholder="Ex.: 8"> horas
+      </div>
+      <small>Total de horas ministradas como instrutor ACAPS.</small>
+    </div>
+    <div class="fg"><label>Período</label><div class="aus-per">
+      <label><input type="radio" name="aPer" value="1" checked onchange="ausAtualizar()"> Dia único</label>
+      <label><input type="radio" name="aPer" value="n" onchange="ausAtualizar()"> Período</label></div></div>
+    <div class="frow">
+      <div class="fg"><label id="aIniLbl">Data</label><input type="date" id="aIni" min="${INICIO}" max="${FIM}" value="${dia||''}" onchange="ausAtualizar()"></div>
+      <div class="fg" id="aFimBox" style="display:none"><label>Até</label><input type="date" id="aFim" min="${INICIO}" max="${FIM}" onchange="ausAtualizar()"></div>
+    </div>
+    <div class="fg"><label>Servidor(es)</label><div class="aus-sv">
+      ${SERVIDORES.map(s=>`<label><input type="checkbox" value="${s.id}" ${s.id===sid?'checked':''} onchange="ausAtualizar()"> ${s.nome} <span class="chip g-${s.g}">${s.grupo}</span></label>`).join('')}</div></div>
+    <div class="fg"><label id="aMotLbl">Observação (obrigatória)</label><textarea id="aMot" maxlength="300" oninput="ausAtualizar()" placeholder="Ex.: convocada para ministrar curso de formação"></textarea></div>
+    <div id="aMsg" class="aviso av-inf"></div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bp" id="aBtn" disabled onclick="salvarAus()">${ed?'Salvar alterações':'Registrar'}</button>`);
+  if(tipoIni){const r=document.querySelector(`input[name=aTipo][value=${tipoIni}]`);if(r)r.checked=true;}
+  if(ed){
+    if(ed.fim&&ed.fim!==ed.ini){document.querySelector('input[name=aPer][value=n]').checked=true;document.getElementById('aFim').value=ed.fim;}
+    document.getElementById('aMot').value=ed.motivo||'';if(ed.horas)document.getElementById('aHoras').value=ed.horas;
+    // na edição, um servidor só
+    document.querySelectorAll('.aus-sv input').forEach(i=>{i.checked=i.value===ed.servidor;i.disabled=i.value!==ed.servidor;});
+  }
+  ausAtualizar();
+};
+// Dias escalados de cada servidor marcado dentro do período
+function ausDados(){
+  const tipo=document.querySelector('input[name=aTipo]:checked').value,per=document.querySelector('input[name=aPer]:checked').value;
+  const ini=val('aIni'),fim=per==='n'?val('aFim'):ini,svs=[...document.querySelectorAll('.aus-sv input:checked')].map(i=>i.value);
+  const er=[],lanc=[];
+  if(!ini||!fim)er.push('Informe a data'+(per==='n'?' inicial e final.':'.'));
+  else if(fim<ini)er.push('A data final é anterior à inicial.');
+  if(!svs.length)er.push('Escolha pelo menos um servidor.');
+  if(!er.length)svs.forEach(sid=>{
+    const dias=[];for(let n=num(ini);n<=num(fim);n++){const e=entrada(n,sid);if(e&&!e.folga&&!e.aus)dias.push(isoDe(n));}
+    if(dias.length)lanc.push({sid,dias});else er.push(`${SV[sid].nome} não tem plantão (sem ausência já lançada) no período.`);
+  });
+  if(!AUS_TIPOS[tipo]?.afasta&&!val('aMot').trim())er.push('Preencha a observação.');
+  return{tipo,ini,fim,er,lanc,horas:tipo==='instrutor'?Math.max(0,+val('aHoras')||0):0};
+}
+window.ausAtualizar=()=>{
+  // Férias: sempre por período (início e fim)
+  const fer=!!AUS_TIPOS[document.querySelector('input[name=aTipo]:checked').value]?.afasta;
+  if(fer)document.querySelector('input[name=aPer][value=n]').checked=true;
+  document.querySelector('input[name=aPer][value="1"]').disabled=fer;
+  document.getElementById('aMotLbl').textContent=fer?'Observação (opcional)':'Observação (obrigatória)';
+  const per=document.querySelector('input[name=aPer]:checked').value;
+  document.getElementById('aFimBox').style.display=per==='n'?'':'none';
+  document.getElementById('aIniLbl').textContent=per==='n'?'De':'Data';
+  document.getElementById('aHorasBox').style.display=document.querySelector('input[name=aTipo]:checked').value==='instrutor'?'':'none';
+  const d=ausDados();
+  caixaErros(document.getElementById('aMsg'),d.er,d.lanc.map(l=>`✓ ${SV[l.sid].nome}: ${l.dias.map(x=>br(num(x))).join(', ')}`).join('<br>')
+    +(AUS_TIPOS[d.tipo]?.afasta?'<br><small>O nome continua na escala (com o ícone), mas NÃO conta no total de servidores do dia.</small>':'<br><small>Continua escalado e contado no total do dia; o nome aparece em itálico.</small>'));
+  document.getElementById('aBtn').disabled=!!d.er.length;
+};
+window.salvarAus=async()=>{
+  const d=ausDados();if(d.er.length)return toast(d.er[0]);
+  try{if(editId){const l=d.lanc[0];
+      await store.upd(editId,{categoria:d.tipo,horas:d.horas,servidor:l.sid,servidorEmail:SV[l.sid].email,ini:d.ini,fim:d.fim,dias:l.dias,motivo:val('aMot').trim(),...marcaEdicao()});
+      editId=null;fecharModal();return toast('Ausência atualizada.');}
+    for(const l of d.lanc)await store.add({tipo:'ausencia',categoria:d.tipo,horas:d.horas,servidor:l.sid,servidorEmail:SV[l.sid].email,
+        ini:d.ini,fim:d.fim,dias:l.dias,motivo:val('aMot').trim(),criadoEm:Date.now(),criadoPor:meuEmail});
+    fecharModal();toast(`Ausência registrada (${d.lanc.length} servidor${d.lanc.length>1?'es':''}).`);}
+  catch(er){toast('Erro: '+(er.message||er));}
+};
+// Excluir: não apaga — marca como excluído (com quem, quando e justificativa) e
+// continua aparecendo no histórico do mês.
+window.desfazer=id=>{
+  const e=eventosTodos.find(x=>x.id===id);if(!e)return;
+  modal('🗑️ Excluir lançamento',`<div class="pd-info">${resumoLanc(e)}</div>
+    <div class="fg"><label>Justificativa (obrigatória)</label><textarea id="xcMot" maxlength="300" oninput="document.getElementById('xcBtn').disabled=!this.value.trim()"></textarea></div>
+    <div class="aviso av-inf">O lançamento sai da escala, mas fica registrado no histórico do mês (quem excluiu, quando e por quê).</div>`,
+    `<button class="btn bn" onclick="fecharModal()">Voltar</button><button class="btn br2" id="xcBtn" disabled onclick="confirmarExclusao('${id}')">🗑️ Excluir</button>`);
+  setTimeout(()=>document.getElementById('xcMot')?.focus(),50);
+};
+window.confirmarExclusao=async id=>{
+  const mot=val('xcMot').trim();if(!mot)return toast('Informe a justificativa.');
+  try{await store.upd(id,{excluido:true,excluidoEm:Date.now(),excluidoPor:meuEmail,motivoExclusao:mot});
+    fecharModal();toast('Lançamento excluído (registrado no histórico).');}catch(e){toast('Erro: '+(e.message||e));}
+};
+// Resumo de uma linha de qualquer lançamento (gerenciar / excluir)
+function resumoLanc(e){
+  const s=SV[e.servidor]?.nome||'';
+  if(e.tipo==='folga')return`🌴 <b>${s}</b> — ${folgaNome(e)} em ${brAno(num(e.dia))}${e.motivo?` · "${esc(e.motivo)}"`:''}`;
+  if(e.tipo==='ausencia')return`${icAus(e)} <b>${s}</b> — ${ausNome(e)}: ${ausPeriodo(e)}${e.motivo?` · "${esc(e.motivo)}"`:''}`;
+  if(e.tipo==='credito')return`8️⃣ <b>${s}</b> — crédito de 8º plantão (${nomeMesLongo(e.mes)})${e.usadoEm?` · já utilizado em ${brAno(num(e.usadoEm))}`:' · disponível'}${e.motivo?` · "${esc(e.motivo)}"`:''}`;
+  if(e.tipo==='movimentacao')return`✋ <b>${s}</b> — movimentação ${movTexto(e)}`;
+  return esc(e.tipo);
+}
+const nomeMesLongo=m=>`${MESES[+m.slice(5)-1]} ${m.slice(0,4)}`;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPRIMIR / BAIXAR / TELA CHEIA
+// ═══════════════════════════════════════════════════════════════════════════
+// ── Imprimir / PDF: o calendário do mês vira uma imagem que cabe em UMA folha A4 deitada ──
+const carregarScript=src=>new Promise((ok,erro)=>{if(document.querySelector(`script[src="${src}"]`))return ok();
+  const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>erro(new Error('Falha ao carregar '+src));document.head.appendChild(s);});
+async function imagemDoMes(){
+  await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  const box=document.createElement('div');box.className='folha-print';
+  box.innerHTML=`<div class="fp-top"><b>📅 Escala de Plantão — CRV/DPP</b><span>${nomeMes(mesAtual)}</span></div>
+    <div class="cal cal-print">${document.getElementById('cal').innerHTML}</div>
+    <div class="fp-rod"><span>⇄ permuta · ✋ movimentado · <i>itálico</i> = ausente · <s>riscado</s> = folga · ✓ presença confirmada · em amarelo: plantão extra · nº à esquerda: servidores no plantão · à direita: plantões extras</span>
+      <span>Gerado em ${brAno(N_HOJE)}</span></div>`;
+  document.body.appendChild(box);
+  // estica as semanas para a proporção da folha A4 deitada (297×210)
+  const semanas=Math.ceil(box.querySelectorAll('.dia').length/7),alvo=1500*196/283;
+  const sobra=alvo-box.offsetHeight;
+  if(sobra>0){const cs=[...box.querySelectorAll('.dia')],hs=cs.map(d=>d.offsetHeight);
+    cs.forEach((d,i)=>d.style.minHeight=Math.floor(hs[i]+sobra/semanas-1)+'px');}
+  try{return await html2canvas(box,{scale:2,backgroundColor:'#ffffff',logging:false,windowWidth:1600,width:box.offsetWidth,height:box.offsetHeight});}
+  finally{box.remove();}
+}
+window.imprimir=async()=>{
+  toast('Preparando impressão…');
+  try{const url=(await imagemDoMes()).toDataURL('image/png');
+    const fr=document.createElement('iframe');fr.style.cssText='position:fixed;width:0;height:0;border:0;right:0;bottom:0';
+    document.body.appendChild(fr);
+    fr.srcdoc=`<!doctype html><html><head><meta charset="utf-8"><title>Escala ${nomeMes(mesAtual)}</title><style>
+      @page{size:A4 landscape;margin:7mm}html,body{margin:0;height:100%}
+      img{display:block;width:100%;height:100%;object-fit:contain}</style></head><body><img src="${url}"></body></html>`;
+    fr.onload=()=>{fr.contentWindow.focus();fr.contentWindow.print();setTimeout(()=>fr.remove(),2000);};
+  }catch(e){toast('Erro ao preparar a impressão: '+(e.message||e));}
+};
+window.baixarPDF=async()=>{
+  toast('Gerando PDF…');
+  try{const cv=await imagemDoMes();
+    await carregarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const pdf=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const W=297-14,H=210-14,r=Math.min(W/cv.width,H/cv.height),w=cv.width*r,h=cv.height*r;
+    pdf.addImage(cv.toDataURL('image/jpeg',0.92),'JPEG',7+(W-w)/2,7+(H-h)/2,w,h);
+    pdf.save(`escala-plantao-${mesAtual}.pdf`);
+  }catch(e){toast('Erro ao gerar o PDF: '+(e.message||e));}
+};
+window.baixarCSV=()=>{
+  const q=s=>`"${String(s).replace(/"/g,'""')}"`;
+  const linhas=[['Data','Dia','Plantão','Servidores','Observações','Total','Plantão extra'].map(q).join(';')];
+  diasDoMes(mesAtual).forEach(n=>{const l=mapa.get(n)||[];
+    const obs=l.map(e=>{const s=SV[e.sid].nome;
+      if(e.folga)return`${s}: ${folgaNome(e.folga).toLowerCase()}`;if(e.aus)return`${s}: ausente (${ausTexto(e.aus)})`;
+      if(e.marca==='permuta')return`${s}: permuta`;if(e.marca==='mov')return`${s}: movimentado por ${quem(e.ev.criadoPor)}`;return'';}).filter(Boolean).join(' | ');
+    linhas.push([brAno(n),SEM_L[dsem(n)],letra(n),l.filter(e=>!e.folga).map(e=>SV[e.sid].nome).join(', '),obs,presentes(n).length,extrasDoDia(isoDe(n)).filter(e=>e.status==='aprovada').map(e=>`${HORARIOS[e.horario].t} ${SV[e.servidor].nome}`).join(' | ')].map(q).join(';'));});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+linhas.join('\r\n')],{type:'text/csv;charset=utf-8'}));
+  a.download=`escala-plantao-${mesAtual}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+window.telaCheia=()=>{const d=document;
+  if(d.fullscreenElement)d.exitFullscreen();
+  else d.documentElement.requestFullscreen?.().catch(()=>window.open(location.href,'_blank'));};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UTIL / BOOT
+// ═══════════════════════════════════════════════════════════════════════════
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('vis');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('vis'),3800);}
+function fbSt(s){const el=document.getElementById('fbSt');
+  el.className='fbs '+({ok:'fbok',err:'fberr',demo:'demo'}[s]||'fbld');
+  el.textContent={ok:'● Ao vivo',err:'⚠ Sem conexão',demo:'🧪 Modo teste — nada é salvo'}[s]||'⏳ Conectando...';}
+function definirUsuario(email){
+  meuEmail=(email||'').toLowerCase();const s=svDoEmail(meuEmail);meuSid=s?s.id:null;
+  souCoord=true;   // todos da CRV podem tudo
+  document.getElementById('euChip').textContent=s?`👤 ${s.nome} · ${s.grupo}`:meuEmail;
+  document.getElementById('chkMeusBox').style.display=meuSid?'':'none';
+  document.getElementById('btnAcoes').style.display=souCoord?'flex':'none';
+}
+function iniciar(email){
+  definirUsuario(email);
+  document.getElementById('bloqueio').style.display='none';
+  document.getElementById('app').style.display='';
+  if(meuSid)aba('cal');
+  store.escutar();
+}
+
+// Botão para alternar entre a escala real e o modo teste (só para quem tem acesso)
+function botaoModo(){
+  const b=document.getElementById('modoBox');b.style.display='';
+  b.innerHTML=QUER_DEMO?'<a class="btn bic bsm" href="escala-plantao.html" title="Voltar para a escala real">● Sair do teste</a>'
+    :'<a class="btn bic bsm" href="escala-plantao.html?demo" title="Simular sem gravar nada">🧪 Modo teste</a>';
+}
+function iniciarDemo(){
+  // Modo teste: dados ficam só neste navegador; dá para "entrar" como qualquer servidor
+  store=storeDemo();
+  const box=document.getElementById('demoBox');box.style.display='';
+  const salvo=svDoEmail(localStorage.getItem('crv-escala-demo-user'))?.email||SERVIDORES[1].email;
+  box.innerHTML=`<select onchange="localStorage.setItem('crv-escala-demo-user',this.value);demoTrocar(this.value)" title="Simular usuário">
+    ${EQUIPE.map(s=>`<option value="${s.email}" ${s.email===salvo?'selected':''}>${s.nome}</option>`).join('')}</select>
+    <button class="btn bic bsm" onclick="if(confirm('Apagar todos os dados de teste?'))demoLimpar()">Limpar teste</button>`;
+  window.demoTrocar=e=>{definirUsuario(e);renderTudo();};
+  window.demoLimpar=()=>store.limpar();
+  iniciar(salvo);
+}
+let iniciado=false;
+if(QUER_DEMO&&LOCAL){iniciarDemo();botaoModo();}
+else{
+  const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
+  onAuthStateChanged(getAuth(app),user=>{
+    const em=(user?.email||'').toLowerCase();
+    if(user&&ehCRV(em)&&(LOCAL||LIBERADA.includes(em))){
+      if(iniciado)return;iniciado=true;botaoModo();
+      if(QUER_DEMO)return iniciarDemo();
+      store=storeFirestore(getFirestore(app));iniciar(em);return;
+    }
+    fbSt('err');document.getElementById('fbSt').textContent=user?'⛔ Acesso restrito':'🔒 Faça login';
+    document.getElementById('app').style.display='none';
+    const b=document.getElementById('bloqueio');b.style.display='';
+    document.title='Portal CRV';document.querySelector('.hdr').style.display='none';
+    b.innerHTML=user?'Página não disponível. <a href="index.html" target="_top">Voltar ao Portal CRV</a>'
+      :'🔒 Faça login no <a href="index.html" target="_top">Portal CRV</a>.';
+  });
+}
+</script>
+</body>
+</html>
