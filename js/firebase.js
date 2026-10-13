@@ -708,7 +708,7 @@ window._abrirModalLogin = function () {
 // ══════════════════════════════════════════════
 // Nova Escala de Plantão (escala-plantao.html) — pré-lançamento.
 // Mesma lista de LIBERADA em escala-plantao.html e de escalaUsuario() em firestore.rules.
-const ESCALA_NOVA_LIBERADA = ['rodrigo.l.pastore@gmail.com'];
+const ESCALA_NOVA_LIBERADA = ['rodrigo.l.pastore@gmail.com', 'abeljuliana2012@gmail.com'];
 function _veEscalaNova(email) { return ESCALA_NOVA_LIBERADA.includes((email || '').toLowerCase()); }
 // O item do menu lateral só existe para quem está liberado (não fica no HTML)
 function _menuEscalaNova(email) {

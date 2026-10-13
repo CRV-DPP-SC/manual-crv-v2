@@ -333,7 +333,7 @@ service cloud.firestore {
     // PRÉ-LANÇAMENTO: só o e-mail abaixo acessa. Para liberar à equipe CRV,
     // troque o corpo da função por:  return isCRV();
     function escalaUsuario() {
-      return isCRV() && meuEmail() in ['rodrigo.l.pastore@gmail.com'];
+      return isCRV() && meuEmail() in ['rodrigo.l.pastore@gmail.com','abeljuliana2012@gmail.com'];
     }
     match /escala_eventos/{id} {
       allow read, create, update: if escalaUsuario();

@@ -1214,7 +1214,7 @@ onAuthStateChanged(_auth, user => {
 
     // Trocas de plantão pedidas a mim (Escala de Plantão — só equipe CRV)
     // (pré-lançamento: mesma lista de escala-plantao.html / firestore.rules)
-    if (['rodrigo.l.pastore@gmail.com'].includes((user.email || '').toLowerCase())) _iniciarTrocas(user.email);
+    if (['rodrigo.l.pastore@gmail.com', 'abeljuliana2012@gmail.com'].includes((user.email || '').toLowerCase())) _iniciarTrocas(user.email);
 
     // Guia de configuração de notificações (iPhone)
     setTimeout(_mostrarGuiaNotificacoes, 1500);
