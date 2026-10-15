@@ -526,9 +526,8 @@ let movModo=false, movSel=null;   // modo "arrastar para movimentar"
 // ═══════════════════════════════════════════════════════════════════════════
 // ARMAZENAMENTO — Firestore (normal) ou navegador (modo teste: ?demo)
 // ═══════════════════════════════════════════════════════════════════════════
-// Pré-lançamento: só estes e-mails veem a nova escala (e o modo teste no site).
-// Para liberar à equipe: esvaziar a lista (ou usar EMAILS_CRV) e ajustar firestore.rules.
-const LIBERADA=['rodrigo.l.pastore@gmail.com','abeljuliana2012@gmail.com'];
+// Acesso: toda a equipe CRV (ehCRV). O modo teste (?demo, nada é gravado) só
+// funciona no PC de desenvolvimento (localhost) — no site publicado está desativado.
 const QUER_DEMO=new URLSearchParams(location.search).has('demo');
 const LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 let store;
@@ -1682,8 +1681,9 @@ function iniciar(email){
   store.escutar();
 }
 
-// Botão para alternar entre a escala real e o modo teste (só para quem tem acesso)
+// Botão para alternar entre a escala real e o modo teste (só no PC de desenvolvimento)
 function botaoModo(){
+  if(!LOCAL)return;
   const b=document.getElementById('modoBox');b.style.display='';
   b.innerHTML=QUER_DEMO?'<a class="btn bic bsm" href="escala-plantao.html" title="Voltar para a escala real">● Sair do teste</a>'
     :'<a class="btn bic bsm" href="escala-plantao.html?demo" title="Simular sem gravar nada">🧪 Modo teste</a>';
@@ -1706,16 +1706,16 @@ else{
   const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
   onAuthStateChanged(getAuth(app),user=>{
     const em=(user?.email||'').toLowerCase();
-    if(user&&ehCRV(em)&&(LOCAL||LIBERADA.includes(em))){
+    if(user&&ehCRV(em)){
       if(iniciado)return;iniciado=true;botaoModo();
-      if(QUER_DEMO)return iniciarDemo();
+      if(QUER_DEMO&&LOCAL)return iniciarDemo();
       store=storeFirestore(getFirestore(app));iniciar(em);return;
     }
     fbSt('err');document.getElementById('fbSt').textContent=user?'⛔ Acesso restrito':'🔒 Faça login';
     document.getElementById('app').style.display='none';
     const b=document.getElementById('bloqueio');b.style.display='';
     document.title='Portal CRV';document.querySelector('.hdr').style.display='none';
-    b.innerHTML=user?'Página não disponível. <a href="index.html" target="_top">Voltar ao Portal CRV</a>'
+    b.innerHTML=user?'⛔ A Escala de Plantão é restrita à equipe CRV. <a href="index.html" target="_top">Voltar ao Portal CRV</a>'
       :'🔒 Faça login no <a href="index.html" target="_top">Portal CRV</a>.';
   });
 }

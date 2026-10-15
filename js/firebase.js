@@ -705,41 +705,18 @@ window._abrirModalLogin = function () {
 
 // ══════════════════════════════════════════════
 // AUTH STATE — abre modal se sem sessão
-// ══════════════════════════════════════════════
-// Nova Escala de Plantão (escala-plantao.html) — pré-lançamento.
-// Mesma lista de LIBERADA em escala-plantao.html e de escalaUsuario() em firestore.rules.
-const ESCALA_NOVA_LIBERADA = ['rodrigo.l.pastore@gmail.com', 'abeljuliana2012@gmail.com'];
-function _veEscalaNova(email) { return ESCALA_NOVA_LIBERADA.includes((email || '').toLowerCase()); }
-// O item do menu lateral só existe para quem está liberado (não fica no HTML)
-function _menuEscalaNova(email) {
-  const atual = document.getElementById('nav-escala-nova');
-  if (!_veEscalaNova(email)) { if (atual) atual.remove(); return; }
-  if (atual) return;
-  const lista = document.getElementById('sub-crv-ferramentas');
-  if (!lista) return;
-  const b = document.createElement('button');
-  b.className = 'nav-sub-item'; b.id = 'nav-escala-nova';
-  b.textContent = '📅 Escala de Plantão (nova) 🧪';
-  b.onclick = () => window._abrirFerramenta('escala-plantao.html', '📅 Escala de Plantão (nova)');
-  const antiga = [...lista.children].find(x => /Escala de Plantão/.test(x.textContent));
-  antiga ? antiga.after(b) : lista.appendChild(b);
-}
-
 onAuthStateChanged(auth, (user) => {
   usuarioAtual = user || null;
   window._usuarioAtual = usuarioAtual;
 
   if (user) {
     _mostrarTopbarUsuario(user);
-    // Nova Escala de Plantão: em pré-lançamento, visível só para quem está liberado
-    _menuEscalaNova(user.email);
     _sincronizarEmailCadastro(user);
     const info = document.getElementById('restrito-usuario-info');
     if (info) info.textContent = 'Conectado como: ' + (user.email || '');
     _sincronizarUnidadesFirestore();
   } else {
     _pararPresenca();
-    _menuEscalaNova('');
     _mostrarTopbarVisitante();
     /* Popup automático de login desativado temporariamente — reativar quando o Painel entrar no ar */
   }
@@ -1428,17 +1405,11 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-titulo">Trello CRV ↗</div>
         <div class="grupo-item-sub">Gestão de tarefas da equipe</div>
       </div>
-      <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')">
+      <div class="grupo-item" onclick="_abrirFerramenta('escala-plantao.html','📅 Escala de Plantão')">
         <div class="grupo-item-icon">📅</div>
-        <div class="grupo-item-titulo">Escala de Plantão ↗</div>
-        <div class="grupo-item-sub">Acesso à escala da equipe</div>
+        <div class="grupo-item-titulo">Escala de Plantão</div>
+        <div class="grupo-item-sub">Escala, trocas, extras e folgas da equipe</div>
       </div>
-      ${_veEscalaNova(usuarioAtual?.email) ? `
-      <div class="grupo-item" onclick="_abrirFerramenta('escala-plantao.html','📅 Escala de Plantão (nova)')">
-        <div class="grupo-item-icon">📅</div>
-        <div class="grupo-item-titulo">Escala de Plantão (nova) 🧪</div>
-        <div class="grupo-item-sub">Em testes — visível só para você</div>
-      </div>` : ''}
       <div class="grupo-item" onclick="_abrirFerramenta('caixinha-controle.html','☕ Caixinha do Setor')">
         <div class="grupo-item-icon">☕</div>
         <div class="grupo-item-titulo">Caixinha do Setor</div>

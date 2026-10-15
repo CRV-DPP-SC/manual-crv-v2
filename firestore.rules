@@ -330,10 +330,9 @@ service cloud.firestore {
     // A escala-base é calculada na página; aqui ficam só os lançamentos.
     // Todos os usuários com acesso têm as mesmas opções (trocas, movimentações,
     // ausências, folgas, extras, créditos). Excluir = marcar "excluido" (update).
-    // PRÉ-LANÇAMENTO: só o e-mail abaixo acessa. Para liberar à equipe CRV,
-    // troque o corpo da função por:  return isCRV();
+    // Acesso: toda a equipe CRV.
     function escalaUsuario() {
-      return isCRV() && meuEmail() in ['rodrigo.l.pastore@gmail.com','abeljuliana2012@gmail.com'];
+      return isCRV();
     }
     match /escala_eventos/{id} {
       allow read, create, update: if escalaUsuario();
