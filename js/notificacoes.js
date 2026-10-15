@@ -606,14 +606,16 @@ let _primeiraTr   = true;
 function _iniciarTrocas(email) {
   if (_unsubTrocas) { _unsubTrocas(); _unsubTrocas = null; }
   _primeiraTr = true;
-  // Um filtro só (não depende de índice composto); "pendente" é filtrado aqui
-  const q = query(
-    collection(_db, 'escala_eventos'),
-    where('solicitadoEmail', '==', (email || '').toLowerCase())
-  );
-  _unsubTrocas = onSnapshot(q, snap => {
+  const eu = (email || '').toLowerCase();
+  // Quem precisa responder: "respondeEmail" (trocas novas — pode ser o solicitante,
+  // quando o colega cadastrou) ou "solicitadoEmail" (movimentações, extras e trocas antigas).
+  // Consultas de um filtro só (não dependem de índice composto); o resto é filtrado aqui.
+  const docs = { a: new Map(), b: new Map() };
+  const atualizar = () => {
     const antes = _trocas.length;
-    _trocas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const todos = new Map([...docs.a, ...docs.b]);
+    _trocas = [...todos.values()]
+      .filter(t => (t.respondeEmail ? t.respondeEmail === eu : t.solicitadoEmail === eu))
       .filter(t => t.status === 'pendente' && !t.excluido && ['permuta', 'movimentacao', 'extra'].includes(t.tipo))
       .sort((a, b) => (a.criadoEm || 0) - (b.criadoEm || 0));
     // Plantões extras marcados juntos viram um aviso só (com todos os horários)
@@ -626,7 +628,13 @@ function _iniciarTrocas(email) {
     if (_primeiraTr) _primeiraTr = false;
     else if (_trocas.length > antes) { _tocarSom(); _ntfToast('⇄ Novo pedido na Escala de Plantão!'); }
     _atualizarUI();
-  }, err => { console.warn('[sininho] pedidos da escala:', err); _trocas = []; _atualizarUI(); });
+  };
+  const ouvir = (campo, chave) => onSnapshot(
+    query(collection(_db, 'escala_eventos'), where(campo, '==', eu)),
+    snap => { docs[chave] = new Map(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }])); atualizar(); },
+    err => { console.warn('[sininho] pedidos da escala (' + campo + '):', err); docs[chave] = new Map(); atualizar(); });
+  const u1 = ouvir('solicitadoEmail', 'a'), u2 = ouvir('respondeEmail', 'b');
+  _unsubTrocas = () => { u1(); u2(); };
 }
 
 function _dataBr(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '—'; }
@@ -665,9 +673,13 @@ function _renderizarTrocas() {
     </div>` : `
     <div class="ntf-item" style="border-color:#bae6fd;background:#f0f9ff;">
       <div class="ntf-item-top">
-        <div class="ntf-item-titulo">⇄ ${_esc(t.solicitanteNome || t.solicitanteEmail)} pediu troca de plantão</div>
+        ${t.respondeEmail && t.respondeEmail === t.solicitanteEmail
+          ? `<div class="ntf-item-titulo">⇄ ${_esc(t.solicitadoNome || t.solicitadoEmail)} cadastrou a troca que você pediu</div>
         <div style="font-size:.74rem;color:#334155;line-height:1.5;">
-          Você trabalha <b>${_dataBr(t.dia1)}</b> e ${_esc(t.solicitanteNome || 'o colega')} trabalha <b>${_dataBr(t.dia2)}</b>.
+          Você trabalha <b>${_dataBr(t.dia2)}</b> e ${_esc(t.solicitadoNome || 'o colega')} trabalha <b>${_dataBr(t.dia1)}</b>. Confirme.`
+          : `<div class="ntf-item-titulo">⇄ ${_esc(t.solicitanteNome || t.solicitanteEmail)} pediu troca de plantão</div>
+        <div style="font-size:.74rem;color:#334155;line-height:1.5;">
+          Você trabalha <b>${_dataBr(t.dia1)}</b> e ${_esc(t.solicitanteNome || 'o colega')} trabalha <b>${_dataBr(t.dia2)}</b>.`}
           ${t.obs ? '<br><i>"' + _esc(t.obs) + '"</i>' : ''}
         </div>
       </div>

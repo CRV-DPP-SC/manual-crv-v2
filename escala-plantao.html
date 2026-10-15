@@ -801,9 +801,12 @@ function descricaoEntrada(e,n){
   return r.join('<br>');
 }
 
+// Quem precisa aceitar a troca: o colega que não cadastrou (pedidos antigos: o solicitado)
+const respondePerm=e=>e.responde||e.solicitado;
 function linhaPermuta(e,acoes){
+  const cad=svDoEmail(e.criadoPor)?.id;
   return`<div class="lin"><div class="lin-tx">
-    <b>${SV[e.solicitante].nome}</b> solicitou troca${e.solicitado===meuSid?' com você':` com <b>${SV[e.solicitado].nome}</b>`}:
+    <b>${SV[e.solicitante].nome}</b> solicitou troca${e.solicitado===meuSid?' com você':` com <b>${SV[e.solicitado].nome}</b>`}${cad&&cad!==e.solicitante?` <small style="display:inline">(cadastrada por ${SV[cad].nome})</small>`:''}:
     ${SV[e.solicitante].nome} trabalha ${br(num(e.dia2))} (plantão de ${SV[e.solicitado].nome}) ⇄
     ${SV[e.solicitado].nome} trabalha ${br(num(e.dia1))} (plantão de ${SV[e.solicitante].nome})
     <small>Pedida em ${new Date(e.criadoEm).toLocaleString('pt-BR')}${e.obs?' — '+esc(e.obs):''}${e.motivoRecusa?`<br>Recusada: "${esc(e.motivoRecusa)}"`:''}</small></div>
@@ -811,10 +814,10 @@ function linhaPermuta(e,acoes){
 }
 function renderPermutas(){
   document.getElementById('permNovaBox').style.display=meuSid?'':'none';
-  const doMes=eventos.filter(e=>e.tipo==='permuta'&&e.mes===mesAtual).sort((a,b)=>b.criadoEm-a.criadoEm);
+  const doMes=eventos.filter(e=>e.tipo==='permuta'&&(e.dia1.startsWith(mesAtual)||e.dia2.startsWith(mesAtual))).sort((a,b)=>b.criadoEm-a.criadoEm);
   if(meuSid){const c=contPermutas(meuSid,mesAtual);
     document.getElementById('permCont').textContent=`${nomeMes(mesAtual)}: ${c.solicitante}/${MAX_SOLICITANTE} como solicitante · ${c.solicitado}/${MAX_SOLICITADO} como solicitado`;}
-  const paraMim=eventos.filter(e=>e.tipo==='permuta'&&e.status==='pendente'&&e.solicitado===meuSid).sort((a,b)=>a.criadoEm-b.criadoEm);
+  const paraMim=eventos.filter(e=>e.tipo==='permuta'&&e.status==='pendente'&&respondePerm(e)===meuSid).sort((a,b)=>a.criadoEm-b.criadoEm);
   const movMim=umPorGrupo(eventos.filter(e=>PEDIDO_PEND(e)&&e.servidor===meuSid).sort((a,b)=>a.criadoEm-b.criadoEm));
   document.getElementById('permParaMim').innerHTML=(paraMim.length||movMim.length)?paraMim.map(e=>linhaPermuta(e,
     `<button class="btn bsm bv" onclick="responderPermuta('${e.id}',true)">Aceitar</button>
@@ -824,9 +827,9 @@ function renderPermutas(){
       <button class="btn bsm bv" onclick="responderMov('${e.id}',true)">${e.tipo==='extra'?'Aceitar':'Autorizar'}</button>
       <button class="btn bsm br2" onclick="responderMov('${e.id}',false)">${e.tipo==='extra'?'Recusar':'Negar'}</button></div></div>`).join('')
     :'<div class="nodata">Nenhum pedido pendente.</div>';
-  const minhas=doMes.filter(e=>e.solicitante===meuSid);
+  const minhas=doMes.filter(e=>e.criadoPor===meuEmail||e.solicitante===meuSid);
   document.getElementById('permMinhas').innerHTML=minhas.length?minhas.map(e=>linhaPermuta(e,
-    e.status==='pendente'?`<button class="btn bsm bn" onclick="cancelarPermuta('${e.id}')">Cancelar pedido</button>`:'')).join(''):'<div class="nodata">Nenhuma solicitação neste mês.</div>';
+    e.status==='pendente'&&e.criadoPor===meuEmail?`<button class="btn bsm bn" onclick="cancelarPermuta('${e.id}')">Cancelar pedido</button>`:'')).join(''):'<div class="nodata">Nenhuma solicitação neste mês.</div>';
 }
 
 function tabelaCreditos(bf){
@@ -836,15 +839,17 @@ function tabelaCreditos(bf){
     h+=`<tr><td>${nomeMes(c.mes)}${c.manual?' <span class="st st-prev" title="Lançado manualmente">MANUAL</span>':''}</td><td class="num">${c.qtd??'—'}</td>
       <td><span class="st st-${c.status}">${{disp:'DISPONÍVEL',usada:'USADA'}[c.status]}</span></td>
       <td>${c.folga?brAno(num(c.folga.dia)):'—'}</td>
-      <td>${c.folga&&!c.folga.manual&&(souCoord||(c.folga.servidor===meuSid&&num(c.folga.dia)>=N_HOJE))?`<button class="btn bsm bn" onclick="cancelarFolga('${c.folga.id}')">Cancelar folga</button>`:''}</td></tr>`;
+      <td>${c.folga&&!c.folga.manual&&c.folga.servidor===meuSid?`<button class="btn bsm bn" onclick="cancelarFolga('${c.folga.id}')">Cancelar folga</button>`:''}</td></tr>`;
   });
   bf.semCredito.forEach(f=>{h+=`<tr><td>${nomeMes(f.creditoMes)}</td><td class="num">—</td><td><span class="st st-inv">SEM CRÉDITO</span></td>
-    <td>${brAno(num(f.dia))}</td><td>${souCoord?`<button class="btn bsm bn" onclick="cancelarFolga('${f.id}')">Cancelar folga</button>`:''}</td></tr>`;});
+    <td>${brAno(num(f.dia))}</td><td>${f.servidor===meuSid?`<button class="btn bsm bn" onclick="cancelarFolga('${f.id}')">Cancelar folga</button>`:''}</td></tr>`;});
   return h+'</table></div>';
 }
 // Número clicável: abre o detalhe (só quando há algo para mostrar)
 const clk=(v,tipo,sid,txt)=>v?`<span class="clk" onclick="event.stopPropagation();detalhe('${tipo}','${sid}')" title="Ver detalhes">${txt??v}</span>`:(txt??v);
 // ── Gerenciar: lista + adicionar / editar / excluir ──
+// Folga, férias, afastamento e crédito manual: só o próprio servidor lança/edita/exclui
+const soDono=e=>e.tipo==='folga'||e.tipo==='credito'||(e.tipo==='ausencia'&&ehAfast(e));
 const ehGerenciavel=e=>e.tipo==='folga'||e.tipo==='credito'||(e.tipo==='ausencia'&&ehAfast(e));
 const dataLanc=e=>e.tipo==='folga'?e.dia:e.tipo==='ausencia'?(e.ini||ausDias(e)[0]):e.tipo==='credito'?(e.usadoEm||e.mes+'-01'):'';
 function renderGerenciar(){
@@ -855,13 +860,13 @@ function renderGerenciar(){
     .sort((a,b)=>dataLanc(b).localeCompare(dataLanc(a)));
   document.getElementById('gerLista').innerHTML=l.length?`<div class="ger-lista">${l.map(e=>`<div class="lin"><div class="lin-tx">${resumoLanc(e)}
       <small>Cadastrado por ${esc(quem(e.criadoPor))} em ${quando(e.criadoEm)}${e.editadoEm?` · editado por ${esc(quem(e.editadoPor))} em ${quando(e.editadoEm)}`:''}</small></div>
-      <div class="lin-ac">${e.tipo==='credito'&&e.servidor!==meuSid?'<span class="st st-nd" title="Crédito manual: só o próprio servidor altera">só o próprio servidor altera</span>'
+      <div class="lin-ac">${soDono(e)&&e.servidor!==meuSid?'<span class="st st-nd" title="Só o próprio servidor altera">só o próprio servidor altera</span>'
         :`<button class="btn bsm bn" onclick="gerEditar('${e.id}')">✏️ Editar</button><button class="btn bsm br2" onclick="desfazer('${e.id}')">🗑️ Excluir</button>`}</div></div>`).join('')}</div>`
     :'<div class="nodata">Nenhum lançamento.</div>';
 }
 window.renderGerenciar=renderGerenciar;
 window.gerAdicionar=()=>modal('＋ Adicionar',`<div class="aus-tipos">
-    <label class="aus-tipo" onclick="abrirFolga(true)"><span class="aus-ic">🌴</span><span><b>Folga</b><small>8º plantão ou banco de horas</small></span></label>
+    <label class="aus-tipo" onclick="abrirFolga(false)"><span class="aus-ic">🌴</span><span><b>Folga</b><small>8º plantão ou banco de horas</small></span></label>
     <label class="aus-tipo" onclick="abrirAus('','','ferias')"><span class="aus-ic">🏖️</span><span><b>Férias</b><small>Período de férias</small></span></label>
     <label class="aus-tipo" onclick="abrirAus('','','afastamento')"><span class="aus-ic">🩺</span><span><b>Afastamento</b><small>Licença médica, licenças e outros afastamentos</small></span></label>
     <label class="aus-tipo" onclick="abrirCredito()"><span class="aus-ic">8️⃣</span><span><b>Crédito de 8º plantão</b><small>Lançamento manual no seu nome (ex.: meses anteriores à escala), disponível ou já utilizado</small></span></label>
@@ -869,7 +874,8 @@ window.gerAdicionar=()=>modal('＋ Adicionar',`<div class="aus-tipos">
 window.gerEditar=id=>{
   const e=eventos.find(x=>x.id===id);if(!e)return;
   editId=id;aplicarEventos();            // o próprio lançamento sai do cálculo enquanto é editado
-  if(e.tipo==='folga')abrirFolga(true,e.dia,e.servidor,e);
+  if(soDono(e)&&e.servidor!==meuSid){editId=null;aplicarEventos();return toast('Só o próprio servidor altera esse lançamento.');}
+  if(e.tipo==='folga')abrirFolga(false,e.dia,e.servidor,e);
   else if(e.tipo==='ausencia')abrirAus(e.servidor,e.ini||ausDias(e)[0],e.categoria,e);
   else if(e.tipo==='credito')abrirCredito(e);
 };
@@ -1030,6 +1036,7 @@ function htmlHistorico(l){
       if(e.tipo==='ausencia'){ic=icAus(e);tag=ausNome(e)+(e.horas?` · ${e.horas}h`:"");det=`Ausente em ${ausPeriodo(e)} — continua escalado(a)`;}
       if(e.tipo==='folga'){ic='🌴';tag=folgaBanco(e)?"Folga · banco de horas":"Folga · 8º plantão";det=`Folga em ${dPl(e.dia)}${folgaBanco(e)?"":` · crédito de ${nomeMes(e.creditoMes)}`}`;}
       if(e.tipo==='extra')del=souCoord&&['aprovada','pendente'].includes(e.status)?`<button class="hi-del" title="Desmarcar" onclick="desmarcarExtra('${ids}')">🗑️</button>`:'';
+      else if(soDono(e)&&e.servidor!==meuSid)del='';
       else if(souCoord)del=`<button class="hi-del" title="Desfazer" onclick="desfazer('${e.id}')">🗑️</button>`;
       else if(e.tipo==='folga'&&e.servidor===meuSid&&num(e.dia)>=N_HOJE)del=`<button class="hi-del" title="Cancelar folga" onclick="cancelarFolga('${e.id}')">🗑️</button>`;
     }
@@ -1045,7 +1052,7 @@ function htmlHistorico(l){
 window.renderHistorico=renderHistorico;
 
 function renderBadges(){
-  const p=umPorGrupo(eventos.filter(e=>(e.tipo==='permuta'&&e.status==='pendente'&&e.solicitado===meuSid)||(PEDIDO_PEND(e)&&e.servidor===meuSid))).length;
+  const p=umPorGrupo(eventos.filter(e=>(e.tipo==='permuta'&&e.status==='pendente'&&respondePerm(e)===meuSid)||(PEDIDO_PEND(e)&&e.servidor===meuSid))).length;
   const b=document.getElementById('bdgPerm');b.textContent=p;b.style.display=p?'':'none';
   const f=meuSid?bancoFolgas(meuSid).disponiveis.length:0;
   const g=document.getElementById('bdgFolga');g.textContent=f;g.style.display=f?'':'none';g.style.background='#0f6e56';
@@ -1092,9 +1099,9 @@ window.abrirDia=d=>{
       if(conf&&n===N_HOJE)ac+=`<button class="btn bsm bn" onclick="confirmar('${d}','${e.sid}',false)">Desfazer confirmação</button>`;
       if(fut)ac+=`<button class="btn bsm bp" onclick="abrirPermuta('${d}')">⇄ Solicitar troca</button>`;
     }
-    if(!e.folga)ac+=e.aus?`<button class="btn bsm bn" onclick="desfazer('${e.aus.id}')">Remover ausência</button>`
+    if(!e.folga)ac+=e.aus?(ehAfast(e.aus)&&!eu?'':`<button class="btn bsm bn" onclick="desfazer('${e.aus.id}')">Remover ausência</button>`)
                          :`<button class="btn bsm bn" onclick="abrirAus('${e.sid}','${d}')">• Cadastrar ausência</button>`;
-    if(!e.folga)ac+=`<button class="btn bsm bn" onclick="abrirFolga(${eu?'false':'true'},'${d}','${e.sid}')">🌴 Folga</button>`;
+    if(eu&&!e.folga)ac+=`<button class="btn bsm bn" onclick="abrirFolga(false,'${d}')">🌴 Folga</button>`;
     if(souCoord){
       if(!e.folga)ac+=`<button class="btn bsm bamb" onclick="abrirMov('${e.sid}','${d}')">✋ Movimentar</button>`;
       if(e.marca==='mov')ac+=`<button class="btn bsm br2" onclick="desfazer('${e.ev.id}')">Desfazer movimentação</button>`;
@@ -1187,6 +1194,9 @@ window.abrirPermuta=(d1)=>{
   if(!meusDias.length)return toast(`Você não tem plantões disponíveis para troca em ${nomeMes(mes)}.`);
   if(!d1||!meusDias.includes(num(d1)))d1=isoDe(meusDias[0]);
   modal(`⇄ Solicitar troca de plantão — ${nomeMes(mes)}`,`
+    <div class="fg"><label>Quem pediu a troca?</label><div class="aus-per">
+      <label><input type="radio" name="pQuem" value="eu" checked onchange="permAtualizar()"> Eu</label>
+      <label><input type="radio" name="pQuem" value="colega" onchange="permAtualizar()"> O colega (eu só estou cadastrando)</label></div></div>
     <div class="fg"><label>Meu plantão (o colega trabalha por mim)</label>
       <select id="pDia1" onchange="permAtualizar('dia1')">${meusDias.map(n=>optDia(n,d1)).join('')}</select></div>
     <div class="fg"><label>Dia que eu vou trabalhar</label><select id="pDia2" onchange="permAtualizar('dia2')"></select></div>
@@ -1213,26 +1223,38 @@ window.permAtualizar=(nivel)=>{
     sc.innerHTML=!d2?'<option value="">— escolha o dia primeiro —</option>'
       :(cs.length>1?'<option value="">— escolha o colega —</option>':'')+cs.map(s=>`<option value="${s}">${SV[s].nome} (${SV[s].grupo})</option>`).join('');
   }
-  const col=val('pColega'),mT=d1.slice(0,7),c=contPermutas(meuSid,mT);
+  const col=val('pColega'),mT=d1.slice(0,7),c=contPermutas(meuSid,mT),euPedi=permQuem()==='eu';
   if(!col||!val('pDia2')){btn.disabled=true;msg.className='aviso av-inf';
-    msg.innerHTML=`A troca conta no mês do seu plantão (o dia que você cede). Você usou ${c.solicitante}/${MAX_SOLICITANTE} trocas como solicitante em ${nomeMes(mT)}.`;return;}
-  const er=validarPermuta({solicitante:meuSid,dia1:d1,solicitado:col,dia2:val('pDia2')});
+    msg.innerHTML=`A troca conta no mês do seu plantão (o dia que você cede). Você usou ${euPedi?c.solicitante:c.solicitado}/${euPedi?MAX_SOLICITANTE:MAX_SOLICITADO} trocas como ${euPedi?'solicitante':'solicitado'} em ${nomeMes(mT)}.`;return;}
+  const er=validarPermuta(montarPermuta());
   if(!er.length&&!val('pObs').trim())er.push('Preencha a observação.');
-  caixaErros(msg,er,`✓ Troca válida: <b>${SV[col].nome}</b> trabalha ${br(num(d1))} e você trabalha ${br(num(val('pDia2')))}. ${SV[col].nome} precisa aceitar.`);
+  caixaErros(msg,er,`✓ Troca válida: <b>${SV[col].nome}</b> trabalha ${br(num(d1))} e você trabalha ${br(num(val('pDia2')))}.
+    ${euPedi?`Você é o solicitante. ${SV[col].nome} precisa aceitar.`:`${SV[col].nome} fica como solicitante e você como solicitado. ${SV[col].nome} precisa confirmar.`}`);
   btn.disabled=!!er.length;
 };
+const permQuem=()=>document.querySelector('input[name=pQuem]:checked')?.value||'eu';
+// dia1 = plantão de quem pede · dia2 = plantão de quem foi pedido
+function montarPermuta(){
+  const meu=val('pDia1'),dele=val('pDia2'),col=val('pColega');
+  return permQuem()==='eu'?{solicitante:meuSid,dia1:meu,solicitado:col,dia2:dele}
+                          :{solicitante:col,dia1:dele,solicitado:meuSid,dia2:meu};
+}
 window.enviarPermuta=async()=>{
-  const p={solicitante:meuSid,dia1:val('pDia1'),solicitado:val('pColega'),dia2:val('pDia2')},obs=val('pObs').trim();
+  const p=montarPermuta(),obs=val('pObs').trim(),col=val('pColega');
   const er=validarPermuta(p);if(!obs)er.push('Preencha a observação.');if(er.length)return toast(er[0]);
   try{await store.add({tipo:'permuta',...p,mes:p.dia1.slice(0,7),status:'pendente',obs,
+      responde:col,respondeEmail:SV[col].email,cadastradoPorNome:SV[meuSid].nome,
       solicitanteEmail:SV[p.solicitante].email,solicitadoEmail:SV[p.solicitado].email,solicitanteNome:SV[p.solicitante].nome,solicitadoNome:SV[p.solicitado].nome,criadoEm:Date.now(),criadoPor:meuEmail});
-    fecharModal();toast(`⇄ Pedido enviado para ${SV[p.solicitado].nome}.`);}
+    fecharModal();toast(`⇄ Enviado para ${SV[col].nome} ${permQuem()==='eu'?'aceitar':'confirmar'}.`);}
   catch(e){toast('Erro: '+(e.message||e));}
 };
 window.responderPermuta=async(id,aceitar)=>{
   const e=eventos.find(x=>x.id===id);if(!e)return toast('Pedido de troca não encontrado.');
   if(e.status!=='pendente')return toast(`Este pedido já foi ${e.status}.`);
-  const resumo=`<b>${SV[e.solicitante].nome}</b> pediu: você trabalha <b>${brAno(num(e.dia1))}</b> (plantão ${letra(num(e.dia1))}) e ${SV[e.solicitante].nome} trabalha <b>${brAno(num(e.dia2))}</b> (plantão ${letra(num(e.dia2))}).${e.obs?`<br><i>"${esc(e.obs)}"</i>`:''}`;
+  // "você" = quem está respondendo; o outro = quem cadastrou
+  const souSolic=e.solicitante===meuSid,outro=souSolic?e.solicitado:e.solicitante;
+  const meuTrab=souSolic?e.dia2:e.dia1,deleTrab=souSolic?e.dia1:e.dia2;
+  const resumo=`${souSolic?`<b>${SV[outro].nome}</b> cadastrou a troca que <b>você pediu</b>`:`<b>${SV[outro].nome}</b> pediu`}: você trabalha <b>${brAno(num(meuTrab))}</b> (plantão ${letra(num(meuTrab))}) e ${SV[outro].nome} trabalha <b>${brAno(num(deleTrab))}</b> (plantão ${letra(num(deleTrab))}).${e.obs?`<br><i>"${esc(e.obs)}"</i>`:''}`;
   if(aceitar){const er=validarPermuta(e,id);
     if(er.length)return modal('Não é possível aceitar',`<div class="pd-info">${resumo}</div><div class="aviso av-err">${er.map(esc).join('<br>')}</div><div class="pd-info">A escala mudou desde o pedido. Você pode recusar a troca.</div>`,
       `<button class="btn bn" onclick="fecharModal()">Fechar</button><button class="btn br2" onclick="responderPermuta('${id}',false)">Recusar</button>`);
@@ -1260,7 +1282,7 @@ function abrirTrocaDaUrl(){
     if(e.servidor!==meuSid)return toast('Este pedido não é seu.');
     return responderMov(id,acao!=='recusar');}
   mesAtual=e.mes;aba('perm');renderTudo();
-  if(e.solicitado!==meuSid)return toast('Este pedido de troca não é para você.');
+  if(respondePerm(e)!==meuSid)return toast('Este pedido de troca não é para você.');
   responderPermuta(id,acao!=='recusar');
 }
 window.cancelarPermuta=async id=>{if(!confirm('Cancelar este pedido de permuta?'))return;
@@ -1272,8 +1294,8 @@ window.anularPermuta=async id=>{if(!confirm('Anular esta permuta? Os dois servid
 const folgaBanco=e=>e.origem==='banco';
 const folgaNome=e=>folgaBanco(e)?'Folga (Banco de Horas)':'Folga do 8º Plantão';
 window.abrirFolga=(paraOutro,dia,quem,ed)=>{
-  if(!paraOutro&&!meuSid)return toast('Seu login não está ligado a nenhum servidor da escala.');
-  const sid=paraOutro?(quem||SERVIDORES[0].id):meuSid;
+  if(!meuSid)return toast('Só quem está na escala cadastra folga (no próprio nome).');
+  const sid=meuSid;
   modal(ed?'✏️ Editar folga':'🌴 Cadastrar folga',`
     <div class="fg"><label>Tipo de folga</label><div class="aus-tipos">
       <label class="aus-tipo"><input type="radio" name="fOrig" value="oitavo" checked onchange="folgaAtualizar(true)"><span class="aus-ic">8️⃣</span>
@@ -1281,7 +1303,7 @@ window.abrirFolga=(paraOutro,dia,quem,ed)=>{
       <label class="aus-tipo"><input type="radio" name="fOrig" value="banco" onchange="folgaAtualizar(true)"><span class="aus-ic">⏱️</span>
         <span><b>Banco de horas</b><small>Compensação de horas excedentes (ex.: viagem, convocação) — controle de cada servidor</small></span></label>
     </div></div>
-    ${paraOutro?`<div class="fg"><label>Servidor</label><select id="fServ" onchange="folgaAtualizar()">${opcoesServ(sid)}</select></div>`:''}
+
     <div class="fg"><label>Dia da folga (um plantão em que está escalado)</label><select id="fDia" onchange="folgaAtualizar(true)"></select></div>
     <div class="fg"><label>Observação (obrigatória)</label><textarea id="fObs" maxlength="300" placeholder="Ex.: compensação da viagem a Chapecó de 03 a 05/10"></textarea></div>
     <div id="fMsg" class="aviso av-inf"></div>`,
@@ -1564,6 +1586,9 @@ window.ausAtualizar=()=>{
   if(fer)document.querySelector('input[name=aPer][value=n]').checked=true;
   document.querySelector('input[name=aPer][value="1"]').disabled=fer;
   document.getElementById('aMotLbl').textContent=fer?'Observação (opcional)':'Observação (obrigatória)';
+  // férias e afastamento: só no próprio nome
+  if(!editId)document.querySelectorAll('.aus-sv input').forEach(i=>{
+    if(fer){i.checked=i.value===meuSid;i.disabled=i.value!==meuSid;}else i.disabled=false;});
   const per=document.querySelector('input[name=aPer]:checked').value;
   document.getElementById('aFimBox').style.display=per==='n'?'':'none';
   document.getElementById('aIniLbl').textContent=per==='n'?'De':'Data';
@@ -1587,6 +1612,7 @@ window.salvarAus=async()=>{
 // continua aparecendo no histórico do mês.
 window.desfazer=id=>{
   const e=eventosTodos.find(x=>x.id===id);if(!e)return;
+  if(soDono(e)&&e.servidor!==meuSid)return toast('Só o próprio servidor altera esse lançamento.');
   modal('🗑️ Excluir lançamento',`<div class="pd-info">${resumoLanc(e)}</div>
     <div class="fg"><label>Justificativa (obrigatória)</label><textarea id="xcMot" maxlength="300" oninput="document.getElementById('xcBtn').disabled=!this.value.trim()"></textarea></div>
     <div class="aviso av-inf">O lançamento sai da escala, mas fica registrado no histórico do mês (quem excluiu, quando e por quê).</div>`,

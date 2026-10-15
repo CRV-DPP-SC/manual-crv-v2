@@ -361,14 +361,17 @@ service cloud.firestore {
     function escalaUsuario() {
       return isCRV();
     }
+    function soDono(d) {
+      return d.tipo in ['folga','credito']
+        || (d.tipo == 'ausencia' && d.get('categoria', '') in ['ferias','afastamento']);
+    }
     match /escala_eventos/{id} {
-      // Crédito manual de 8º plantão: cada um só lança/altera no próprio nome.
+      // Folga, férias, afastamento e crédito manual de 8º plantão: só o próprio servidor.
       allow read: if escalaUsuario();
-      allow create: if escalaUsuario()
-        && (request.resource.data.tipo != 'credito' || request.resource.data.servidorEmail == meuEmail());
+      allow create: if escalaUsuario() && (!soDono(request.resource.data) || request.resource.data.servidorEmail == meuEmail());
       allow update: if escalaUsuario()
-        && (resource.data.tipo != 'credito' || resource.data.servidorEmail == meuEmail())
-        && (request.resource.data.tipo != 'credito' || request.resource.data.servidorEmail == meuEmail());
+        && (!soDono(resource.data) || resource.data.servidorEmail == meuEmail())
+        && (!soDono(request.resource.data) || request.resource.data.servidorEmail == meuEmail());
       allow delete: if false;          // nada é apagado: a exclusão fica registrada
     }
     // Confirmação de presença: cada um confirma o próprio plantão

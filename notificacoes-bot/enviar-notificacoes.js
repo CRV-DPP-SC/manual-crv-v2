@@ -293,10 +293,14 @@ async function processarTrocasPlantao(desde) {
       continue;
     }
     if (t.tipo !== 'permuta' || t.status !== 'pendente' || !t.solicitadoEmail) continue;
+    // Quem responde: respondeEmail (trocas novas) ou o solicitado (antigas)
+    const cadastrouPeloSolicitante = t.respondeEmail && t.respondeEmail === t.solicitanteEmail;
     await enviarPushPessoas({
-      emails: [t.solicitadoEmail],
-      titulo: '⇄ Pedido de troca de plantão',
-      corpo:  `${t.solicitanteNome || t.solicitanteEmail}: você trabalha ${dataBr(t.dia1)} e ele(a) trabalha ${dataBr(t.dia2)}. Abra o portal para aceitar ou recusar.`,
+      emails: [t.respondeEmail || t.solicitadoEmail],
+      titulo: cadastrouPeloSolicitante ? '⇄ Confirme a troca de plantão' : '⇄ Pedido de troca de plantão',
+      corpo:  cadastrouPeloSolicitante
+        ? `${t.solicitadoNome || t.solicitadoEmail} cadastrou a troca que você pediu: você trabalha ${dataBr(t.dia2)} e ele(a) trabalha ${dataBr(t.dia1)}. Abra o portal para confirmar.`
+        : `${t.solicitanteNome || t.solicitanteEmail}: você trabalha ${dataBr(t.dia1)} e ele(a) trabalha ${dataBr(t.dia2)}. Abra o portal para aceitar ou recusar.`,
       tag:    'troca-' + doc.id,
     });
   }
@@ -324,10 +328,12 @@ async function processarTrocasPlantao(desde) {
       continue;
     }
     if (t.tipo !== 'permuta' || !['aceita', 'recusada'].includes(t.status) || !t.solicitanteEmail) continue;
+    // Resposta vai para quem cadastrou a troca
+    const respNome = t.respondeEmail === t.solicitanteEmail ? (t.solicitanteNome || t.solicitanteEmail) : (t.solicitadoNome || t.solicitadoEmail);
     await enviarPushPessoas({
-      emails: [t.solicitanteEmail],
+      emails: [t.criadoPor || t.solicitanteEmail],
       titulo: t.status === 'aceita' ? '✅ Troca de plantão aceita' : '❌ Troca de plantão recusada',
-      corpo:  `${t.solicitadoNome || t.solicitadoEmail} ${t.status === 'aceita' ? 'aceitou' : 'recusou'} a troca de ${dataBr(t.dia1)} por ${dataBr(t.dia2)}.`
+      corpo:  `${respNome} ${t.status === 'aceita' ? 'aceitou' : 'recusou'} a troca de ${dataBr(t.dia1)} por ${dataBr(t.dia2)}.`
               + (t.motivoRecusa ? ' Motivo: ' + t.motivoRecusa : ''),
       tag:    'troca-resp-' + doc.id,
     });
