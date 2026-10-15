@@ -8,9 +8,9 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=3";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=4";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=2";
-import { garantirEquipe } from "./equipe-crv.js?v=1";
+import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { definirContador, limparContador } from "./badge-app.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──

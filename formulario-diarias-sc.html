@@ -14,8 +14,8 @@
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc }
     from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-  import { FIREBASE_CONFIG, ehCRV, EMAILS_CRV } from "./js/config-crv.js";
-  import { garantirEquipe } from "./js/equipe-crv.js?v=1";
+  import { FIREBASE_CONFIG, ehCRV, EMAILS_CRV } from "./js/config-crv.js?v=4";
+  import { garantirEquipe } from "./js/equipe-crv.js?v=2";
 
   const app  = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
   const auth = getAuth(app);

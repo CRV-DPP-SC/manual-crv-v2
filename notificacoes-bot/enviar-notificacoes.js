@@ -104,7 +104,7 @@ async function diretorio() {
   const srs      = cfg.exists ? Object.keys(cfg.data().sr || {}) : [];
   const pessoas = [];
   // Equipe CRV: mesma regra de js/equipe-crv.js (fixos + lista antiga sem documento + ativos da coleção)
-  const fixos = ['rodrigo.l.pastore@gmail.com', 'crv@pp.sc.gov.br'];
+  const fixos = ['rodrigo.l.pastore@gmail.com', 'jessicaveiga9@gmail.com'];
   const eqSnap = await db.collection('equipe_crv').get();
   const eqDocs = new Map(eqSnap.docs.map(d => [d.id, d.data()]));
   const equipe = new Set(fixos);

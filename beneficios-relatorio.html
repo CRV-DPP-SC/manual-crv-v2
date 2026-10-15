@@ -360,8 +360,8 @@ import { getAuth, onAuthStateChanged }
 import { getFirestore, getDocs, collection }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-import { FIREBASE_CONFIG as firebaseConfig, EMAILS_CRV } from "./js/config-crv.js";
-import { garantirEquipe } from "./js/equipe-crv.js?v=1";
+import { FIREBASE_CONFIG as firebaseConfig, EMAILS_CRV } from "./js/config-crv.js?v=4";
+import { garantirEquipe } from "./js/equipe-crv.js?v=2";
 
 /* Reaproveita a sessão de Auth do site principal (mesmo app default) */
 const app     = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);

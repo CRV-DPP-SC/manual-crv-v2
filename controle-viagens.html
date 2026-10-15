@@ -406,8 +406,8 @@ import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/fir
 import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,getDocs,updateDoc,deleteDoc,doc,query,orderBy}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import{FIREBASE_CONFIG,ehCRV,EMAILS_CRV}from"./js/config-crv.js";
-import{garantirEquipe}from"./js/equipe-crv.js?v=1";
+import{FIREBASE_CONFIG,ehCRV,EMAILS_CRV}from"./js/config-crv.js?v=4";
+import{garantirEquipe}from"./js/equipe-crv.js?v=2";
 // Mesmo projeto e mesma sessão de login do site (crv-dpp-sc-v2)
 const fbApp=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
 const db=getFirestore(fbApp);

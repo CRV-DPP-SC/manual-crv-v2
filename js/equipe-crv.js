@@ -16,7 +16,7 @@ import { getApps, initializeApp } from "https://www.gstatic.com/firebasejs/10.11
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG } from "./config-crv.js";
 
-export const EMAILS_FIXOS = ['rodrigo.l.pastore@gmail.com', 'crv@pp.sc.gov.br'];
+export const EMAILS_FIXOS = ['rodrigo.l.pastore@gmail.com', 'jessicaveiga9@gmail.com'];
 
 let _docs = null;      // Map e-mail → dados (último carregamento com sucesso)
 let _carregando = null;

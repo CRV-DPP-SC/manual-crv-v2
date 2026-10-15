@@ -84,8 +84,8 @@ import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,sendPasswordRes
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import{getFirestore,collection,doc,onSnapshot,setDoc,updateDoc,arrayUnion}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import{FIREBASE_CONFIG,EMAILS_CRV,ehCRV,escHtml as esc}from"./js/config-crv.js";
-import{garantirEquipe,EMAILS_FIXOS}from"./js/equipe-crv.js?v=1";
+import{FIREBASE_CONFIG,EMAILS_CRV,ehCRV,escHtml as esc}from"./js/config-crv.js?v=4";
+import{garantirEquipe,EMAILS_FIXOS}from"./js/equipe-crv.js?v=2";
 
 const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
 const auth=getAuth(app);auth.languageCode='pt-BR';
@@ -98,8 +98,10 @@ const NOMES={
   'rodrigo.l.pastore@gmail.com':'Rodrigo Laux Pastore','ivana.schafer@gmail.com':'Ivana Schafer Ortiz',
   'brunawlongen@gmail.com':'Bruna Roberta Wessner Longen','ricardobritomarques12@gmail.com':'Ricardo de Brito Marques',
   'abeljuliana2012@gmail.com':'Juliana de Andrade Abel','jessicaveiga9@gmail.com':'Jéssica (Coordenadora)',
-  'day.sestren88@gmail.com':'Dayanne Christine Sestrem Rosa','sepen@pp.sc.gov.br':'SEPEN (institucional)',
-  'leilakfarias@gmail.com':'Leila','wanessaemerim@gmail.com':'Wanessa Priscyla Ventura Emerim','crv@pp.sc.gov.br':'CRV (institucional)'};
+  'day.sestren88@gmail.com':'Dayanne Christine Sestrem Rosa','wanessaemerim@gmail.com':'Wanessa Priscyla Ventura Emerim'};
+// Retirados da equipe em 15/10/2026 (e-mail institucional e quem não faz mais parte):
+// se já tiverem cadastro ativo, a página desativa automaticamente e registra no histórico.
+const REMOVIDOS=['sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'];
 
 const quando=t=>t?new Date(t).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
 const nomeDe=e=>equipe.get(e)?.nome||e;
@@ -135,6 +137,9 @@ function render(){
 async function semear(){
   if(semeado)return;semeado=true;
   const legado=[...new Set([...(EMAILS_CRV._legado||EMAILS_CRV),...EMAILS_FIXOS])];
+  for(const e of REMOVIDOS)if(equipe.get(e)?.ativo){
+    try{await updateDoc(doc(COL,e),{ativo:false,historico:arrayUnion(reg('retirado da equipe','ajuste da lista em 15/10/2026'))});}catch(er){console.warn(er);}
+  }
   for(const e of legado)if(!equipe.has(e)){
     try{await setDoc(doc(COL,e),{email:e,nome:NOMES[e]||'',ativo:true,loginCriado:null,origem:'lista anterior',
       criadoEm:Date.now(),criadoPor:meuEmail,historico:[reg('registrado a partir da lista anterior')]});}catch(er){console.warn(er);}

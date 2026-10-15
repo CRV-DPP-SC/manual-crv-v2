@@ -22,10 +22,7 @@ export const EMAILS_CRV = [
   'abeljuliana2012@gmail.com',
   'jessicaveiga9@gmail.com',
   'day.sestren88@gmail.com',
-  'sepen@pp.sc.gov.br',
-  'leilakfarias@gmail.com',
-  'wanessaemerim@gmail.com',
-  'crv@pp.sc.gov.br'
+  'wanessaemerim@gmail.com'
 ];
 
 // Envio de anexos para o Google Drive da CRV (Apps Script — mesmo usado pela
