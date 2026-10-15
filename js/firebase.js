@@ -11,6 +11,7 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, quer
          serverTimestamp, getCountFromServer }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente } from "./config-crv.js?v=3";
+import { garantirEquipe } from "./equipe-crv.js?v=1";
 
 const app  = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
@@ -705,7 +706,9 @@ window._abrirModalLogin = function () {
 
 // ══════════════════════════════════════════════
 // AUTH STATE — abre modal se sem sessão
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
+  // Equipe CRV vem do banco (página Equipe CRV) — atualiza EMAILS_CRV antes de tudo
+  if (user) await garantirEquipe(EMAILS_CRV);
   usuarioAtual = user || null;
   window._usuarioAtual = usuarioAtual;
 
@@ -1429,6 +1432,11 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-icon">🗺️</div>
         <div class="grupo-item-titulo">Controle de Viagens</div>
         <div class="grupo-item-sub">Registro de saídas e itinerários</div>
+      </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('equipe-crv.html','👥 Equipe CRV')">
+        <div class="grupo-item-icon">👥</div>
+        <div class="grupo-item-titulo">Equipe CRV</div>
+        <div class="grupo-item-sub">Incluir, desativar e redefinir senha de quem tem acesso total</div>
       </div>
       <div class="grupo-item" onclick="abrirEditorUnidades()">
         <div class="grupo-item-icon">✏️</div>

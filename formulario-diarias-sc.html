@@ -14,7 +14,8 @@
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc }
     from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-  import { FIREBASE_CONFIG, ehCRV } from "./js/config-crv.js";
+  import { FIREBASE_CONFIG, ehCRV, EMAILS_CRV } from "./js/config-crv.js";
+  import { garantirEquipe } from "./js/equipe-crv.js?v=1";
 
   const app  = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
   const auth = getAuth(app);
@@ -74,6 +75,7 @@
   onAuthStateChanged(auth, async (user) => {
     if (!_resolver) return;
     const resolver = _resolver; _resolver = null;
+    if (user) await garantirEquipe(EMAILS_CRV);
     if (!user || !ehCRV(user.email)) {
       resolver({ ok: false, motivo: user ? 'Acesso restrito à equipe CRV.' : 'Faça login no site da CRV para usar o Sistema de Diárias.' });
       return;

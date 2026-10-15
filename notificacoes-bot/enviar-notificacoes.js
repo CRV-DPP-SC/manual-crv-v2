@@ -103,7 +103,14 @@ async function diretorio() {
   const unidades = cfg.exists ? (cfg.data().unidades || []) : [];
   const srs      = cfg.exists ? Object.keys(cfg.data().sr || {}) : [];
   const pessoas = [];
-  EMAILS_CRV.forEach(email => pessoas.push({ email, tipo: 'crv', unidadeEmail: '', srCod: '', nome: 'CRV/DPP' }));
+  // Equipe CRV: mesma regra de js/equipe-crv.js (fixos + lista antiga sem documento + ativos da coleção)
+  const fixos = ['rodrigo.l.pastore@gmail.com', 'crv@pp.sc.gov.br'];
+  const eqSnap = await db.collection('equipe_crv').get();
+  const eqDocs = new Map(eqSnap.docs.map(d => [d.id, d.data()]));
+  const equipe = new Set(fixos);
+  EMAILS_CRV.forEach(e => { const d = eqDocs.get(e); if (!d || d.ativo) equipe.add(e); });
+  eqDocs.forEach((d, e) => { if (d.ativo) equipe.add(e); });
+  equipe.forEach(email => pessoas.push({ email, tipo: 'crv', unidadeEmail: '', srCod: '', nome: 'CRV/DPP' }));
   srs.forEach(sr => pessoas.push({ email: sr.toLowerCase() + 'sr@pp.sc.gov.br', tipo: 'super', unidadeEmail: '', srCod: sr, nome: 'Superintendente ' + sr }));
   unidades.forEach(u => {
     const base = u.email.toLowerCase().split('@')[0];

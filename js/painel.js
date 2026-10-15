@@ -9,6 +9,7 @@ import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario } from "./config-crv.js?v=3";
+import { garantirEquipe } from "./equipe-crv.js?v=1";
 import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, textoAvisoHtml,
          formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
          confirmarLeitura, publicarAviso, alterarArquivado, listarComentarios, contarComentarios,
@@ -155,6 +156,7 @@ const dadosPromise = carregarDados();
 onAuthStateChanged(auth, async (user) => {
   await dadosPromise;
   if (user) {
+    await garantirEquipe(EMAILS_CRV);
     usuarioAtual = user;
     const resolvido = await resolverPerfil(user);
     if (!resolvido) {

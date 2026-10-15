@@ -426,7 +426,8 @@ import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/fir
 import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,updateDoc,deleteDoc,setDoc,doc,onSnapshot}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import{FIREBASE_CONFIG,ehCRV,escHtml as esc}from"./js/config-crv.js";
+import{FIREBASE_CONFIG,ehCRV,EMAILS_CRV,escHtml as esc}from"./js/config-crv.js";
+import{garantirEquipe}from"./js/equipe-crv.js?v=1";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURAÇÃO DA ESCALA
@@ -1704,7 +1705,8 @@ let iniciado=false;
 if(QUER_DEMO&&LOCAL){iniciarDemo();botaoModo();}
 else{
   const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
-  onAuthStateChanged(getAuth(app),user=>{
+  onAuthStateChanged(getAuth(app),async user=>{
+    if(user)await garantirEquipe(EMAILS_CRV);
     const em=(user?.email||'').toLowerCase();
     if(user&&ehCRV(em)){
       if(iniciado)return;iniciado=true;botaoModo();

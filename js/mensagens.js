@@ -8,6 +8,7 @@ import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
          query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=3";
+import { garantirEquipe } from "./equipe-crv.js?v=1";
 import { definirContador } from "./badge-app.js";
 
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
@@ -112,9 +113,9 @@ function _mostrarToast(titulo, texto, onClick) {
   setTimeout(() => el.remove(), 8000);
 }
 
-onAuthStateChanged(_auth, user => {
+onAuthStateChanged(_auth, async user => {
   _user = user || null;
-  if (user) setTimeout(() => _iniciarListenersTempoReal(), 1500);
+  if (user) { await garantirEquipe(EMAILS_CRV); setTimeout(() => _iniciarListenersTempoReal(), 1500); }
   else { _pararListenersTempoReal(); document.getElementById('mensagens-panel')?.remove(); }
 });
 

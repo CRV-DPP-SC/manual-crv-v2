@@ -10,6 +10,7 @@ import { getFirestore, collection, query, orderBy, where,
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=3";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=2";
+import { garantirEquipe } from "./equipe-crv.js?v=1";
 import { definirContador, limparContador } from "./badge-app.js";
 
 // ── Firebase (reutiliza instância já inicializada se existir) ──
@@ -1191,8 +1192,9 @@ window._guiaNotifFechar = function(naoVerMais) {
 // ════════════════════════════════════════
 _injetarDOM();
 
-onAuthStateChanged(_auth, user => {
+onAuthStateChanged(_auth, async user => {
   if (user) {
+    await garantirEquipe(EMAILS_CRV);
     const btn = document.getElementById('ntf-btn');
     if (btn) btn.classList.remove('ntf-oculto');
 

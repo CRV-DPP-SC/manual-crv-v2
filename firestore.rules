@@ -33,12 +33,26 @@ service cloud.firestore {
       return request.auth.token.email_verified == true;
     }
 
+    // Equipe CRV (acesso total). Gerenciada pela página "Equipe CRV" — coleção
+    // equipe_crv (id = e-mail). Mesma regra de js/equipe-crv.js:
+    //  • e-mails fixos sempre têm acesso (segurança);
+    //  • lista antiga vale até a pessoa ter documento na coleção; daí vale "ativo".
+    function emailsFixosCRV() {
+      return ['rodrigo.l.pastore@gmail.com','crv@pp.sc.gov.br'];
+    }
+    function docEquipe() {
+      return /databases/$(database)/documents/equipe_crv/$(meuEmail());
+    }
     function isCRV() {
-      return logado() && meuEmail() in [
-        'rodrigo.l.pastore@gmail.com','ivana.schafer@gmail.com','brunawlongen@gmail.com',
-        'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
-        'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','wanessaemerim@gmail.com','crv@pp.sc.gov.br'
-      ];
+      return logado() && (
+        meuEmail() in emailsFixosCRV()
+        || (exists(docEquipe()) && get(docEquipe()).data.ativo == true)
+        || (!exists(docEquipe()) && meuEmail() in [
+          'ivana.schafer@gmail.com','brunawlongen@gmail.com',
+          'ricardobritomarques12@gmail.com','abeljuliana2012@gmail.com','jessicaveiga9@gmail.com',
+          'day.sestren88@gmail.com','sepen@pp.sc.gov.br','leilakfarias@gmail.com','wanessaemerim@gmail.com'
+        ])
+      );
     }
     // Superintendente: sr01sr@ (e-mail do titular) OU sr01@ (e-mail da Superintendência) —
     // os dois logins valem igualmente.
@@ -317,6 +331,19 @@ service cloud.firestore {
     // Índice pessoal "quais avisos eu já confirmei"
     match /avisos_lidos/{uid} {
       allow read, write: if logado() && request.auth.uid == uid;
+    }
+
+    // ── Equipe CRV (página equipe-crv.html) ─────────────────────────
+    // Qualquer logado lê (o site precisa saber quem é da equipe); qualquer membro
+    // inclui/edita/desativa. Nada é apagado. Os fixos não podem ser desativados.
+    match /equipe_crv/{email} {
+      allow read: if logado();
+      allow create, update: if isCRV()
+        && email == email.lower()
+        && request.resource.data.email == email
+        && request.resource.data.ativo is bool
+        && !(email in emailsFixosCRV() && request.resource.data.ativo == false);
+      allow delete: if false;
     }
 
     // ── Ferramentas internas da CRV ─────────────────────────────────

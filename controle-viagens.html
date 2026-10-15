@@ -406,7 +406,8 @@ import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/fir
 import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import{getFirestore,collection,addDoc,getDocs,updateDoc,deleteDoc,doc,query,orderBy}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import{FIREBASE_CONFIG,ehCRV}from"./js/config-crv.js";
+import{FIREBASE_CONFIG,ehCRV,EMAILS_CRV}from"./js/config-crv.js";
+import{garantirEquipe}from"./js/equipe-crv.js?v=1";
 // Mesmo projeto e mesma sessão de login do site (crv-dpp-sc-v2)
 const fbApp=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
 const db=getFirestore(fbApp);
@@ -1000,7 +1001,8 @@ function toast(msg){
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 initFormDms();
 // Só a equipe CRV acessa (antes a página não exigia login)
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth,async user=>{
+  if(user)await garantirEquipe(EMAILS_CRV);
   if(user&&ehCRV(user.email)){carregar();return;}
   fbSt('err');
   document.getElementById('fbSt').textContent=user?'⛔ Acesso restrito':'🔒 Faça login';

@@ -361,6 +361,7 @@ import { getFirestore, getDocs, collection }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 import { FIREBASE_CONFIG as firebaseConfig, EMAILS_CRV } from "./js/config-crv.js";
+import { garantirEquipe } from "./js/equipe-crv.js?v=1";
 
 /* Reaproveita a sessão de Auth do site principal (mesmo app default) */
 const app     = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -383,7 +384,8 @@ const PERGUNTAS = {
 
 let usuarioAutorizado = false;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
+  if (user) await garantirEquipe(EMAILS_CRV);
   usuarioAutorizado = !!(user && EMAILS_CRV.includes((user.email || '').toLowerCase()));
   loadingMsg.style.display = 'none';
   if (usuarioAutorizado){

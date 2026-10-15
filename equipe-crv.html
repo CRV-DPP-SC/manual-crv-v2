@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Equipe CRV — CRV/DPP</title>
+<style>
+:root{--az:#1a2a4a;--azc:#3b82f6;--vd:#0f6e56;--cin:#6b7280;--bg:#f4f6f9;--br:#fff;--bd:#e5e7eb}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2937;min-height:100vh}
+.hdr{background:var(--az);color:#fff;padding:.8rem 1.3rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;
+  position:sticky;top:0;z-index:200;box-shadow:0 2px 14px rgba(0,0,0,.3)}
+.hdr-t{font-size:1rem;font-weight:700}
+.fbs{font-size:.7rem;padding:.22rem .55rem;border-radius:20px;font-weight:700}
+.fbok{background:#d1fae5;color:#065f46}.fberr{background:#fee2e2;color:#991b1b}.fbld{background:#fef3c7;color:#92400e}
+.wrap{max-width:1100px;margin:0 auto;padding:1.1rem 1rem}
+.card{background:var(--br);border:1.5px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem}
+.card h3{font-size:.95rem;color:var(--az);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.info{font-size:.8rem;color:#4b5563;line-height:1.5;margin-bottom:.7rem}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .85rem;border:none;border-radius:7px;font-size:.8rem;font-weight:600;
+  cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.bp{background:var(--azc);color:#fff}.bv{background:var(--vd);color:#fff}.bn{background:#fff;color:var(--az);border:1.5px solid var(--az)}
+.br2{background:#dc2626;color:#fff}.bsm{padding:.26rem .55rem;font-size:.73rem}
+.tbl{overflow-x:auto;border:1.5px solid var(--bd);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:720px}
+th{background:var(--az);color:#fff;text-align:left;padding:.55rem .7rem;font-size:.74rem;font-weight:600}
+td{padding:.55rem .7rem;border-bottom:1px solid var(--bd);vertical-align:middle}
+tr.inativo td{color:#9ca3af}
+.ac{display:flex;gap:.3rem;flex-wrap:wrap}
+.st{font-size:.66rem;font-weight:700;padding:.12rem .45rem;border-radius:20px;white-space:nowrap}
+.st-ok{background:#d1fae5;color:#065f46}.st-off{background:#fee2e2;color:#991b1b}.st-nd{background:#f3f4f6;color:#6b7280}.st-fx{background:#e0f2fe;color:#075985}
+.hist{max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:.4rem}
+.hi{border:1.5px solid var(--bd);border-radius:9px;padding:.5rem .7rem;font-size:.8rem}
+.hi small{display:block;color:var(--cin);font-size:.72rem;margin-top:.15rem}
+.nodata{text-align:center;padding:1.2rem;color:var(--cin);font-size:.84rem}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;padding:1rem}
+.ov.on{display:flex}
+.mdl{background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:93vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.mhdr{background:var(--az);color:#fff;padding:.9rem 1.2rem;display:flex;justify-content:space-between;align-items:center;border-radius:14px 14px 0 0}
+.mt{font-size:.92rem;font-weight:700}.mx{background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer}
+.mbody{padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.mft{padding:.9rem 1.2rem;background:#f8faff;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:.45rem;border-radius:0 0 14px 14px}
+.fg{display:flex;flex-direction:column;gap:.28rem}
+.fg label{font-size:.78rem;font-weight:600;color:var(--az)}
+.fg input,.fg textarea{padding:.48rem .7rem;border:1.5px solid var(--bd);border-radius:7px;font-size:.84rem;font-family:inherit}
+.fg textarea{resize:vertical;min-height:64px}
+.chk{display:flex;gap:.45rem;align-items:flex-start;font-size:.8rem;color:#374151}
+.aviso{font-size:.8rem;border-radius:8px;padding:.6rem .8rem;line-height:1.45}
+.av-inf{background:#eff6ff;color:#1e3a8a}.av-amb{background:#fef3c7;color:#92400e}.av-err{background:#fee2e2;color:#991b1b}
+#toast{position:fixed;bottom:1.3rem;left:50%;transform:translateX(-50%) translateY(140px);background:#1a2a4a;color:#fff;padding:.6rem 1.2rem;
+  border-radius:8px;font-size:.8rem;font-weight:600;transition:transform .3s;z-index:10000;max-width:92vw;text-align:center;pointer-events:none}
+#toast.vis{transform:translateX(-50%) translateY(0)}
+#bloqueio{max-width:520px;margin:3rem auto;text-align:center;font-size:.92rem;color:#374151}
+</style>
+<script>(function(){var t=localStorage.getItem('crv-tema');if(t)document.documentElement.setAttribute('data-tema',t);})();window.addEventListener('message',function(e){if(e.data&&e.data.crvTema)document.documentElement.setAttribute('data-tema',e.data.crvTema);});</script>
+<style>[data-tema="escuro"] body{filter:invert(1) hue-rotate(180deg);background:#111 !important;}</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-t">👥 Equipe CRV — Acesso Total</div><span class="fbs fbld" id="fbSt">⏳ Conectando...</span></div>
+<div id="bloqueio" style="display:none"></div>
+
+<div class="wrap" id="app" style="display:none">
+  <div class="card">
+    <h3>👥 Quem Tem Acesso Total ao Portal</h3>
+    <div class="info">
+      Todos da equipe têm o mesmo acesso: área restrita, ferramentas, escala de plantão, avisos e mensagens.
+      Ao <b>incluir</b> alguém, o sistema cria o login e envia um e-mail para a pessoa <b>definir a própria senha</b>.
+      <b>Desativar</b> tira o acesso na hora (nada é apagado — fica no histórico). Se alguém esquecer a senha, use
+      <b>🔑 Enviar link de senha</b> (ou a pessoa clica em "Esqueci minha senha" na tela de login).
+    </div>
+    <button class="btn bv" onclick="abrirIncluir()">＋ Incluir na Equipe</button>
+  </div>
+  <div class="card"><h3>Equipe</h3><div id="lista"></div></div>
+  <div class="card"><h3>📜 Histórico</h3><div class="hist" id="hist"></div></div>
+</div>
+
+<div class="ov" id="ov" onclick="if(event.target===this)fecharModal()"><div class="mdl" id="mdl"></div></div>
+<div id="toast"></div>
+
+<script type="module">
+import{initializeApp,getApps,deleteApp}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,sendPasswordResetEmail,signOut}
+  from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import{getFirestore,collection,doc,onSnapshot,setDoc,updateDoc,arrayUnion}
+  from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import{FIREBASE_CONFIG,EMAILS_CRV,ehCRV,escHtml as esc}from"./js/config-crv.js";
+import{garantirEquipe,EMAILS_FIXOS}from"./js/equipe-crv.js?v=1";
+
+const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
+const auth=getAuth(app);auth.languageCode='pt-BR';
+const db=getFirestore(app);
+const COL=collection(db,'equipe_crv');
+let meuEmail='',equipe=new Map(),semeado=false;
+
+// Nomes da lista anterior (usados só no primeiro registro; dá para editar depois)
+const NOMES={
+  'rodrigo.l.pastore@gmail.com':'Rodrigo Laux Pastore','ivana.schafer@gmail.com':'Ivana Schafer Ortiz',
+  'brunawlongen@gmail.com':'Bruna Roberta Wessner Longen','ricardobritomarques12@gmail.com':'Ricardo de Brito Marques',
+  'abeljuliana2012@gmail.com':'Juliana de Andrade Abel','jessicaveiga9@gmail.com':'Jéssica (Coordenadora)',
+  'day.sestren88@gmail.com':'Dayanne Christine Sestrem Rosa','sepen@pp.sc.gov.br':'SEPEN (institucional)',
+  'leilakfarias@gmail.com':'Leila','wanessaemerim@gmail.com':'Wanessa Priscyla Ventura Emerim','crv@pp.sc.gov.br':'CRV (institucional)'};
+
+const quando=t=>t?new Date(t).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+const nomeDe=e=>equipe.get(e)?.nome||e;
+const reg=(acao,motivo)=>({acao,por:meuEmail,em:Date.now(),...(motivo?{motivo}:{})});
+function toast(m){const el=document.getElementById('toast');el.textContent=m;el.classList.add('vis');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('vis'),4000);}
+function modal(t,c,r){document.getElementById('mdl').innerHTML=`<div class="mhdr"><span class="mt">${t}</span><button class="mx" onclick="fecharModal()">×</button></div><div class="mbody">${c}</div>${r?`<div class="mft">${r}</div>`:''}`;document.getElementById('ov').classList.add('on');}
+window.fecharModal=()=>document.getElementById('ov').classList.remove('on');
+const val=id=>(document.getElementById(id)?.value||'').trim();
+
+// ── Lista ──
+function render(){
+  const l=[...equipe.values()].sort((a,b)=>(b.ativo-a.ativo)||(a.nome||a.email).localeCompare(b.nome||b.email,'pt-BR'));
+  document.getElementById('lista').innerHTML=l.length?`<div class="tbl"><table><tr><th>Nome</th><th>E-mail</th><th>Situação</th><th>Login</th><th></th></tr>
+    ${l.map(p=>{const fx=EMAILS_FIXOS.includes(p.email);
+      return`<tr class="${p.ativo?'':'inativo'}"><td><b>${esc(p.nome||'—')}</b>${fx?' <span class="st st-fx" title="Sempre tem acesso (segurança)">FIXO</span>':''}</td>
+      <td>${esc(p.email)}</td>
+      <td><span class="st ${p.ativo?'st-ok':'st-off'}">${p.ativo?'ATIVO':'DESATIVADO'}</span></td>
+      <td>${p.loginCriado?'<span class="st st-ok">CRIADO</span>':'<span class="st st-nd">—</span>'}</td>
+      <td><div class="ac">
+        <button class="btn bsm bn" onclick="abrirEditar('${p.email}')">✏️ Editar</button>
+        ${p.ativo?`<button class="btn bsm bn" onclick="enviarSenha('${p.email}')" title="Envia para o e-mail da pessoa um link para criar uma nova senha">🔑 Enviar link de senha</button>`:''}
+        ${p.ativo&&!p.loginCriado?`<button class="btn bsm bp" onclick="criarLogin('${p.email}')" title="Cria o login (se ainda não existir) e envia o link para definir a senha">👤 Criar login</button>`:''}
+        ${fx?'':p.ativo?`<button class="btn bsm br2" onclick="abrirDesativar('${p.email}')">⛔ Desativar</button>`
+          :`<button class="btn bsm bv" onclick="reativar('${p.email}')">✅ Reativar</button>`}
+      </div></td></tr>`;}).join('')}</table></div>`:'<div class="nodata">Carregando…</div>';
+  const h=[];equipe.forEach(p=>(p.historico||[]).forEach(x=>h.push({...x,email:p.email})));
+  h.sort((a,b)=>b.em-a.em);
+  document.getElementById('hist').innerHTML=h.length?h.map(x=>`<div class="hi"><b>${esc(nomeDe(x.email))}</b> — ${esc(x.acao)}${x.motivo?` · "${esc(x.motivo)}"`:''}
+    <small>por ${esc(nomeDe(x.por))} em ${quando(x.em)}</small></div>`).join(''):'<div class="nodata">Nenhum registro ainda.</div>';
+}
+
+// Primeiro uso: registra na coleção quem estava na lista anterior (ninguém perde acesso)
+async function semear(){
+  if(semeado)return;semeado=true;
+  const legado=[...new Set([...(EMAILS_CRV._legado||EMAILS_CRV),...EMAILS_FIXOS])];
+  for(const e of legado)if(!equipe.has(e)){
+    try{await setDoc(doc(COL,e),{email:e,nome:NOMES[e]||'',ativo:true,loginCriado:null,origem:'lista anterior',
+      criadoEm:Date.now(),criadoPor:meuEmail,historico:[reg('registrado a partir da lista anterior')]});}catch(er){console.warn(er);}
+  }
+}
+
+// ── Incluir ──
+window.abrirIncluir=()=>modal('＋ Incluir na Equipe CRV',`
+  <div class="fg"><label>Nome completo</label><input id="iNome" maxlength="120"></div>
+  <div class="fg"><label>E-mail de login</label><input id="iEmail" type="email" maxlength="120" placeholder="nome@gmail.com"></div>
+  <label class="chk"><input type="checkbox" id="iLogin" checked> Criar o login e enviar e-mail para a pessoa definir a senha</label>
+  <div class="aviso av-inf">A pessoa passa a ter o mesmo acesso de toda a equipe assim que for incluída.</div>`,
+  `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bv" onclick="salvarIncluir()">Incluir</button>`);
+window.salvarIncluir=async()=>{
+  const nome=val('iNome'),email=val('iEmail').toLowerCase(),comLogin=document.getElementById('iLogin').checked;
+  if(!nome)return toast('Informe o nome.');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast('E-mail inválido.');
+  const ja=equipe.get(email);
+  if(ja?.ativo)return toast('Esse e-mail já está na equipe.');
+  try{
+    if(ja)await updateDoc(doc(COL,email),{nome,ativo:true,historico:arrayUnion(reg('incluído novamente'))});
+    else await setDoc(doc(COL,email),{email,nome,ativo:true,loginCriado:null,criadoEm:Date.now(),criadoPor:meuEmail,historico:[reg('incluído na equipe')]});
+    fecharModal();toast(`✓ ${nome} incluído(a) na equipe.`);
+    if(comLogin)await criarLogin(email,true);
+  }catch(e){toast('Erro: '+(e.message||e));}
+};
+
+// ── Login: cria a conta numa "segunda conexão" (não desloga você) e manda o link de senha ──
+window.criarLogin=async(email,silencioso)=>{
+  if(!silencioso&&!confirm(`Criar o login de ${nomeDe(email)} e enviar o e-mail para definir a senha?`))return;
+  const sec=initializeApp(FIREBASE_CONFIG,'cria-login-'+Date.now()),sa=getAuth(sec);
+  let existia=false;
+  try{
+    const senhaTemp=crypto.getRandomValues(new Uint32Array(4)).join('-')+'Aa!';
+    await createUserWithEmailAndPassword(sa,email,senhaTemp);
+  }catch(e){
+    if(e.code==='auth/email-already-in-use')existia=true;
+    else{toast('Erro ao criar o login: '+(e.message||e));await deleteApp(sec).catch(()=>{});return;}
+  }
+  await signOut(sa).catch(()=>{});await deleteApp(sec).catch(()=>{});
+  try{
+    await sendPasswordResetEmail(auth,email);
+    await updateDoc(doc(COL,email),{loginCriado:true,historico:arrayUnion(reg(existia?'login já existia — link de senha enviado':'login criado — link para definir a senha enviado'))});
+    toast(existia?'Essa pessoa já tinha login. Enviamos o link para ela definir uma nova senha.':`✓ Login criado. ${nomeDe(email)} vai receber um e-mail para definir a senha.`);
+  }catch(e){toast('Login ok, mas falhou o envio do e-mail: '+(e.message||e));}
+};
+window.enviarSenha=async email=>{
+  if(!confirm(`Enviar para ${email} um link para criar uma nova senha?`))return;
+  try{await sendPasswordResetEmail(auth,email);
+    await updateDoc(doc(COL,email),{historico:arrayUnion(reg('link de redefinição de senha enviado'))});
+    toast('✓ Link enviado. Peça para a pessoa olhar a caixa de entrada (e o spam).');}
+  catch(e){toast(e.code==='auth/user-not-found'?'Essa pessoa ainda não tem login — use "Criar login".':'Erro: '+(e.message||e));}
+};
+
+// ── Editar / desativar / reativar ──
+window.abrirEditar=email=>{const p=equipe.get(email);
+  modal('✏️ Editar',`<div class="fg"><label>Nome completo</label><input id="eNome" maxlength="120" value="${esc(p.nome||'')}"></div>
+    <div class="fg"><label>E-mail</label><input value="${esc(email)}" disabled></div>
+    <div class="aviso av-inf">Para trocar o e-mail, inclua o e-mail novo e desative o antigo.</div>`,
+    `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn bp" onclick="salvarEditar('${email}')">Salvar</button>`);};
+window.salvarEditar=async email=>{const nome=val('eNome');if(!nome)return toast('Informe o nome.');
+  try{await updateDoc(doc(COL,email),{nome,historico:arrayUnion(reg('nome alterado para "'+nome+'"'))});fecharModal();toast('Salvo.');}
+  catch(e){toast('Erro: '+(e.message||e));}};
+window.abrirDesativar=email=>modal('⛔ Desativar acesso',`<div class="aviso av-amb"><b>${esc(nomeDe(email))}</b> (${esc(email)}) perde o acesso à área restrita na hora. Nada é apagado e dá para reativar depois.</div>
+  <div class="fg"><label>Justificativa (obrigatória)</label><textarea id="dMot" maxlength="300" oninput="document.getElementById('dBtn').disabled=!this.value.trim()"></textarea></div>`,
+  `<button class="btn bn" onclick="fecharModal()">Cancelar</button><button class="btn br2" id="dBtn" disabled onclick="desativar('${email}')">⛔ Desativar</button>`);
+window.desativar=async email=>{const mot=val('dMot');if(!mot)return;
+  if(email===meuEmail&&!confirm('Você está desativando o seu próprio acesso. Continuar?'))return;
+  try{await updateDoc(doc(COL,email),{ativo:false,historico:arrayUnion(reg('acesso desativado',mot))});fecharModal();toast('Acesso desativado.');}
+  catch(e){toast('Erro: '+(e.message||e));}};
+window.reativar=async email=>{if(!confirm(`Reativar o acesso de ${nomeDe(email)}?`))return;
+  try{await updateDoc(doc(COL,email),{ativo:true,historico:arrayUnion(reg('acesso reativado'))});toast('Acesso reativado.');}
+  catch(e){toast('Erro: '+(e.message||e));}};
+
+// ── Boot ──
+onAuthStateChanged(auth,async user=>{
+  const st=document.getElementById('fbSt');
+  if(user)await garantirEquipe(EMAILS_CRV);
+  if(!user||!ehCRV(user.email)){
+    st.className='fbs fberr';st.textContent=user?'⛔ Acesso restrito':'🔒 Faça login';
+    const b=document.getElementById('bloqueio');b.style.display='';
+    b.innerHTML=user?'⛔ Página restrita à equipe CRV.':'🔒 Faça login no <a href="index.html" target="_top">Portal CRV</a>.';
+    return;
+  }
+  meuEmail=user.email.toLowerCase();
+  document.getElementById('app').style.display='';
+  onSnapshot(COL,s=>{equipe=new Map(s.docs.map(d=>[d.id,d.data()]));st.className='fbs fbok';st.textContent='● Ao vivo';render();if(!s.metadata.fromCache)semear();},
+    e=>{st.className='fbs fberr';st.textContent='⚠ Sem conexão';toast(e.code==='permission-denied'?'Sem permissão — as regras do Firestore já foram publicadas?':'Erro: '+e.message);});
+});
+</script>
+</body>
+</html>
