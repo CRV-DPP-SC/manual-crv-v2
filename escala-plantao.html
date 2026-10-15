@@ -375,7 +375,7 @@ td{padding:.5rem .7rem;border-bottom:1px solid var(--bd);vertical-align:top}
     <div class="card" id="permNovaBox">
       <h3>⇄ Solicitar troca de plantão <span class="sub" id="permCont"></span></h3>
       <div class="pd-info" style="margin-bottom:.6rem">
-        Você trabalha num plantão do colega e o colega trabalha num plantão seu, no mesmo mês (eventualmente no mês seguinte, ex.: 31/10 por 02/11). A observação é obrigatória.
+        Você trabalha num plantão do colega e o colega trabalha num plantão seu, no mesmo mês ou em meses vizinhos (ex.: 30/11 por 01/12, ou 01/12 por 30/11). Cada um gasta a troca no mês do dia em que vai trabalhar. A observação é obrigatória.
         Cada servidor pode fazer até <b>2 permutas por mês como solicitante</b> e <b>2 como solicitado</b>.
         Ninguém pode ficar mais de <b>48h seguidas</b> por permuta. A permuta só vale depois que o colega aceitar.
       </div>
@@ -504,6 +504,7 @@ const diasDoMes=m=>{const[y,mm]=m.split('-').map(Number);const a=Date.UTC(y,mm-1
 const MESES_LISTA=(()=>{const r=[];let[y,m]=INICIO.split('-').map(Number);
   while(`${y}-${String(m).padStart(2,'0')}`<=FIM.slice(0,7)){r.push(`${y}-${String(m).padStart(2,'0')}`);if(++m>12){m=1;y++;}}return r;})();
 const proxMes=m=>{let[y,mm]=m.split("-").map(Number);if(++mm>12){mm=1;y++;}return`${y}-${String(mm).padStart(2,"0")}`;};
+const antMes=m=>{let[y,mm]=m.split("-").map(Number);if(--mm<1){mm=12;y--;}return`${y}-${String(mm).padStart(2,"0")}`;};
 // Equipe CRV que pode marcar plantão extra: os 7 da escala + a coordenadora
 // (horário comercial, não aparece na escala ordinária).
 const EQUIPE=[...SERVIDORES,{id:'jessica',nome:'JÉSSICA',email:'jessicaveiga9@gmail.com',grupo:'Coord.',g:'CO',regime:'comercial'}];
@@ -646,16 +647,19 @@ function seguidos(sid,n,alt){
 // PERMUTAS — regras
 // ═══════════════════════════════════════════════════════════════════════════
 const PERM_ATIVAS=['pendente','aceita'];
+// Limite de trocas: cada um gasta no mês do dia em que vai TRABALHAR
+// (quem pede trabalha o dia do colega = dia2; quem aceita trabalha o dia de quem pediu = dia1).
+const trocasComo=(sid,mes,papel,ignorar)=>eventos.filter(e=>e.tipo==='permuta'&&PERM_ATIVAS.includes(e.status)&&e.id!==ignorar
+  &&e[papel]===sid&&(papel==='solicitante'?e.dia2:e.dia1).startsWith(mes));
 function contPermutas(sid,mes,ignorar){
-  const l=eventos.filter(e=>e.tipo==='permuta'&&e.mes===mes&&PERM_ATIVAS.includes(e.status)&&e.id!==ignorar);
-  return{solicitante:l.filter(e=>e.solicitante===sid).length,solicitado:l.filter(e=>e.solicitado===sid).length};
+  return{solicitante:trocasComo(sid,mes,'solicitante',ignorar).length,solicitado:trocasComo(sid,mes,'solicitado',ignorar).length};
 }
 function validarPermuta(p,ignorar){
   const er=[];
   if(!p.solicitante||!p.solicitado||!p.dia1||!p.dia2)return['Preencha todos os campos.'];
   const n1=num(p.dia1),n2=num(p.dia2),A=SV[p.solicitante].nome,B=SV[p.solicitado].nome;
   if(p.solicitante===p.solicitado)er.push('Escolha outro servidor.');
-  {const m1=p.dia1.slice(0,7),m2=p.dia2.slice(0,7);if(m2!==m1&&m2!==proxMes(m1))er.push('O plantão do colega precisa ser do mesmo mês ou do mês seguinte.');}
+  {const m1=p.dia1.slice(0,7),m2=p.dia2.slice(0,7);if(m2!==m1&&m2!==proxMes(m1)&&m2!==antMes(m1))er.push('Os dois dias precisam ser do mesmo mês ou de meses vizinhos (anterior ou seguinte).');}
   if(n1<N_HOJE||n2<N_HOJE)er.push('Não é possível permutar dias que já passaram.');
   if(n1===n2)er.push('Os dias precisam ser diferentes.');
   if(temExtra(p.solicitado,p.dia1))er.push(`${B} tem plantão extra marcado em ${br(n1)}.`);
@@ -665,9 +669,9 @@ function validarPermuta(p,ignorar){
   if(!trabalha(p.solicitado,n2))er.push(`${B} não está escalado(a) em ${br(n2)}.`);
   if(trabalha(p.solicitante,n2)||entrada(n2,p.solicitante))er.push(`${A} já está escalado(a) em ${br(n2)}.`);
   if(entrada(n1,p.solicitante)?.folga||entrada(n2,p.solicitado)?.folga)er.push('Dia com folga cadastrada não pode ser permutado.');
-  const mes=p.dia1.slice(0,7),cA=contPermutas(p.solicitante,mes,ignorar),cB=contPermutas(p.solicitado,mes,ignorar);
-  if(cA.solicitante>=MAX_SOLICITANTE)er.push(`${A} já usou as ${MAX_SOLICITANTE} permutas como solicitante em ${nomeMes(mes)}.`);
-  if(cB.solicitado>=MAX_SOLICITADO)er.push(`${B} já usou as ${MAX_SOLICITADO} permutas como solicitado(a) em ${nomeMes(mes)}.`);
+  const mA=p.dia2.slice(0,7),mB=p.dia1.slice(0,7);   // mês em que cada um vai trabalhar
+  if(contPermutas(p.solicitante,mA,ignorar).solicitante>=MAX_SOLICITANTE)er.push(`${A} já usou as ${MAX_SOLICITANTE} trocas como solicitante em ${nomeMes(mA)}.`);
+  if(contPermutas(p.solicitado,mB,ignorar).solicitado>=MAX_SOLICITADO)er.push(`${B} já usou as ${MAX_SOLICITADO} trocas como solicitado(a) em ${nomeMes(mB)}.`);
   // Permuta pendente envolvendo os mesmos dias
   const outra=eventos.find(e=>e.tipo==='permuta'&&e.status==='pendente'&&e.id!==ignorar&&
     [[e.solicitante,e.dia1],[e.solicitado,e.dia2]].some(([s,d])=>(s===p.solicitante&&d===p.dia1)||(s===p.solicitado&&d===p.dia2)));
@@ -951,7 +955,7 @@ window.detalhe=(tipo,sid)=>{
         descricaoEntrada(e,n)||'Plantão da escala',tipo==='conf'?st:'');}).join('');
   }
   if(tipo==='solicitante'||tipo==='solicitado'){
-    const l=eventos.filter(e=>e.tipo==='permuta'&&e.mes===m&&PERM_ATIVAS.includes(e.status)&&e[tipo]===sid);
+    const l=trocasComo(sid,m,tipo);
     tit=`⇄ ${s.nome} — trocas como ${tipo} em ${nomeMes(m)}`;
     c=l.map(e=>lin(`<b>${SV[e.solicitante].nome}</b> trabalha ${brAno(num(e.dia2))} · <b>${SV[e.solicitado].nome}</b> trabalha ${brAno(num(e.dia1))}`,
       `${e.obs?'"'+esc(e.obs)+'" · ':''}Pedida em ${quando(e.criadoEm)}`,`<span class="st st-${e.status}">${e.status.toUpperCase()}</span>`)).join('');
@@ -1193,9 +1197,9 @@ window.permAtualizar=(nivel)=>{
   const d1=val('pDia1'),s2=document.getElementById('pDia2'),sc=document.getElementById('pColega'),msg=document.getElementById('pMsg'),btn=document.getElementById('pBtn');
   if(nivel==='dia1'){
     // Dias do mesmo mês ou do mês seguinte em que não estou escalado e há colega escalado
-    const m=d1.slice(0,7),grupos=[m,proxMes(m)].filter(x=>MESES_LISTA.includes(x)).map(mm=>{
+    const m=d1.slice(0,7),grupos=[antMes(m),m,proxMes(m)].filter(x=>MESES_LISTA.includes(x)).map(mm=>{
       const ds=diasDoMes(mm).filter(n=>n>=N_HOJE&&!entrada(n,meuSid)&&colegasNoDia(n).length);
-      return ds.length?`<optgroup label="${nomeMes(mm)}${mm!==m?' (mês seguinte)':''}">${ds.map(n=>
+      return ds.length?`<optgroup label="${nomeMes(mm)}${mm===proxMes(m)?' (mês seguinte)':mm===antMes(m)?' (mês anterior)':''}">${ds.map(n=>
         `<option value="${isoDe(n)}">${SEM[dsem(n)]} ${brAno(n)} · plantão ${letra(n)} · ${colegasNoDia(n).map(s=>SV[s].nome).join(', ')}</option>`).join('')}</optgroup>`:'';}).join('');
     s2.innerHTML='<option value="">— escolha o dia —</option>'+grupos;
   }
@@ -1204,9 +1208,9 @@ window.permAtualizar=(nivel)=>{
     sc.innerHTML=!d2?'<option value="">— escolha o dia primeiro —</option>'
       :(cs.length>1?'<option value="">— escolha o colega —</option>':'')+cs.map(s=>`<option value="${s}">${SV[s].nome} (${SV[s].grupo})</option>`).join('');
   }
-  const col=val('pColega'),c=contPermutas(meuSid,d1.slice(0,7));
+  const col=val('pColega'),mT=(val('pDia2')||d1).slice(0,7),c=contPermutas(meuSid,mT);
   if(!col||!val('pDia2')){btn.disabled=true;msg.className='aviso av-inf';
-    msg.innerHTML=`Você usou ${c.solicitante}/${MAX_SOLICITANTE} trocas como solicitante em ${nomeMes(d1.slice(0,7))}.`;return;}
+    msg.innerHTML=`A troca conta no mês do dia que você vai trabalhar. Você usou ${c.solicitante}/${MAX_SOLICITANTE} trocas como solicitante em ${nomeMes(mT)}.`;return;}
   const er=validarPermuta({solicitante:meuSid,dia1:d1,solicitado:col,dia2:val('pDia2')});
   if(!er.length&&!val('pObs').trim())er.push('Preencha a observação.');
   caixaErros(msg,er,`✓ Troca válida: <b>${SV[col].nome}</b> trabalha ${br(num(d1))} e você trabalha ${br(num(val('pDia2')))}. ${SV[col].nome} precisa aceitar.`);
