@@ -364,7 +364,7 @@ td{padding:.5rem .7rem;border-bottom:1px solid var(--bd);vertical-align:top}
       <h3>💬 Histórico do mês <span class="hist-n" id="histN">0</span>
         <select id="histFiltro" onchange="renderHistorico()">
           <option value="">Todos</option><option value="permuta">⇄ Permutas</option><option value="movimentacao">✋ Movimentações</option>
-          <option value="folga8">🌴 Folgas do 8º plantão</option><option value="folgaBH">⏱️ Folgas de banco de horas</option><option value="ausencia">• Ausências</option><option value="extra">⏱️ Plantões extras</option><option value="credito">8️⃣ Créditos de 8º plantão</option>
+          <option value="folga8">🌴 Folgas do 8º plantão</option><option value="folgaBH">⏱️ Folgas de banco de horas</option><optgroup label="Ausências"><option value="ausencia">• Todas as ausências</option><option value="aus:instrutor">🏛️ Convocação ACAPS – Instrutor</option><option value="aus:aluno">📗 Convocação ACAPS – Aluno</option><option value="aus:curso">📘 Participação em curso – Aluno</option><option value="aus:viagem">🚐 Viagem a trabalho</option><option value="aus:outros">📋 Convocação outros</option><option value="aus:ferias">🏖️ Férias</option><option value="aus:afastamento">🩺 Afastamento</option></optgroup><option value="extra">⏱️ Plantões extras</option><option value="credito">8️⃣ Créditos de 8º plantão</option>
         </select></h3>
       <div class="hist" id="hist"></div>
     </div>
@@ -1000,7 +1000,7 @@ function eventosDoMes(m){
 function renderHistorico(){
   const f=document.getElementById('histFiltro').value;
   const l0=eventosDoMes(mesAtual).sort((a,b)=>(b.respondidoEm||b.criadoEm)-(a.respondidoEm||a.criadoEm));
-  const l=l0.filter(e=>!f||(f==='folga8'?e.tipo==='folga'&&!folgaBanco(e):f==='folgaBH'?e.tipo==='folga'&&folgaBanco(e):e.tipo===f));
+  const l=l0.filter(e=>!f||(f==='folga8'?e.tipo==='folga'&&!folgaBanco(e):f==='folgaBH'?e.tipo==='folga'&&folgaBanco(e):f.startsWith('aus:')?e.tipo==='ausencia'&&e.categoria===f.slice(4):e.tipo===f));
   document.getElementById('histN').textContent=umPorGrupo(l).length;
   document.getElementById('hist').innerHTML=htmlHistorico(l);
 }

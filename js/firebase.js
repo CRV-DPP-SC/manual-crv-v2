@@ -1408,9 +1408,9 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-titulo">Trello CRV ↗</div>
         <div class="grupo-item-sub">Gestão de tarefas da equipe</div>
       </div>
-      <div class="grupo-item" onclick="_abrirFerramenta('escala-plantao.html','📅 Escala de Plantão')">
+      <div class="grupo-item" onclick="_abrirFerramenta('escala-plantao.html','📅 Escala de Plantão (nova)')">
         <div class="grupo-item-icon">📅</div>
-        <div class="grupo-item-titulo">Escala de Plantão</div>
+        <div class="grupo-item-titulo">Escala de Plantão (nova)</div>
         <div class="grupo-item-sub">Escala, trocas, extras e folgas da equipe</div>
       </div>
       <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')">
