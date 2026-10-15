@@ -1410,6 +1410,11 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-titulo">Escala de Plantão</div>
         <div class="grupo-item-sub">Escala, trocas, extras e folgas da equipe</div>
       </div>
+      <div class="grupo-item" onclick="window.open('https://sparkle-spark-spark.lovable.app','_blank')">
+        <div class="grupo-item-icon">📅</div>
+        <div class="grupo-item-titulo">Escala de Plantão (antiga) ↗</div>
+        <div class="grupo-item-sub">Sistema anterior (Lovable)</div>
+      </div>
       <div class="grupo-item" onclick="_abrirFerramenta('caixinha-controle.html','☕ Caixinha do Setor')">
         <div class="grupo-item-icon">☕</div>
         <div class="grupo-item-titulo">Caixinha do Setor</div>
