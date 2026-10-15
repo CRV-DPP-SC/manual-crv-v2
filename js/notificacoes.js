@@ -606,15 +606,15 @@ let _primeiraTr   = true;
 function _iniciarTrocas(email) {
   if (_unsubTrocas) { _unsubTrocas(); _unsubTrocas = null; }
   _primeiraTr = true;
+  // Um filtro só (não depende de índice composto); "pendente" é filtrado aqui
   const q = query(
     collection(_db, 'escala_eventos'),
-    where('solicitadoEmail', '==', (email || '').toLowerCase()),
-    where('status', '==', 'pendente')
+    where('solicitadoEmail', '==', (email || '').toLowerCase())
   );
   _unsubTrocas = onSnapshot(q, snap => {
     const antes = _trocas.length;
     _trocas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .filter(t => ['permuta', 'movimentacao', 'extra'].includes(t.tipo))
+      .filter(t => t.status === 'pendente' && !t.excluido && ['permuta', 'movimentacao', 'extra'].includes(t.tipo))
       .sort((a, b) => (a.criadoEm || 0) - (b.criadoEm || 0));
     // Plantões extras marcados juntos viram um aviso só (com todos os horários)
     const lotes = {};
@@ -626,7 +626,7 @@ function _iniciarTrocas(email) {
     if (_primeiraTr) _primeiraTr = false;
     else if (_trocas.length > antes) { _tocarSom(); _ntfToast('⇄ Novo pedido na Escala de Plantão!'); }
     _atualizarUI();
-  }, () => { _trocas = []; _atualizarUI(); });
+  }, err => { console.warn('[sininho] pedidos da escala:', err); _trocas = []; _atualizarUI(); });
 }
 
 function _dataBr(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '—'; }
