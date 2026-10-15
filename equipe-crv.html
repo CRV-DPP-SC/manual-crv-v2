@@ -82,7 +82,7 @@ tr.inativo td{color:#9ca3af}
 import{initializeApp,getApps,deleteApp}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,sendPasswordResetEmail,signOut}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import{getFirestore,collection,doc,onSnapshot,setDoc,updateDoc,arrayUnion}
+import{getFirestore,collection,doc,onSnapshot,setDoc,updateDoc,deleteDoc,arrayUnion}
   from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import{FIREBASE_CONFIG,EMAILS_CRV,ehCRV,escHtml as esc}from"./js/config-crv.js?v=4";
 import{garantirEquipe,EMAILS_FIXOS}from"./js/equipe-crv.js?v=2";
@@ -99,8 +99,7 @@ const NOMES={
   'brunawlongen@gmail.com':'Bruna Roberta Wessner Longen','ricardobritomarques12@gmail.com':'Ricardo de Brito Marques',
   'abeljuliana2012@gmail.com':'Juliana de Andrade Abel','jessicaveiga9@gmail.com':'Jéssica (Coordenadora)',
   'day.sestren88@gmail.com':'Dayanne Christine Sestrem Rosa','wanessaemerim@gmail.com':'Wanessa Priscyla Ventura Emerim'};
-// Retirados da equipe em 15/10/2026 (e-mail institucional e quem não faz mais parte):
-// se já tiverem cadastro ativo, a página desativa automaticamente e registra no histórico.
+// Retirados da equipe em 15/10/2026: se ainda houver cadastro, a página apaga (sem deixar registro).
 const REMOVIDOS=['sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'];
 
 const quando=t=>t?new Date(t).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
@@ -137,9 +136,6 @@ function render(){
 async function semear(){
   if(semeado)return;semeado=true;
   const legado=[...new Set([...(EMAILS_CRV._legado||EMAILS_CRV),...EMAILS_FIXOS])];
-  for(const e of REMOVIDOS)if(equipe.get(e)?.ativo){
-    try{await updateDoc(doc(COL,e),{ativo:false,historico:arrayUnion(reg('retirado da equipe','ajuste da lista em 15/10/2026'))});}catch(er){console.warn(er);}
-  }
   for(const e of legado)if(!equipe.has(e)){
     try{await setDoc(doc(COL,e),{email:e,nome:NOMES[e]||'',ativo:true,loginCriado:null,origem:'lista anterior',
       criadoEm:Date.now(),criadoPor:meuEmail,historico:[reg('registrado a partir da lista anterior')]});}catch(er){console.warn(er);}
@@ -226,7 +222,8 @@ onAuthStateChanged(auth,async user=>{
   }
   meuEmail=user.email.toLowerCase();
   document.getElementById('app').style.display='';
-  onSnapshot(COL,s=>{equipe=new Map(s.docs.map(d=>[d.id,d.data()]));st.className='fbs fbok';st.textContent='● Ao vivo';render();if(!s.metadata.fromCache)semear();},
+  onSnapshot(COL,s=>{equipe=new Map(s.docs.map(d=>[d.id,d.data()]).filter(([e])=>!REMOVIDOS.includes(e)));
+    s.docs.forEach(d=>{if(REMOVIDOS.includes(d.id)&&!s.metadata.fromCache)deleteDoc(doc(COL,d.id)).catch(er=>console.warn(er));});st.className='fbs fbok';st.textContent='● Ao vivo';render();if(!s.metadata.fromCache)semear();},
     e=>{st.className='fbs fberr';st.textContent='⚠ Sem conexão';toast(e.code==='permission-denied'?'Sem permissão — as regras do Firestore já foram publicadas?':'Erro: '+e.message);});
 });
 </script>

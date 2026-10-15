@@ -342,7 +342,8 @@ service cloud.firestore {
         && request.resource.data.email == email
         && request.resource.data.ativo is bool
         && !(email in emailsFixosCRV() && request.resource.data.ativo == false);
-      allow delete: if false;
+      // só os cadastros retirados em 15/10/2026 podem ser apagados (limpeza)
+      allow delete: if isCRV() && email in ['sepen@pp.sc.gov.br','leilakfarias@gmail.com','crv@pp.sc.gov.br'];
     }
 
     // ── Ferramentas internas da CRV ─────────────────────────────────
