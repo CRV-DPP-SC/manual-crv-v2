@@ -157,6 +157,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2
 .st-recusada,.st-cancelada,.st-anulada{background:#f3f4f6;color:#6b7280}
 .st-disp{background:#d1fae5;color:#065f46}.st-usada{background:#e5e7eb;color:#4b5563}.st-prev{background:#e0f2fe;color:#075985}
 .st-inv{background:#fee2e2;color:#991b1b}
+.st-nd{background:#f3f4f6;color:#6b7280}
 
 table{width:100%;border-collapse:collapse;font-size:.8rem}
 th{background:var(--az);color:#fff;text-align:left;padding:.55rem .7rem;font-size:.73rem;font-weight:600}
@@ -854,7 +855,8 @@ function renderGerenciar(){
     .sort((a,b)=>dataLanc(b).localeCompare(dataLanc(a)));
   document.getElementById('gerLista').innerHTML=l.length?`<div class="ger-lista">${l.map(e=>`<div class="lin"><div class="lin-tx">${resumoLanc(e)}
       <small>Cadastrado por ${esc(quem(e.criadoPor))} em ${quando(e.criadoEm)}${e.editadoEm?` · editado por ${esc(quem(e.editadoPor))} em ${quando(e.editadoEm)}`:''}</small></div>
-      <div class="lin-ac"><button class="btn bsm bn" onclick="gerEditar('${e.id}')">✏️ Editar</button><button class="btn bsm br2" onclick="desfazer('${e.id}')">🗑️ Excluir</button></div></div>`).join('')}</div>`
+      <div class="lin-ac">${e.tipo==='credito'&&e.servidor!==meuSid?'<span class="st st-nd" title="Crédito manual: só o próprio servidor altera">só o próprio servidor altera</span>'
+        :`<button class="btn bsm bn" onclick="gerEditar('${e.id}')">✏️ Editar</button><button class="btn bsm br2" onclick="desfazer('${e.id}')">🗑️ Excluir</button>`}</div></div>`).join('')}</div>`
     :'<div class="nodata">Nenhum lançamento.</div>';
 }
 window.renderGerenciar=renderGerenciar;
@@ -862,7 +864,7 @@ window.gerAdicionar=()=>modal('＋ Adicionar',`<div class="aus-tipos">
     <label class="aus-tipo" onclick="abrirFolga(true)"><span class="aus-ic">🌴</span><span><b>Folga</b><small>8º plantão ou banco de horas</small></span></label>
     <label class="aus-tipo" onclick="abrirAus('','','ferias')"><span class="aus-ic">🏖️</span><span><b>Férias</b><small>Período de férias</small></span></label>
     <label class="aus-tipo" onclick="abrirAus('','','afastamento')"><span class="aus-ic">🩺</span><span><b>Afastamento</b><small>Licença médica, licenças e outros afastamentos</small></span></label>
-    <label class="aus-tipo" onclick="abrirCredito()"><span class="aus-ic">8️⃣</span><span><b>Crédito de 8º plantão</b><small>Lançamento manual (ex.: meses anteriores à escala), disponível ou já utilizado</small></span></label>
+    <label class="aus-tipo" onclick="abrirCredito()"><span class="aus-ic">8️⃣</span><span><b>Crédito de 8º plantão</b><small>Lançamento manual no seu nome (ex.: meses anteriores à escala), disponível ou já utilizado</small></span></label>
   </div>`);
 window.gerEditar=id=>{
   const e=eventos.find(x=>x.id===id);if(!e)return;
@@ -875,10 +877,13 @@ const marcaEdicao=()=>({editadoEm:Date.now(),editadoPor:meuEmail});
 
 // Crédito manual de 8º plantão
 window.abrirCredito=ed=>{
+  // crédito manual: cada um só lança/edita no próprio nome
+  if(!meuSid)return toast('Só quem está na escala lança crédito de 8º plantão (no próprio nome).');
+  if(ed&&ed.servidor!==meuSid)return toast('Você só pode alterar créditos no seu próprio nome.');
   const ms=[];{let[y,m]=[2026,3];while(`${y}-${String(m).padStart(2,'0')}`<=FIM.slice(0,7)){ms.push(`${y}-${String(m).padStart(2,'0')}`);if(++m>12){m=1;y++;}}}
   modal(ed?'✏️ Editar crédito de 8º plantão':'8️⃣ Crédito de 8º plantão (manual)',`
     <div class="frow">
-      <div class="fg"><label>Servidor</label><select id="crServ">${opcoesServ(ed?.servidor||SERVIDORES[0].id)}</select></div>
+      <div class="fg"><label>Servidor</label><select id="crServ" disabled>${opcoesServ(meuSid,s=>s.id===meuSid)}</select></div>
       <div class="fg"><label>Mês de referência</label><select id="crMes">${ms.map(m=>`<option value="${m}" ${m===(ed?.mes||'')?'selected':''}>${nomeMesLongo(m)}</option>`).join('')}</select></div>
     </div>
     <div class="fg"><label>Situação</label><div class="aus-per">
@@ -1001,7 +1006,7 @@ function htmlHistorico(l){
     if(e.tipo==='credito'){
       ic='8️⃣';tit=SV[e.servidor].nome;tag='Crédito 8º plantão · manual';
       det=`Crédito de ${nomeMesLongo(e.mes)}${e.usadoEm?` · já utilizado em ${brAno(num(e.usadoEm))}`:' · disponível'}`;
-      if(souCoord&&!e.excluido)del=`<button class="hi-del" title="Excluir" onclick="desfazer('${e.id}')">🗑️</button>`;
+      if(e.servidor===meuSid&&!e.excluido)del=`<button class="hi-del" title="Excluir" onclick="desfazer('${e.id}')">🗑️</button>`;
     }else if(e.tipo==='permuta'){
       ic='⇄';tag=`Permuta · ${e.status}`;inativo=!PERM_ATIVAS.includes(e.status);
       tit=`${SV[e.solicitante].nome} ⇄ ${SV[e.solicitado].nome}`;
