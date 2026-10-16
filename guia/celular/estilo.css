@@ -1,0 +1,119 @@
+/* Guias "Instalar o app do Portal CRV" — estilo comum (iPhone e Android) */
+@page { size: A4; margin: 14mm 14mm 16mm; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.capa { background: #1e3a5f; color: #fff; border-radius: 12px; padding: 18px 22px; display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
+.capa img { width: 64px; height: 64px; border-radius: 50%; background: #fff; padding: 4px; }
+.capa h1 { margin: 0 0 4px; font-size: 19pt; line-height: 1.15; }
+.capa p { margin: 0; font-size: 9.5pt; opacity: .9; }
+h2 { font-size: 13pt; color: #1e3a5f; margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; break-after: avoid; }
+h2 .n { background: #1e3a5f; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5pt; flex-shrink: 0; }
+.box { border-radius: 10px; padding: 10px 14px; margin: 8px 0; border: 1px solid #dbe4f0; background: #f1f5fb; }
+.box.amb { background: #fffbeb; border-color: #fde68a; }
+.box.vd { background: #f0fdf4; border-color: #bbf7d0; }
+.box b { color: #0f172a; }
+table.t { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 6px 0; }
+table.t th { background: #1e3a5f; color: #fff; text-align: left; padding: 6px 8px; font-weight: 600; }
+table.t td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top; }
+table.t td.c { text-align: center; }
+.passo { display: flex; gap: 18px; align-items: flex-start; margin: 8px 0 14px; break-inside: avoid; }
+.passo .txt { flex: 1; }
+.passo .txt ol, .passo .txt ul { margin: 4px 0; padding-left: 20px; }
+.passo .txt li { margin: 3px 0; }
+.bt { display: inline-block; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 6px; font-weight: 600; background: #fff; }
+.bt.vd { background: #22c55e; color: #fff; border-color: #22c55e; }
+.cam { color: #1d4ed8; font-weight: 600; }
+.quebra { break-before: page; }
+.rod { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8.5pt; color: #64748b; }
+
+/* ── Celular (ilustração) ── */
+.cel { width: 190px; flex-shrink: 0; border: 7px solid #111827; border-radius: 28px; background: #fff; overflow: hidden; position: relative; box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: 8.5pt; }
+.cel .tela { height: 340px; position: relative; overflow: hidden; background: #f8fafc; }
+.cel .barra-sup { height: 20px; display: flex; justify-content: space-between; align-items: center; padding: 0 12px; font-size: 7.5pt; font-weight: 700; color: #111; background: #fff; }
+.cel.and { border-radius: 18px; }
+.cel.and .barra-sup { background: #e2e8f0; }
+.alvo { outline: 3px solid #ef4444; outline-offset: 2px; border-radius: 6px; position: relative; }
+.seta { position: absolute; background: #ef4444; color: #fff; font-weight: 800; font-size: 8pt; border-radius: 10px; padding: 2px 7px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.25); z-index: 5; }
+.site { background: #1e3a5f; color: #fff; padding: 8px; font-weight: 700; font-size: 8pt; display: flex; gap: 6px; align-items: center; }
+.site img { width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+.linhas div { height: 7px; background: #e2e8f0; border-radius: 4px; margin: 7px 10px; }
+.url { margin: 6px 8px; background: #e5e7eb; border-radius: 10px; padding: 5px 8px; font-size: 7.5pt; color: #374151; text-align: center; }
+.safari-baixo { position: absolute; left: 0; right: 0; bottom: 0; background: #f3f4f6; border-top: 1px solid #d1d5db; padding: 4px 8px 8px; }
+.safari-icones { display: flex; justify-content: space-around; font-size: 13pt; padding-top: 4px; color: #2563eb; }
+.folha { position: absolute; left: 0; right: 0; bottom: 0; background: #f2f2f7; border-radius: 14px 14px 0 0; padding: 8px; box-shadow: 0 -4px 12px rgba(0,0,0,.2); }
+.folha .item { background: #fff; padding: 7px 9px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; }
+.folha .item:first-child { border-radius: 8px 8px 0 0; } .folha .item:last-child { border-radius: 0 0 8px 8px; border-bottom: none; }
+.dialogo { position: absolute; left: 14px; right: 14px; top: 105px; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3); padding: 12px; text-align: center; z-index: 3; }
+.dialogo.ios { background: rgba(242,242,247,.98); padding: 12px 0 0; }
+.dialogo .tit { font-weight: 700; font-size: 8.5pt; margin-bottom: 4px; padding: 0 10px; }
+.dialogo .sub { font-size: 7.5pt; color: #4b5563; padding: 0 10px 10px; }
+.dialogo .bts { display: flex; border-top: 1px solid #d1d5db; }
+.dialogo .bts div { flex: 1; padding: 8px 0; color: #2563eb; font-weight: 600; }
+.dialogo .bts div + div { border-left: 1px solid #d1d5db; }
+.dialogo.and .bts { border: none; justify-content: flex-end; gap: 4px; }
+.dialogo.and .bts div { flex: 0 0 auto; padding: 6px 10px; border: none !important; color: #1d4ed8; }
+.escurece { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 2; }
+.home { background: linear-gradient(160deg,#60a5fa,#a78bfa); height: 100%; padding: 26px 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 8px; align-content: start; }
+.app { text-align: center; color: #fff; font-size: 6.5pt; }
+.app i { display: block; width: 34px; height: 34px; border-radius: 9px; margin: 0 auto 3px; background: rgba(255,255,255,.55); }
+.app img { display: block; width: 34px; height: 34px; border-radius: 9px; margin: 0 auto 3px; background: #1e3a5f; padding: 3px; }
+.faixa { position: absolute; left: 8px; right: 8px; bottom: 10px; background: #1e3a5f; color: #fff; border-radius: 9px; padding: 7px; display: flex; gap: 5px; align-items: center; font-size: 7pt; z-index: 4; }
+.faixa .ok { background: #22c55e; border-radius: 6px; padding: 4px 5px; font-weight: 700; white-space: nowrap; }
+.login { margin: 30px 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
+.login .campo { border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px; margin: 6px 0; color: #94a3b8; font-size: 7.5pt; }
+.login .ent { background: #2563eb; color: #fff; text-align: center; border-radius: 6px; padding: 6px; font-weight: 700; }
+.ajustes { background: #f2f2f7; height: 100%; padding: 8px; }
+.ajustes .tit { font-weight: 700; text-align: center; margin: 4px 0 8px; }
+.ajustes .grp { background: #fff; border-radius: 9px; margin-bottom: 8px; }
+.ajustes .lin { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px; border-bottom: 1px solid #e5e7eb; font-size: 7.5pt; }
+.ajustes .lin:last-child { border-bottom: none; }
+.tg { width: 26px; height: 15px; border-radius: 8px; background: #22c55e; position: relative; flex-shrink: 0; }
+.tg::after { content: ""; position: absolute; right: 2px; top: 2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; }
+.bloqueio { background: linear-gradient(170deg,#1e293b,#334155); height: 100%; color: #fff; padding: 20px 10px; }
+.bloqueio .hora { text-align: center; font-size: 26pt; font-weight: 300; }
+.bloqueio .data { text-align: center; font-size: 8pt; opacity: .8; margin-bottom: 18px; }
+.notif { background: rgba(255,255,255,.9); color: #111; border-radius: 12px; padding: 7px 8px; display: flex; gap: 6px; font-size: 7.5pt; margin-bottom: 6px; }
+.notif img { width: 22px; height: 22px; border-radius: 6px; background: #1e3a5f; padding: 2px; }
+.chrome-topo { background: #fff; display: flex; align-items: center; gap: 4px; padding: 5px 6px; border-bottom: 1px solid #e5e7eb; }
+.chrome-topo .url { flex: 1; margin: 0; text-align: left; }
+.menu { position: absolute; right: 4px; top: 22px; width: 140px; background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.25); z-index: 3; padding: 4px 0; }
+.menu div { padding: 6px 10px; font-size: 7.5pt; }
+
+/* ── Layout em galeria (celulares lado a lado, com legenda) ── */
+.galeria { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 10px 0 6px; break-inside: avoid; }
+.fig { width: 168px; text-align: center; font-size: 8.5pt; color: #334155; break-inside: avoid; }
+.fig .leg { margin-top: 6px; line-height: 1.35; }
+.fig .leg b { color: #1e3a5f; }
+.fig .cel { width: 168px; margin: 0 auto; }
+.fig .cel .tela { height: 300px; }
+.faixa { flex-direction: column; align-items: stretch; text-align: left; }
+.faixa .ok { text-align: center; margin-top: 4px; }
+.etapa { break-inside: avoid; }
+ol.lista { margin: 4px 0 4px; padding-left: 20px; } ol.lista li { margin: 3px 0; }
+.fig .tela { text-align: left; }
+.fig .home { gap: 12px 4px; padding: 26px 8px; }
+.fig .app i, .fig .app img { width: 28px; height: 28px; }
+.fig .app { font-size: 6pt; overflow: hidden; white-space: nowrap; }
+.ajustes .lin span:first-child { white-space: nowrap; }
+.ajustes .lin span + span { white-space: nowrap; }
+.fig .seta { font-size: 7pt; }
+.etapa.curta .fig .cel .tela { height: 270px; }
+table.t tr { break-inside: avoid; }
+.etapa.curta .fig .cel .tela { height: 245px; }
+.rod { margin-top: 10px; }
+table.t td { padding: 5px 8px; }
+
+/* ── Na tela (visualização online no portal) ── */
+@media screen {
+  body { max-width: 860px; margin: 0 auto; padding: 16px; background: #fff; }
+  .quebra { margin-top: 28px; }
+  table.t { display: block; overflow-x: auto; }
+}
+@media screen and (max-width: 600px) {
+  .capa { flex-direction: column; text-align: center; }
+  .capa h1 { font-size: 16pt; }
+  body { padding: 8px; }
+  .box { padding: 8px 10px; }
+  table.t { font-size: 8pt; }
+  table.t th, table.t td { padding: 4px 5px; }
+}

@@ -1373,8 +1373,8 @@ img { max-width: 100%; display: block; }
   background: #b45309; color: #fff; font-size: 1rem; font-weight: 700;
 }
 
-#trein-app { width: 100%; max-width: 1280px; min-width: 0; margin: 0 auto; padding: 22px 28px 28px; box-sizing: border-box; }
-@media (max-width: 767px) { #trein-app { padding: 16px 12px 20px; } }
+#trein-app, #guia-celular-app { width: 100%; max-width: 1280px; min-width: 0; margin: 0 auto; padding: 22px 28px 28px; box-sizing: border-box; }
+@media (max-width: 767px) { #trein-app, #guia-celular-app { padding: 16px 12px 20px; } }
 .trein-topo, .trein-modulos, .trein-palco, .trein-rodape { min-width: 0; max-width: 100%; }
 .trein-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
 .trein-titulo { font-size: 1.15rem; font-weight: 700; color: var(--txt-1); margin: 0; }

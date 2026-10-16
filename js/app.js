@@ -62,6 +62,7 @@ const NOMES_SECAO = {
   unidades:   'Unidades Prisionais',
   restrito:   'CRV',
   guia:       'Instruções de Uso',
+  'guia-celular': 'Configuração em Smartphone',
 };
 
 function navegarPara(id) {
