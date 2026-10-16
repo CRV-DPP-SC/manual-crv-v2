@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Projeção Lotacional — CRV/DPP</title>
+<script>(function(){var t=localStorage.getItem('crv-tema');if(t)document.documentElement.setAttribute('data-tema',t);})();window.addEventListener('message',function(e){if(e.data&&e.data.crvTema)document.documentElement.setAttribute('data-tema',e.data.crvTema);});</script>
+<style>[data-tema="escuro"] body{filter:invert(1) hue-rotate(180deg);background:#111 !important;}</style>
+<style>
+:root{--az:#1a2a4a;--azc:#3b82f6;--cin:#6b7280;--bg:#f4f6f9;--bd:#e5e7eb;
+  --azul:#1d4ed8;--azul-bg:#eff6ff;--verde:#047857;--verde-bg:#ecfdf5;--verm:#dc2626;--verm-bg:#fef2f2}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2937;min-height:100vh}
+.hdr{background:var(--az);color:#fff;padding:.8rem 1.3rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;
+  position:sticky;top:0;z-index:20;box-shadow:0 2px 14px rgba(0,0,0,.3)}
+.hdr-t{font-size:1rem;font-weight:700}
+.wrap{max-width:860px;margin:0 auto;padding:1.1rem 1rem 3rem}
+.intro{font-size:.82rem;color:#4b5563;line-height:1.5;margin-bottom:1rem}
+.card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem;position:relative}
+.card h3{font-size:.95rem;color:var(--az);margin-bottom:.8rem;padding-right:2rem}
+.rem{position:absolute;top:.7rem;right:.7rem;background:none;border:none;font-size:1.1rem;color:var(--cin);cursor:pointer}
+.rem:hover{color:var(--verm)}
+.campos{display:grid;grid-template-columns:2fr 1fr 1fr;gap:.7rem}
+@media(max-width:620px){.campos{grid-template-columns:1fr 1fr}.campos .un{grid-column:1/-1}}
+.fg{display:flex;flex-direction:column;gap:.28rem}
+.fg label{font-size:.76rem;font-weight:600;color:var(--az)}
+.fg input,.fg select{padding:.5rem .7rem;border:1.5px solid var(--bd);border-radius:7px;font-size:.9rem;font-family:inherit;background:#fff;width:100%}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--azc)}
+.res{margin-top:1rem;display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:center;border-radius:10px;padding:.9rem 1rem;border:1.5px solid var(--bd)}
+@media(max-width:520px){.res{grid-template-columns:1fr;text-align:center}}
+.res.azul{background:var(--azul-bg);border-color:#bfdbfe}.res.verde{background:var(--verde-bg);border-color:#a7f3d0}.res.verm{background:var(--verm-bg);border-color:#fecaca}
+.pct{font-size:2.4rem;font-weight:800;line-height:1;letter-spacing:-.02em;min-width:150px;text-align:center}
+.azul .pct{color:var(--azul)}.verde .pct{color:var(--verde)}.verm .pct{color:var(--verm)}
+.pct small{display:block;font-size:.68rem;font-weight:600;letter-spacing:0;color:var(--cin);margin-top:.35rem;text-transform:uppercase}
+.det{font-size:.86rem;line-height:1.6}
+.det b{font-size:.95rem}
+.vazio{margin-top:1rem;font-size:.8rem;color:var(--cin);text-align:center;padding:.8rem;border:1.5px dashed var(--bd);border-radius:10px}
+.sim{margin-top:.9rem;border-top:1px dashed var(--bd);padding-top:.9rem}
+.sim-t{font-size:.8rem;font-weight:700;color:var(--az);margin-bottom:.55rem}
+.sim-l{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:620px){.sim-l{grid-template-columns:1fr}}
+.sim-r{margin-top:.35rem;font-size:.82rem;line-height:1.5;min-height:1.2em}
+.c-azul{color:var(--azul);font-weight:700}.c-verde{color:var(--verde);font-weight:700}.c-verm{color:var(--verm);font-weight:700}
+.add{display:flex;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:.35rem;padding:.5rem 1rem;border:1.5px solid var(--az);border-radius:8px;font-size:.82rem;font-weight:600;
+  cursor:pointer;font-family:inherit;background:#fff;color:var(--az)}
+.btn:hover{background:#f8faff}
+.leg{display:flex;gap:1rem;flex-wrap:wrap;font-size:.76rem;color:#4b5563;margin-bottom:1rem}
+.leg span{display:inline-flex;align-items:center;gap:.35rem}
+.fbs{font-size:.7rem;padding:.22rem .55rem;border-radius:20px;font-weight:700}
+.fbok{background:#d1fae5;color:#065f46}.fberr{background:#fee2e2;color:#991b1b}.fbld{background:#fef3c7;color:#92400e}
+#bloqueio{max-width:520px;margin:3rem auto;text-align:center;font-size:.92rem;color:#374151}
+.leg i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.combo{position:relative}
+.combo input{padding-right:.7rem}
+.lista{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--bd);border-radius:9px;
+  box-shadow:0 10px 28px rgba(0,0,0,.15);max-height:340px;overflow-y:auto;z-index:30}
+.lista.on{display:block}
+.grp-t{width:100%;display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.55rem .75rem;border:none;border-bottom:1px solid var(--bd);
+  background:#f8fafc;font-family:inherit;font-size:.78rem;font-weight:700;color:var(--az);cursor:pointer;text-align:left}
+.grp-t:hover{background:#eef2f7}
+.grp-t .qt{font-weight:600;color:var(--cin);white-space:nowrap}
+.grp.aberto .grp-t .qt{color:var(--azc)}
+.grp-i{display:none}
+.grp.aberto .grp-i{display:block}
+.it{display:block;width:100%;text-align:left;padding:.45rem .75rem .45rem 1.3rem;border:none;border-bottom:1px solid #f1f5f9;background:#fff;
+  font-family:inherit;font-size:.83rem;color:#1f2937;cursor:pointer}
+.it small{display:block;font-size:.7rem;color:var(--cin)}
+.it:hover{background:var(--azul-bg)}
+.nada{padding:.8rem;font-size:.8rem;color:var(--cin);text-align:center}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-t">🧮 Calculadora de Projeção Lotacional</div><span class="fbs fbld" id="fbSt">⏳ Conectando...</span></div>
+<div id="bloqueio" style="display:none"></div>
+<div class="wrap" id="app" style="display:none">
+  <p class="intro">Simulação de ocupação das unidades. Informe o número de vagas e de presos — nada é salvo.</p>
+  <div class="leg">
+    <span><i style="background:var(--azul)"></i>Abaixo da capacidade (sobram vagas)</span>
+    <span><i style="background:var(--verde)"></i>Exatamente 100%</span>
+    <span><i style="background:var(--verm)"></i>Acima da capacidade (excedente)</span>
+  </div>
+  <div id="lista"></div>
+  <div class="add"><button class="btn" onclick="novaUnidade()">➕ Incluir outra unidade</button></div>
+</div>
+
+<script>
+// Regionais e unidades: carregadas do cadastro do portal (o mesmo de "Atualizar Unidades")
+let SR = {}, UNIDADES = [];
+
+// Números sem arredondamento: mostra até 2 casas decimais (só o necessário)
+const fmt = n => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+const EPS = 1e-9;
+const semAcento = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const nomeSR = cod => SR[cod].replace('Superintendência Regional ', '');
+
+// ── Seletor de unidade: digitar filtra; regionais em sanfona ──
+function montarLista(id) {
+  const q = semAcento(document.getElementById('u' + id).value.trim());
+  const lista = document.getElementById('l' + id);
+  let h = '', achou = 0;
+  Object.keys(SR).forEach(cod => {
+    const us = UNIDADES.filter(u => u[0] === cod)
+      .filter(u => !q || semAcento(u[1] + ' ' + u[2] + ' ' + cod + ' ' + SR[cod]).includes(q))
+      .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
+    if (!us.length) return;
+    achou += us.length;
+    const aberto = !!q || lista.dataset.aberto === cod;
+    h += `<div class="grp${aberto ? ' aberto' : ''}">
+      <button type="button" class="grp-t" onmousedown="event.preventDefault()" onclick="alternarGrupo(${id},'${cod}')">
+        <span>${cod} — ${nomeSR(cod)}</span><span class="qt">${us.length} ▸</span></button>
+      <div class="grp-i">${us.map(u => `<button type="button" class="it" onmousedown="event.preventDefault()"
+        onclick="escolherUnidade(${id}, this.dataset.n)" data-n="${u[1].replace(/"/g, '&quot;')}">${u[1]}<small>${u[2]}</small></button>`).join('')}</div>
+    </div>`;
+  });
+  lista.innerHTML = h || '<div class="nada">Nenhuma unidade encontrada.</div>';
+  lista.classList.add('on');
+}
+function alternarGrupo(id, cod) {
+  const lista = document.getElementById('l' + id);
+  lista.dataset.aberto = lista.dataset.aberto === cod ? '' : cod;
+  if (document.getElementById('u' + id).value.trim()) { document.getElementById('u' + id).value = ''; }
+  montarLista(id);
+}
+function escolherUnidade(id, nome) {
+  const inp = document.getElementById('u' + id);
+  inp.value = nome;
+  inp.dataset.escolhida = nome;
+  document.getElementById('l' + id).classList.remove('on');
+  calcular(id);
+  document.getElementById('v' + id).focus();
+}
+function fecharLista(id) {
+  const inp = document.getElementById('u' + id);
+  document.getElementById('l' + id).classList.remove('on');
+  // Se digitou e não escolheu, volta para a unidade escolhida antes
+  inp.value = inp.dataset.escolhida || '';
+}
+
+let seq = 0;
+window.novaUnidade = novaUnidade;
+function novaUnidade() {
+  const id = ++seq;
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.id = 'c' + id;
+  div.innerHTML = `
+    <h3 id="t${id}">Unidade ${document.querySelectorAll('.card').length + 1}</h3>
+    ${document.querySelectorAll('.card').length ? `<button class="rem" title="Remover" onclick="remover(${id})">✕</button>` : ''}
+    <div class="campos">
+      <div class="fg un"><label>Unidade prisional</label>
+        <div class="combo">
+          <input id="u${id}" type="text" autocomplete="off" placeholder="🔍 Digite o nome ou a cidade…">
+          <div class="lista" id="l${id}"></div>
+        </div></div>
+      <div class="fg"><label>Nº de vagas</label><input id="v${id}" type="number" min="1" step="1" inputmode="numeric" placeholder="ex.: 400"></div>
+      <div class="fg"><label>Nº de presos</label><input id="p${id}" type="number" min="0" step="1" inputmode="numeric" placeholder="ex.: 460"></div>
+    </div>
+    <div id="r${id}"></div>`;
+  document.getElementById('lista').appendChild(div);
+  const u = document.getElementById('u' + id);
+  u.addEventListener('focus', () => { u.select(); montarLista(id); });
+  u.addEventListener('input', () => montarLista(id));
+  u.addEventListener('blur', () => fecharLista(id));
+  u.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const p = document.querySelector(`#l${id} .it`); if (p) escolherUnidade(id, p.dataset.n); e.preventDefault(); }
+    if (e.key === 'Escape') u.blur();
+  });
+  ['v', 'p'].forEach(k => document.getElementById(k + id).addEventListener('input', () => calcular(id)));
+  calcular(id);
+  if (id > 1) u.focus();
+}
+function remover(id) { document.getElementById('c' + id)?.remove(); }
+
+// Percentual colorido: acima de 100% em vermelho com "-", abaixo em azul, 100% em verde
+function pctHtml(pct) {
+  if (pct > 100 + EPS) return `<span class="c-verm">-${fmt(pct)}%</span>`;
+  if (pct < 100 - EPS) return `<span class="c-azul">${fmt(pct)}%</span>`;
+  return `<span class="c-verde">100%</span>`;
+}
+
+function calcular(id) {
+  const un = document.getElementById('u' + id).dataset.escolhida;
+  document.getElementById('t' + id).textContent = un || ('Unidade ' + ([...document.querySelectorAll('.card')].findIndex(c => c.id === 'c' + id) + 1));
+  const vagas = parseInt(document.getElementById('v' + id).value, 10);
+  const presos = parseInt(document.getElementById('p' + id).value, 10);
+  const r = document.getElementById('r' + id);
+  const simAntes = { pct: document.getElementById('sp' + id)?.value || '', qtd: document.getElementById('sq' + id)?.value || '' };
+
+  if (!(vagas > 0) || !(presos >= 0)) {
+    r.innerHTML = '<div class="vazio">Informe o número de vagas e de presos para ver a ocupação.</div>';
+    return;
+  }
+
+  const pct = presos / vagas * 100;
+  const dif = presos - vagas;
+  const cls = dif > 0 ? 'verm' : dif < 0 ? 'azul' : 'verde';
+  const pctTxt = dif > 0 ? '-' + fmt(pct) + '%' : dif < 0 ? fmt(pct) + '%' : '100%';
+  const det = dif > 0
+    ? `<b class="c-verm">${fmt(dif)} presos acima</b> da capacidade<br>Excedente de <span class="c-verm">-${fmt(pct - 100)}%</span> sobre as vagas`
+    : dif < 0
+    ? `<b class="c-azul">${fmt(-dif)} vagas livres</b><br><span class="c-azul">${fmt(100 - pct)}%</span> da capacidade disponível`
+    : `<b class="c-verde">Lotação completa</b><br>Presos = vagas`;
+
+  r.innerHTML = `
+    <div class="res ${cls}">
+      <div class="pct">${pctTxt}<small>taxa de ocupação</small></div>
+      <div class="det">${fmt(presos)} presos em ${fmt(vagas)} vagas<br>${det}</div>
+    </div>
+    <div class="sim">
+      <div class="sim-t">Simular</div>
+      <div class="sim-l">
+        <div class="fg"><label>Quero chegar a (% de ocupação)</label>
+          <input id="sp${id}" type="number" min="0" step="any" inputmode="decimal" placeholder="ex.: 130" value="${simAntes.pct}">
+          <div class="sim-r" id="spr${id}"></div></div>
+        <div class="fg"><label>Se eu incluir (nº de presos)</label>
+          <input id="sq${id}" type="number" step="1" inputmode="numeric" placeholder="ex.: 50" value="${simAntes.qtd}">
+          <div class="sim-r" id="sqr${id}"></div></div>
+      </div>
+    </div>`;
+  ['sp', 'sq'].forEach(k => document.getElementById(k + id).addEventListener('input', () => simular(id, vagas, presos)));
+  simular(id, vagas, presos);
+}
+
+function simular(id, vagas, presos) {
+  // Meta em %: quantos presos cabem até lá (conta exata, sem arredondar)
+  const meta = parseFloat(String(document.getElementById('sp' + id).value).replace(',', '.'));
+  const spr = document.getElementById('spr' + id);
+  if (meta > 0) {
+    const max = vagas * meta / 100;
+    const cabe = max - presos;
+    const metaTxt = pctHtml(meta);
+    spr.innerHTML = cabe > EPS
+      ? `Para ficar em ${metaTxt}: até <b>${fmt(max)}</b> presos → <span class="c-azul">pode receber mais ${fmt(cabe)}</span>`
+      : cabe > -EPS
+      ? `Para ficar em ${metaTxt}: até <b>${fmt(max)}</b> presos → <span class="c-verde">já está no limite</span>`
+      : `Para ficar em ${metaTxt}: até <b>${fmt(max)}</b> presos → <span class="c-verm">precisaria retirar ${fmt(-cabe)}</span>`;
+  } else spr.innerHTML = '';
+
+  // Inclusão de N presos: como fica a ocupação
+  const qtd = parseInt(document.getElementById('sq' + id).value, 10);
+  const sqr = document.getElementById('sqr' + id);
+  if (Number.isFinite(qtd) && qtd !== 0) {
+    const novo = presos + qtd;
+    sqr.innerHTML = novo < 0
+      ? '<span class="c-verm">Resultado ficaria negativo.</span>'
+      : `Ficaria com <b>${fmt(novo)}</b> presos → ocupação ${pctHtml(novo / vagas * 100)}`;
+  } else sqr.innerHTML = '';
+}
+
+</script>
+<script type="module">
+import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import{getFirestore,doc,getDoc}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import{FIREBASE_CONFIG,EMAILS_CRV,ehCRV}from"./js/config-crv.js?v=4";
+import{garantirEquipe}from"./js/equipe-crv.js?v=2";
+
+const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+// Cadastro atualizado (Firestore); se não der, usa o arquivo do site
+async function carregarUnidades(){
+  let d=null;
+  try{const s=await getDoc(doc(db,'unidades_config','principal'));if(s.exists())d=s.data();}catch(_){}
+  if(!d||!Array.isArray(d.unidades)){const r=await fetch('data/unidades.json',{cache:'no-store'});d=await r.json();}
+  SR={};Object.keys(d.sr||{}).sort().forEach(c=>{SR[c]=d.sr[c].nome||c;});
+  UNIDADES=(d.unidades||[]).filter(u=>u&&u.nome).map(u=>[u.sr||'',u.nome,u.cidade||'']);
+  // unidade sem regional conhecida: agrupa em "Outras"
+  if(UNIDADES.some(u=>!SR[u[0]])){UNIDADES.forEach(u=>{if(!SR[u[0]])u[0]='—';});SR['—']='Outras';}
+}
+
+let iniciado=false;
+onAuthStateChanged(auth,async user=>{
+  const st=document.getElementById('fbSt');
+  if(user)await garantirEquipe(EMAILS_CRV);
+  if(!user||!ehCRV(user.email)){
+    st.className='fbs fberr';st.textContent=user?'⛔ Acesso restrito':'🔒 Faça login';
+    document.getElementById('app').style.display='none';
+    const b=document.getElementById('bloqueio');b.style.display='';
+    b.innerHTML=user?'⛔ Página restrita à equipe CRV.':'🔒 Faça login no <a href="index.html" target="_top">Portal CRV</a>.';
+    return;
+  }
+  document.getElementById('bloqueio').style.display='none';
+  st.className='fbs fbok';st.textContent='✅ '+user.email;
+  if(iniciado){document.getElementById('app').style.display='';return;}
+  iniciado=true;
+  try{await carregarUnidades();}catch(e){st.className='fbs fberr';st.textContent='⚠️ Erro ao carregar unidades';}
+  document.getElementById('app').style.display='';
+  window.novaUnidade();
+});
+</script>
+</body>
+</html>

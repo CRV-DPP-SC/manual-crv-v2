@@ -1398,6 +1398,11 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-titulo">Calculadora de Gestão de Vagas</div>
         <div class="grupo-item-sub">Déficit, excedente e taxa de ocupação</div>
       </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('calculadora-lotacional.html','🧮 Calculadora de Projeção Lotacional')">
+        <div class="grupo-item-icon">🧮</div>
+        <div class="grupo-item-titulo">Calculadora de Projeção Lotacional</div>
+        <div class="grupo-item-sub">Simular ocupação e quantos presos a unidade comporta</div>
+      </div>
       <div class="grupo-item" onclick="_abrirFerramenta('gerador_despachos_crv.html','⚖️ Gerador de Despachos')">
         <div class="grupo-item-icon">⚖️</div>
         <div class="grupo-item-titulo">Gerador de Despachos</div>
