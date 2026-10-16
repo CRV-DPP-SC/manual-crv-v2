@@ -15,7 +15,7 @@ import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, text
          confirmarLeitura, publicarAviso, alterarArquivado, listarComentarios, contarComentarios,
          comentarAviso, excluirComentario, excluirAviso, enviarAnexoAviso, anexosHtml,
          editarAviso, avisoExpirado, expiraEmMs,
-         ANEXO_MAX_ARQUIVOS, ANEXO_MAX_MB } from "./avisos.js?v=2";
+         ANEXO_MAX_ARQUIVOS, ANEXO_MAX_MB, nomeCRV, nomeAutorAviso } from "./avisos.js?v=3";
 
 // ── CONFIG FIREBASE ──
 const app  = initializeApp(FIREBASE_CONFIG);
@@ -2927,7 +2927,7 @@ function _renderMural() {
             ${a.ativo !== false && expirado ? '<span class="p-status p-status-cancelado">Expirado</span>' : ''}
           </div>
           <div style="font-size:.72rem;color:var(--txt-3);">
-            ${formatarDataAviso(a.criadoEm)} · por ${escHtml(a.criadoPorNome || a.criadoPor || 'CRV')}
+            ${formatarDataAviso(a.criadoEm)} · por ${escHtml(nomeAutorAviso(a.criadoPorNome, a.criadoPor))}
             ${a.editadoEm ? ' · editado em ' + formatarDataAviso(a.editadoEm) : ''}
             ${ehCRV ? ' · Para: ' + escHtml(descreverPublico(a.publico, UNIDADES, SR_INFO)) : ''}
           </div>
@@ -3118,7 +3118,7 @@ function _srComentarios() { return null; } // null = todos os comentários do av
 
 function _rotuloAutor(eu) {
   const un = UNIDADES.find(u => u.email === eu.unidadeEmail);
-  if (eu.tipo === 'crv')   return 'CRV/DPP — ' + (eu.email.split('@')[0]);
+  if (eu.tipo === 'crv')   return 'CRV/DPP — ' + (nomeCRV(eu.email) || eu.email.split('@')[0]);
   if (eu.tipo === 'super') return 'Superintendente ' + eu.srCod;
   if (eu.tipo === 'dir')   return 'Diretor(a) — ' + (un?.nome || '');
   if (eu.tipo === 'cpen')  return 'Coord. Execução Penal — ' + (un?.nome || '');
@@ -3137,7 +3137,7 @@ window.alternarComentariosAviso = async function (id, forcarAbrir) {
     const itens = lista.map(cm => `
       <div style="padding:8px 10px;border-radius:8px;background:${cm.perfil === 'crv' ? 'var(--azul-50)' : 'var(--surface-2)'};margin-bottom:6px;">
         <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;">
-          <span style="font-size:.74rem;font-weight:700;color:var(--txt-1);">${cm.perfil === 'crv' ? '🏛 ' : ''}${escHtml(cm.autorNome || cm.autorEmail)}</span>
+          <span style="font-size:.74rem;font-weight:700;color:var(--txt-1);">${cm.perfil === 'crv' ? '🏛 ' : ''}${escHtml(cm.perfil === 'crv' && nomeCRV(cm.autorEmail) ? 'CRV/DPP — ' + nomeCRV(cm.autorEmail) : (cm.autorNome || cm.autorEmail))}</span>
           ${cm.srCod ? `<span style="font-size:.64rem;color:var(--txt-3);">${escHtml(cm.srCod)}</span>` : ''}
           <span style="font-size:.66rem;color:var(--txt-3);margin-left:auto;">${formatarDataAviso(cm.criadoEm)}</span>
           ${ehCRV ? `<button onclick="excluirComentarioAviso('${id}','${cm.id}')" title="Remover comentário" style="border:none;background:none;cursor:pointer;font-size:.72rem;color:var(--vermelho);">🗑</button>` : ''}

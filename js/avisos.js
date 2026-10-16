@@ -197,13 +197,36 @@ export async function confirmarLeitura(avisoId, uid, eu) {
 }
 
 /** Só a equipe CRV publica (a regra do Firestore garante). expiraEm: Date ou null (não expira) */
+// ── Nome de quem publica (só a equipe CRV publica): primeiro nome, não o e-mail ──
+const NOME_CRV = {
+  'rodrigo.l.pastore@gmail.com': 'Rodrigo', 'day.sestren88@gmail.com': 'Dayanne', 'jessicaveiga9@gmail.com': 'Jéssica',
+  'ricardobritomarques12@gmail.com': 'Ricardo', 'ivana.schafer@gmail.com': 'Ivana', 'brunawlongen@gmail.com': 'Bruna',
+  'abeljuliana2012@gmail.com': 'Juliana', 'wanessaemerim@gmail.com': 'Wanessa',
+};
+export function nomeCRV(email) { return NOME_CRV[(email || '').toLowerCase()] || null; }
+/** Nome para exibir: primeiro nome da equipe CRV; senão o nome salvo (se não for e-mail); senão "CRV". */
+export function nomeAutorAviso(nome, email) {
+  return nomeCRV(email) || (nome && !nome.includes('@') ? nome : 'CRV');
+}
+// Quem entrou depois pela página Equipe CRV: usa o primeiro nome do cadastro
+async function _primeiroNome(email) {
+  const fixo = nomeCRV(email);
+  if (fixo) return fixo;
+  try {
+    const s = await getDoc(doc(db(), 'equipe_crv', (email || '').toLowerCase()));
+    const n = s.exists() ? (s.data().nome || '').trim().split(/\s+/)[0] : '';
+    return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : null;
+  } catch (_) { return null; }
+}
+
 export async function publicarAviso({ titulo, texto, importante, publico, anexos, expiraEm }, eu) {
+  const nome = await _primeiroNome(eu.email);
   return addDoc(collection(db(), 'avisos'), {
     titulo: titulo.trim(), texto: texto.trim(), importante: !!importante,
     anexos: anexos || [],
     publico: { tipo: publico.tipo || 'todos', valor: publico.valor || '', perfis: publico.perfis || [] },
     expiraEm: expiraEm || null,
-    criadoPor: eu.email, criadoPorNome: eu.nome || eu.email,
+    criadoPor: eu.email, criadoPorNome: nome || eu.nome || eu.email,
     criadoEm: serverTimestamp(), ativo: true,
   });
 }
