@@ -187,8 +187,21 @@ async function enviarSolicitacaoAssinatura() {
   /* Gera o resumo sintético para salvar junto à solicitação */
   var resumoTexto = gerarTextoResumo(s);
 
+  /* Transferências: guarda os dados organizados para as comunicações de entrada/saída */
+  var transf = null;
+  if (typeof MODS_COM_JUD !== 'undefined' && MODS_COM_JUD.indexOf(s.mod) >= 0 && s.ori && s.des) {
+    var lim = function(l) { return (l || []).map(function(r) { return { nome: r.nome || '', ipen: r.ipen || '' }; }); };
+    transf = {
+      mod: s.mod, numOficio: s.numOficio || '',
+      oriEm: s.ori.em, oriNome: s.ori.n, desEm: s.des.em, desNome: s.des.n,
+      presosIda: presos,                                            // saem da origem → destino
+      presosVolta: s.mod === 'permuta' ? lim(s.permutaDes) : [],    // permuta: saem do destino → origem
+      motivo: s.motTransf || s.motTransfPermuta || s.motIndicacao || '',
+    };
+  }
+
   try {
-    await fnCriar({ titulo: _assModalData.titulo, conteudo: conteudo, unidadeOrigem: unidadeOrigem, assinantes: _assModalData.assinantes, presos: presos, resumo: resumoTexto });
+    await fnCriar({ titulo: _assModalData.titulo, conteudo: conteudo, unidadeOrigem: unidadeOrigem, assinantes: _assModalData.assinantes, presos: presos, resumo: resumoTexto, transf: transf });
     fecharModalAssinaturas();
     _toast('Solicitação de assinaturas enviada com sucesso!');
   } catch (e) {

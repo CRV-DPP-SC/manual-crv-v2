@@ -11,7 +11,7 @@ import { initializeApp, getApps, getApp }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAuth, onAuthStateChanged }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, addDoc, collection, serverTimestamp }
+import { getFirestore, doc, getDoc, addDoc, updateDoc, collection, serverTimestamp }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG as firebaseConfig } from "../../js/config-crv.js";
 
@@ -100,7 +100,7 @@ onAuthStateChanged(auth, async (user) => {
   window._v2Usuario = user || null;
 
   if (user) {
-    window._v2CriarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo }) {
+    window._v2CriarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo, transf }) {
       const uns  = typeof getUns === 'function' ? getUns()
                  : (typeof UNS !== 'undefined'  ? UNS : []);
       const uObj = uns.find(u => u.em === unidadeOrigem) || {};
@@ -122,10 +122,22 @@ onAuthStateChanged(auth, async (user) => {
           motivo:       null,
         })),
         statusGeral:  'em_andamento',
+        // dados organizados da transferência (para gerar as comunicações no Painel)
+        ...(transf ? { transf } : {}),
         criadoEm:     serverTimestamp(),
         atualizadoEm: serverTimestamp(),
       });
       return ref.id;
+    };
+    /* Comunicações de entrada/saída geradas a partir do Painel */
+    window._v2LerSolicitacao = async function (id) {
+      const snap = await getDoc(doc(db, 'solicitacoes', id));
+      return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    };
+    window._v2SalvarComunicacao = async function (id, chave, dados) {
+      await updateDoc(doc(db, 'solicitacoes', id), {
+        ['comunicacoes.' + chave]: { ...dados, salvoEm: Date.now(), salvoPor: user.email },
+      });
     };
   } else {
     window._v2CriarSolicitacaoAssinatura = null;

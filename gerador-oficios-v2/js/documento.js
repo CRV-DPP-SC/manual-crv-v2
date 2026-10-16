@@ -4,9 +4,16 @@
    Funções puras: recebem estado (s) e retornam HTML.
    ============================================================ */
 
+/* Unidade dona do papel (cabeçalho, rodapé, cidade/data): na comunicação de
+   ENTRADA é a unidade de destino (quem recebeu o preso); nos demais, a origem. */
+function unPapel(s) {
+  if (s && s.mod === 'comunicacao' && s.sub === 'entrada' && s.des) return s.des;
+  return s ? s.ori : null;
+}
+
 /* ── Cabeçalho ── */
 function cab(s) {
-  var ori = s.ori || null;
+  var ori = unPapel(s) || null;
   var nomeUn = ori ? ori.n : ph('Unidade de Origem');
   return '<div class="ofc-cab">'
     + '<img src="assets/brasao.png" alt="Brasão SC">'
@@ -21,7 +28,8 @@ function cab(s) {
 
 /* ── Linha número / data ── */
 function numData(s) {
-  var cidade = s.ori ? s.ori.c : '';
+  var un = unPapel(s);
+  var cidade = un ? un.c : '';
   var data = dHoje(cidade);
   if (s.numOficio) {
     return '<div class="ofc-numdata">'
@@ -100,7 +108,7 @@ function dJuizo(s) {
 
 /* ── Rodapé ── */
 function rod(s) {
-  var o   = s ? s.ori : null;
+  var o   = unPapel(s);
   var tel = o ? o.tel : '';
   var em  = o ? o.em  : '';
   var end = o ? o.e   : '';

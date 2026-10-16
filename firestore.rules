@@ -198,7 +198,7 @@ service cloud.firestore {
       // e os dados de criação ficam congelados depois de criado.
       allow update: if membro()
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['assinantes','statusGeral','cancelamento','atualizadoEm']);
+             .hasOnly(['assinantes','statusGeral','cancelamento','atualizadoEm','comunicacoes']);
       allow delete: if isCRV();
     }
 

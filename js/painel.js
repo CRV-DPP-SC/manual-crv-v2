@@ -1556,6 +1556,7 @@ function renderizarLista(el, lista, tipo) {
             ${statusGeral.classe === 'concluido' ? 'Baixar PDF validado' : 'Baixar PDF'}
           </button>
           <button class="p-btn p-btn-outline" onclick="verResumoOficio('${s.id}')">📄 Resumo IPEN</button>
+          ${_botoesComunicacao(s, statusGeral)}
           ${podeFirmar ? `
             <button class="p-btn p-btn-assinar" onclick="assinarOficio('${s.id}')">Assinar</button>
             <button class="p-btn p-btn-negar"   onclick="abrirModalNegar('${s.id}')">Negar</button>
@@ -2206,6 +2207,37 @@ async function getBrasaoBase64() {
 }
 
 // ── GERAR PDF VALIDADO ──
+// ── Ofícios de comunicação (entrada/saída) de uma transferência ──
+// Aparecem só com a transferência totalmente assinada (some se negada/cancelada).
+// Saída → unidade de origem; Entrada → unidade de destino; CRV vê todas.
+// Permuta: cada unidade tem uma saída e uma entrada (sentidos "ida" e "volta").
+function _botoesComunicacao(s, statusGeral) {
+  const t = s.transf;
+  if (!t || statusGeral.classe !== 'concluido') return '';
+  const minha = unidadeSelecionada ? unidadeSelecionada.email
+              : (escopoAtual && escopoAtual.tipo === 'unidade' ? escopoAtual.email : null);
+  const crv = perfilAtual === 'crv' && !unidadeSelecionada;
+  const eq = (a, b) => (a || '').toLowerCase() === (b || '').toLowerCase();
+  const sentidos = [{ dir: 'ida', ori: t.oriEm, des: t.desEm, oriN: t.oriNome, desN: t.desNome, n: (t.presosIda || []).length }];
+  if ((t.presosVolta || []).length) sentidos.push({ dir: 'volta', ori: t.desEm, des: t.oriEm, oriN: t.desNome, desN: t.oriNome, n: t.presosVolta.length });
+  const perm = sentidos.length > 1;
+  const btn = (sen, tipo) => {
+    const salvo = (s.comunicacoes || {})[tipo + '_' + sen.dir];
+    const rot = (tipo === 'saida' ? '📨 Comunicação de Saída' : '📨 Comunicação de Entrada')
+      + (perm || crv ? ` (${escHtml(tipo === 'saida' ? sen.oriN : sen.desN)})` : '');
+    return `<button class="p-btn p-btn-outline" title="${salvo ? 'Já preenchida — clique para baixar ou editar' : 'Gerar o ofício de comunicação ao Judiciário'}"
+      onclick="abrirComunicacao('${s.id}','${sen.dir}','${tipo}')">${rot}${salvo ? ' ✓' : ''}</button>`;
+  };
+  return sentidos.map(sen =>
+    (crv || eq(minha, sen.ori) ? btn(sen, 'saida') : '') + (crv || eq(minha, sen.des) ? btn(sen, 'entrada') : '')
+  ).join('');
+}
+window.abrirComunicacao = function (id, dir, tipo) {
+  const url = 'gerador-oficios-v2/index.html?com=' + encodeURIComponent(id) + '&dir=' + dir + '&tipo=' + tipo;
+  const w = window.open(url, '_blank');
+  if (!w) showToastPainel('Permita pop-ups para abrir a comunicação.');
+};
+
 window.gerarPDFValidado = async function (id) {
   showToastPainel('Preparando documento…');
   try {
@@ -3230,7 +3262,7 @@ function _htmlConfirmacoes(leituras, aviso) {
 // ══════════════════════════════════════════════
 // API EXPORTADA — usada pelo Gerador de Ofícios V2
 // ══════════════════════════════════════════════
-window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo }) {
+window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo, transf }) {
   if (!usuarioAtual) throw new Error('Usuário não autenticado.');
   const unidade = UNIDADES.find(u => u.email === unidadeOrigem) || {};
   const docRef  = await addDoc(collection(db, 'solicitacoes'), {
@@ -3251,6 +3283,7 @@ window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeO
       motivo:       null,
     })),
     statusGeral:  'em_andamento',
+    ...(transf ? { transf } : {}),
     criadoEm:     serverTimestamp(),
     atualizadoEm: serverTimestamp(),
   });

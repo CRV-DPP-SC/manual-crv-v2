@@ -210,6 +210,7 @@ function gerarOficiosCJ() {
       juiz:      grp.juiz,
       vara:      grp.vara,
       cidJuizo:  grp.cid,
+      tipo:       (window.COM_PAINEL && window.COM_PAINEL.tipo) || 'saida',
       dataTrans:  dataTrans,
       motivo:     motivo,
       numOficio:  numOficio + (listaGrupos.length > 1 ? ' (' + (gi + 1) + '/' + listaGrupos.length + ')' : ''),
@@ -228,9 +229,13 @@ function gerarOficiosCJ() {
 
 function _montarOficioCJ(cfg) {
   var o = cfg.ori;
+  var dU = cfg.des || Estado.get('des');
+  var entrada = cfg.tipo === 'entrada';
+  /* Unidade que comunica: saída = origem; entrada = destino (cabeçalho, rodapé, assinatura) */
+  var com = entrada ? dU : o;
 
   /* Reutiliza cab() / numData() / rod() com estado mínimo */
-  var sMini = {ori: o, des: cfg.des || Estado.get('des'), numOficio: cfg.numOficio, sau: cfg.sau, desp: cfg.desp, dd: false, sro: false, srd: false};
+  var sMini = {mod: 'comunicacao', sub: entrada ? 'entrada' : 'saida', ori: o, des: dU, numOficio: cfg.numOficio, sau: cfg.sau, desp: cfg.desp, dd: false, sro: false, srd: false};
 
   /* Número + data — igual a numData() */
   var ndHTML = numData(sMini);
@@ -239,15 +244,16 @@ function _montarOficioCJ(cfg) {
   var txtPresos;
   var anexoHTML = '';
   if (cfg.presos.length === 1) {
-    txtPresos = 'o(a) custodiado(a) <strong>' + _esc(cfg.presos[0].nome.toUpperCase()) + '</strong>, IPEN nº <strong>' + _esc(cfg.presos[0].ipen) + '</strong>, foi transferido(a)';
+    txtPresos = 'o(a) custodiado(a) <strong>' + _esc(cfg.presos[0].nome.toUpperCase()) + '</strong>, IPEN nº <strong>' + _esc(cfg.presos[0].ipen) + '</strong>, ' + (entrada ? 'ingressou' : 'foi transferido(a)');
   } else {
-    txtPresos = 'os(as) custodiados(as) relacionados(as) no <strong>Anexo I</strong> deste ofício foram transferidos(as)';
+    txtPresos = 'os(as) custodiados(as) relacionados(as) no <strong>Anexo I</strong> deste ofício ' + (entrada ? 'ingressaram' : 'foram transferidos(as)');
     anexoHTML = '<div class="page-break-preview ofc-no-print">— Nova página: Anexo I —</div>'
       + gerarAnexoTabela(cfg.presos.map(function(pr) { return {nome: pr.nome, ipen: pr.ipen}; }), 'I', 'Relação de Custodiados', null, false);
   }
 
-  var destCidade = o ? o.c + '/SC' : '';
-  var nomeDestinoCJ = cfg.des ? cfg.des.n : (Estado.get('des') ? Estado.get('des').n : '');
+  var destCidade = dU ? dU.c + '/SC' : '';
+  var oriCidade  = o ? o.c + '/SC' : '';
+  var nomeDestinoCJ = dU ? dU.n : '';
   var motivo = cfg.motivo ? '<strong>' + _esc(cfg.motivo) + '</strong>' : ph('motivo da transferência');
   var fem = cfg.genJuiz === 'F';
 
@@ -256,7 +262,9 @@ function _montarOficioCJ(cfg) {
     ? (cfg.presos.length === 1 ? ', autos do Processo nº <strong>' + _esc(cfg.numProc) + '</strong>' : '')
     : '';
 
-  var p1 = 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(nomeDestinoCJ) + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>' + procTexto + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
+  var p1 = entrada
+    ? 'Comunica-se a Vossa Excelência que ' + txtPresos + ' nesta unidade — <strong>' + _esc(nomeDestinoCJ) + '</strong> —, ' + (cfg.presos.length === 1 ? 'oriundo(a)' : 'oriundos(as)') + ' de <strong>' + _esc(o ? o.n : '') + '</strong>, em ' + _esc(oriCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>' + procTexto + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.'
+    : 'Comunica-se a Vossa Excelência que ' + txtPresos + ' desta unidade — <strong>' + _esc(o ? o.n : '') + '</strong> — para <strong>' + _esc(nomeDestinoCJ) + '</strong>, em ' + _esc(destCidade) + ', na data de <strong>' + _esc(cfg.dataTrans) + '</strong>' + procTexto + ', nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
   var p2 = 'A transferência foi autorizada pela Central de Regulação de Vagas — CRV/DPP, em razão de que ' + motivo + '.';
 
   /* Destinatário com gênero definido */
@@ -268,7 +276,7 @@ function _montarOficioCJ(cfg) {
     + (cfg.cidJuizo ? '<div class="dest-l">' + _esc(cfg.cidJuizo) + '</div>' : '')
     + '</div></div>';
 
-  var assHTML = o ? ass(o.dir, o.cg, o.n, true) : '';
+  var assHTML = com ? ass(com.dir, com.cg, com.n, true) : '';
 
   /* Processo no anexo (múltiplos presos): adiciona coluna extra */
   if (cfg.presos.length > 1 && cfg.numProc) {
