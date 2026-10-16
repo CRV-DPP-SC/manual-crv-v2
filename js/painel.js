@@ -3222,7 +3222,8 @@ window.verConfirmacoesAviso = async function (id) {
 function _htmlConfirmacoes(leituras, aviso) {
   if (!leituras.length) return '<div class="p-vazio" style="padding:6px 0;">Ninguém confirmou a leitura ainda.</div>';
   const n2 = n => String(n).padStart(2, '0');
-  const rotulo = l => ({ dir: 'Diretor(a)', cpen: 'Coord. Execução Penal', super: 'Superintendente' }[l.perfil]) || l.nome || l.email;
+  const rotulo = l => ({ dir: 'Diretor(a)', cpen: 'Coord. Execução Penal', super: 'Superintendente' }[l.perfil])
+    || nomeCRV(l.email) || (l.nome && !l.nome.includes('@') ? l.nome : l.email);
   let seq = 0;
   const pessoa = l => `
     <div style="display:flex;gap:8px;padding:4px 6px 4px 26px;font-size:.76rem;">

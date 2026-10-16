@@ -9,6 +9,7 @@ import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=4";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
+import { nomeCRV } from "./avisos.js?v=3";
 import { definirContador } from "./badge-app.js";
 
 const _app  = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
@@ -135,6 +136,8 @@ function _rotuloPerfil(email) {
 }
 
 function _nomeExibicaoEmail(email) {
+  const crv = nomeCRV(email);              // equipe CRV: primeiro nome
+  if (crv) return crv;
   const prefix = (email || '').split('@')[0];
   const partes = prefix.split('.');
   if (partes.length > 1) return partes[0].charAt(0).toUpperCase() + partes[0].slice(1).toLowerCase();
