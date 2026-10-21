@@ -354,7 +354,7 @@ async function _verificarPendenciasLogin() {
       <p style="font-size:.88rem;color:var(--txt-2);margin-bottom:14px;line-height:1.55;">
         Você tem <strong>${pendentes.length} solicitaç${pendentes.length > 1 ? 'ões' : 'ão'} pendente${pendentes.length > 1 ? 's' : ''}</strong> aguardando sua assinatura:
       </p>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:50vh;overflow-y:auto;">
         ${pendentes.map(s => `
           <div style="padding:10px 14px;background:var(--surface-2);border-radius:var(--radius);font-size:.84rem;">
             <div style="font-weight:600;color:var(--txt-1);">${escHtml(s.titulo || 'Ofício s/ título')}</div>
@@ -368,6 +368,9 @@ async function _verificarPendenciasLogin() {
                    <p style="font-size:.78rem;color:#1e3a8a;line-height:1.6;margin:0;">${escHtml(s.resumo)}</p>
                  </div>`
               : '<div style="margin-top:6px;font-size:.72rem;color:var(--txt-4);font-style:italic;">Resumo não disponível para este documento.</div>'}
+            <div style="margin-top:10px;">
+              <button class="p-btn p-btn-assinar" onclick="fecharModalPendencias();assinarOficio('${s.id}')">✍️ Assinar</button>
+            </div>
           </div>`).join('')}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px;">
