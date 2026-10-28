@@ -52,6 +52,32 @@ export function emailCanonico(email) {
   const m = e.match(RE_SUPERINTENDENTE);
   return m ? m[1] + 'sr@pp.sc.gov.br' : e;
 }
+// ── Índices das solicitações de assinatura ──
+// Para não ler a coleção inteira a cada tela (estourava a cota gratuita do Firestore),
+// cada solicitação guarda:
+//   pendentesDe → e-mails (canônicos) de quem ainda precisa assinar  (sino / pendências)
+//   unidades    → e-mails das unidades envolvidas (origem + assinantes) (Diretor/CPEN)
+//   srs         → regionais envolvidas ('SR01'…)                         (Superintendente)
+// O bot de notificações (notificacoes-bot) usa a mesma regra para corrigir/preencher.
+export function pendentesDe(assinantes, statusGeral) {
+  const lista = assinantes || [];
+  if (statusGeral === 'cancelado' || lista.some(a => a.status === 'negado')) return [];
+  return [...new Set(lista.filter(a => a.status === 'pendente' && a.email).map(a => emailCanonico(a.email)))];
+}
+/** unidadesLista: [{ email|em, sr }] (window.UNIDADES do site ou UNS do Gerador) */
+export function indiceSolicitacao(s, unidadesLista) {
+  const unidades = [...new Set([s.emailUnidadeOrigem, ...(s.assinantes || []).map(a => a.emailUnidade)]
+    .filter(Boolean).map(e => e.toLowerCase()))];
+  const srs = new Set();
+  unidades.forEach(e => {
+    const m = e.match(/^(sr0[1-8])@/);
+    if (m) { srs.add(m[1].toUpperCase()); return; }
+    const u = (unidadesLista || []).find(x => (x.email || x.em || '').toLowerCase() === e);
+    if (u?.sr) srs.add(u.sr);
+  });
+  return { pendentesDe: pendentesDe(s.assinantes, s.statusGeral), unidades, srs: [...srs] };
+}
+
 /** Mesmo titular? (sr01@ e sr01sr@ contam como a mesma pessoa) */
 export function mesmoUsuario(a, b) {
   return !!a && !!b && emailCanonico(a) === emailCanonico(b);

@@ -7,7 +7,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
          query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=5";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=6";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { nomeCRV } from "./avisos.js?v=3";
 import { definirContador } from "./badge-app.js";

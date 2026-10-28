@@ -161,13 +161,66 @@ async function processarCadastros(desde) {
   }
 }
 
+// ── Índices das solicitações (mesma regra de indiceSolicitacao em js/config-crv.js) ──
+// O site consulta as solicitações por estes campos, em vez de ler a coleção inteira.
+function pendentesDe(assinantes, statusGeral) {
+  const lista = assinantes || [];
+  if (statusGeral === 'cancelado' || lista.some(a => a.status === 'negado')) return [];
+  return [...new Set(lista.filter(a => a.status === 'pendente' && a.email).map(a => canonico(a.email)))];
+}
+let _unidadesCfg = null;
+async function unidadesCfg() {
+  if (!_unidadesCfg) {
+    const cfg = await db.collection('unidades_config').doc('principal').get();
+    _unidadesCfg = cfg.exists ? (cfg.data().unidades || []) : [];
+  }
+  return _unidadesCfg;
+}
+async function indiceSolicitacao(s) {
+  const lista = await unidadesCfg();
+  const unidades = [...new Set([s.emailUnidadeOrigem, ...(s.assinantes || []).map(a => a.emailUnidade)]
+    .filter(Boolean).map(e => e.toLowerCase()))];
+  const srs = new Set();
+  unidades.forEach(e => {
+    const m = e.match(/^(sr0[1-8])@/);
+    if (m) { srs.add(m[1].toUpperCase()); return; }
+    const u = lista.find(x => (x.email || '').toLowerCase() === e);
+    if (u?.sr) srs.add(u.sr);
+  });
+  return { pendentesDe: pendentesDe(s.assinantes, s.statusGeral), unidades, srs: [...srs] };
+}
+const _igual = (a, b) => JSON.stringify([...(a || [])].sort()) === JSON.stringify([...(b || [])].sort());
+// Grava os índices só se estiverem faltando ou diferentes. Devolve true se gravou.
+async function corrigirIndice(doc) {
+  const s = doc.data();
+  const ind = await indiceSolicitacao(s);
+  if (_igual(s.pendentesDe, ind.pendentesDe) && _igual(s.unidades, ind.unidades) && _igual(s.srs, ind.srs)) return false;
+  await doc.ref.update(ind);   // não mexe em atualizadoEm
+  return true;
+}
+
+// Uma única vez: preenche os índices de todas as solicitações antigas
+async function indexarTudoUmaVez(estadoRef, estado) {
+  if (estado.indicesSolicitacoesV1) return;   // já feito (marca no mesmo documento de estado do bot)
+  const snap = await db.collection('solicitacoes').get();
+  let n = 0;
+  for (const doc of snap.docs) if (await corrigirIndice(doc)) n++;
+  await estadoRef.set({ indicesSolicitacoesV1: admin.firestore.Timestamp.now() }, { merge: true });
+  console.log(`[índices] ${n} de ${snap.size} solicitações indexadas (execução única).`);
+}
+
 async function processarSolicitacoes(desde) {
+  // Uma consulta só: tudo que foi criado OU alterado desde a última verificação.
+  // Criadas → push de assinatura; todas → índices conferidos (quem ainda usa
+  // a versão antiga do site assina sem atualizar o campo pendentesDe).
   const snap = await db.collection('solicitacoes')
-    .where('criadoEm', '>', desde)
+    .where('atualizadoEm', '>', desde)
     .get();
 
   for (const doc of snap.docs) {
+    try { await corrigirIndice(doc); } catch (e) { console.warn('[índices]', doc.id, e.message); }
     const data = doc.data();
+    if (!(data.criadoEm && data.criadoEm.toMillis() > desde.toMillis())) continue;   // só as novas geram push
     const pendentes = (data.assinantes || []).filter(a => a.status === 'pendente' && a.emailUnidade);
     const unidadesUnicas = [...new Set(pendentes.map(a => a.emailUnidade))];
     const titulo  = data.titulo || 'Solicitação de transferência';
@@ -359,6 +412,8 @@ async function main() {
     ? estadoSnap.data().ultimaVerificacao
     : admin.firestore.Timestamp.fromMillis(agora.toMillis() - 24 * 60 * 60 * 1000);
 
+  try { await indexarTudoUmaVez(estadoRef, estadoSnap.exists ? estadoSnap.data() : {}); } catch (e) { console.error('Erro ao indexar solicitações:', e.message); }
+
   // Cada etapa independente: a falha de uma não impede as outras
   const etapas = { processarCadastros, processarSolicitacoes, processarAvisos, processarMensagens, processarRecados, processarTrocasPlantao };
   const resultados = await Promise.allSettled(Object.values(etapas).map(f => f(desde)));
@@ -366,7 +421,7 @@ async function main() {
   resultados.forEach((r, i) => {
     if (r.status === 'rejected') { falhou = true; console.error('Erro em', Object.keys(etapas)[i] + ':', r.reason); }
   });
-  await estadoRef.set({ ultimaVerificacao: agora });
+  await estadoRef.set({ ultimaVerificacao: agora }, { merge: true });
   if (falhou) process.exitCode = 1;
 }
 

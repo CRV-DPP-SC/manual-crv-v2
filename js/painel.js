@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendP
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario, emailCanonico } from "./config-crv.js?v=5";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario, emailCanonico, pendentesDe, indiceSolicitacao } from "./config-crv.js?v=6";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, textoAvisoHtml,
          formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
@@ -223,11 +223,36 @@ function mostrarPainel() {
 let _prevPendenciasIds = new Set();
 let _primeiraExecucaoSnap = true;
 
+// ── Leituras de solicitações: só o escopo de quem está vendo ──
+// (ler a coleção inteira a cada tela estourava a cota gratuita do Firestore)
+function _qMinhasPendencias() {
+  return query(collection(db, 'solicitacoes'),
+    where('pendentesDe', 'array-contains', emailCanonico(usuarioAtual.email)));
+}
+function _escopoSolicitacoes() {
+  if (unidadeSelecionada) return ['unidades', unidadeSelecionada.email.toLowerCase()];
+  if (srSelecionada)      return ['srs', srSelecionada];
+  if (perfilAtual === 'crv')   return null;                      // visão geral do estado
+  if (perfilAtual === 'super') return ['srs', escopoAtual.codigo];
+  return ['unidades', (escopoAtual?.email || '-').toLowerCase()];
+}
+// Devolve algo com a mesma "cara" do snapshot (forEach/docs/size), do mais novo ao mais antigo
+async function _lerSolicitacoes() {
+  const esc = _escopoSolicitacoes();
+  const q = esc
+    ? query(collection(db, 'solicitacoes'), where(esc[0], 'array-contains', esc[1]))
+    : query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc'));
+  const snap = await getDocs(q);
+  const ms = d => d.data().criadoEm?.toMillis?.() || 0;
+  const docs = esc ? snap.docs.slice().sort((a, b) => ms(b) - ms(a)) : snap.docs;
+  return { docs, size: docs.length, empty: !docs.length, forEach: fn => docs.forEach(fn) };
+}
+
 function _iniciarListenerPendencias() {
   if (_pendenciasUnsub) { _pendenciasUnsub(); _pendenciasUnsub = null; }
   _primeiraExecucaoSnap = true;
 
-  const q = query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc'));
+  const q = _qMinhasPendencias();
   _pendenciasUnsub = onSnapshot(q, (snap) => {
     const pendentes = [];
     snap.forEach(d => {
@@ -334,7 +359,7 @@ function _mostrarModalAcessosPendentes(lista) {
 /* ── Modal de pendências no login ── */
 async function _verificarPendenciasLogin() {
   try {
-    const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+    const snap = await getDocs(_qMinhasPendencias());
     const pendentes = [];
     snap.forEach(d => {
       const s = { id: d.id, ...d.data() };
@@ -767,7 +792,7 @@ async function _contarSituacaoUnidade() {
   const unids = unidadesVisiveis().map(u => u.email);
   if (!unids.length) return resultado;
 
-  const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+  const snap = await _lerSolicitacoes();
   snap.forEach(d => {
     const s = d.data();
     const jaNegado = (s.assinantes || []).some(a => a.status === 'negado');
@@ -817,7 +842,7 @@ let _transfDocsCache = { local: null, externa: null };
 async function _buscarTransferenciasEscopo(escopo) {
   if (_transfDocsCache[escopo]) return _transfDocsCache[escopo];
   const unids = unidadesVisiveis().map(u => u.email);
-  const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+  const snap = await _lerSolicitacoes();
   const lista = [];
   snap.forEach(d => {
     const s = { id: d.id, ...d.data() };
@@ -1106,9 +1131,7 @@ window.carregarAba = async function (aba) {
   try {
     let solicitacoes = [];
     const rid = _novaRenderizacao();
-    const snap = await getDocs(
-      query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc'))
-    );
+    const snap = await _lerSolicitacoes();
     if (!_renderAtual(rid)) return;
 
     if (aba === 'pendentes') {
@@ -1316,7 +1339,7 @@ window.bulkAssinar = async function() {
       const assinantes = (snap.data().assinantes || []).map(a =>
         mesmoUsuario(a.email, usuarioAtual.email) ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() } : a
       );
-      await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+      await updateDoc(ref, { assinantes, pendentesDe: pendentesDe(assinantes), atualizadoEm: serverTimestamp() });
       ok++;
     } catch { err++; }
   }
@@ -1345,7 +1368,7 @@ async function _bulkCancelarExec(ids, motivo) {
         a.status === 'pendente' ? { ...a, status: 'cancelado', dataAcao: new Date().toISOString() } : a
       );
       await updateDoc(ref, {
-        assinantes, statusGeral: 'cancelado',
+        assinantes, statusGeral: 'cancelado', pendentesDe: [],
         cancelamento: { por: usuarioAtual.email, nome: nomeExibidoAtual(), perfil: _labelPerfil[perfilAtual] || perfilAtual, motivo, em: new Date().toISOString() },
         atualizadoEm: serverTimestamp(),
       });
@@ -1650,7 +1673,7 @@ async function _executarAssinatura(ref, snap) {
       ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() }
       : a
   );
-  await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+  await updateDoc(ref, { assinantes, pendentesDe: pendentesDe(assinantes), atualizadoEm: serverTimestamp() });
   showToastPainel('Documento assinado com sucesso.');
   carregarAba('pendentes');
 }
@@ -1700,7 +1723,7 @@ window.confirmarNegar = async function () {
         ? { ...a, status: 'negado', motivo, dataAcao: new Date().toISOString() }
         : a
     );
-    await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+    await updateDoc(ref, { assinantes, pendentesDe: pendentesDe(assinantes), atualizadoEm: serverTimestamp() });
     fecharModalNegar();
     showToastPainel('Negativa registrada.');
     carregarAba('pendentes');
@@ -1742,6 +1765,7 @@ window.confirmarCancelar = async function () {
     await updateDoc(ref, {
       assinantes,
       statusGeral: 'cancelado',
+      pendentesDe: [],
       cancelamento: {
         por:    usuarioAtual.email,
         nome:   nomeExibidoAtual(),
@@ -1822,7 +1846,7 @@ async function mostrarDashboard() {
   _dashFiltro = { sr: '', un: '', cat: '' };
   try {
     const rid = _novaRenderizacao();
-    const snap = await getDocs(query(collection(db, 'solicitacoes'), orderBy('criadoEm', 'desc')));
+    const snap = await _lerSolicitacoes();
     if (!_renderAtual(rid)) return;
     _dashDocs = [];
     snap.forEach(d => {
@@ -3269,7 +3293,7 @@ function _htmlConfirmacoes(leituras, aviso) {
 window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo, transf }) {
   if (!usuarioAtual) throw new Error('Usuário não autenticado.');
   const unidade = UNIDADES.find(u => u.email === unidadeOrigem) || {};
-  const docRef  = await addDoc(collection(db, 'solicitacoes'), {
+  const dados = {
     titulo,
     conteudo,
     resumo:             resumo || '',
@@ -3290,6 +3314,7 @@ window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeO
     ...(transf ? { transf } : {}),
     criadoEm:     serverTimestamp(),
     atualizadoEm: serverTimestamp(),
-  });
+  };
+  const docRef  = await addDoc(collection(db, 'solicitacoes'), { ...dados, ...indiceSolicitacao(dados, UNIDADES) });
   return docRef.id;
 };

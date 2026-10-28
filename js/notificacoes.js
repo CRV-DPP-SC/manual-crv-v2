@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=5";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico, pendentesDe } from "./config-crv.js?v=6";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=3";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { definirContador, limparContador } from "./badge-app.js";
@@ -521,7 +521,8 @@ function _iniciarListener(email) {
   _emailUsuario = email;
   _primeiraAss  = true;
 
-  const q = query(collection(_db, 'solicitacoes'), orderBy('criadoEm', 'desc'));
+  // Só os documentos com assinatura pendente desta pessoa (não a coleção inteira)
+  const q = query(collection(_db, 'solicitacoes'), where('pendentesDe', 'array-contains', emailCanonico(email)));
   _unsub = onSnapshot(q, snap => {
     const anteriorN = _pendentes.length;
     const pend = [];
@@ -535,6 +536,7 @@ function _iniciarListener(email) {
       );
       if (minha) pend.push(s);
     });
+    pend.sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0));
     _pendentes = pend;
 
     if (_primeiraAss) {
@@ -972,7 +974,7 @@ window._ntfAssinar = async function() {
         ? { ...a, status: 'assinado', dataAcao: new Date().toISOString() }
         : a
     );
-    await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+    await updateDoc(ref, { assinantes, pendentesDe: pendentesDe(assinantes), atualizadoEm: serverTimestamp() });
     _ntfFecharConf();
     _ntfToast('✅ Documento assinado com sucesso!');
   } catch (e) {
@@ -1018,7 +1020,7 @@ window._ntfNegar = async function() {
         ? { ...a, status: 'negado', motivo, dataAcao: new Date().toISOString() }
         : a
     );
-    await updateDoc(ref, { assinantes, atualizadoEm: serverTimestamp() });
+    await updateDoc(ref, { assinantes, pendentesDe: pendentesDe(assinantes), atualizadoEm: serverTimestamp() });
     _ntfFecharNeg();
     _ntfToast('❌ Assinatura negada.');
   } catch (e) {

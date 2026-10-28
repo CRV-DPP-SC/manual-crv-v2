@@ -10,7 +10,7 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where,
          serverTimestamp, getCountFromServer }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente, emailCanonico } from "./config-crv.js?v=5";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente, emailCanonico } from "./config-crv.js?v=6";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 
 const app  = initializeApp(FIREBASE_CONFIG);
@@ -370,7 +370,7 @@ async function _iniciarPresenca(user) {
 
   _atualizarContadorOnline();
   clearInterval(window._presencaContadorTimer);
-  window._presencaContadorTimer = setInterval(_atualizarContadorOnline, 2 * 60 * 1000);
+  window._presencaContadorTimer = setInterval(_atualizarContadorOnline, 5 * 60 * 1000);   // a cada 5 min (economiza a cota do Firestore)
 }
 
 function _pararPresenca(user) {

@@ -13,7 +13,7 @@ import { getAuth, onAuthStateChanged }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, updateDoc, collection, serverTimestamp }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG as firebaseConfig, emailCanonico } from "../../js/config-crv.js?v=5";
+import { FIREBASE_CONFIG as firebaseConfig, emailCanonico, indiceSolicitacao } from "../../js/config-crv.js?v=6";
 
 /*
  * Usa o app DEFAULT (sem nome) para compartilhar a sessão com o site
@@ -104,7 +104,7 @@ onAuthStateChanged(auth, async (user) => {
       const uns  = typeof getUns === 'function' ? getUns()
                  : (typeof UNS !== 'undefined'  ? UNS : []);
       const uObj = uns.find(u => u.em === unidadeOrigem) || {};
-      const ref  = await addDoc(collection(db, 'solicitacoes'), {
+      const dados = {
         titulo,
         conteudo,
         resumo:             resumo || '',
@@ -126,7 +126,9 @@ onAuthStateChanged(auth, async (user) => {
         ...(transf ? { transf } : {}),
         criadoEm:     serverTimestamp(),
         atualizadoEm: serverTimestamp(),
-      });
+      };
+      // índices para as consultas por pessoa/unidade/regional (ver indiceSolicitacao em js/config-crv.js)
+      const ref  = await addDoc(collection(db, 'solicitacoes'), { ...dados, ...indiceSolicitacao(dados, uns) });
       return ref.id;
     };
     /* Comunicações de entrada/saída geradas a partir do Painel */
