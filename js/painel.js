@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendP
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario } from "./config-crv.js?v=4";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario, emailCanonico } from "./config-crv.js?v=5";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, textoAvisoHtml,
          formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
@@ -52,7 +52,7 @@ async function carregarDados() {
 // Primeiro testa padrões institucionais (rápido, sem Firestore).
 // Se não encontrar, busca no Firestore para servidor com e-mail particular aprovado.
 async function resolverPerfil(user) {
-  const e = (user.email || '').toLowerCase();
+  const e = emailCanonico(user.email);   // cogri@ → cogridir@ (logins alternativos)
 
   if (EMAILS_CRV.includes(e))
     return { perfil: 'crv', escopo: { tipo: 'crv' } };

@@ -7,7 +7,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc,
          query, where, orderBy, limit, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=4";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendente, emailCanonico, mesmoUsuario } from "./config-crv.js?v=5";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { nomeCRV } from "./avisos.js?v=3";
 import { definirContador } from "./badge-app.js";
@@ -128,7 +128,7 @@ const meuEmail = () => emailCanonico(meuLogin());
 const convId = (a, b) => [emailCanonico(a), emailCanonico(b)].sort().join('__');
 
 function _rotuloPerfil(email) {
-  const e = (email || '').toLowerCase();
+  const e = emailCanonico(email);
   if (RE_SUPERINTENDENTE.test(e))           return 'Superintendente';
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))    return 'Diretor(a)';
   if (/^.+cpen@pp\.sc\.gov\.br$/.test(e))   return 'Coord. Execução Penal';

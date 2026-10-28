@@ -37,9 +37,18 @@ export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnmN9XV
 // "oficial" de uma SR é o sr01sr@ (ver emailCanonico).
 export const RE_SUPERINTENDENTE = /^(sr0[1-8])(?:sr)?@pp\.sc\.gov\.br$/;
 
-/** 'sr01@…' ou 'sr01sr@…' → 'sr01sr@pp.sc.gov.br'; outros e-mails ficam como estão (minúsculos) */
+// ── Logins alternativos de Diretor(a) ──
+// E-mail extra que vale como o login de Diretor da unidade (mesmo acesso, mesmas
+// assinaturas e mesma caixa de mensagens). Para incluir/remover, altere aqui
+// E em firestore.rules (função aliasDiretor) — as duas listas devem ser iguais.
+export const ALIAS_DIRETOR = {
+  'cogri@pp.sc.gov.br': 'cogridir@pp.sc.gov.br',   // Colônia Agroindustrial de Palhoça
+};
+
+/** 'sr01@…'/'sr01sr@…' → 'sr01sr@pp.sc.gov.br'; 'cogri@…' → 'cogridir@…'; outros e-mails ficam como estão (minúsculos) */
 export function emailCanonico(email) {
   const e = (email || '').toLowerCase();
+  if (ALIAS_DIRETOR[e]) return ALIAS_DIRETOR[e];
   const m = e.match(RE_SUPERINTENDENTE);
   return m ? m[1] + 'sr@pp.sc.gov.br' : e;
 }

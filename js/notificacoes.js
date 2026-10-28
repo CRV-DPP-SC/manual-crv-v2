@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=4";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico } from "./config-crv.js?v=5";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=3";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { definirContador, limparContador } from "./badge-app.js";
@@ -19,7 +19,7 @@ const _auth = getAuth(_app);
 const _db   = getFirestore(_app);
 
 function _podeSinalizar(email) {
-  const e = (email || '').toLowerCase();
+  const e = emailCanonico(email);
   return EMAILS_CRV.includes(e)
     || RE_SUPERINTENDENTE.test(e)
     || /^.+dir@pp\.sc\.gov\.br$/.test(e)
@@ -30,7 +30,7 @@ function _podeSinalizar(email) {
 // DIR/CPEN, ou o e-mail da Superintendência (ex: sr01@pp.sc.gov.br) para o
 // Superintendente (login sr01sr@). Retorna null para outros perfis.
 function _getEmailUnidade(email) {
-  const e = (email || '').toLowerCase();
+  const e = emailCanonico(email);
   const srCod = srDoSuperintendente(e);
   if (srCod) return emailSuperintendencia(srCod);
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))  return e.replace(/dir@pp\.sc\.gov\.br$/,  '@pp.sc.gov.br');
@@ -714,7 +714,7 @@ function _montarEuAviso(user) {
   if (EMAILS_CRV.includes(email)) return { tipo: 'crv', email, nome: email };
   const sr = srDoSuperintendente(email);
   if (sr) return { tipo: 'super', email, nome: 'Superintendente ' + sr, srCod: sr, unidadeEmail: '' };
-  const m = email.match(/^(.+?)(dir|cpen)@pp\.sc\.gov\.br$/);
+  const m = emailCanonico(email).match(/^(.+?)(dir|cpen)@pp\.sc\.gov\.br$/);
   if (m) {
     const unidadeEmail = m[1] + '@pp.sc.gov.br';
     const lista = window.UNIDADES || (typeof getUns === 'function' ? getUns().map(u => ({ email: u.em, sr: u.sr })) : []);

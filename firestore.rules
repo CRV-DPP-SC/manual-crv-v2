@@ -11,7 +11,7 @@ rules_version = '2';
 // Perfis:
 //   CRV              → lista fixa (igual a js/config-crv.js)
 //   Superintendente  → sr01sr@ … sr08sr@ OU sr01@ … sr08@pp.sc.gov.br (e-mail confirmado)
-//   Diretor(a)       → xxxdir@pp.sc.gov.br              (e-mail confirmado)
+//   Diretor(a)       → xxxdir@pp.sc.gov.br ou login alternativo (aliasDiretor) (e-mail confirmado)
 //   CPEN             → xxxcpen@pp.sc.gov.br             (e-mail confirmado)
 //   Servidor         → e-mail pessoal com cadastro APROVADO em usuarios_cadastrados
 //
@@ -61,12 +61,23 @@ service cloud.firestore {
     function ehEmailSR(e) {
       return e.matches('^sr0[1-8](sr)?@pp[.]sc[.]gov[.]br$');
     }
-    // 'sr01@…' ou 'sr01sr@…' → 'sr01sr@pp.sc.gov.br' (endereço único da SR nas conversas)
+    // Logins alternativos de Diretor(a): o e-mail da esquerda vale como o login de
+    // Diretor da direita. Mesma lista de ALIAS_DIRETOR em js/config-crv.js.
+    function aliasDiretor() {
+      return { 'cogri@pp.sc.gov.br': 'cogridir@pp.sc.gov.br' };   // Colônia Agroindustrial de Palhoça
+    }
+    // Meu e-mail "oficial": o login alternativo de Diretor vira o xxxdir@
+    function meuEmailBase() {
+      return meuEmail() in aliasDiretor() ? aliasDiretor()[meuEmail()] : meuEmail();
+    }
+    // 'sr01@…' ou 'sr01sr@…' → 'sr01sr@pp.sc.gov.br'; 'cogri@…' → 'cogridir@…'
+    // (endereço único da pessoa nas conversas)
     function canonico(e) {
-      return ehEmailSR(e.lower()) ? 'sr' + e.lower().split('@')[0].split('sr')[1] + 'sr@pp.sc.gov.br' : e;
+      return e.lower() in aliasDiretor() ? aliasDiretor()[e.lower()]
+           : ehEmailSR(e.lower()) ? 'sr' + e.lower().split('@')[0].split('sr')[1] + 'sr@pp.sc.gov.br' : e;
     }
     function isDir() {
-      return logado() && confirmado() && meuEmail().matches('^.+dir@pp[.]sc[.]gov[.]br$');
+      return logado() && confirmado() && meuEmailBase().matches('^.+dir@pp[.]sc[.]gov[.]br$');
     }
     function isCpen() {
       return logado() && confirmado() && meuEmail().matches('^.+cpen@pp[.]sc[.]gov[.]br$');
@@ -80,7 +91,7 @@ service cloud.firestore {
 
     // 'pr05dir@pp.sc.gov.br' → 'pr05@pp.sc.gov.br'
     function unidadeDoGestor() {
-      return meuEmail().replace('(dir|cpen)@pp[.]sc[.]gov[.]br$', '@pp.sc.gov.br');
+      return meuEmailBase().replace('(dir|cpen)@pp[.]sc[.]gov[.]br$', '@pp.sc.gov.br');
     }
     // 'sr03sr@pp.sc.gov.br' ou 'sr03@pp.sc.gov.br' → 'SR03'
     function srDoSuperintendente() {
@@ -219,11 +230,11 @@ service cloud.firestore {
     }
     // Sou eu? (o Superintendente aparece nas conversas sempre como sr0Xsr@)
     function souEu(e) {
-      return e == request.auth.token.email || (isSR() && e == canonico(meuEmail()));
+      return e == request.auth.token.email || ((isSR() || isDir()) && e == canonico(meuEmail()));
     }
     function souParticipante(participantes) {
       return request.auth.token.email in participantes
-          || (isSR() && canonico(meuEmail()) in participantes);
+          || ((isSR() || isDir()) && canonico(meuEmail()) in participantes);
     }
     function outroParticipante(participantes) {
       return souEu(participantes[0]) ? participantes[1] : participantes[0];

@@ -42,10 +42,18 @@ const EMAILS_CRV = (() => {
   return [...bloco.matchAll(/'([^']+)'/g)].map(m => m[1].toLowerCase());
 })();
 
-// sr01@ e sr01sr@ → sr01sr@ (mesma regra do site: emailCanonico em js/config-crv.js)
+// Logins alternativos de Diretor(a): mesma lista do site (ALIAS_DIRETOR em js/config-crv.js)
+const ALIAS_DIRETOR = (() => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'config-crv.js'), 'utf8');
+  const bloco = (src.match(/ALIAS_DIRETOR\s*=\s*\{([\s\S]*?)\}/) || [])[1] || '';
+  return Object.fromEntries([...bloco.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)].map(m => [m[1].toLowerCase(), m[2].toLowerCase()]));
+})();
+
+// sr01@ e sr01sr@ → sr01sr@; cogri@ → cogridir@ (mesma regra do site: emailCanonico em js/config-crv.js)
 const RE_SR = /^(sr0[1-8])(?:sr)?@pp\.sc\.gov\.br$/;
 const canonico = e => {
   const x = (e || '').toLowerCase();
+  if (ALIAS_DIRETOR[x]) return ALIAS_DIRETOR[x];
   const m = x.match(RE_SR);
   return m ? m[1] + 'sr@pp.sc.gov.br' : x;
 };

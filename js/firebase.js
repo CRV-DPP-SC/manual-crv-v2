@@ -10,7 +10,7 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where,
          serverTimestamp, getCountFromServer }
                                         from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente } from "./config-crv.js?v=4";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, RE_SUPERINTENDENTE, srDoSuperintendente, emailCanonico } from "./config-crv.js?v=5";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 
 const app  = initializeApp(FIREBASE_CONFIG);
@@ -34,7 +34,7 @@ let _presencaInfo  = null; // { tipo, unidadeEmail, unidadeNome, srCod, nome }
 // PERFIL — resolve localmente por padrão de e-mail
 // ══════════════════════════════════════════════
 function _resolverPerfil(email) {
-  const e = (email || '').toLowerCase();
+  const e = emailCanonico(email);   // cogri@ → cogridir@ (logins alternativos)
   if (EMAILS_CRV.includes(e))                return { tipo: 'crv',   label: 'CRV',             cor: '#3b82f6' };
   if (RE_SUPERINTENDENTE.test(e))           return { tipo: 'super', label: 'Superintendente', cor: '#7c3aed' };
   if (/^.+dir@pp\.sc\.gov\.br$/.test(e))    return { tipo: 'dir',   label: 'Diretor(a)',      cor: '#15803d' };
@@ -68,7 +68,7 @@ function _mostrarTopbarVisitante() {
 }
 
 function _iniciaisPerfil(email) {
-  const e = (email || '').toLowerCase();
+  const e = emailCanonico(email);
   // SR: sr01sr@pp.sc.gov.br → SR01
   const srCodIni = srDoSuperintendente(e);
   if (srCodIni) return srCodIni;
@@ -329,7 +329,7 @@ async function _iniciarPresenca(user) {
     srCod = srDoSuperintendente(email);
   } else if (perfil?.tipo === 'dir' || perfil?.tipo === 'cpen') {
     tipo = perfil.tipo;
-    unidadeEmail = email.replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
+    unidadeEmail = emailCanonico(email).replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
                          .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
     const unidade = (window.UNIDADES || []).find(u => u.email === unidadeEmail);
     srCod = unidade?.sr || '';
@@ -807,7 +807,7 @@ window.fazerLogin = async function () {
         // SR, DIR, CPEN — autenticados mas sem acesso às ferramentas internas CRV
         /* Grava unidade de origem no localStorage para o Gerador de Ofícios V2 */
         if (perfil.tipo === 'dir' || perfil.tipo === 'cpen') {
-          const emailBase = email
+          const emailBase = emailCanonico(email)
             .replace(/dir@pp\.sc\.gov\.br$/, '@pp.sc.gov.br')
             .replace(/cpen@pp\.sc\.gov\.br$/, '@pp.sc.gov.br');
           localStorage.setItem('crv_ori_email', emailBase);

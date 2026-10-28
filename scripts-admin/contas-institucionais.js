@@ -20,6 +20,14 @@ const crypto = require('crypto');
 const { EXECUTAR, iniciar, cabecalho, rodape, rodar } = require('./comum');
 
 const CRIAR_SR = process.argv.includes('--criar-sr');
+
+// Logins alternativos de Diretor(a) (ALIAS_DIRETOR em js/config-crv.js): também são
+// esperados, confirmados e — com --criar-sr — criados se ainda não existirem.
+const ALIAS_DIRETOR = (() => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', 'config-crv.js'), 'utf8');
+  const bloco = (src.match(/ALIAS_DIRETOR\s*=\s*\{([\s\S]*?)\}/) || [])[1] || '';
+  return new Map([...bloco.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)].map(m => [m[1].toLowerCase(), m[2].toLowerCase()]));
+})();
 const SRS = ['SR01','SR02','SR03','SR04','SR05','SR06','SR07','SR08'];
 const DOMINIO = '@pp.sc.gov.br';
 
@@ -55,6 +63,9 @@ rodar(async () => {
     esperadas.set(sr.toLowerCase() + 'sr' + DOMINIO, 'Superintendente — ' + sr + ' (e-mail do titular)');
     esperadas.set(sr.toLowerCase() + DOMINIO,        'Superintendente — ' + sr + ' (e-mail da Superintendência)');
   });
+  ALIAS_DIRETOR.forEach((principal, alias) => {
+    esperadas.set(alias, (esperadas.get(principal) || principal) + ' (login alternativo)');
+  });
 
   const contas = await listarTodas(auth);
   const porEmail = new Map(contas.filter(u => u.email).map(u => [u.email.toLowerCase(), u]));
@@ -63,7 +74,7 @@ rodar(async () => {
   const confirmar = [], jaConfirmadas = [], suspeitas = [];
   for (const u of contas) {
     const e = (u.email || '').toLowerCase();
-    if (!rePadrao.test(e)) continue;
+    if (!rePadrao.test(e) && !ALIAS_DIRETOR.has(e)) continue;
     if (!esperadas.has(e)) { suspeitas.push(u); continue; }
     (u.emailVerified ? jaConfirmadas : confirmar).push(u);
   }
@@ -81,14 +92,15 @@ rodar(async () => {
   }
 
   const RE_SR = /^sr0[1-8](sr)?@/;
-  const faltandoSR = faltando.filter(e => RE_SR.test(e));
-  const faltandoUn = faltando.filter(e => !RE_SR.test(e));
+  const criavel = e => RE_SR.test(e) || ALIAS_DIRETOR.has(e);   // logins que esta tarefa cria
+  const faltandoSR = faltando.filter(criavel);
+  const faltandoUn = faltando.filter(e => !criavel(e));
   if (faltandoUn.length) {
     console.log(`\nContas de unidade que AINDA NÃO EXISTEM (${faltandoUn.length}) — crie no Console quando a unidade for usar o Painel:`);
     faltandoUn.forEach(e => console.log(`    • ${e.padEnd(32)} ${esperadas.get(e)}`));
   }
   if (faltandoSR.length) {
-    console.log(`\nLogins de Superintendente que ainda não existem (${faltandoSR.length}):`);
+    console.log(`\nLogins de Superintendente / alternativos de Diretor que ainda não existem (${faltandoSR.length}):`);
     faltandoSR.forEach(e => console.log(`    • ${e}`));
     if (!CRIAR_SR) console.log('  → rode a tarefa "criar-logins-superintendentes" para criá-los.');
   }
@@ -104,7 +116,7 @@ rodar(async () => {
         email,
         emailVerified: true,
         password: crypto.randomBytes(24).toString('base64url'), // descartada: o titular define a sua
-        displayName: 'Superintendente ' + email.slice(0, 4).toUpperCase(),
+        displayName: ALIAS_DIRETOR.has(email) ? 'Diretor(a) — login alternativo' : 'Superintendente ' + email.slice(0, 4).toUpperCase(),
       });
       console.log(`✓ criado ${email}`);
     }

@@ -13,7 +13,7 @@ import { getAuth, onAuthStateChanged }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, updateDoc, collection, serverTimestamp }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG as firebaseConfig } from "../../js/config-crv.js";
+import { FIREBASE_CONFIG as firebaseConfig, emailCanonico } from "../../js/config-crv.js?v=5";
 
 /*
  * Usa o app DEFAULT (sem nome) para compartilhar a sessão com o site
@@ -51,7 +51,7 @@ const db   = getFirestore(app);
 
 /* Resolve unidade a partir do e-mail institucional ou Firestore */
 async function _resolverUnidade(user) {
-  const e = (user.email || '').toLowerCase();
+  const e = emailCanonico(user.email);   // cogri@ → cogridir@
 
   /* Diretor: pe01dir@pp.sc.gov.br → pe01@pp.sc.gov.br */
   const dirMatch = e.match(/^(.+)dir@pp\.sc\.gov\.br$/);
