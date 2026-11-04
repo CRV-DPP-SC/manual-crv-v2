@@ -67,7 +67,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2
     <ul class="req">
       <li><b>2.13 – Regime atual</b> (obrigatório): Situação penal TODOS · Alocados SIM · Sexo TODOS</li>
       <li><b>1.2 – Documentos</b> (obrigatório): Situação penal RECOLHIDO · Situação documento TODOS · Registro geral TODOS · marcar CPF e RJI</li>
-      <li><b>1.5 – Prontuários por residência com foto</b> (opcional, só para conferência)</li>
+      <li><b>1.5 – Prontuários por residência com foto</b> (opcional, só para conferência): o i-PEN gera até 200 prontuários por arquivo — anexe até 10 arquivos (2.000 presos)</li>
     </ul>
   </div>
 
@@ -87,7 +87,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2
 // CRV – Consolidação i-PEN (versão web). Mesma lógica da ferramenta PowerShell v1.0,
 // validada com os relatórios de Araranguá (11/2026). Roda inteira no navegador.
 // =====================================================================================
-const VERSAO = 'web 1.0';
+const VERSAO = 'web 1.1';
 
 // ---------------------------------------------------------------- leitura do PDF
 // Os PDFs do i-PEN (Skia) posicionam cada trecho de texto (Tm/Td) e usam fontes com
@@ -280,20 +280,47 @@ function ler213(tr) {
 function ler12(tr) {
   const doc = tr.find(c => c.t.trim().toUpperCase() === 'TIPO DE DOCUMENTO');
   if (!doc) throw new Error("Relatório 1.2: não encontrei a coluna 'TIPO DE DOCUMENTO'.");
+  // Como no 2.13, a célula de documentos é centralizada na linha do preso: quem tem vários
+  // documentos tem o bloco começando ACIMA do prontuário. Cada célula vai para o preso cujo
+  // centro (célula da esquerda: prontuário, nome, situação) está mais perto; célula no topo da
+  // página, antes do 1º prontuário, continua o último preso da página anterior.
   const xDoc = doc.x;
-  const ips = tr.filter(c => c.x < 20 && /^\d{6}$/.test(c.t.trim()));
+  const dados = tr.filter(c => c.y > doc.y + 4);
+  const celulas = lista => {
+    const cel = []; let atual = null;
+    for (const c of [...lista].sort((a, b) => a.y - b.y || a.x - b.x || a.i - b.i)) {
+      if (atual && c.y - atual[atual.length - 1].y <= 18.5) atual.push(c); else { atual = [c]; cel.push(atual); }
+    }
+    return cel;
+  };
+  const ehIp = c => c.x < 20 && /^\d{6}$/.test(c.t.trim());
+  const esq = celulas(dados.filter(c => c.x < xDoc - 5));
+  const centro = new Map(), nomes = new Map(), ordem = [], prim = new Map();
+  for (const cel of esq) {
+    const p = cel.find(ehIp); if (!p) continue;
+    const ip = p.t.trim();
+    centro.set(ip, (cel[0].y + cel[cel.length - 1].y) / 2); ordem.push(ip);
+    nomes.set(ip, junta(cel.filter(c => c.x > p.x + 20 && Math.abs(c.y - p.y) < 4)));
+    if (!prim.has(p.p) || p.y < prim.get(p.p)) prim.set(p.p, p.y);
+  }
+  const ips = ordem.sort((a, b) => centro.get(a) - centro.get(b)), cs = ips.map(i => centro.get(i));
+  const dono = cel => {
+    const ini = cel[0], fimY = cel[cel.length - 1].y, meio = (ini.y + fimY) / 2, topo = prim.get(ini.p);
+    if (topo != null && fimY < topo - 6) { let ant = null; for (const i of ips) { if (centro.get(i) < ini.y) ant = i; else break; } if (ant) return ant; }
+    let lo = 0, hi = cs.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cs[m] < meio) lo = m; else hi = m; }
+    return Math.abs(cs[lo] - meio) <= Math.abs(cs[hi] - meio) ? ips[lo] : ips[hi];
+  };
+  const docsDe = new Map(ips.map(i => [i, []]));
+  if (ips.length) for (const cel of celulas(dados.filter(c => c.x >= xDoc - 5))) docsDe.get(dono(cel)).push(...cel);
   const out = new Map();
-  ips.forEach((iw, k) => {
-    const ip = iw.t.trim();
-    const ini = iw.y - 6, fim = k + 1 < ips.length ? ips[k + 1].y - 6 : iw.y + 40;
-    const bl = faixa(tr, ini, fim);
-    const docs = junta(bl.filter(c => c.x >= xDoc - 5));
-    const nome = junta(bl.filter(c => c.x > iw.x + 20 && c.x < xDoc - 5 && c.y < iw.y + 4));
-    const uniq = a => [...new Set(a)];
+  const uniq = a => [...new Set(a)];
+  for (const ip of ips) {
+    const docs = junta(docsDe.get(ip));
     const cpfs = uniq([...docs.matchAll(/CPF\s*:\s*([\d.\-]+)/g)].map(m => m[1].replace(/\D/g, '')).filter(Boolean));
     const rjis = uniq([...docs.matchAll(/RJI\s*:\s*([\d.\-]+)/g)].map(m => m[1].replace(/\D/g, '')).filter(Boolean));
-    out.set(ip, { Nome: nome, Cpfs: cpfs, Rjis: rjis });
-  });
+    out.set(ip, { Nome: nomes.get(ip), Cpfs: cpfs, Rjis: rjis });
+  }
   return { Registros: out, Paginas: Math.max(...tr.map(c => c.p)) + 1 };
 }
 
@@ -420,25 +447,30 @@ function gerarXlsx(abas) {
 
 // ---------------------------------------------------------------- processamento (sem gravar nada)
 const CAB = ['UNIDADE', 'IPEN', 'NOME COMPLETO', 'DATA DE NASCIMENTO', 'NOME DA MÃE', 'CPF', 'RJI', 'REGIME ATUAL', 'SITUAÇÃO PENAL', 'DIAS NO REGIME ATUAL'];
+const MAX_15 = 10;   // o i-PEN gera o 1.5 com no máximo 200 prontuários por arquivo
 async function processar(arquivos) {
-  const lidos = {};
+  const lidos = {}; const lidos15 = [];
   for (const a of arquivos) {
     const tr = await lerPdf(await a.arrayBuffer());
     const tipo = tipoRelatorio(tr);
     if (!tipo) throw new Error(`Não reconheci o relatório '${a.name}'. Use os relatórios 2.13, 1.2 e (opcional) 1.5 do i-PEN.`);
+    if (tipo === '1.5') { lidos15.push(tr); continue; }
     if (lidos[tipo]) throw new Error(`Foram escolhidos dois arquivos do relatório ${tipo}.`);
     lidos[tipo] = tr;
   }
+  if (lidos15.length > MAX_15) throw new Error(`No máximo ${MAX_15} arquivos do relatório 1.5.`);
   for (const t of ['2.13', '1.2']) if (!lidos[t]) throw new Error(`Faltou o relatório ${t}.`);
   const r213 = ler213(lidos['2.13']), r12 = ler12(lidos['1.2']);
-  const r15 = lidos['1.5'] ? ler15(lidos['1.5']) : { Registros: new Map(), Paginas: 0 };
+  // 1.5 em vários arquivos: junta os prontuários de todos (o mesmo prontuário em dois arquivos vale uma vez)
+  const r15 = { Registros: new Map(), Paginas: 0, Arquivos: lidos15.length };
+  for (const tr of lidos15) { const p = ler15(tr); r15.Paginas += p.Paginas; for (const [k, v] of p.Registros) if (!r15.Registros.has(k)) r15.Registros.set(k, v); }
   const c = consolidar(r15, r12, r213);
   for (const ip of r12.Registros.keys()) if (!r213.Registros.has(ip)) c.obs.push([ip, 'Consta no relatório 1.2, mas não no 2.13 (não incluído na planilha).']);
   const agora = new Date(), dd = n => String(n).padStart(2, '0');
   const conf = [
     ['Versão da ferramenta', VERSAO], ['Unidade', r213.Unidade],
     ['Registros no Relatório 2.13 (base)', r213.Registros.size], ['Registros na planilha (presos penais)', c.linhas.length],
-    ['Prontuários no Relatório 1.5', r15.Registros.size], ['Prontuários no Relatório 1.2', r12.Registros.size],
+    ['Prontuários no Relatório 1.5', `${r15.Registros.size} (${r15.Arquivos} arquivo${r15.Arquivos === 1 ? '' : 's'})`], ['Prontuários no Relatório 1.2', r12.Registros.size],
     ['Registros sem CPF/RJI no Relatório 1.2', c.cont.semDoc], ['CPFs inválidos descartados', c.cont.cpfInv],
     ['Registros com mais de um CPF válido', c.cont.cpfMulti], ['RJIs fora do padrão', c.cont.rjiFmt],
     ['Registros sem regime identificado', c.cont.semRegime], ['Nome diferente entre 2.13 e 1.5', c.cont.difNome],
@@ -459,31 +491,42 @@ async function processar(arquivos) {
 window.__crvProcessar = processar;   // usado na validação local
 
 // ---------------------------------------------------------------- tela
-const sel = new Map();   // tipo -> File
-let pendentes = [];
+const sel = new Map();   // '2.13' / '1.2' -> File
+let sel15 = [];          // relatório 1.5: até MAX_15 arquivos
+let pendentes = [], aviso = '';
 const $ = id => document.getElementById(id);
 async function adicionar(files) {
+  aviso = '';
   for (const f of files) {
     if (!/\.pdf$/i.test(f.name)) continue;
     let tipo = null;
     try { tipo = tipoRelatorio(await lerPdf(await f.arrayBuffer())); } catch (_) { }
     if (!tipo) { pendentes.push(f); continue; }
-    sel.set(tipo, f);
+    if (tipo === '1.5') {
+      if (sel15.some(x => x.name === f.name && x.size === f.size)) continue;
+      if (sel15.length >= MAX_15) { aviso = `O relatório 1.5 aceita até ${MAX_15} arquivos; os demais foram ignorados.`; continue; }
+      sel15.push(f);
+    } else sel.set(tipo, f);
   }
   desenhar();
 }
 function desenhar() {
-  const nomes = { '2.13': '2.13 – Regime atual', '1.2': '1.2 – Documentos', '1.5': '1.5 – Com foto (opcional)' };
+  const nomes = { '2.13': '2.13 – Regime atual', '1.2': '1.2 – Documentos' };
+  const linha = (tag, cls, nome, rem) => `<div class="arq"><span class="tag ${cls}">${tag}</span><span class="nm">${nome}</span>${rem ? `<button class="btn sec" onclick="${rem}">remover</button>` : ''}</div>`;
   let h = '';
-  for (const t of ['2.13', '1.2', '1.5']) {
+  for (const t of ['2.13', '1.2']) {
     const f = sel.get(t);
-    h += `<div class="arq"><span class="tag ${f ? 'ok' : (t === '1.5' ? 'opc' : '')}">${nomes[t]}</span><span class="nm">${f ? esc(f.name) : '<i style="color:#9ca3af">não selecionado</i>'}</span>${f ? `<button class="btn sec" onclick="window.__tirar('${t}')">remover</button>` : ''}</div>`;
+    h += linha(nomes[t], f ? 'ok' : '', f ? esc(f.name) : '<i style="color:#9ca3af">não selecionado</i>', f ? `window.__tirar('${t}')` : '');
   }
-  for (const f of pendentes) h += `<div class="arq"><span class="tag err">não reconhecido</span><span class="nm">${esc(f.name)}</span></div>`;
+  if (!sel15.length) h += linha('1.5 – Com foto (opcional)', 'opc', `<i style="color:#9ca3af">não selecionado · até ${MAX_15} arquivos (200 prontuários cada)</i>`, '');
+  sel15.forEach((f, i) => { h += linha(`1.5 – Com foto · ${i + 1}/${MAX_15}`, 'ok', esc(f.name), `window.__tirar15(${i})`); });
+  for (const f of pendentes) h += linha('não reconhecido', 'err', esc(f.name), '');
+  if (aviso) h += `<div class="arq" style="color:#92400e;background:#fffbeb">⚠️ ${esc(aviso)}</div>`;
   $('arqs').innerHTML = h;
   $('btnGerar').disabled = !(sel.has('2.13') && sel.has('1.2'));
 }
 window.__tirar = t => { sel.delete(t); desenhar(); };
+window.__tirar15 = i => { sel15.splice(i, 1); aviso = ''; desenhar(); };
 function iniciarTela() {
   const drop = $('drop'), inp = $('inp');
   drop.onclick = () => inp.click();
@@ -496,7 +539,7 @@ function iniciarTela() {
     btn.disabled = true; btn.textContent = '⏳ Processando...'; msg.className = 'msg info'; msg.textContent = 'Lendo os relatórios neste computador...';
     $('res').innerHTML = ''; $('obs').style.display = 'none';
     try {
-      const r = await processar([...sel.values()]);
+      const r = await processar([...sel.values(), ...sel15]);
       const url = URL.createObjectURL(r.blob);
       const a = document.createElement('a'); a.href = url; a.download = r.nomeArq; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
