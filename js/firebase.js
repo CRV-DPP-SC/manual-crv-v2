@@ -1408,6 +1408,11 @@ function _htmlGrupoCRV() {
         <div class="grupo-item-titulo">Gerador de Despachos</div>
         <div class="grupo-item-sub">Deferir, Indeferir e Devolver — CRV</div>
       </div>
+      <div class="grupo-item" onclick="_abrirFerramenta('consolidacao-ipen.html','📑 Consolidação i-PEN')">
+        <div class="grupo-item-icon">📑</div>
+        <div class="grupo-item-titulo">Consolidação i-PEN</div>
+        <div class="grupo-item-sub">Planilha de presos a partir dos relatórios 2.13 e 1.2</div>
+      </div>
       <div class="grupo-item" onclick="window.open('https://regulation-flow-pro.lovable.app/board/1966025a-82e4-4cc4-bfd9-fd88671ba682','_blank')">
         <div class="grupo-item-icon">📋</div>
         <div class="grupo-item-titulo">Trello CRV ↗</div>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consolidação i-PEN — CRV/DPP</title>
+<script>(function(){var t=localStorage.getItem('crv-tema');if(t)document.documentElement.setAttribute('data-tema',t);})();window.addEventListener('message',function(e){if(e.data&&e.data.crvTema)document.documentElement.setAttribute('data-tema',e.data.crvTema);});</script>
+<style>[data-tema="escuro"] body{filter:invert(1) hue-rotate(180deg);background:#111 !important;}</style>
+<style>
+:root{--az:#1a2a4a;--azc:#3b82f6;--cin:#6b7280;--bg:#f4f6f9;--bd:#e5e7eb;
+  --azul:#1d4ed8;--azul-bg:#eff6ff;--verde:#047857;--verde-bg:#ecfdf5;--verm:#dc2626;--verm-bg:#fef2f2;--amar-bg:#fffbeb}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:#1f2937;min-height:100vh}
+.hdr{background:var(--az);color:#fff;padding:.8rem 1.3rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;
+  position:sticky;top:0;z-index:20;box-shadow:0 2px 14px rgba(0,0,0,.3)}
+.hdr-t{font-size:1rem;font-weight:700}
+.wrap{max-width:860px;margin:0 auto;padding:1.1rem 1rem 3rem}
+.intro{font-size:.82rem;color:#4b5563;line-height:1.5;margin-bottom:1rem}
+.card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem}
+.card h3{font-size:.95rem;color:var(--az);margin-bottom:.7rem}
+.drop{border:2px dashed #93c5fd;border-radius:12px;background:var(--azul-bg);padding:1.6rem 1rem;text-align:center;cursor:pointer;transition:.15s}
+.drop.on{background:#dbeafe;border-color:var(--azul)}
+.drop b{color:var(--az)}
+.drop small{display:block;margin-top:.4rem;color:var(--cin);font-size:.76rem}
+.arqs{margin-top:.8rem;display:grid;gap:.4rem}
+.arq{display:flex;align-items:center;gap:.6rem;font-size:.83rem;padding:.45rem .7rem;border:1px solid var(--bd);border-radius:8px;background:#fafafa}
+.arq .tag{font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:20px;background:#e5e7eb;color:#374151;white-space:nowrap}
+.arq .tag.ok{background:#d1fae5;color:#065f46}.arq .tag.opc{background:#e0e7ff;color:#3730a3}.arq .tag.err{background:#fee2e2;color:#991b1b}
+.arq .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.req{font-size:.78rem;color:#4b5563;line-height:1.55;margin-top:.8rem}
+.req li{margin-left:1.1rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.7rem 1.2rem;border:none;border-radius:9px;font-size:.92rem;font-weight:700;
+  cursor:pointer;font-family:inherit;background:var(--azul);color:#fff;width:100%}
+.btn:disabled{background:#9ca3af;cursor:not-allowed}
+.btn.sec{background:#fff;color:var(--az);border:1.5px solid var(--az);width:auto;font-size:.82rem;padding:.45rem .9rem}
+.msg{margin-top:.8rem;font-size:.85rem;line-height:1.5;border-radius:10px;padding:.8rem 1rem;display:none}
+.msg.ok{display:block;background:var(--verde-bg);border:1.5px solid #a7f3d0;color:#065f46}
+.msg.err{display:block;background:var(--verm-bg);border:1.5px solid #fecaca;color:#991b1b}
+.msg.info{display:block;background:var(--amar-bg);border:1.5px solid #fde68a;color:#92400e}
+.res{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.6rem;margin-top:.8rem}
+.kpi{border:1px solid var(--bd);border-radius:9px;padding:.6rem .7rem;background:#fafafa}
+.kpi b{display:block;font-size:1.25rem;color:var(--az)}
+.kpi span{font-size:.72rem;color:var(--cin)}
+.obs{margin-top:.8rem;max-height:260px;overflow:auto;font-size:.78rem;border:1px solid var(--bd);border-radius:8px}
+.obs div{padding:.35rem .6rem;border-bottom:1px solid #f1f5f9}
+.obs div b{color:var(--az)}
+.fbs{font-size:.7rem;padding:.22rem .55rem;border-radius:20px;font-weight:700}
+.fbok{background:#d1fae5;color:#065f46}.fberr{background:#fee2e2;color:#991b1b}.fbld{background:#fef3c7;color:#92400e}
+#bloqueio{max-width:520px;margin:3rem auto;text-align:center;font-size:.92rem;color:#374151}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-t">📑 Consolidação i-PEN</div><span class="fbs fbld" id="fbSt">⏳ Conectando...</span></div>
+<div id="bloqueio" style="display:none"></div>
+<div class="wrap" id="app" style="display:none">
+  <p class="intro">Gera a planilha de presos da unidade (IPEN, nome, nascimento, mãe, CPF, RJI, regime, situação penal e dias no regime atual)
+    a partir dos relatórios do i-PEN. <b>Tudo é processado neste computador: os PDFs não são enviados nem gravados em lugar nenhum.</b></p>
+
+  <div class="card">
+    <h3>1. Relatórios do i-PEN</h3>
+    <div class="drop" id="drop">
+      <b>Arraste os PDFs aqui</b> ou clique para escolher
+      <small>Pode selecionar todos juntos — o tipo de cada relatório é reconhecido automaticamente.</small>
+      <input type="file" id="inp" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+    <div class="arqs" id="arqs"></div>
+    <ul class="req">
+      <li><b>2.13 – Regime atual</b> (obrigatório): Situação penal TODOS · Alocados SIM · Sexo TODOS</li>
+      <li><b>1.2 – Documentos</b> (obrigatório): Situação penal RECOLHIDO · Situação documento TODOS · Registro geral TODOS · marcar CPF e RJI</li>
+      <li><b>1.5 – Prontuários por residência com foto</b> (opcional, só para conferência)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>2. Gerar planilha</h3>
+    <button class="btn" id="btnGerar" disabled>GERAR PLANILHA EXCEL</button>
+    <div class="msg" id="msg"></div>
+    <div class="res" id="res"></div>
+    <div class="obs" id="obs" style="display:none"></div>
+  </div>
+  <p class="intro" style="font-size:.74rem">Regras: a base é o Relatório 2.13 (um registro por prontuário) e o IPEN liga os relatórios. Presos de prisão civil não entram
+    (não têm execução penal). CPF com dígito verificador inválido não entra. Nada é presumido: o que falta fica em branco e é apontado na aba Conferência.</p>
+</div>
+
+<script>
+// =====================================================================================
+// CRV – Consolidação i-PEN (versão web). Mesma lógica da ferramenta PowerShell v1.0,
+// validada com os relatórios de Araranguá (11/2026). Roda inteira no navegador.
+// =====================================================================================
+const VERSAO = 'web 1.0';
+
+// ---------------------------------------------------------------- leitura do PDF
+// Os PDFs do i-PEN (Skia) posicionam cada trecho de texto (Tm/Td) e usam fontes com
+// tabela ToUnicode. Devolve trechos {p,x,y,t} ordenados por y (contínuo entre páginas).
+async function inflar(bytes) {
+  const ds = new DecompressionStream('deflate');
+  const buf = await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer();
+  return new Uint8Array(buf);
+}
+const latin = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return s; };
+
+async function lerPdf(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const s = latin(bytes);
+  const objs = new Map();
+  for (const m of s.matchAll(/(\d+) 0 obj([\s\S]*?)endobj/g)) objs.set(+m[1], { raw: m[2], start: m.index + m[0].indexOf(m[2]) });
+  async function streamOf(n) {
+    const o = objs.get(n); if (!o) return null;
+    const r = o.raw, k = r.indexOf('stream'); if (k < 0) return null;
+    let st = o.start + k + 6; if (s[st] === '\r') st++; if (s[st] === '\n') st++;
+    const len = +((r.match(/\/Length (\d+)/) || [])[1] || 0);
+    const pedaco = bytes.subarray(st, st + len);
+    if (!/\/FlateDecode/.test(r)) return latin(pedaco);
+    return latin(await inflar(pedaco));
+  }
+  const hexStr = h => { let r = ''; for (let i = 0; i < h.length; i += 4) r += String.fromCharCode(parseInt(h.substr(i, 4), 16)); return r; };
+  function parseCMap(t) {
+    const map = new Map();
+    for (const b of t.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) for (const p of b[1].matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) map.set(parseInt(p[1], 16), hexStr(p[2]));
+    for (const b of t.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)) for (const p of b[1].matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) {
+      const a = parseInt(p[1], 16), z = parseInt(p[2], 16), u = parseInt(p[3], 16);
+      for (let i = a; i <= z; i++) map.set(i, String.fromCharCode(u + i - a));
+    }
+    return map;
+  }
+  const fontMap = new Map();
+  for (const [n, o] of objs) {
+    if (/\/Type\s*\/Font/.test(o.raw)) { const m = o.raw.match(/\/ToUnicode (\d+) 0 R/); if (m) fontMap.set(n, parseCMap(await streamOf(+m[1]) || '')); }
+  }
+  const trechos = [];
+  const pages = [...s.matchAll(/(\d+) 0 obj\s*<<(?:(?!endobj)[\s\S])*?\/Type\s*\/Page[^s](?:(?!endobj)[\s\S])*?endobj/g)];
+  let pno = 0;
+  for (const pg of pages) {
+    const r = pg[0];
+    let res = r; const mr = r.match(/\/Resources (\d+) 0 R/); if (mr) res = objs.get(+mr[1]).raw;
+    const fonts = new Map();
+    let fd = (res.match(/\/Font\s*<<([^>]*)>>/) || [])[1];
+    if (!fd) { const mf = res.match(/\/Font (\d+) 0 R/); if (mf) fd = objs.get(+mf[1]).raw; }
+    for (const f of (fd || '').matchAll(/\/(\w+)\s+(\d+) 0 R/g)) fonts.set(f[1], +f[2]);
+    const cont = (r.match(/\/Contents\s*(\[[^\]]*\]|\d+ 0 R)/) || [])[1] || '';
+    let content = '';
+    for (const c of cont.matchAll(/(\d+) 0 R/g)) content += (await streamOf(+c[1]) || '') + '\n';
+    let cur = null, atual = null, lx = 0, ly = 0;
+    const re = /\/(\w+)\s+[\d.]+\s+Tf|([\d.-]+)\s+([\d.-]+)\s+Td|[\d.-]+ [\d.-]+ [\d.-]+ [\d.-]+ ([\d.-]+) ([\d.-]+) Tm|<([0-9A-Fa-f]*)>\s*Tj|\[((?:[^\]])*)\]\s*TJ/g;
+    for (const t of content.matchAll(re)) {
+      if (t[1] !== undefined) { cur = fontMap.get(fonts.get(t[1])); continue; }
+      if (t[4] !== undefined) { lx = +t[4]; ly = +t[5]; atual = { p: pno, x: Math.round(lx), y: Math.round(ly), t: '' }; trechos.push(atual); continue; }
+      if (t[2] !== undefined) {
+        const dx = +t[2], dy = +t[3];
+        if (dy !== 0 || !atual) { lx += dx; ly += dy; atual = { p: pno, x: Math.round(lx), y: Math.round(ly), t: '' }; trechos.push(atual); }
+        continue;
+      }
+      const hexes = t[6] !== undefined ? [t[6]] : [...t[7].matchAll(/<([0-9A-Fa-f]*)>/g)].map(x => x[1]);
+      let txt = '';
+      for (const h of hexes) for (let i = 0; i + 4 <= h.length; i += 4) { const g = parseInt(h.substr(i, 4), 16); if (cur && cur.has(g)) txt += cur.get(g); }
+      if (atual) atual.t += txt;
+    }
+    pno++;
+  }
+  for (const c of trechos) c.t = c.t.replace(/\s+/g, ' ');
+  // mesma ordenação da ferramenta PowerShell: y, depois x (estável)
+  return trechos.filter(c => c.t.trim() !== '').map((c, i) => ({ ...c, i })).sort((a, b) => a.y - b.y || a.x - b.x || a.i - b.i);
+}
+
+// ---------------------------------------------------------------- utilitários
+const norm = s => (s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const limpa = s => (s || '').replace(/\s+/g, ' ').trim().replace(/\s*\(.*$/, '').replace(/\s*-\s*RECEBENDO\s*$/i, '').trim().toUpperCase();
+function cpfValido(c) {
+  if (!/^\d{11}$/.test(c) || /^(\d)\1{10}$/.test(c)) return false;
+  for (const n of [9, 10]) {
+    let soma = 0; for (let i = 0; i < n; i++) soma += +c[i] * (n + 1 - i);
+    if (((soma * 10) % 11) % 10 !== +c[n]) return false;
+  }
+  return true;
+}
+const junta = arr => [...arr].sort((a, b) => a.y - b.y || a.x - b.x || a.i - b.i).map(c => c.t.trim()).join(' ').replace(/\s+/g, ' ').trim();
+function titulo(s) {
+  const t = s.trim().toLowerCase().replace(/(^|[\s\-(])(\S)/g, (m, a, b) => a + b.toUpperCase());
+  return t.replace(/(?<= )(Da|De|Do|Das|Dos|E)(?= )/g, m => m.toLowerCase());
+}
+function tipoRelatorio(tr) {
+  const topo = tr.slice(0, 15).map(c => c.t).join(' ').toUpperCase();
+  if (/COM FOTO|POR RESID/.test(topo)) return '1.5';
+  if (/DOCUMENTOS/.test(topo)) return '1.2';
+  if (/REGIME ATUAL/.test(topo)) return '2.13';
+  return null;
+}
+function faixa(tr, ini, fim) {
+  let lo = 0, hi = tr.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (tr[mid].y < ini) lo = mid + 1; else hi = mid; }
+  const r = []; for (let i = lo; i < tr.length && tr[i].y < fim; i++) r.push(tr[i]); return r;
+}
+
+// ---------------------------------------------------------------- Relatório 2.13
+// Células centralizadas na vertical: cada coluna é dividida em células (linhas a ~16 de
+// distância) e cada célula vai para o preso cujo centro está mais perto; célula no topo da
+// página, antes do 1º prontuário, continua o último preso da página anterior.
+function ler213(tr) {
+  const h = {};
+  for (const c of tr) {
+    const u = c.t.trim().toUpperCase();
+    if (h.mae == null && u.startsWith('NOME DA M')) h.mae = c.x;
+    else if (h.nasc == null && u === 'NASCIMENTO') h.nasc = c.x;
+    else if (h.comp == null && u === 'COMPORTAMENTO') h.comp = c.x;
+    else if (h.sit == null && /^SITUA..O$/.test(u)) h.sit = c.x;
+    else if (h.dias == null && u === 'DIAS') h.dias = c.x;
+    else if (h.unidade == null) { const m = c.t.match(/^Unidade:\s*(\d+)\s+(.+?)\s*$/); if (m) h.unidade = `${m[1]} - ${titulo(m[2])}`; }
+  }
+  for (const k of ['mae', 'nasc', 'comp', 'sit', 'dias']) if (h[k] == null) throw new Error(`Relatório 2.13: não encontrei a coluna '${k}' no cabeçalho.`);
+  const lh = 16;
+  const ips = tr.filter(c => c.x < h.mae - 5 && /^(\d{6})(\s|$)/.test(c.t.trim()));
+  if (!ips.length) throw new Error('Relatório 2.13: nenhum prontuário encontrado.');
+  const yCab = Math.max(...tr.filter(c => c.y < ips[0].y && c.x >= h.dias - 30).map(c => c.y), -Infinity);
+  const resumo = tr.find(c => c.x < 20 && /^Regime atual/.test(c.t.trim()));
+  const fimResumo = resumo ? resumo.y : Infinity;
+  const civis = tr.filter(c => c.t.trim().toUpperCase() === 'PRISÃO CIVIL');
+  const dados = tr.filter(c => c.y > yCab && c.y < fimResumo && c.t.trim().toUpperCase() !== 'PRISÃO CIVIL');
+  const ehData = c => /^\d{2}\/\d{2}\/\d{4}$/.test(c.t.trim());
+  const col = { nome: [], mae: [], nasc: [], sit: [], sitc: [], dias: [] };
+  for (const c of dados) {
+    const t = c.t.trim();
+    if (c.x < h.mae - 5) col.nome.push(c);
+    else if (c.x < h.comp - 5) { if (ehData(c)) col.nasc.push(c); else if (c.x < h.nasc - 8) col.mae.push(c); }
+    else if (c.x >= h.dias - 16) { if (/^\d+$/.test(t)) col.dias.push(c); }
+    else if (c.x >= h.sit - 5) { if (!/^\d+$/.test(t)) col.sit.push(c); }
+    else if (c.x >= h.comp + 150) col.sitc.push(c);
+  }
+  const celulas = lista => {
+    const cel = []; let atual = null;
+    for (const c of [...lista].sort((a, b) => a.y - b.y || a.x - b.x || a.i - b.i)) {
+      if (atual && c.y - atual[atual.length - 1].y <= 18.5) atual.push(c); else { atual = [c]; cel.push(atual); }
+    }
+    return cel;
+  };
+  const celNome = celulas(col.nome);
+  const centro = new Map(); const ordem = [];
+  const ipDe = cel => { const p = cel.find(c => /^(\d{6})(\s|$)/.test(c.t.trim())); return p ? p.t.trim().slice(0, 6) : null; };
+  for (const cel of celNome) { const ip = ipDe(cel); if (ip) { centro.set(ip, (cel[0].y + cel[cel.length - 1].y) / 2); ordem.push(ip); } }
+  const ipsOrd = ordem.sort((a, b) => centro.get(a) - centro.get(b));
+  const cs = ipsOrd.map(i => centro.get(i));
+  const primeiroDaPagina = new Map();
+  for (const c of ips) if (!primeiroDaPagina.has(c.p) || c.y < primeiroDaPagina.get(c.p)) primeiroDaPagina.set(c.p, c.y);
+  const continuacoes = new Set();
+  function dono(cel) {
+    const ini = cel[0], fimY = cel[cel.length - 1].y, meio = (ini.y + fimY) / 2;
+    const topo = primeiroDaPagina.get(ini.p);
+    if (topo != null && fimY < topo - 6) {
+      let ant = null; for (const i of ipsOrd) { if (centro.get(i) < ini.y) ant = i; else break; }
+      if (ant) { continuacoes.add(ant); return ant; }
+    }
+    let lo = 0, hi = cs.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cs[m] < meio) lo = m; else hi = m; }
+    return Math.abs(cs[lo] - meio) <= Math.abs(cs[hi] - meio) ? ipsOrd[lo] : ipsOrd[hi];
+  }
+  const campos = new Map(ipsOrd.map(ip => [ip, { nome: [], mae: [], nasc: [], sit: [], sitc: [], dias: [] }]));
+  for (const cel of celNome) { const d = ipDe(cel) || dono(cel); if (d) campos.get(d).nome.push(...cel); }
+  for (const k of ['mae', 'nasc', 'sit', 'sitc', 'dias']) for (const cel of celulas(col[k])) { const d = dono(cel); if (d) campos.get(d)[k].push(...cel); }
+
+  const reg = new Map();
+  for (const ip of ipsOrd) {
+    const f = campos.get(ip), cen = centro.get(ip);
+    const civil = civis.some(c => c.y < cen && c.y > cen - 3 * lh);
+    const nome = junta(f.nome).replace(new RegExp('^' + ip + '\\s*'), '');
+    const mae = civil ? '' : junta(f.mae);
+    const dt = [...f.nasc].sort((a, b) => a.y - b.y)[0];
+    const sit = (civil ? junta(f.sitc) : junta(f.sit)).toUpperCase();
+    const dias = f.dias[0];
+    const m = sit.match(/(?:^|-\s*)((?:FECHADO|SEMIABERTO|ABERTO|PROVIS.RIO|PRIS.O TEMPOR.RIA|PRIS.O CIVIL|MEDIDA DE SEGURAN.A)\b.*)$/);
+    reg.set(ip, {
+      IPEN: ip, Nome: limpa(nome), Mae: limpa(mae), Nasc: dt ? dt.t.trim() : '',
+      Situacao: civil ? `PRISÃO CIVIL - ${sit}` : sit, Regime: m ? m[1].trim() : '',
+      Dias: dias ? parseInt(dias.t.trim(), 10) : null, Civil: civil,
+      Continua: continuacoes.has(ip), Extra: f.nasc.length > 1 || f.dias.length > 1
+    });
+  }
+  return { Unidade: h.unidade, Registros: reg, Paginas: Math.max(...tr.map(c => c.p)) + 1 };
+}
+
+// ---------------------------------------------------------------- Relatório 1.2
+function ler12(tr) {
+  const doc = tr.find(c => c.t.trim().toUpperCase() === 'TIPO DE DOCUMENTO');
+  if (!doc) throw new Error("Relatório 1.2: não encontrei a coluna 'TIPO DE DOCUMENTO'.");
+  const xDoc = doc.x;
+  const ips = tr.filter(c => c.x < 20 && /^\d{6}$/.test(c.t.trim()));
+  const out = new Map();
+  ips.forEach((iw, k) => {
+    const ip = iw.t.trim();
+    const ini = iw.y - 6, fim = k + 1 < ips.length ? ips[k + 1].y - 6 : iw.y + 40;
+    const bl = faixa(tr, ini, fim);
+    const docs = junta(bl.filter(c => c.x >= xDoc - 5));
+    const nome = junta(bl.filter(c => c.x > iw.x + 20 && c.x < xDoc - 5 && c.y < iw.y + 4));
+    const uniq = a => [...new Set(a)];
+    const cpfs = uniq([...docs.matchAll(/CPF\s*:\s*([\d.\-]+)/g)].map(m => m[1].replace(/\D/g, '')).filter(Boolean));
+    const rjis = uniq([...docs.matchAll(/RJI\s*:\s*([\d.\-]+)/g)].map(m => m[1].replace(/\D/g, '')).filter(Boolean));
+    out.set(ip, { Nome: nome, Cpfs: cpfs, Rjis: rjis });
+  });
+  return { Registros: out, Paginas: Math.max(...tr.map(c => c.p)) + 1 };
+}
+
+// ---------------------------------------------------------------- Relatório 1.5 (opcional)
+function ler15(tr) {
+  const out = new Map();
+  const rot = tr.filter(c => /^PRONTU.RIO:$/i.test(c.t.trim()));
+  if (!rot.length) return { Registros: out, Paginas: 0 };
+  const xs = [...new Set(rot.map(c => c.x))].sort((a, b) => a - b);
+  const corte = xs.find(x => x > xs[0] + 100);
+  const colunas = corte ? [tr.filter(c => c.x < corte - 20), tr.filter(c => c.x >= corte - 20)] : [tr];
+  for (const colc of colunas) {
+    const linhas = new Map();
+    for (const c of colc) { const k = Math.round(c.y); if (!linhas.has(k)) linhas.set(k, []); linhas.get(k).push(c); }
+    let atual = null;
+    for (const k of [...linhas.keys()].sort((a, b) => a - b)) {
+      const txt = linhas.get(k).sort((a, b) => a.x - b.x).map(c => c.t).join('').replace(/\s+/g, ' ').trim();
+      let m;
+      if ((m = txt.match(/^PRONTU.RIO:\s*(\d{6})/))) { atual = m[1]; out.set(atual, { Nome: '', Mae: '', Nasc: '' }); continue; }
+      if (!atual) continue;
+      const r = out.get(atual);
+      if ((m = txt.match(/^NOME:\s*(.*)$/)) && !r.Nome) r.Nome = limpa(m[1]);
+      else if ((m = txt.match(/^M.E:\s*(.*)$/)) && !r.Mae) r.Mae = limpa(m[1]);
+      else if ((m = txt.match(/^NASCIMENTO:\s*(\d{2}\/\d{2}\/\d{4})/)) && !r.Nasc) r.Nasc = m[1];
+    }
+  }
+  return { Registros: out, Paginas: Math.max(...tr.map(c => c.p)) + 1 };
+}
+
+// ---------------------------------------------------------------- consolidação
+function consolidar(r15, r12, r213) {
+  const linhas = [], obs = [];
+  const cont = { continua: 0, semDoc: 0, cpfInv: 0, cpfMulti: 0, semRegime: 0, difNome: 0, difMae: 0, incompleto: 0, civil: 0, rjiFmt: 0 };
+  for (const r of r213.Registros.values()) {
+    const ip = r.IPEN, d = r12.Registros.get(ip), f = r15 ? r15.Registros.get(ip) : null;
+    let nome = r.Nome, mae = r.Mae, nasc = r.Nasc;
+    if (r.Civil) { cont.civil++; obs.push([ip, `EXCLUÍDO da planilha: prisão civil (não tem execução penal) – ${r.Nome}.`]); continue; }
+    if (r.Continua) { cont.continua++; obs.push([ip, 'No 2.13 a linha deste preso continua na página seguinte; o texto do topo da página seguinte foi juntado a ele. Conferir nome, mãe e situação.']); }
+    if (r.Extra) obs.push([ip, 'Mais de uma data de nascimento ou de dias no regime atribuída a este preso no 2.13. Conferir.']);
+    if (f) {
+      if (f.Nome && norm(f.Nome) !== norm(nome)) { cont.difNome++; obs.push([ip, `Nome difere: 2.13 '${nome}' x 1.5 '${f.Nome}'. Usado o do 2.13.`]); }
+      if (!mae && f.Mae) mae = f.Mae;
+      else if (f.Mae && norm(f.Mae) !== norm(mae)) { cont.difMae++; obs.push([ip, `Mãe difere: 2.13 '${mae}' x 1.5 '${f.Mae}'. Usada a do 2.13.`]); }
+      if (!nasc && f.Nasc) nasc = f.Nasc;
+      else if (f.Nasc && f.Nasc !== nasc) obs.push([ip, `Nascimento difere: 2.13 ${nasc} x 1.5 ${f.Nasc}.`]);
+    }
+    let cpfs = [], rjis = [];
+    if (!d) { cont.semDoc++; obs.push([ip, 'Sem correspondência no relatório 1.2: CPF e RJI em branco.']); }
+    else {
+      for (const c of d.Cpfs) { if (cpfValido(c)) cpfs.push(c); else { cont.cpfInv++; obs.push([ip, `CPF inválido no relatório 1.2 (dígito verificador ou tamanho): ${c}. Não incluído.`]); } }
+      if (cpfs.length > 1) { cont.cpfMulti++; obs.push([ip, `Mais de um CPF válido no relatório 1.2: ${cpfs.join('; ')}. Conferir.`]); }
+      rjis = d.Rjis;
+      for (const j of rjis) if (!/^\d{11}$/.test(j)) { cont.rjiFmt++; obs.push([ip, `RJI fora do padrão de 11 dígitos: ${j}. Conferir.`]); }
+      if (d.Nome && norm(d.Nome) !== norm(nome) && !norm(d.Nome).startsWith(norm(nome))) obs.push([ip, `Nome no 1.2 ('${d.Nome}') difere do 2.13 ('${nome}').`]);
+    }
+    if (!r.Regime) { cont.semRegime++; obs.push([ip, `Regime não identificado. Situação no 2.13: '${r.Situacao}'.`]); }
+    if (!nome || !mae || !nasc) { cont.incompleto++; obs.push([ip, 'Dado pessoal incompleto (nome, mãe ou nascimento).']); }
+    linhas.push([r213.Unidade, ip, nome, nasc, mae, cpfs.join('; '), rjis.join('; '), r.Regime, r.Situacao, r.Dias]);
+  }
+  return { linhas, obs, cont };
+}
+
+// ---------------------------------------------------------------- gravação do .xlsx (ZIP sem compressão)
+const crcTab = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = crcTab[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zip(arquivos) {
+  const enc = new TextEncoder(); const partes = []; const central = []; let off = 0;
+  for (const [nome, texto] of arquivos) {
+    const nb = enc.encode(nome), dados = enc.encode(texto), crc = crc32(dados);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, dados.length, true); lh.setUint32(22, dados.length, true); lh.setUint16(26, nb.length, true);
+    partes.push(new Uint8Array(lh.buffer), nb, dados);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, dados.length, true); ch.setUint32(24, dados.length, true); ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), nb);
+    off += 30 + nb.length + dados.length;
+  }
+  const tamCentral = central.reduce((s, p) => s + p.length, 0);
+  const fim = new DataView(new ArrayBuffer(22));
+  fim.setUint32(0, 0x06054b50, true); fim.setUint16(8, arquivos.length, true); fim.setUint16(10, arquivos.length, true);
+  fim.setUint32(12, tamCentral, true); fim.setUint32(16, off, true);
+  return new Blob([...partes, ...central, new Uint8Array(fim.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+const esc = s => String(s ?? '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const colL = n => { let r = ''; while (n > 0) { const m = (n - 1) % 26; r = String.fromCharCode(65 + m) + r; n = Math.floor((n - 1) / 26); } return r; };
+function planilhaXml(cab, linhas, larg, tipos) {
+  let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'
+    + larg.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('') + '</cols><sheetData><row r="1">'
+    + cab.map((c, i) => `<c r="${colL(i + 1)}1" t="inlineStr" s="1"><is><t>${esc(c)}</t></is></c>`).join('') + '</row>';
+  let r = 1;
+  for (const l of linhas) {
+    r++; x += `<row r="${r}">`;
+    cab.forEach((_, i) => {
+      const v = l[i]; if (v == null || `${v}` === '') return;
+      const ref = colL(i + 1) + r, tp = tipos ? tipos[i] : 't'; let m;
+      if (tp === 'd' && (m = `${v}`.match(/^(\d{2})\/(\d{2})\/(\d{4})$/))) {
+        const serial = Math.round((Date.UTC(+m[3], +m[2] - 1, +m[1]) - Date.UTC(1899, 11, 30)) / 86400000);
+        x += `<c r="${ref}" s="2"><v>${serial}</v></c>`;
+      } else if (tp === 'n' && /^\d+$/.test(`${v}`)) x += `<c r="${ref}"><v>${v}</v></c>`;
+      else x += `<c r="${ref}" t="inlineStr" s="3"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+    });
+    x += '</row>';
+  }
+  return x + `</sheetData><autoFilter ref="A1:${colL(cab.length)}${r}"/></worksheet>`;
+}
+function gerarXlsx(abas) {
+  const arq = [];
+  arq.push(['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+    + abas.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('') + '</Types>']);
+  arq.push(['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>']);
+  arq.push(['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+    + abas.map((a, i) => `<sheet name="${esc(a.nome)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets><definedNames>'
+    + abas.map((a, i) => `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${esc(a.nome)}'!$A$1:$${colL(a.cab.length)}$${a.linhas.length + 1}</definedName>`).join('') + '</definedNames></workbook>']);
+  arq.push(['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + abas.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')
+    + `<Relationship Id="rId${abas.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`]);
+  arq.push(['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>']);
+  abas.forEach((a, i) => arq.push([`xl/worksheets/sheet${i + 1}.xml`, planilhaXml(a.cab, a.linhas, a.larg, a.tipos)]));
+  return zip(arq);
+}
+
+// ---------------------------------------------------------------- processamento (sem gravar nada)
+const CAB = ['UNIDADE', 'IPEN', 'NOME COMPLETO', 'DATA DE NASCIMENTO', 'NOME DA MÃE', 'CPF', 'RJI', 'REGIME ATUAL', 'SITUAÇÃO PENAL', 'DIAS NO REGIME ATUAL'];
+async function processar(arquivos) {
+  const lidos = {};
+  for (const a of arquivos) {
+    const tr = await lerPdf(await a.arrayBuffer());
+    const tipo = tipoRelatorio(tr);
+    if (!tipo) throw new Error(`Não reconheci o relatório '${a.name}'. Use os relatórios 2.13, 1.2 e (opcional) 1.5 do i-PEN.`);
+    if (lidos[tipo]) throw new Error(`Foram escolhidos dois arquivos do relatório ${tipo}.`);
+    lidos[tipo] = tr;
+  }
+  for (const t of ['2.13', '1.2']) if (!lidos[t]) throw new Error(`Faltou o relatório ${t}.`);
+  const r213 = ler213(lidos['2.13']), r12 = ler12(lidos['1.2']);
+  const r15 = lidos['1.5'] ? ler15(lidos['1.5']) : { Registros: new Map(), Paginas: 0 };
+  const c = consolidar(r15, r12, r213);
+  for (const ip of r12.Registros.keys()) if (!r213.Registros.has(ip)) c.obs.push([ip, 'Consta no relatório 1.2, mas não no 2.13 (não incluído na planilha).']);
+  const agora = new Date(), dd = n => String(n).padStart(2, '0');
+  const conf = [
+    ['Versão da ferramenta', VERSAO], ['Unidade', r213.Unidade],
+    ['Registros no Relatório 2.13 (base)', r213.Registros.size], ['Registros na planilha (presos penais)', c.linhas.length],
+    ['Prontuários no Relatório 1.5', r15.Registros.size], ['Prontuários no Relatório 1.2', r12.Registros.size],
+    ['Registros sem CPF/RJI no Relatório 1.2', c.cont.semDoc], ['CPFs inválidos descartados', c.cont.cpfInv],
+    ['Registros com mais de um CPF válido', c.cont.cpfMulti], ['RJIs fora do padrão', c.cont.rjiFmt],
+    ['Registros sem regime identificado', c.cont.semRegime], ['Nome diferente entre 2.13 e 1.5', c.cont.difNome],
+    ['Mãe diferente entre 2.13 e 1.5', c.cont.difMae], ['Prisão civil – excluídos da planilha', c.cont.civil],
+    ['Linhas que continuam na página seguinte (2.13)', c.cont.continua], ['Registros com dado pessoal incompleto', c.cont.incompleto],
+    ['Páginas lidas – 1.5 / 1.2 / 2.13', `${r15.Paginas} / ${r12.Paginas} / ${r213.Paginas}`],
+    ['Gerado em', `${dd(agora.getDate())}/${dd(agora.getMonth() + 1)}/${agora.getFullYear()} ${dd(agora.getHours())}:${dd(agora.getMinutes())}`],
+    ['', ''], ['IPEN', 'OBSERVAÇÃO'], ...[...c.obs].sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)
+  ];
+  const linhas = [...c.linhas].sort((a, b) => a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0);
+  const blob = gerarXlsx([
+    { nome: 'Consolidado', cab: CAB, linhas, larg: [26, 10, 40, 14, 40, 16, 16, 40, 50, 12], tipos: ['t', 't', 't', 'd', 't', 't', 't', 't', 't', 'n'] },
+    { nome: 'Conferência', cab: ['ITEM', 'RESULTADO'], linhas: conf, larg: [45, 110], tipos: null }
+  ]);
+  const nomeArq = `CRV_Consolidado_${(r213.Unidade || 'unidade').replace(/[\\/:*?"<>|]/g, '')}_${agora.getFullYear()}-${dd(agora.getMonth() + 1)}-${dd(agora.getDate())}.xlsx`;
+  return { blob, nomeArq, linhas, obs: c.obs, cont: c.cont, r213, r12, r15 };
+}
+window.__crvProcessar = processar;   // usado na validação local
+
+// ---------------------------------------------------------------- tela
+const sel = new Map();   // tipo -> File
+let pendentes = [];
+const $ = id => document.getElementById(id);
+async function adicionar(files) {
+  for (const f of files) {
+    if (!/\.pdf$/i.test(f.name)) continue;
+    let tipo = null;
+    try { tipo = tipoRelatorio(await lerPdf(await f.arrayBuffer())); } catch (_) { }
+    if (!tipo) { pendentes.push(f); continue; }
+    sel.set(tipo, f);
+  }
+  desenhar();
+}
+function desenhar() {
+  const nomes = { '2.13': '2.13 – Regime atual', '1.2': '1.2 – Documentos', '1.5': '1.5 – Com foto (opcional)' };
+  let h = '';
+  for (const t of ['2.13', '1.2', '1.5']) {
+    const f = sel.get(t);
+    h += `<div class="arq"><span class="tag ${f ? 'ok' : (t === '1.5' ? 'opc' : '')}">${nomes[t]}</span><span class="nm">${f ? esc(f.name) : '<i style="color:#9ca3af">não selecionado</i>'}</span>${f ? `<button class="btn sec" onclick="window.__tirar('${t}')">remover</button>` : ''}</div>`;
+  }
+  for (const f of pendentes) h += `<div class="arq"><span class="tag err">não reconhecido</span><span class="nm">${esc(f.name)}</span></div>`;
+  $('arqs').innerHTML = h;
+  $('btnGerar').disabled = !(sel.has('2.13') && sel.has('1.2'));
+}
+window.__tirar = t => { sel.delete(t); desenhar(); };
+function iniciarTela() {
+  const drop = $('drop'), inp = $('inp');
+  drop.onclick = () => inp.click();
+  inp.onchange = () => { pendentes = []; adicionar([...inp.files]); inp.value = ''; };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+  drop.ondragleave = () => drop.classList.remove('on');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); pendentes = []; adicionar([...e.dataTransfer.files]); };
+  $('btnGerar').onclick = async () => {
+    const msg = $('msg'), btn = $('btnGerar');
+    btn.disabled = true; btn.textContent = '⏳ Processando...'; msg.className = 'msg info'; msg.textContent = 'Lendo os relatórios neste computador...';
+    $('res').innerHTML = ''; $('obs').style.display = 'none';
+    try {
+      const r = await processar([...sel.values()]);
+      const url = URL.createObjectURL(r.blob);
+      const a = document.createElement('a'); a.href = url; a.download = r.nomeArq; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      msg.className = 'msg ok';
+      msg.innerHTML = `✅ Planilha gerada e baixada: <b>${esc(r.nomeArq)}</b><br>Unidade: ${esc(r.r213.Unidade)} · ${r.linhas.length} presos penais · ${r.obs.length} apontamento(s) na aba Conferência.`;
+      const k = (v, t) => `<div class="kpi"><b>${v}</b><span>${t}</span></div>`;
+      $('res').innerHTML = k(r.linhas.length, 'presos na planilha') + k(r.cont.semDoc, 'sem CPF/RJI') + k(r.cont.cpfInv, 'CPF inválido descartado')
+        + k(r.cont.civil, 'prisão civil (fora)') + k(r.cont.continua, 'linhas em 2 páginas') + k(r.cont.incompleto, 'dado incompleto');
+      if (r.obs.length) { $('obs').style.display = ''; $('obs').innerHTML = [...r.obs].sort().map(o => `<div><b>${esc(o[0])}</b> — ${esc(o[1])}</div>`).join(''); }
+    } catch (e) {
+      msg.className = 'msg err'; msg.textContent = '⚠️ ' + (e.message || e);
+    } finally { btn.textContent = 'GERAR PLANILHA EXCEL'; btn.disabled = !(sel.has('2.13') && sel.has('1.2')); }
+  };
+  desenhar();
+}
+</script>
+<script type="module">
+import{initializeApp,getApps}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import{FIREBASE_CONFIG,EMAILS_CRV,ehCRV}from"./js/config-crv.js?v=4";
+import{garantirEquipe}from"./js/equipe-crv.js?v=2";
+
+// Acesso: toda a equipe CRV (ehCRV). Nada é gravado: os PDFs são lidos só no navegador.
+// Teste local (?demo, apenas em localhost): abre sem login para validar com PDFs de exemplo.
+const QUER_DEMO=new URLSearchParams(location.search).has('demo');
+const LOCAL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+let iniciado=false;
+function abrir(rotulo){
+  const st=document.getElementById('fbSt');st.className='fbs fbok';st.textContent=rotulo;
+  document.getElementById('bloqueio').style.display='none';document.getElementById('app').style.display='';
+  if(!iniciado){iniciado=true;iniciarTela();}
+}
+if(QUER_DEMO&&LOCAL){abrir('🧪 Teste local');}
+else{
+  const app=getApps().length?getApps()[0]:initializeApp(FIREBASE_CONFIG);
+  onAuthStateChanged(getAuth(app),async user=>{
+    const st=document.getElementById('fbSt');
+    if(user)await garantirEquipe(EMAILS_CRV);
+    if(!user||!ehCRV(user.email)){
+      st.className='fbs fberr';st.textContent=user?'⛔ Acesso restrito':'🔒 Faça login';
+      document.getElementById('app').style.display='none';
+      const b=document.getElementById('bloqueio');b.style.display='';
+      b.innerHTML=user?'⛔ Página restrita à equipe CRV.':'🔒 Faça login no <a href="index.html" target="_top">Portal CRV</a>.';
+      return;
+    }
+    abrir('✅ '+user.email);
+  });
+}
+</script>
+</body>
+</html>
