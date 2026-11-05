@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerador de Ofícios — CRV/DPP</title>
-  <link rel="stylesheet" href="css/app.css?v=2">
+  <link rel="stylesheet" href="css/app.css?v=3">
   <link rel="stylesheet" href="css/oficio.css">
 </head>
 <body>
@@ -142,6 +142,28 @@
   </div>
 </div>
 
+<!-- Pernoite: aviso de que não é necessário ofício — js/formulario.js -->
+<div class="modal-bg" id="pernBg" style="z-index:240;" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="width:min(96vw,520px);">
+    <div class="modal-head">
+      <h3>🔄 Pernoite — não é necessário ofício</h3>
+      <button onclick="document.getElementById('pernBg').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" style="font-size:.9rem;line-height:1.65;">
+      <p>Para o <strong>pernoite</strong> não é necessário ofício nem solicitação de assinaturas. Basta consignar no <strong>cadastro do i-PEN</strong>:</p>
+      <ul style="margin:.6rem 0 .8rem 1.2rem;">
+        <li>o <strong>motivo do pernoite</strong>;</li>
+        <li>a <strong>autorização/anuência do(a) Gestor(a) da Unidade Prisional de Destino</strong>;</li>
+        <li>a <strong>documentação pertinente</strong> (requisição para audiência/júri, processo de transferência, consulta médica, entre outros).</li>
+      </ul>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-acao btn-sec" onclick="document.getElementById('pernBg').classList.remove('open');FormularioCtrl.selecionarMod('pernoite', true)">Gerar ofício mesmo assim</button>
+      <button class="btn-acao btn-pri" onclick="document.getElementById('pernBg').classList.remove('open')">Entendi</button>
+    </div>
+  </div>
+</div>
+
 <!-- Assinatura em exercício: escolha do(a) substituto(a) — js/substituto.js -->
 <div class="modal-bg" id="ssBg" style="z-index:250;">
   <div class="modal" style="width:min(96vw,520px);">
@@ -169,7 +191,7 @@
 <script src="js/modal-unidade.js?v=4"></script>
 <script src="js/modal-cj.js?v=5"></script>
 <script src="js/preview.js?v=4"></script>
-<script src="js/formulario.js?v=4"></script>
+<script src="js/formulario.js?v=6"></script>
 <script src="js/substituto.js?v=1"></script>
 <script src="js/app.js?v=6"></script>
 <script src="js/comunicacao-painel.js?v=1"></script>

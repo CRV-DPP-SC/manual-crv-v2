@@ -409,6 +409,11 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
   border-radius: 12px;
   white-space: nowrap;
 }
+.aviso-mandado {
+  margin: 10px 0 4px; padding: 10px 12px; border-radius: 8px;
+  background: #fef3c7; border: 1px solid #f59e0b; color: #92400e;
+  font-size: .85rem; line-height: 1.5;
+}
 .aviso-pend { background: #fef3c7; color: #92400e; }
 .aviso-ok   { background: #dcfce7; color: #166534; }
 

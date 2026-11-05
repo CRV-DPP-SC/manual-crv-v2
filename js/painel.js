@@ -1577,6 +1577,10 @@ function renderizarLista(el, lista, tipo) {
           &nbsp;·&nbsp; <strong>Em:</strong> ${cancelDt}<br>
           <strong>Justificativa:</strong> ${escHtml(s.cancelamento.motivo)}
         </div>` : ''}
+        ${statusGeral.classe === 'concluido' && /Mandado de Comarca/i.test(s.titulo || '') ? `
+        <div style="margin:8px 0;padding:8px 12px;border-radius:8px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-size:.8rem;line-height:1.5;">
+          📎 Lembre-se de anexar o <strong>mandado de prisão</strong> no cadastro do i-PEN (obrigatório).
+        </div>` : ''}
         <div class="p-card-acoes">
           <button class="p-btn p-btn-outline" onclick="verDetalheOficio('${s.id}')">Ver documento</button>
           <button class="p-btn" style="background:var(--azul-600);color:#fff;" onclick="gerarPDFValidado('${s.id}')">

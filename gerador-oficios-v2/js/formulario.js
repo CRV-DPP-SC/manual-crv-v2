@@ -12,7 +12,7 @@ var FormularioCtrl = (function() {
       + '<div class="cards-grid">'
       + _card('emergencial', '🚨', 'Emergencial', 'Art. 21, I')
       + _card('mandado', '🏛', 'Mandado de Prisão de Comarca Diversa', 'Art. 21, III')
-      + _card('pernoite', '🔄', 'Pernoite', 'Art. 21, III')
+      + _card('pernoite', '🔄', 'Pernoite', 'Art. 21, III', 'Sem ofício — cadastro direto no i-PEN')
       + _card('adequacao', '⚖', 'Transferências Ordinárias', 'Art. 21, III', 'Transferências do dia a dia')
       + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Utilizar este modelo quando tratar-se de transferências determinadas pelo DPP/CRV')
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
@@ -33,7 +33,12 @@ var FormularioCtrl = (function() {
   }
 
   /* ── Seleciona modalidade ── */
-  function selecionarMod(mod) {
+  function selecionarMod(mod, forcar) {
+    /* Pernoite dispensa ofício: mostra o aviso antes (o ofício ainda pode ser gerado, se a unidade quiser) */
+    if (mod === 'pernoite' && !forcar) {
+      document.getElementById('pernBg').classList.add('open');
+      return;
+    }
     /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV (padrão fixo) */
     var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : 'Senhor(a) Coordenador(a),';
     var patch = { mod: mod, sub: null, sau: sauInicial, desp: 'Respeitosamente,' };
@@ -103,7 +108,10 @@ var FormularioCtrl = (function() {
         + sub
       + '</div>'
       + '<button class="btn-trocar" onclick="FormularioCtrl.trocarMod()">Trocar ▾</button>'
-      + '</div>';
+      + '</div>'
+      + (s.mod === 'mandado'
+          ? '<div class="aviso-mandado">⚠️ <strong>Atenção:</strong> é <strong>obrigatório anexar o respectivo mandado de prisão</strong> ao pedido no i-PEN.</div>'
+          : '');
   }
 
   /* ── Seção: Subtipo ── */
