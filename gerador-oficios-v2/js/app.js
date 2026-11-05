@@ -72,16 +72,24 @@ function _extrairAssinantes(s) {
   function _emailSuperintendente(cod) { return cod.toLowerCase() + 'sr@pp.sc.gov.br'; }
   function _emailSuperintendencia(cod) { return cod.toLowerCase() + '@pp.sc.gov.br'; }
 
-  if (o) lista.push({ email: _emailDir(o), nome: o.dir || o.n, cargo: o.cg || 'Diretor(a)', unidade: o.n, emailUnidade: o.em });
-  if (s.dd && d) lista.push({ email: _emailDir(d), nome: d.dir || d.n, cargo: d.cg || 'Diretor(a)', unidade: d.n, emailUnidade: d.em });
+  /* slot: lugar da assinatura; se houver substituto(a) em exercício (substituto.js), assina ele(a) */
+  function _add(slot, a) {
+    var x = _substDe(s, slot, a.emailUnidade);
+    if (x) a = Object.assign({}, a, { email: x.email, nome: x.nome, cargo: x.cg, emExercicio: true, de: x.de });
+    a.slot = slot;
+    lista.push(a);
+  }
+
+  if (o) _add('ori', { email: _emailDir(o), nome: o.dir || o.n, cargo: o.cg || 'Diretor(a)', unidade: o.n, emailUnidade: o.em });
+  if (s.dd && d) _add('des', { email: _emailDir(d), nome: d.dir || d.n, cargo: d.cg || 'Diretor(a)', unidade: d.n, emailUnidade: d.em });
   if (s.sro && o) {
     var srO = SR[o.sr];
-    if (srO) lista.push({ email: _emailSuperintendente(o.sr), nome: srO.s, cargo: 'Superintendente Regional', unidade: srO.nome, emailUnidade: _emailSuperintendencia(o.sr) });
+    if (srO) _add('sro', { email: _emailSuperintendente(o.sr), nome: srO.s, cargo: 'Superintendente Regional', unidade: srO.nome, emailUnidade: _emailSuperintendencia(o.sr) });
   }
   /* Mesma SR na origem e no destino: o Superintendente assina uma vez só */
   if (s.srd && d && !(s.sro && o && o.sr === d.sr)) {
     var srD = SR[d.sr];
-    if (srD) lista.push({ email: _emailSuperintendente(d.sr), nome: srD.s, cargo: 'Superintendente Regional', unidade: srD.nome, emailUnidade: _emailSuperintendencia(d.sr) });
+    if (srD) _add('srd', { email: _emailSuperintendente(d.sr), nome: srD.s, cargo: 'Superintendente Regional', unidade: srD.nome, emailUnidade: _emailSuperintendencia(d.sr) });
   }
   return lista;
 }
@@ -119,11 +127,19 @@ async function abrirModalAssinaturas() {
   if (s.des) titulo += ' → ' + s.des.n;
   if (s.numOficio) titulo = s.numOficio + ' | ' + titulo;
 
+  var ehSup = function(a) { return a.slot === 'sro' || a.slot === 'srd'; };
   var listaHtml = assinantes.map(function(a) {
-    return '<div class="ass-modal-item">'
+    var t = ehSup(a) ? 'Superintendente' : 'Diretor(a)';
+    return '<div class="ass-modal-item' + (a.emExercicio ? ' ass-modal-ee' : '') + '">'
+      + '<div class="ass-modal-lugar">' + _esc(a.unidade) + '</div>'
+      + '<div class="ass-escolha">'
+      +   '<button class="' + (a.emExercicio ? '' : 'at') + '" onclick="usarTitular(\'' + a.slot + '\')">' + t + ' titular</button>'
+      +   '<button class="' + (a.emExercicio ? 'at' : '') + '" onclick="abrirSeletorSubstituto(\'' + a.slot + '\')">' + t + ' substituto(a)</button>'
+      + '</div>'
       + '<div class="ass-modal-nome">' + _esc(a.nome) + '</div>'
-      + '<div class="ass-modal-info">' + _esc(a.cargo) + ' · ' + _esc(a.unidade) + '</div>'
-      + '<div class="ass-modal-email">' + _esc(a.email) + '</div>'
+      + '<div class="ass-modal-info">' + _esc(a.cargo) + (a.emExercicio ? ' — titular de: ' + _esc(a.de) : '') + '</div>'
+      + '<div class="ass-modal-email">' + _esc(a.email)
+      +   (a.emExercicio ? ' · <a href="#" onclick="abrirSeletorSubstituto(\'' + a.slot + '\');return false;">trocar</a>' : '') + '</div>'
       + '</div>';
   }).join('');
 
@@ -145,6 +161,7 @@ async function abrirModalAssinaturas() {
       + '<div class="ass-modal-titulo">' + _esc(titulo) + '</div>'
     + '</div>'
     + '<div class="ass-modal-label">Assinantes (' + assinantes.length + ')</div>'
+    + (assinantes.length > 0 ? '<p class="ass-modal-dica">Se o(a) titular estiver afastado(a), escolha quem responde pela unidade.</p>' : '')
     + (assinantes.length > 0
         ? '<div class="ass-modal-list">' + listaHtml + '</div>'
         : '<p class="ass-modal-aviso">Nenhum assinante identificado. Verifique as unidades e a seção de assinaturas.</p>')

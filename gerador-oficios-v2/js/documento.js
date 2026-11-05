@@ -66,15 +66,20 @@ function blocoAss(s) {
     }).join('');
   }
 
-  if (o) lista.push({n: o.dir || '', cg: o.cg || 'Diretor(a)', un: o.n});
-  if (s.dd && d) lista.push({n: d.dir || '', cg: d.cg || 'Diretor(a)', un: d.n});
+  /* Substituto(a) em exercício escolhido no modal de assinaturas (substituto.js) */
+  function _ou(slot, para, titular) {
+    var x = typeof _substDe === 'function' ? _substDe(s, slot, para) : null;
+    return x ? {n: x.nome, cg: x.cg, un: titular.un} : titular;
+  }
+  if (o) lista.push(_ou('ori', o.em, {n: o.dir || '', cg: o.cg || 'Diretor(a)', un: o.n}));
+  if (s.dd && d) lista.push(_ou('des', d.em, {n: d.dir || '', cg: d.cg || 'Diretor(a)', un: d.n}));
   if (s.sro && o) {
     var so = SR[o.sr];
-    lista.push({n: so ? so.s : '', cg: 'Superintendente Regional', un: so ? so.nome : ''});
+    lista.push(_ou('sro', o.sr.toLowerCase() + '@pp.sc.gov.br', {n: so ? so.s : '', cg: 'Superintendente Regional', un: so ? so.nome : ''}));
   }
   if (s.srd && d) {
     var sd = SR[d.sr];
-    lista.push({n: sd ? sd.s : '', cg: 'Superintendente Regional', un: sd ? sd.nome : ''});
+    lista.push(_ou('srd', d.sr.toLowerCase() + '@pp.sc.gov.br', {n: sd ? sd.s : '', cg: 'Superintendente Regional', un: sd ? sd.nome : ''}));
   }
   if (lista.length === 0) {
     lista.push({n: ph('Nome do Diretor(a)'), cg: 'Diretor(a)', un: ph('Unidade de Origem')});

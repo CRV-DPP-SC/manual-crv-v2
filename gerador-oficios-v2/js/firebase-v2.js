@@ -13,7 +13,7 @@ import { getAuth, onAuthStateChanged }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, addDoc, updateDoc, collection, serverTimestamp }
                              from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG as firebaseConfig, emailCanonico, indiceSolicitacao } from "../../js/config-crv.js?v=6";
+import { FIREBASE_CONFIG as firebaseConfig, emailCanonico, indiceSolicitacao } from "../../js/config-crv.js?v=7";
 
 /*
  * Usa o app DEFAULT (sem nome) para compartilhar a sessão com o site
@@ -45,6 +45,11 @@ const db   = getFirestore(app);
         alvo.tel = ru.tel     || alvo.tel;
         alvo.e   = ru.end     || alvo.e;
       }
+    });
+    /* nomes dos Superintendentes (busca do substituto em exercício e bloco de assinaturas) */
+    const srs = snap.data().sr || {};
+    if (typeof SR !== 'undefined') Object.keys(srs).forEach(function (cod) {
+      if (SR[cod] && srs[cod].superintendente) SR[cod].s = srs[cod].superintendente;
     });
   } catch (_) { /* Firestore indisponível — mantém os dados estáticos de dados.js */ }
 })();
@@ -120,6 +125,8 @@ onAuthStateChanged(auth, async (user) => {
           status:       'pendente',
           dataAcao:     null,
           motivo:       null,
+          // assinatura em exercício (substituto.js): quem assina não é o(a) titular do lugar
+          ...(a.emExercicio ? { emExercicio: true, cargo: a.cargo || '', unidade: a.unidade || '' } : {}),
         })),
         statusGeral:  'em_andamento',
         // dados organizados da transferência (para gerar as comunicações no Painel)

@@ -176,9 +176,18 @@ async function unidadesCfg() {
   }
   return _unidadesCfg;
 }
+// 'pr24dir@…' → 'pr24@…'; 'sr06sr@…' → 'sr06@…' (mesma regra de unidadeDoLogin em js/config-crv.js)
+function unidadeDoLogin(email) {
+  const e = canonico(email);
+  const sr = e.match(/^(sr0[1-8])(?:sr)?@pp\.sc\.gov\.br$/);
+  if (sr) return sr[1] + '@pp.sc.gov.br';
+  const m = e.match(/^(.+)(dir|cpen)@pp\.sc\.gov\.br$/);
+  return m ? m[1] + '@pp.sc.gov.br' : '';
+}
 async function indiceSolicitacao(s) {
   const lista = await unidadesCfg();
-  const unidades = [...new Set([s.emailUnidadeOrigem, ...(s.assinantes || []).map(a => a.emailUnidade)]
+  const exercicio = (s.assinantes || []).filter(a => a.emExercicio).map(a => unidadeDoLogin(a.email));
+  const unidades = [...new Set([s.emailUnidadeOrigem, ...(s.assinantes || []).map(a => a.emailUnidade), ...exercicio]
     .filter(Boolean).map(e => e.toLowerCase()))];
   const srs = new Set();
   unidades.forEach(e => {
@@ -222,7 +231,9 @@ async function processarSolicitacoes(desde) {
     const data = doc.data();
     if (!(data.criadoEm && data.criadoEm.toMillis() > desde.toMillis())) continue;   // só as novas geram push
     const pendentes = (data.assinantes || []).filter(a => a.status === 'pendente' && a.emailUnidade);
-    const unidadesUnicas = [...new Set(pendentes.map(a => a.emailUnidade))];
+    // Em exercício: o push vai para a pessoa (substituto/a), não para a unidade do lugar
+    const unidadesUnicas = [...new Set(pendentes.filter(a => !a.emExercicio).map(a => a.emailUnidade))];
+    const substitutos = pendentes.filter(a => a.emExercicio);
     const titulo  = data.titulo || 'Solicitação de transferência';
     const criador = data.nomeCriador || data.emailCriador || 'Alguém';
 
@@ -231,6 +242,14 @@ async function processarSolicitacoes(desde) {
         emailUnidade,
         titulo: '✍️ Assinatura Pendente',
         corpo:  criador + ' solicitou sua anuência em: ' + titulo,
+        tag:    'assinatura-' + doc.id,
+      });
+    }
+    for (const a of substitutos) {
+      await enviarPushPessoas({
+        emails: [a.email],
+        titulo: '✍️ Assinatura Pendente (em exercício)',
+        corpo:  criador + ' solicitou sua anuência, como ' + (a.cargo || 'substituto(a)') + ' — ' + (a.unidade || '') + ', em: ' + titulo,
         tag:    'assinatura-' + doc.id,
       });
     }

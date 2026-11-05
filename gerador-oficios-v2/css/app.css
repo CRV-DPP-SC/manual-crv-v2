@@ -625,6 +625,26 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
   margin-top: 8px;
 }
 
+/* Assinatura em exercício (substituto.js) */
+.ass-modal-dica  { font-size: .76rem; color: #555; margin: 0 0 8px; }
+.ass-modal-lugar { font-size: .7rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
+.ass-modal-ee    { border-color: #d97706; background: #fffbeb; }
+.ass-escolha { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.ass-escolha button {
+  flex: 1; min-width: 140px; padding: 6px 10px; font: inherit; font-size: .76rem; cursor: pointer;
+  border: 1.5px solid var(--borda); border-radius: 6px; background: #fff; color: #444;
+}
+.ass-escolha button.at { border-color: var(--azul); background: #eef4ff; color: var(--azul); font-weight: 700; }
+.ss-busca { width: 100%; box-sizing: border-box; padding: 9px 12px; font: inherit; font-size: .86rem;
+  border: 1.5px solid var(--borda); border-radius: 8px; margin-bottom: 10px; }
+.ss-lista { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.ss-grupo { font-size: .7rem; font-weight: 700; color: var(--azul); text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 2px; }
+.ss-item { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; width: 100%;
+  padding: 8px 12px; border: 1px solid var(--borda); border-radius: 8px; background: #fff; cursor: pointer; font: inherit; }
+.ss-item:hover { border-color: var(--azul); background: #f0f5ff; }
+.ss-nome { font-size: .86rem; font-weight: 700; color: var(--texto); }
+.ss-de   { font-size: .74rem; color: #666; }
+
 /* ── Modal Resumo Sintético ── */
 #resumoBg .modal { width: min(96vw, 660px); }
 #resumoTexto { font-size: .9rem; line-height: 1.7; color: var(--texto); text-align: justify; }

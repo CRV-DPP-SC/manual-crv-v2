@@ -8,7 +8,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendP
 import { getFirestore, collection, doc, addDoc, getDoc, getDocs,
          updateDoc, deleteDoc, orderBy, query, where, serverTimestamp, onSnapshot }
                                  from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario, emailCanonico, pendentesDe, indiceSolicitacao } from "./config-crv.js?v=6";
+import { FIREBASE_CONFIG, EMAILS_CRV, escHtml, srDoSuperintendente, mesmoUsuario, emailCanonico, pendentesDe, indiceSolicitacao } from "./config-crv.js?v=7";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { PERFIS_AVISO, avisoNoMeuHistorico, avisoParaMim, descreverPublico, textoAvisoHtml,
          formatarDataAviso, listarAvisos, meusAvisosLidos, listarLeituras, contarLeituras,
@@ -1544,6 +1544,7 @@ function renderizarLista(el, lista, tipo) {
         <input type="checkbox" class="p-card-check" data-ctx="sol" onchange="selSolToggle('${s.id}')" onclick="event.stopPropagation()" title="Selecionar">
         <span class="p-status p-status-${statusGeral.classe}" style="flex-shrink:0;">${statusGeral.label}</span>
         <span class="p-card-titulo-row">${escHtml(s.titulo || 'Ofício s/ título')}</span>
+        ${_etiquetaExercicio(s)}
         <span class="p-card-meta-row">${escHtml(s.nomeUnidadeOrigem || s.emailUnidadeOrigem || '—')} · ${data}</span>
         <span class="p-card-arrow" id="parrow-${s.id}">▶</span>
       </div>
@@ -1565,7 +1566,7 @@ function renderizarLista(el, lista, tipo) {
                 a.status === 'negado'    ? '❌' :
                 a.status === 'cancelado' ? '🚫' : '⏳'
               }</span>
-              <span class="p-assinante-nome">${escHtml(a.nome || a.email)}</span>
+              <span class="p-assinante-nome">${escHtml(a.nome || a.email)}${a.emExercicio ? ` <span style="color:var(--txt-3);font-weight:400;">— ${escHtml(a.cargo || 'e.e.')}${a.unidade ? ' · ' + escHtml(a.unidade) : ''}</span>` : ''}</span>
               ${a.status === 'negado' && _motivoNeg(a) ? `<span class="p-assinante-motivo">— ${escHtml(_motivoNeg(a))}</span>` : ''}
               ${a.dataAcao ? `<span class="p-assinante-data">${new Date(a.dataAcao).toLocaleDateString('pt-BR')}</span>` : ''}
             </div>`).join('')}
@@ -1620,6 +1621,23 @@ window.pAccToggle = function(id) {
 /* Negativas antigas feitas pelo sino gravavam o texto em 'motivoNegacao' */
 function _motivoNeg(a) { return a.motivo || a.motivoNegacao || ''; }
 
+// ── Assinatura em exercício (e.e.): o lugar é de outra unidade/SR, mas quem assina sou eu ──
+function _minhasEmExercicio(s) {
+  return (s.assinantes || []).filter(a => a.emExercicio && a.status === 'pendente' && mesmoUsuario(a.email, usuarioAtual?.email));
+}
+function _etiquetaExercicio(s) {
+  return _minhasEmExercicio(s).map(a =>
+    `<span style="flex-shrink:0;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;">🔁 Em exercício — ${escHtml(a.unidade || a.emailUnidade || '')}</span>`
+  ).join('');
+}
+function _avisoExercicio(s) {
+  const ee = _minhasEmExercicio(s);
+  if (!ee.length) return '';
+  return `<div style="background:#fffbeb;border:1px solid #fbbf24;color:#92400e;padding:9px 12px;border-radius:6px;font-size:.82rem;margin-bottom:10px;">
+    🔁 Você está assinando como <strong>${ee.map(a => escHtml((a.cargo || 'e.e.') + ' — ' + (a.unidade || a.emailUnidade || ''))).join('</strong> e como <strong>')}</strong>.
+  </div>`;
+}
+
 function calcularStatusGeral(assinantes, statusDoc) {
   if (statusDoc === 'cancelado')                       return { label: 'Cancelado',    classe: 'cancelado' };
   if (!assinantes.length)                              return { label: 'Aguardando',   classe: 'pendente' };
@@ -1659,6 +1677,7 @@ window.assinarOficio = async function (id) {
           <div style="font-size:.62rem;font-weight:700;color:var(--azul-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Resumo Sintético — Cadastro IPEN</div>
           <p style="font-size:.84rem;color:#1e3a8a;line-height:1.65;margin:0;">${escHtml(s.resumo)}</p>
         </div>` : ''}
+      ${_avisoExercicio(s)}
       <p style="font-size:.82rem;color:var(--txt-3);margin:0;">Confirma sua anuência ao presente expediente?</p>`;
 
     modalConf.style.display = 'flex';
@@ -2090,7 +2109,7 @@ window.verDetalheOficio = async function (id) {
         <span style="font-size:1rem;flex-shrink:0;margin-top:1px;">${icone}</span>
         <div style="flex:1;">
           <div style="font-size:.84rem;font-weight:600;color:var(--txt-1);">${escHtml(a.nome || a.email)}</div>
-          ${a.cargo ? `<div style="font-size:.72rem;color:var(--txt-3);">${escHtml(a.cargo)}</div>` : ''}
+          ${a.cargo ? `<div style="font-size:.72rem;color:var(--txt-3);">${escHtml(a.cargo)}${a.emExercicio && a.unidade ? ' — ' + escHtml(a.unidade) : ''}</div>` : ''}
           ${_motivoNeg(a) ? `<div style="font-size:.75rem;color:var(--vermelho);margin-top:2px;">Negativa: ${escHtml(_motivoNeg(a))}</div>` : ''}
           ${dtStr ? `<div style="font-size:.7rem;color:var(--txt-4);margin-top:2px;">${dtStr}</div>` : ''}
         </div>
@@ -2303,7 +2322,7 @@ window.gerarPDFValidado = async function (id) {
         <td style="padding:6pt 8pt;font-size:8.5pt;font-weight:700;color:${cor};white-space:nowrap;vertical-align:top;">${icone}</td>
         <td style="padding:6pt 8pt;font-size:8.5pt;vertical-align:top;">
           <strong>${escHtml(a.nome || a.email)}</strong>
-          ${a.cargo ? `<br><span style="color:#555;">${escHtml(a.cargo)}</span>` : ''}
+          ${a.cargo ? `<br><span style="color:#555;">${escHtml(a.cargo)}${a.emExercicio && a.unidade ? ' — ' + escHtml(a.unidade) : ''}</span>` : ''}
           <br><span style="color:#666;font-size:8pt;">${escHtml(dtStr)}</span>
           ${_motivoNeg(a) ? `<br><span style="color:#dc2626;font-size:8pt;">Motivo: ${escHtml(_motivoNeg(a))}</span>` : ''}
         </td>
@@ -3309,6 +3328,7 @@ window.criarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeO
       status:       'pendente',
       dataAcao:     null,
       motivo:       null,
+      ...(a.emExercicio ? { emExercicio: true, cargo: a.cargo || '', unidade: a.unidade || '' } : {}),
     })),
     statusGeral:  'em_andamento',
     ...(transf ? { transf } : {}),

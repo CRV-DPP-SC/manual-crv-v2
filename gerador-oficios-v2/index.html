@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerador de Ofícios — CRV/DPP</title>
-  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/app.css?v=2">
   <link rel="stylesheet" href="css/oficio.css">
 </head>
 <body>
@@ -142,21 +142,36 @@
   </div>
 </div>
 
+<!-- Assinatura em exercício: escolha do(a) substituto(a) — js/substituto.js -->
+<div class="modal-bg" id="ssBg" style="z-index:250;">
+  <div class="modal" style="width:min(96vw,520px);">
+    <div class="modal-head">
+      <h3 id="ssTitulo">Quem responde?</h3>
+      <button onclick="fecharSeletorSubstituto()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" id="ssBusca" class="ss-busca" placeholder="Nome da pessoa, unidade ou regional" oninput="_renderizarSubstitutos()" autocomplete="off">
+      <div id="ssLista" class="ss-lista"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════════ SCRIPTS (ordem de dependência) ════════════════════════ -->
-<script type="module" src="js/firebase-v2.js?v=8"></script>
-<script type="module" src="../js/notificacoes.js?v=26"></script>
+<script type="module" src="js/firebase-v2.js?v=9"></script>
+<script type="module" src="../js/notificacoes.js?v=27"></script>
 <script src="js/dados.js?v=4"></script>
 <script src="js/utils.js?v=4"></script>
-<script src="js/documento.js?v=5"></script>
+<script src="js/documento.js?v=6"></script>
 <script src="js/templates.js?v=4"></script>
-<script src="js/estado.js?v=4"></script>
+<script src="js/estado.js?v=5"></script>
 <script src="js/persistencia.js?v=4"></script>
 <script src="js/exportar.js?v=4"></script>
 <script src="js/modal-unidade.js?v=4"></script>
 <script src="js/modal-cj.js?v=5"></script>
 <script src="js/preview.js?v=4"></script>
 <script src="js/formulario.js?v=4"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/substituto.js?v=1"></script>
+<script src="js/app.js?v=6"></script>
 <script src="js/comunicacao-painel.js?v=1"></script>
 
 </body>

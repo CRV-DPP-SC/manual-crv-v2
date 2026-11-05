@@ -65,8 +65,19 @@ export function pendentesDe(assinantes, statusGeral) {
   return [...new Set(lista.filter(a => a.status === 'pendente' && a.email).map(a => emailCanonico(a.email)))];
 }
 /** unidadesLista: [{ email|em, sr }] (window.UNIDADES do site ou UNS do Gerador) */
+// 'pr24dir@…' → 'pr24@…'; 'sr06sr@…' → 'sr06@…' (unidade/SR de que a pessoa é titular)
+export function unidadeDoLogin(email) {
+  const e = emailCanonico(email);
+  const sr = e.match(RE_SUPERINTENDENTE);
+  if (sr) return sr[1] + '@pp.sc.gov.br';
+  const m = e.match(/^(.+)(dir|cpen)@pp\.sc\.gov\.br$/);
+  return m ? m[1] + '@pp.sc.gov.br' : '';
+}
 export function indiceSolicitacao(s, unidadesLista) {
-  const unidades = [...new Set([s.emailUnidadeOrigem, ...(s.assinantes || []).map(a => a.emailUnidade)]
+  // Assinatura em exercício: a unidade de que o(a) substituto(a) é titular também entra,
+  // para o pedido aparecer no Painel dele(a)
+  const exercicio = (s.assinantes || []).filter(a => a.emExercicio).map(a => unidadeDoLogin(a.email));
+  const unidades = [...new Set([s.emailUnidadeOrigem, ...(s.assinantes || []).map(a => a.emailUnidade), ...exercicio]
     .filter(Boolean).map(e => e.toLowerCase()))];
   const srs = new Set();
   unidades.forEach(e => {

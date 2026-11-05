@@ -8,7 +8,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, orderBy, where,
          onSnapshot, doc, getDoc, updateDoc, setDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico, pendentesDe } from "./config-crv.js?v=6";
+import { FIREBASE_CONFIG, EMAILS_CRV, RE_SUPERINTENDENTE, srDoSuperintendente, emailSuperintendencia, mesmoUsuario, emailCanonico, pendentesDe } from "./config-crv.js?v=7";
 import { avisoParaMim, ouvirAvisosAtivos, meusAvisosLidos, confirmarLeitura, textoAvisoHtml } from "./avisos.js?v=3";
 import { garantirEquipe } from "./equipe-crv.js?v=2";
 import { definirContador, limparContador } from "./badge-app.js";
@@ -863,6 +863,7 @@ function _renderizarLista() {
         <div class="ntf-item-top">
           <div class="ntf-item-titulo">${_esc(s.titulo || 'Ofício s/ título')}</div>
           <div class="ntf-item-origem">${_esc(s.nomeUnidadeOrigem || s.emailUnidadeOrigem || '—')}${data ? ' · ' + data : ''}</div>
+          ${_ntfEmExercicio(s).map(a => '<div style="display:inline-block;margin:4px 0;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;">🔁 Em exercício — ' + _esc(a.unidade || a.emailUnidade || '') + '</div>').join('')}
           ${presosHtml}
           ${resumoHtml}
         </div>
@@ -922,6 +923,12 @@ window._ntfFechar = function() {
   if (painel) painel.classList.remove('aberto');
 };
 
+// Assinatura em exercício (e.e.): lugares de outra unidade/SR em que quem assina sou eu
+function _ntfEmExercicio(s) {
+  const eu = _auth.currentUser?.email;
+  return (s.assinantes || []).filter(a => a.emExercicio && a.status === 'pendente' && mesmoUsuario(a.email, eu));
+}
+
 window._ntfAbrirConf = function(id) {
   const s = _pendentes.find(x => x.id === id);
   if (!s) return;
@@ -949,6 +956,7 @@ window._ntfAbrirConf = function(id) {
     <p style="font-size:.88rem;font-weight:600;color:#0f172a;margin:0 0 8px;">${_esc(s.titulo || 'Ofício s/ título')}</p>
     ${presosHtml}
     ${resumoHtml}
+    ${_ntfEmExercicio(s).map(a => '<div style="background:#fffbeb;border:1px solid #fbbf24;color:#92400e;padding:9px 12px;border-radius:6px;font-size:.82rem;margin-bottom:10px;">🔁 Você está assinando como <strong>' + _esc((a.cargo || 'e.e.') + ' — ' + (a.unidade || a.emailUnidade || '')) + '</strong>.</div>').join('')}
     <p style="font-size:.8rem;color:#64748b;margin:0;">Confirma sua anuência ao presente expediente?</p>`;
 
   document.getElementById('ntf-modal-conf').classList.add('aberto');

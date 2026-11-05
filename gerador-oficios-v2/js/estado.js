@@ -24,6 +24,7 @@ var Estado = (function() {
       regime: '', alocacao: '',
       bpi: '', bpiMotivo: '',
       dd: true, sro: false, srd: false,
+      subst: {},   /* assinatura em exercício — ver substituto.js */
       comorbidades: [], medicamentos: [],
       saudeOpcao: null,
     };
