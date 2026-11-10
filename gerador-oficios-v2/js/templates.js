@@ -153,16 +153,34 @@ function gerarCorpo(s) {
 
   /* ── EMERGENCIAL ── */
   else if (s.mod === 'emergencial') {
-    var cp  = s.sub === 'com_pad';
-    var sit = s.sit ? fld(s.sit) : ph('situação concreta');
-    var padTxt = cp ? [
-      'Informa-se que ' + fld(s.pad || ph('FOI/SERÁ INSTAURADO')) + ' o Procedimento Administrativo Disciplinar (PAD), nos termos da legislação vigente, em razão de conduta <strong>supostamente</strong> enquadrada no ' + fld((s.faltaCod || ph('Art.')) + ' — ' + (s.faltaDesc || ph('descrição da falta'))) + ', cujos fatos serão devidamente apurados.',
-      'A presente medida possui natureza administrativa e cautelar, sem caráter punitivo, sem prejuízo da regular apuração no âmbito do PAD.',
-    ] : [
-      (isMulti
-        ? 'A medida possui natureza administrativa, não estando vinculada à prática de falta grave, sendo vedada qualquer forma de isolamento dos(as) reeducandos(as).'
-        : 'A medida possui natureza administrativa, não estando vinculada à prática de falta grave, sendo vedada qualquer forma de isolamento do(a) reeducando(a).'),
-    ];
+    var sit    = s.sit ? fld(s.sit) : ph('situação concreta');
+    var isDisc = s.sub === 'disc_instaurado' || s.sub === 'disc_instaurar';
+
+    var faltasTxt = (s.faltas && s.faltas.length)
+      ? s.faltas.map(function(cod) {
+          var f = FALTAS.filter(function(x) { return x.c === cod; })[0];
+          return f ? (f.c + ' — ' + f.d) : cod;
+        }).join('; ')
+      : ph('infração(ões) disciplinar(es)');
+
+    var padTxt;
+    if (isDisc) {
+      var instaurPart = s.sub === 'disc_instaurado' ? 'foi instaurado' : 'será instaurado';
+      padTxt = [
+        'Informa-se que ' + fld(instaurPart) + ' o Procedimento Administrativo Disciplinar (PAD), nos termos da legislação vigente, em razão de o(a) reeducando(a) <strong>supostamente</strong> ter cometido a(s) infração(ões) disciplinar(es) prevista(s) no(s) ' + fld(faltasTxt) + ', cujos fatos serão devidamente apurados.',
+        'A presente medida possui natureza administrativa e cautelar, sem caráter punitivo, sem prejuízo da regular apuração no âmbito do PAD.',
+      ];
+    } else {
+      var motivos = {
+        isol_risco:    'decorrente de risco atual, concreto e relevante à integridade física do(a) próprio(a) reeducando(a) ou de outrem',
+        isol_ordem:    'necessária à manutenção da ordem e da disciplina no estabelecimento penal',
+        isol_apuracao: 'destinada a viabilizar a apuração dos fatos/ocorrência relatados',
+      };
+      padTxt = [
+        'A medida possui natureza administrativa e cautelar, ' + (motivos[s.sub] || ph('motivo')) + ', não estando vinculada à prática de falta disciplinar, sendo vedada qualquer forma de isolamento '
+          + (isMulti ? 'dos(as) reeducandos(as)' : 'do(a) reeducando(a)') + '.',
+      ];
+    }
     if (isMulti) {
       ps = [
         'Encaminho para análise urgente pedido de transferência excepcional ' + refAnexo + ' custodiados(as) no(a) ' + nOri + ', em razão de situação emergencial identificada pelas equipes deste estabelecimento penal.',

@@ -39,6 +39,11 @@ var FormularioCtrl = (function() {
       document.getElementById('pernBg').classList.add('open');
       return;
     }
+    /* Emergencial: categoria/subcategoria são escolhidas em modal próprio antes do formulário */
+    if (mod === 'emergencial') {
+      abrirModalEmergencial();
+      return;
+    }
     /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV (padrão fixo) */
     var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : 'Senhor(a) Coordenador(a),';
     var patch = { mod: mod, sub: null, sau: sauInicial, desp: 'Respeitosamente,' };
@@ -53,6 +58,128 @@ var FormularioCtrl = (function() {
     if (!confirm('Trocar o tipo apagará os dados já preenchidos. Deseja continuar?')) return;
     Estado.reset();
     _renderizarCards();
+  }
+
+  /* ── Modal Emergencial: categoria (Disciplinar / Isolamento Necessário) → subcategoria ── */
+  var EMERG_CATEGORIAS = [
+    { id:'disciplinar', icon:'⚖️', nome:'Disciplinar', desc:'Resultado de suposta infração disciplinar (grave, média ou leve).' },
+    { id:'isolamento',  icon:'🛑', nome:'Isolamento Necessário', desc:'Medida cautelar e administrativa, sem caráter disciplinar.' },
+  ];
+  var EMERG_SUB = {
+    disciplinar: [
+      { id:'disc_instaurado', icon:'✅', nome:'PAD Instaurado', desc:'O Procedimento Administrativo Disciplinar já foi instaurado.' },
+      { id:'disc_instaurar',  icon:'⏳', nome:'PAD a Instaurar', desc:'O PAD ainda será instaurado em razão da conduta.' },
+    ],
+    isolamento: [
+      { id:'isol_risco',    icon:'🛡️', nome:'Risco à integridade física', desc:'Do(a) próprio(a) reeducando(a) ou de outrem.' },
+      { id:'isol_ordem',    icon:'🚧', nome:'Manutenção da Ordem e Disciplina' },
+      { id:'isol_apuracao', icon:'🔍', nome:'Apuração de Fatos/Ocorrências' },
+    ],
+  };
+  var EMERG_NOMES = {
+    disc_instaurado: '⚖️ Disciplinar — PAD instaurado',
+    disc_instaurar:  '⚖️ Disciplinar — PAD a instaurar',
+    isol_risco:       '🛑 Isolamento Necessário — Risco à integridade física',
+    isol_ordem:       '🛑 Isolamento Necessário — Manutenção da Ordem e Disciplina',
+    isol_apuracao:    '🛑 Isolamento Necessário — Apuração de Fatos/Ocorrências',
+  };
+  var EMERG_SIT_PLACEHOLDER = {
+    disc_instaurado: 'Ex.: Descreva os fatos que configuram a suposta infração...',
+    disc_instaurar:  'Ex.: Descreva os fatos que configuram a suposta infração...',
+    isol_risco:      'Ex.: Descreva o risco identificado e os fatos que o fundamentam...',
+    isol_ordem:      'Ex.: Descreva a situação que compromete a ordem/disciplina...',
+    isol_apuracao:   'Ex.: Descreva os fatos/ocorrência a ser apurada...',
+  };
+  var _emergCatAtual = null; /* null = tela de categorias; 'disciplinar' | 'isolamento' = tela de subcategoria */
+
+  function abrirModalEmergencial() {
+    _emergCatAtual = null;
+    _renderModalEmergencial();
+    document.getElementById('emergBg').classList.add('open');
+  }
+
+  function reabrirModalEmergencial() {
+    var s = Estado.get();
+    _emergCatAtual = s.sub && s.sub.indexOf('disc_') === 0 ? 'disciplinar' : (s.sub ? 'isolamento' : null);
+    _renderModalEmergencial();
+    document.getElementById('emergBg').classList.add('open');
+  }
+
+  function fecharModalEmergencial() {
+    document.getElementById('emergBg').classList.remove('open');
+  }
+
+  function _emergVoltar() {
+    _emergCatAtual = null;
+    _renderModalEmergencial();
+  }
+
+  function _emergEscolherCategoria(catId) {
+    _emergCatAtual = catId;
+    _renderModalEmergencial();
+  }
+
+  function _emergEscolherFinal(subId) {
+    Estado.setMany({ mod:'emergencial', sub: subId, faltas: [], sau:'Senhor(a) Coordenador(a),', desp:'Respeitosamente,' });
+    fecharModalEmergencial();
+    _renderizarFormulario();
+  }
+
+  function _emergTile(o, onclick) {
+    return '<div class="emerg-tile" onclick="' + onclick + '">'
+      + '<div class="emerg-tile-icon">' + o.icon + '</div>'
+      + '<div class="emerg-tile-nome">' + o.nome + '</div>'
+      + (o.desc ? '<div class="emerg-tile-desc">' + o.desc + '</div>' : '')
+      + '</div>';
+  }
+
+  function _renderModalEmergencial() {
+    var modal = document.getElementById('emergModal');
+    if (!modal) return;
+    var html;
+
+    if (!_emergCatAtual) {
+      html = '<div class="modal-head"><h3>🚨 Transferência Emergencial</h3><button onclick="FormularioCtrl.fecharModalEmergencial()">✕</button></div>'
+        + '<div class="modal-body">'
+          + '<div class="emerg-sub">Art. 21, I — Resolução Conjunta 01/2026</div>'
+          + '<div class="campo-label" style="margin-top:14px;">Selecione a categoria:</div>'
+          + '<div class="emerg-tiles">'
+          + EMERG_CATEGORIAS.map(function(c) {
+              return _emergTile({ icon:c.icon, nome:c.nome.toUpperCase(), desc:c.desc }, "FormularioCtrl._emergEscolherCategoria('" + c.id + "')");
+            }).join('')
+          + '</div>'
+          + '<div class="emerg-nota">📌 Em ambas as categorias a fundamentação legal citada no ofício será sempre o <strong>art. 21, I</strong>.</div>'
+        + '</div>';
+    } else {
+      var cat     = _emergCatAtual;
+      var subs    = EMERG_SUB[cat];
+      var catNome = cat === 'disciplinar' ? 'Disciplinar' : 'Isolamento Necessário';
+      var catIcon = cat === 'disciplinar' ? '⚖️' : '🛑';
+      html = '<div class="modal-head"><h3>' + catIcon + ' ' + catNome + '</h3><button onclick="FormularioCtrl.fecharModalEmergencial()">✕</button></div>'
+        + '<div class="modal-body">'
+          + '<button class="emerg-voltar" onclick="FormularioCtrl._emergVoltar()">← Voltar à categoria</button>'
+          + '<div class="campo-label" style="margin-top:14px;">' + (cat === 'disciplinar' ? 'Selecione a situação do PAD:' : 'Selecione o motivo:') + '</div>'
+          + '<div class="emerg-tiles' + (cat === 'isolamento' ? ' emerg-tiles-col' : '') + '">'
+          + subs.map(function(o) {
+              return _emergTile(o, "FormularioCtrl._emergEscolherFinal('" + o.id + "')");
+            }).join('')
+          + '</div>'
+          + (cat === 'disciplinar'
+              ? '<div class="emerg-nota">📌 Em ambos os casos: seleção <strong>múltipla</strong> da(s) falta(s) grave(s) — art. 50 da LEP.</div>'
+              : '<div class="emerg-nota">📌 Casos finais, sem subdivisão.</div>')
+        + '</div>';
+    }
+    modal.innerHTML = html;
+  }
+
+  /* ── Seleção múltipla de faltas graves (Art. 50 da LEP) ── */
+  function _faltasMultiSelect(selecionadas) {
+    return '<div class="chip-group falta-chip-group">'
+      + FALTAS.map(function(f) {
+          var sel = selecionadas.indexOf(f.c) >= 0;
+          return '<button class="chip falta-chip' + (sel ? ' sel' : '') + '" data-falta="' + _esc(f.c) + '" title="' + _esc(f.d) + '">' + f.c + '</button>';
+        }).join('')
+      + '</div>';
   }
 
   /* ── Renderiza o formulário completo para a modalidade atual ── */
@@ -97,9 +224,9 @@ var FormularioCtrl = (function() {
     };
     var sub = '';
     if (s.sub) {
-      var subs = {com_pad:'Com PAD — falta grave', sem_pad:'Sem PAD — risco à integridade',
+      var subs = Object.assign({
         pontual:'Transferência', regime:'Alteração de Regime',
-        saida:'Saída', entrada:'Entrada'};
+        saida:'Saída', entrada:'Entrada'}, EMERG_NOMES);
       sub = subs[s.sub] ? '<span class="header-sub">' + subs[s.sub] + '</span>' : '';
     }
     return '<div class="mod-header">'
@@ -117,9 +244,15 @@ var FormularioCtrl = (function() {
   /* ── Seção: Subtipo ── */
   function _secaoSubtipo(s) {
     var mod = s.mod;
-    if (!['emergencial','adequacao','ajuste_lotacional','comunicacao','resumo_ipen'].includes(mod)) return '';
+    if (mod === 'emergencial') {
+      var html = '<div class="emerg-escolha-atual">'
+        + '<span>' + (EMERG_NOMES[s.sub] || '—') + '</span>'
+        + '<button class="btn-alterar-cat" onclick="FormularioCtrl.reabrirModalEmergencial()">Alterar ▾</button>'
+        + '</div>';
+      return _secao('sub', 'Categoria', html, s.sub ? '✓' : '○', false);
+    }
+    if (!['adequacao','ajuste_lotacional','comunicacao','resumo_ipen'].includes(mod)) return '';
     var opts = [];
-    if (mod === 'emergencial') opts = [['com_pad','📋 Com PAD — falta grave'],['sem_pad','⚠ Sem PAD — risco à integridade']];
     if (mod === 'adequacao' || mod === 'ajuste_lotacional') opts = [['pontual','📋 Transferência'],['regime','🔄 Alteração de Regime']];
     if (mod === 'comunicacao') opts = [['saida','🚀 Saída — preso saiu desta unidade'],['entrada','🏠 Entrada — preso chegou nesta unidade']];
     if (mod === 'resumo_ipen') opts = [['art1','🚨 Art. 21, I — Emergencial'],['art3','⚖ Art. 21, III — Demais hipóteses']];
@@ -280,21 +413,14 @@ var FormularioCtrl = (function() {
     var ok = false;
 
     if (mod === 'emergencial') {
-      html += _textarea('sit', 'Situação concreta (descreva detalhadamente)', s.sit, 'Ex.: O reeducando ameaçou agentes...', true);
-      if (s.sub === 'com_pad') {
-        html += '<div class="campo-label">Quanto ao PAD</div>'
-          + '<div class="chip-group">'
-          + _chip('pad','FOI INSTAURADO','✓ Foi instaurado', s.pad === 'FOI INSTAURADO', true)
-          + _chip('pad','SERÁ INSTAURADO','📋 Será instaurado', s.pad === 'SERÁ INSTAURADO', true)
-          + '</div>'
-          + '<div class="campo-label">Falta disciplinar (LEP)</div>'
-          + '<select id="sel-falta" class="sel-falta">'
-          + '<option value="">Selecione o inciso</option>'
-          + FALTAS.map(function(f, i) {
-              return '<option value="' + i + '"' + (s.faltaCod === f.c ? ' selected' : '') + '>' + f.c + ' — ' + f.d + '</option>';
-            }).join('')
-          + '</select>';
-        ok = !!s.sit && !!s.pad && !!s.faltaCod;
+      var isDisc = s.sub && s.sub.indexOf('disc_') === 0;
+      var placeholder = EMERG_SIT_PLACEHOLDER[s.sub] || 'Ex.: Descreva a situação concreta...';
+      html += _textarea('sit', 'Situação concreta (descreva detalhadamente)', s.sit, placeholder, true);
+      if (isDisc) {
+        html += '<div class="campo-label">Infração(ões) disciplinar(es) — seleção múltipla</div>'
+          + '<div class="campo-hint">Será consignado que o(a) reeducando(a) supostamente cometeu a(s) infração(ões) indicada(s).</div>'
+          + _faltasMultiSelect(s.faltas || []);
+        ok = !!s.sit && !!(s.faltas && s.faltas.length);
       } else {
         ok = !!s.sit;
       }
@@ -500,7 +626,7 @@ var FormularioCtrl = (function() {
   /* ── Vincula eventos após renderização ── */
   function _vincularEventos(s) {
     /* Chips */
-    document.querySelectorAll('#form-area .chip').forEach(function(btn) {
+    document.querySelectorAll('#form-area .chip:not(.falta-chip)').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var field = this.dataset.field;
         var val   = this.dataset.val;
@@ -556,16 +682,17 @@ var FormularioCtrl = (function() {
       inpNum.addEventListener('input', function() { Estado.set('numOficio', this.value); });
     }
 
-    /* Select falta LEP */
-    var selFalta = document.getElementById('sel-falta');
-    if (selFalta) {
-      selFalta.addEventListener('change', function() {
-        var idx = parseInt(this.value);
-        if (!isNaN(idx) && FALTAS[idx]) {
-          Estado.setMany({faltaCod: FALTAS[idx].c, faltaDesc: FALTAS[idx].d});
-        }
+    /* Chips de falta disciplinar (seleção múltipla) */
+    document.querySelectorAll('#form-area .falta-chip').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var cod = this.dataset.falta;
+        var faltas = (Estado.get('faltas') || []).slice();
+        var idx = faltas.indexOf(cod);
+        if (idx >= 0) faltas.splice(idx, 1); else faltas.push(cod);
+        Estado.set('faltas', faltas);
+        _renderizarFormulario();
       });
-    }
+    });
 
     /* Inputs de reeducandos */
     document.querySelectorAll('.inp-reed[data-ri]').forEach(function(inp) {
@@ -792,6 +919,12 @@ var FormularioCtrl = (function() {
     inicializar: inicializar,
     selecionarMod: selecionarMod,
     trocarMod: trocarMod,
+    abrirModalEmergencial: abrirModalEmergencial,
+    reabrirModalEmergencial: reabrirModalEmergencial,
+    fecharModalEmergencial: fecharModalEmergencial,
+    _emergVoltar: _emergVoltar,
+    _emergEscolherCategoria: _emergEscolherCategoria,
+    _emergEscolherFinal: _emergEscolherFinal,
     adicionarReed: adicionarReed,
     removerReed: removerReed,
     adicionarPermutaDes: adicionarPermutaDes,

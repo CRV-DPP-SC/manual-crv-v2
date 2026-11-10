@@ -16,7 +16,7 @@ var Estado = (function() {
       ori: null, des: null,
       sau: '', desp: '',
       numOficio: null,
-      juizo: '', sit: '', pad: '', faltaCod: '', faltaDesc: '',
+      juizo: '', sit: '', faltas: [],
       razPernoite: '', dataTrans: '', motComun: '', motTransf: '',
       motTransfPermuta: '', motPermuta: '', motPermutaDes: '', motIndicacao: '',
       permutaDes: [],

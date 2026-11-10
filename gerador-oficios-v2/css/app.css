@@ -542,6 +542,54 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
 .modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
 .modal-foot { padding: 12px 20px; border-top: 1px solid var(--borda); display: flex; gap: 8px; justify-content: flex-end; }
 
+/* ── Modal Emergencial (categoria/subcategoria) ── */
+.emerg-sub { font-size: .72rem; font-weight: 700; color: var(--azul3); text-transform: uppercase; letter-spacing: .03em; }
+.emerg-voltar {
+  background: none; border: none; color: var(--azul3); font-size: .78rem; font-weight: 700;
+  cursor: pointer; padding: 0; font-family: inherit;
+}
+.emerg-voltar:hover { color: var(--azul); }
+
+.emerg-tiles { display: flex; gap: 14px; margin-top: 10px; }
+.emerg-tiles-col { flex-direction: column; }
+
+.emerg-tile {
+  flex: 1;
+  border: 2px solid var(--borda);
+  border-radius: 12px;
+  padding: 16px 16px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.emerg-tiles-col .emerg-tile { display: flex; align-items: center; gap: 14px; }
+.emerg-tile:hover { border-color: var(--azul3); background: #f0f5ff; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,.1); }
+
+.emerg-tile-icon { font-size: 1.6rem; }
+.emerg-tile-nome { font-size: .88rem; font-weight: 800; color: var(--azul); margin-top: 8px; }
+.emerg-tiles-col .emerg-tile-nome { margin-top: 0; }
+.emerg-tile-desc { font-size: .74rem; color: #667; margin-top: 4px; line-height: 1.4; }
+
+.emerg-nota {
+  margin-top: 16px; background: #f5f8fc; border-left: 3px solid var(--azul3);
+  border-radius: 8px; padding: 10px 14px; font-size: .74rem; color: #30415e; line-height: 1.5;
+}
+
+.emerg-escolha-atual {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #f5f8fc; border-radius: 8px; padding: 10px 14px;
+  font-size: .82rem; font-weight: 700; color: var(--azul);
+}
+.btn-alterar-cat {
+  background: #fff; color: var(--azul3); border: 1.5px solid var(--azul3); border-radius: 14px;
+  padding: 5px 12px; font-size: .72rem; font-weight: 700; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0; font-family: inherit;
+}
+.btn-alterar-cat:hover { background: var(--azul3); color: #fff; }
+
+.falta-grupo-label { font-size: .7rem; font-weight: 700; color: #667; text-transform: uppercase; letter-spacing: .02em; margin: 10px 0 6px; }
+.falta-chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.falta-chip { padding: 5px 11px; font-size: .74rem; }
+
 /* ── Modal Seletor de Unidade ── */
 #umBg .modal { width: min(96vw, 560px); }
 

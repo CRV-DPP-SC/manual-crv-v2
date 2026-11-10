@@ -152,7 +152,7 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
           <div class="ri" data-v="RETPERNOITE" onclick="selMod('RETPERNOITE')"><div class="rd"><div class="rdi"></div></div><div class="rl">Retorno de Pernoite<small>Retorno à unidade de origem após pernoite em unidade diversa (consulta, audiência ou outro)</small></div></div>
           <div class="ri" data-v="REGIME"   onclick="selMod('REGIME')"><div class="rd"><div class="rdi"></div></div><div class="rl">Alteração do Regime<small>Transferência decorrente de decisão judicial de progressão/regressão de regime</small></div></div>
           <div class="ri" data-v="CONVIVIO" onclick="selMod('CONVIVIO')"><div class="rd"><div class="rdi"></div></div><div class="rl">Falta de Convívio na Unidade de Origem<small>Dificuldade de convívio entre o(a) reeducando(a) e demais colegas de cárcere</small></div></div>
-          <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Inobservância de Procedimentos<small style="color:var(--texto2)">Reunião 05/05/2026 — texto fixo, sem etapas adicionais</small></div></div>
+          <div class="ri" data-v="PROC"     onclick="selMod('PROC')"><div class="rd"><div class="rdi"></div></div><div class="rl" style="color:var(--verm)">Indeferimento do Pedido<small style="color:var(--texto2)">Selecione o(s) motivo(s) do indeferimento</small></div></div>
         </div>
       </div>
     </div>
@@ -168,20 +168,53 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
       </div>
     </div>
 
-    <!-- 3. PAD (Emergencial) -->
-    <div class="sec off" id="s4pad">
-      <div class="sec-head"><div class="sec-num">3</div>Procedimento Administrativo Disciplinar (PAD)</div>
-      <div class="sec-body">
-        <div class="rg" id="gPad">
-          <div class="ri" data-v="com_pad" onclick="selPad('com_pad')"><div class="rd"><div class="rdi"></div></div><div class="rl">📋 Com PAD<small>Falta grave — isolamento preventivo</small></div></div>
-          <div class="ri" data-v="sem_pad" onclick="selPad('sem_pad')"><div class="rd"><div class="rdi"></div></div><div class="rl">⚠ Sem PAD<small>Risco à integridade, sem falta grave</small></div></div>
+    <!-- 2. Motivo(s) do Indeferimento -->
+    <div class="sec off" id="sProc">
+      <div class="sec-head"><div class="sec-num">2</div>Motivo(s) do indeferimento</div>
+      <div class="sec-body" id="gProc">
+        <div class="ci" data-v="motivacao" onclick="togProc('motivacao')">
+          <div class="ci-h"><div class="cb"></div><div class="ct">Ausência de motivação clara</div></div>
+        </div>
+        <div class="ci" data-v="assin_gestor" onclick="togProc('assin_gestor')">
+          <div class="ci-h"><div class="cb"></div><div class="ct">Ausência de assinatura do(s) gestor(es)</div></div>
+        </div>
+        <div class="ci" data-v="assin_superintendente" onclick="togProc('assin_superintendente')">
+          <div class="ci-h"><div class="cb"></div><div class="ct">Ausência de assinatura do(s) Superintendente(s)</div></div>
+        </div>
+        <div class="ci" data-v="criterio" onclick="togProc('criterio')">
+          <div class="ci-h"><div class="cb"></div><div class="ct">Falta de clareza quanto ao critério para escolha do(a) reeducando(a) indicado(a)</div></div>
+        </div>
+        <div class="ci" data-v="outro" onclick="togProc('outro')">
+          <div class="ci-h"><div class="cb"></div><div class="ct">Outro</div></div>
+          <div class="csub" id="csubProcOutro">
+            <input id="iProcOutro" class="inp" type="text" placeholder="Descreva o motivo..." onclick="event.stopPropagation()" oninput="S.procOutro=this.value;render()">
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 4. PRAZO -->
+    <!-- 3. Categoria (Emergencial) -->
+    <div class="sec off" id="s4cat">
+      <div class="sec-head"><div class="sec-num">3</div>Categoria</div>
+      <div class="sec-body">
+        <div class="rg" id="gCatEmerg">
+          <div class="ri" data-v="disciplinar" onclick="selCatEmerg('disciplinar')"><div class="rd"><div class="rdi"></div></div><div class="rl">⚖️ Disciplinar<small>Resultado de suposta infração disciplinar</small></div></div>
+          <div class="ri" data-v="isolamento" onclick="selCatEmerg('isolamento')"><div class="rd"><div class="rdi"></div></div><div class="rl">🛑 Isolamento Necessário<small>Medida cautelar e administrativa, sem caráter disciplinar</small></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Situação (Emergencial) -->
+    <div class="sec off" id="s4sub">
+      <div class="sec-head"><div class="sec-num">4</div>Situação</div>
+      <div class="sec-body">
+        <div class="rg" id="gSubEmerg"></div>
+      </div>
+    </div>
+
+    <!-- 5. PRAZO -->
     <div class="sec off" id="s4">
-      <div class="sec-head"><div class="sec-num">4</div>Prazo para efetivação</div>
+      <div class="sec-head"><div class="sec-num">5</div>Prazo para efetivação</div>
       <div class="sec-body">
         <div class="rg h" id="gPrazo">
           <div class="ri" data-v="24 horas" onclick="selPrazo('24 horas')"><div class="rd"><div class="rdi"></div></div><div class="rl">24 horas</div></div>
@@ -260,7 +293,8 @@ html,body{height:100%;font-family:"Segoe UI",system-ui,sans-serif;background:var
 // ── ESTADO ────────────────────────────────────────────────────
 var S = {
   mod:null, sub:null,
-  pad:null,
+  catEmerg:null, subEmerg:null,
+  procMotivos:[], procOutro:'',
   prazo:null, prazoCustom:'',
   fin:null, finCustom:'', sgpe:'',
   finR:null, finRCustom:''
@@ -268,8 +302,9 @@ var S = {
 
 // ── SELEÇÃO ───────────────────────────────────────────────────
 function selMod(v){
-  S.mod=v; S.sub=null; S.pad=null; S.prazo=null; S.prazoCustom=''; S.fin=null; S.finCustom=''; S.sgpe='';
-  rg('gSub',null); rg('gPad',null); rg('gPrazo',null); rg('gFin',null);
+  S.mod=v; S.sub=null; S.catEmerg=null; S.subEmerg=null; S.prazo=null; S.prazoCustom=''; S.fin=null; S.finCustom=''; S.sgpe='';
+  S.procMotivos=[]; S.procOutro=''; _resetProcUI();
+  rg('gSub',null); rg('gCatEmerg',null); g('gSubEmerg').innerHTML=''; rg('gPrazo',null); rg('gFin',null);
   g('iPrazo').style.display='none'; g('iPrazo').value='';
   g('iFin').style.display='none'; g('iFin').value='';
   g('iSgpe').value='';
@@ -288,7 +323,50 @@ function selFinR(v){
   render();
 }
 function selSub(v){ S.sub=v; rg('gSub',v); render(); }
-function selPad(v){ S.pad=v; rg('gPad',v); render(); }
+
+var EMERG_SUB_OPTS = {
+  disciplinar: [
+    ['disc_instaurado','✅ PAD Instaurado','O Procedimento Administrativo Disciplinar já foi instaurado.'],
+    ['disc_instaurar', '⏳ PAD a Instaurar','O PAD ainda será instaurado em razão da conduta.'],
+  ],
+  isolamento: [
+    ['isol_risco',    '🛡️ Risco à integridade física','Do(a) próprio(a) reeducando(a) ou de outrem.'],
+    ['isol_ordem',    '🚧 Manutenção da Ordem e Disciplina', ''],
+    ['isol_apuracao', '🔍 Apuração de Fatos/Ocorrências', ''],
+  ],
+};
+function selCatEmerg(v){
+  S.catEmerg=v; S.subEmerg=null;
+  rg('gCatEmerg',v);
+  g('gSubEmerg').innerHTML=(EMERG_SUB_OPTS[v]||[]).map(function(o){
+    return '<div class="ri" data-v="'+o[0]+'" onclick="selSubEmerg(\''+o[0]+'\')"><div class="rd"><div class="rdi"></div></div><div class="rl">'+o[1]+(o[2]?'<small>'+o[2]+'</small>':'')+'</div></div>';
+  }).join('');
+  ui(); render();
+}
+function selSubEmerg(v){ S.subEmerg=v; rg('gSubEmerg',v); render(); }
+
+function togProc(v){
+  var idx=S.procMotivos.indexOf(v);
+  if(idx>=0) S.procMotivos.splice(idx,1); else S.procMotivos.push(v);
+  var sel=S.procMotivos.indexOf(v)>=0;
+  var el=document.querySelector('#gProc .ci[data-v="'+v+'"]');
+  el.classList.toggle('sel-r', sel);
+  el.querySelector('.cb').textContent = sel?'✓':'';
+  if(v==='outro'){
+    var csub=g('csubProcOutro');
+    csub.classList.toggle('vis', sel);
+    if(sel) g('iProcOutro').focus(); else { S.procOutro=''; g('iProcOutro').value=''; }
+  }
+  render();
+}
+function _resetProcUI(){
+  document.querySelectorAll('#gProc .ci').forEach(function(el){
+    el.classList.remove('sel-r');
+    el.querySelector('.cb').textContent='';
+  });
+  g('csubProcOutro').classList.remove('vis');
+  g('iProcOutro').value='';
+}
 function selPrazo(v){
   S.prazo=v; S.prazoCustom='';
   rg('gPrazo',v);
@@ -310,7 +388,9 @@ function selFin(v){
 function ui(){
   var m=S.mod;
   sec('s2', m==='PERMUTA');
-  sec('s4pad', m==='I');
+  sec('sProc', m==='PROC');
+  sec('s4cat', m==='I');
+  sec('s4sub', m==='I' && !!S.catEmerg);
   sec('s4', m==='I');
   sec('s5', m==='PERNOITE');
   sec('s5r', m==='RETPERNOITE');
@@ -330,19 +410,33 @@ function g(id){ return document.getElementById(id); }
 var PCOM='Após a efetivação da transferência, os estabelecimentos penais deverão comunicar ao Juízo competente no prazo máximo de 24 (vinte e quatro) horas em dias úteis, ou no primeiro dia útil seguinte caso a movimentação ocorra em fim de semana ou feriado, nos termos do art. 16 da Resolução Conjunta Interinstitucional n. 01/2026.';
 var PHIG='A unidade prisional de origem deverá encaminhar, no momento da remoção, os itens de higiene pessoal e os uniformes fornecidos ao reeducando.';
 var PAD_SEM='Ressalta-se que, não havendo instauração de Procedimento Administrativo Disciplinar (PAD), não poderá haver suspensão ou restrição dos direitos previstos no art. 41 da Lei de Execução Penal, especialmente os incisos V, X e XV, os quais somente poderão ser suspensos ou restringidos mediante ato motivado do Juízo da Execução, conforme dispõe o art. 41, § 1º, da referida Lei.';
-var PAD_COM='Ressalta-se que, havendo instauração de Procedimento Administrativo Disciplinar (PAD), o(a) reeducando(a) poderá ser mantido(a) em cela de isolamento pelo prazo de até 10 (dez) dias. Caso o PAD seja concluído dentro desse prazo e julgado procedente, o isolamento poderá ser complementado por até mais 20 (vinte) dias.';
+var PAD_COM='Ressalta-se que, havendo instauração de Procedimento Administrativo Disciplinar (PAD), poderá ser decretado o isolamento preventivo do(a) reeducando(a) pelo prazo de até 10 (dez) dias, nos termos do art. 60 da Lei de Execução Penal. Caso o PAD seja concluído dentro desse prazo e julgado procedente, o isolamento poderá ser complementado por até mais 20 (vinte) dias, observado o limite máximo de 30 (trinta) dias previsto no art. 58 da referida Lei.';
 var INC={'I':'art. 21, inciso I (gerenciamento de crises ou emergências)','II':'art. 21, inciso II (pedido da pessoa privada de liberdade ou familiar)','III':'art. 21, inciso III (adequação da capacidade de ocupação)'};
 
 function gerar(){
   var m=S.mod;
   if(!m) return null;
 
-  // PROC
-  if(m==='PROC') return {
-    badge:'❌ INDEFERIDO', bc:'bind',
-    subtit:'Inobservância de Procedimentos — Reunião de 05/05/2026',
-    txt:'Indefere-se o pedido por inobservância das regras estabelecidas e convencionadas em reunião realizada em 05 de maio de 2026, notadamente a obrigatoriedade de elaboração do ofício por meio do Gerador disponível no site desta CRV (https://crv-dpp-sc.github.io/manual-crv-v2/) e do preenchimento do campo "Observação" com o texto do Resumo Sintético gerado ao final do ofício, o qual reúne todas as informações da transferência.\n\nNovo pedido poderá ser formulado com a observância integral dos referidos procedimentos.'
-  };
+  // PROC — Indeferimento do Pedido
+  if(m==='PROC'){
+    var sub='Indeferimento do Pedido';
+    var PROC_LABELS={
+      motivacao:'ausência de motivação clara para a transferência pretendida',
+      assin_gestor:'ausência de assinatura do(s) gestor(es) da(s) unidade(s) envolvida(s)',
+      assin_superintendente:'ausência de assinatura do(s) Superintendente(s) Regional(is) envolvido(s)',
+      criterio:'falta de clareza quanto ao critério adotado para a escolha do(a) reeducando(a) indicado(a)',
+    };
+    var motivos=S.procMotivos.map(function(v){
+      return v==='outro' ? (S.procOutro.trim()||null) : PROC_LABELS[v];
+    }).filter(Boolean);
+    if(!motivos.length) return {badge:'❌ INDEFERIDO',bc:'bind',subtit:sub,txt:null};
+    var listaTxt = motivos.length===1 ? motivos[0]
+      : motivos.slice(0,-1).join(', ')+' e '+motivos[motivos.length-1];
+    return {
+      badge:'❌ INDEFERIDO', bc:'bind', subtit:sub,
+      txt:'Indefere-se o pedido em razão de '+listaTxt+'.\n\nNovo pedido poderá ser formulado mediante a devida regularização dos apontamentos acima.'
+    };
+  }
 
   // PERMUTA
   if(m==='PERMUTA'){
@@ -489,13 +583,14 @@ function gerar(){
 
   // I, II, III
   var linc=INC[m];
-  var sub='Resolução Conjunta Interinstitucional n. 01/2026 — '+linc;
+  var EMERG_SUB_LABEL={disc_instaurado:'Disciplinar — PAD instaurado',disc_instaurar:'Disciplinar — PAD a instaurar',isol_risco:'Isolamento Necessário — Risco à integridade física',isol_ordem:'Isolamento Necessário — Manutenção da Ordem e Disciplina',isol_apuracao:'Isolamento Necessário — Apuração de Fatos/Ocorrências'};
+  var sub='Resolução Conjunta Interinstitucional n. 01/2026 — '+linc+(m==='I'&&S.subEmerg?' — '+EMERG_SUB_LABEL[S.subEmerg]:'');
   var prz=S.prazo==='__outro'?S.prazoCustom:S.prazo;
-  if(m==='I' && (!prz || !S.pad)) return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:null};
+  if(m==='I' && (!prz || !S.subEmerg)) return {badge:'✅ DEFERIDO',bc:'bdef',subtit:sub,txt:null};
   var pp=['Trata-se de pedido de transferência administrativa enquadrado no '+linc+', da Resolução Conjunta Interinstitucional n. 01/2026.',
           'Após análise da documentação encaminhada, a Central de Regulação de Vagas decide pela aprovação do pedido, por estar em conformidade com o referido dispositivo legal, estando atendidos os requisitos formais e materiais exigidos para a modalidade requerida.'];
   if(m==='I'){
-    pp.push(S.pad==='com_pad'?PAD_COM:PAD_SEM);
+    pp.push(S.subEmerg==='disc_instaurado'?PAD_COM:PAD_SEM);
     pp.push('Por se tratar de situação emergencial, a transferência deverá ser efetivada no prazo máximo de '+prz+', contados da ciência do presente despacho.');
   }
   pp.push(PCOM); pp.push(PHIG);
@@ -565,8 +660,9 @@ function baixarDoc(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);toast('📄 Download iniciado!');
 }
 function limpar(){
-  S={mod:null,sub:null,pad:null,prazo:null,prazoCustom:'',fin:null,finCustom:'',sgpe:''};
-  ['gMod','gSub','gPad','gPrazo','gFin'].forEach(function(id){rg(id,null);});
+  S={mod:null,sub:null,catEmerg:null,subEmerg:null,procMotivos:[],procOutro:'',prazo:null,prazoCustom:'',fin:null,finCustom:'',sgpe:''};
+  ['gMod','gSub','gCatEmerg','gPrazo','gFin'].forEach(function(id){rg(id,null);});
+  g('gSubEmerg').innerHTML=''; _resetProcUI();
   g('iPrazo').style.display='none';g('iPrazo').value='';
   g('iFin').style.display='none';g('iFin').value='';
   g('iSgpe').value='';
@@ -578,7 +674,7 @@ function toast(m){
 }
 
 // BOOT
-['s2','s4pad','s4','s5','s6'].forEach(function(id){ g(id).style.display='none'; });
+['s2','sProc','s4cat','s4sub','s4','s5','s6'].forEach(function(id){ g(id).style.display='none'; });
 ui();render();
 </script>
 </body>

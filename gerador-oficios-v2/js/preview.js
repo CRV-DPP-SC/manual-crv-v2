@@ -71,6 +71,7 @@ function _contarPendencias(s) {
 
   if (s.mod === 'mandado'    && !s.juizo)       n++;
   if (s.mod === 'emergencial' && !s.sit)         n++;
+  if (s.mod === 'emergencial' && (s.sub === 'disc_instaurado' || s.sub === 'disc_instaurar') && (!s.faltas || !s.faltas.length)) n++;
   if (s.mod === 'pernoite'   && !s.razPernoite)  n++;
   if (s.mod === 'comunicacao' && !s.dataTrans)   n++;
   if (s.mod === 'comunicacao' && !s.motComun)    n++;
