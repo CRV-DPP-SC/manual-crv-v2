@@ -100,6 +100,12 @@ function _wrapParaExport(html) {
 function copiar() {
   var el = document.getElementById('oficio-preview');
   if (!el || !el.innerHTML.trim()) { _toast('Nada para copiar.'); return; }
+
+  if (Estado.get('mod') === 'mesmo_complexo') {
+    _copiarMesmoComplexo();
+    return;
+  }
+
   var range = document.createRange();
   range.selectNode(el);
   window.getSelection().removeAllRanges();
@@ -114,6 +120,39 @@ function copiar() {
   }
   window.getSelection().removeAllRanges();
   _prefsSalvar('ultimoNumOficio', Estado.get('numOficio') || '');
+}
+
+/* ── Copiar texto — Transferência Dentro do Mesmo Complexo ──
+   Exibe aviso sobre a comunicação prévia obrigatória entre gestores
+   antes de copiar apenas o parágrafo (sem a caixa decorativa do preview). */
+function _copiarMesmoComplexo() {
+  var ok = confirm(
+    'Não é necessário ofício, documento anexo ou assinaturas — este texto é apenas um despacho/resumo ' +
+    'a ser registrado no cadastro do i-PEN.\n\n' +
+    'IMPORTANTE: A COMUNICAÇÃO ENTRE OS GESTORES, ANTES DA EFETIVAÇÃO DA TRANSFERÊNCIA, É OBRIGATÓRIA.\n\n' +
+    'Art. 344, § 4º, da Portaria nº 2189/GABS/SEJURI/2025 (Secretaria de Estado de Justiça e Reintegração Social): ' +
+    'é obrigatório o contato prévio com o estabelecimento penal de destino, informando sobre a realização da ' +
+    'transferência, horário de saída e previsão de horário de chegada.\n\n' +
+    'Clique em OK para copiar o texto.'
+  );
+  if (!ok) return;
+
+  var textoEl = document.getElementById('textoMesmoComplexo');
+  if (!textoEl) { _toast('Nada para copiar.'); return; }
+
+  var range = document.createRange();
+  range.selectNode(textoEl);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  try {
+    document.execCommand('copy');
+    _toast('Texto copiado!');
+  } catch (e) {
+    navigator.clipboard.writeText(textoEl.innerText)
+      .then(function() { _toast('Texto copiado!'); })
+      .catch(function() { _toast('Erro ao copiar.'); });
+  }
+  window.getSelection().removeAllRanges();
 }
 
 /* ── Baixar .doc ── */

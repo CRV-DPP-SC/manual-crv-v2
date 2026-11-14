@@ -454,6 +454,21 @@ function _injetarSaude(s, ps, isMulti, isPermuta) {
   return ps;
 }
 
+/* ── Transferência Dentro do Mesmo Complexo (sem ofício/assinaturas) ── */
+function gerarTextoMesmoComplexo(s) {
+  var nome   = s.nome ? fld(s.nome) : ph('Nome do(a) reeducando(a)');
+  var ipen   = s.ipen ? fld(s.ipen) : ph('IPEN');
+  var regime = s.regime ? fld(s.regime) : ph('Regime');
+  var ori    = s.ori ? fld(s.ori.n) : ph('Unidade de Origem');
+  var des    = s.des ? fld(s.des.n) : ph('Unidade de Destino');
+
+  return 'Trata-se de transferência ' + doA(s) + ' ' + gng(s,'reeducando','reeducanda','reeducandos','reeducandas') + ' '
+    + nome + ', IPEN ' + ipen + ', atualmente em regime ' + regime + ', do(a) ' + ori + ' para o(a) ' + des
+    + ', unidades prisionais distintas, mas localizadas dentro do mesmo complexo prisional, amparada no artigo 21, inciso III, '
+    + 'da Resolução Interinstitucional Conjunta n.º 01/2026. Ressalta-se a anuência do(a) Superintendente Regional, '
+    + 'bem como da equipe gestora da unidade prisional de destino.';
+}
+
 /* ── Resumo Sintético ── */
 function gerarTextoResumo(s) {
   var modLabels = {

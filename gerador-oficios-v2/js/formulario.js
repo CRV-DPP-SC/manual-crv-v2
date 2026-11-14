@@ -13,6 +13,7 @@ var FormularioCtrl = (function() {
       + _card('emergencial', '🚨', 'Emergencial', 'Art. 21, I')
       + _card('mandado', '🏛', 'Mandado de Prisão de Comarca Diversa', 'Art. 21, III')
       + _card('pernoite', '🔄', 'Pernoite', 'Art. 21, III', 'Sem ofício — cadastro direto no i-PEN')
+      + _card('mesmo_complexo', '🏢', 'Transferência Dentro do Mesmo Complexo', 'Art. 21, III', 'Não é necessário ofício nem assinaturas — apenas copie o texto.')
       + _card('adequacao', '⚖', 'Transferências Ordinárias', 'Art. 21, III', 'Transferências do dia a dia')
       + _card('ajuste_lotacional', '📊', 'Ajuste Lotacional', 'Art. 21, III', 'Utilizar este modelo quando tratar-se de transferências determinadas pelo DPP/CRV')
       + _card('permuta', '↔', 'Permuta entre Unidades', 'Art. 21, III')
@@ -47,8 +48,8 @@ var FormularioCtrl = (function() {
     /* Comunicação → Juiz(a); demais → Coordenador(a) da CRV (padrão fixo) */
     var sauInicial = mod === 'comunicacao' ? 'Senhor(a) Juiz(a),' : 'Senhor(a) Coordenador(a),';
     var patch = { mod: mod, sub: null, sau: sauInicial, desp: 'Respeitosamente,' };
-    /* Retorno de Saída Temporária — só admite 1 reeducando por vez */
-    if (mod === 'retorno_saida_temporaria') patch.numero = 'S';
+    /* Retorno de Saída Temporária e Transferência dentro do mesmo complexo — só admitem 1 reeducando por vez */
+    if (mod === 'retorno_saida_temporaria' || mod === 'mesmo_complexo') patch.numero = 'S';
     Estado.setMany(patch);
     _renderizarFormulario();
   }
@@ -195,13 +196,13 @@ var FormularioCtrl = (function() {
     html += _secaoReeducando(s);
     html += _secaoUnidades(s);
     html += _secaoCamposEspecificos(s);
-    if (mod !== 'pernoite' && mod !== 'comunicacao' && mod !== 'resumo_ipen') {
+    if (mod !== 'pernoite' && mod !== 'comunicacao' && mod !== 'resumo_ipen' && mod !== 'mesmo_complexo') {
       html += _secaoSaude(s);
     }
-    if (mod !== 'comunicacao' && mod !== 'resumo_ipen') {
+    if (mod !== 'comunicacao' && mod !== 'resumo_ipen' && mod !== 'mesmo_complexo') {
       html += _secaoAssinaturas(s);
     }
-    if (mod !== 'resumo_ipen') {
+    if (mod !== 'resumo_ipen' && mod !== 'mesmo_complexo') {
       html += _secaoBPI(s);
       html += _secaoFormatacao(s);
     }
@@ -216,7 +217,7 @@ var FormularioCtrl = (function() {
   function _headerMod(s) {
     var nomes = {
       emergencial:'Transferência Emergencial', mandado:'Mandado de Comarca',
-      pernoite:'Pernoite', adequacao:'Transferências Ordinárias',
+      pernoite:'Pernoite', mesmo_complexo:'Transferência Dentro do Mesmo Complexo', adequacao:'Transferências Ordinárias',
       ajuste_lotacional:'Ajuste Lotacional',
       permuta:'Permuta entre Unidades', prisaocivil:'Prisão Civil',
       retorno_saida_temporaria:'Retorno de Saída Temporária - Unidade Diversa',
@@ -268,9 +269,10 @@ var FormularioCtrl = (function() {
   /* ── Seção: Reeducando(s) ── */
   function _secaoReeducando(s) {
     var mod = s.mod;
-    var semNumero  = mod === 'retorno_saida_temporaria'; /* só admite 1 reeducando por vez */
+    var semNumero  = mod === 'retorno_saida_temporaria' || mod === 'mesmo_complexo'; /* só admitem 1 reeducando por vez */
     var comRegime  = ['emergencial','mandado','adequacao','ajuste_lotacional','permuta','retorno_saida_temporaria'].includes(mod);
     var semRegime  = ['pernoite','prisaocivil','comunicacao','resumo_ipen'].includes(mod);
+    var regimeSimples = mod === 'mesmo_complexo'; /* só regime, sem característica de alocação */
     var isPlural   = !semNumero && s.numero === 'P';
 
     var generoChips = '<div class="chip-group">'
@@ -288,7 +290,9 @@ var FormularioCtrl = (function() {
       /* Singular */
       camposHtml += _campo('nome', 'Nome completo', 'text', s.nome, 'Ex.: João da Silva Santos', true);
       camposHtml += _campo('ipen', 'IPEN', 'text', s.ipen, 'Ex.: 123456', true);
-      if (!semRegime) {
+      if (regimeSimples) {
+        camposHtml += _secaoRegimeSimples(s);
+      } else if (!semRegime) {
         camposHtml += _secaoSitPenal(s);
       }
     } else {
@@ -296,7 +300,7 @@ var FormularioCtrl = (function() {
       camposHtml += _renderizarReedList(s, !semRegime);
     }
 
-    var ok = isPlural ? (s.reed && s.reed.length > 0) : (s.nome && s.ipen);
+    var ok = isPlural ? (s.reed && s.reed.length > 0) : (s.nome && s.ipen && (!regimeSimples || s.regime));
     return _secao('reed', 'Reeducando(s)', camposHtml, ok ? '✓' : (s.nome || s.ipen || (s.reed && s.reed.length > 0) ? '⚠' : '○'), false);
   }
 
@@ -317,6 +321,18 @@ var FormularioCtrl = (function() {
       + _chip('alocacao', 'SEGURO',         '🛡 SEGURO',        aloc === 'SEGURO',         true, undefined, true)
       + _chip('alocacao', 'Não informado',  '❓ Não informado', aloc === 'Não informado',  true)
       + '</div>'
+      + '</div>';
+  }
+
+  function _secaoRegimeSimples(s) {
+    var reg = s.regime;
+    var opts = ['Provisório','Fechado','Semiaberto'];
+    return '<div class="campo-wrap">'
+      + '<label class="campo-label">Regime</label>'
+      + '<select id="inp-regime" class="inp-campo" data-field="regime">'
+      + '<option value="">Selecione o regime</option>'
+      + opts.map(function(o) { return '<option' + (reg === o ? ' selected' : '') + '>' + o + '</option>'; }).join('')
+      + '</select>'
       + '</div>';
   }
 
@@ -385,10 +401,29 @@ var FormularioCtrl = (function() {
 
   /* ── Seção: Unidades ── */
   function _secaoUnidades(s) {
-    var html = _btnUnidade('ori', 'Origem', s.ori)
-      + _btnUnidade('des', 'Destino', s.des);
+    var html = s.mod === 'mesmo_complexo'
+      ? _btnUnidadeAuto('ori', 'Origem', s.ori)
+      : _btnUnidade('ori', 'Origem', s.ori);
+    html += _btnUnidade('des', 'Destino', s.des);
     var ok = s.ori && s.des;
     return _secao('unidades', 'Unidades', html, ok ? '✓' : (s.ori || s.des ? '⚠' : '○'), false);
+  }
+
+  /* Unidade de origem identificada automaticamente pelo login do usuário.
+     Mantém um link para trocar, caso a detecção falhe ou esteja incorreta. */
+  function _btnUnidadeAuto(field, label, u) {
+    return '<div class="campo-label">' + label + ' <span class="opc">(identificada pelo login)</span></div>'
+      + '<div class="btn-unidade-wrap">'
+      + (u
+        ? '<div class="un-selecionada un-selecionada-auto">'
+            + '<div class="un-sel-nome">' + _esc(u.n) + '</div>'
+            + '<div class="un-sel-sub">' + _esc(u.sr) + ' · ' + _esc(u.dir) + '</div>'
+          + '</div>'
+          + '<button class="btn-un-limpar" onclick="abrirModalUnidade(\'' + field + '\')" title="Trocar unidade de origem">✎</button>'
+        : '<button class="btn-escolher-un" onclick="abrirModalUnidade(\'' + field + '\')">'
+            + '+ Não foi possível identificar — escolher unidade de origem'
+          + '</button>')
+      + '</div>';
   }
 
   function _btnUnidade(field, label, u) {
@@ -674,6 +709,11 @@ var FormularioCtrl = (function() {
     document.querySelectorAll('#form-area input[data-field]:not([type=checkbox]), #form-area textarea[data-field]').forEach(function(inp) {
       inp.addEventListener('input', function() { Estado.set(this.dataset.field, this.value); });
       inp.addEventListener('blur',  function() { _validarCampo(this); });
+    });
+
+    /* Select simples de regime (data-field, fora da lista de reeducandos) */
+    document.querySelectorAll('#form-area select[data-field]').forEach(function(sel) {
+      sel.addEventListener('change', function() { Estado.set(this.dataset.field, this.value); });
     });
 
     /* Input numOficio */

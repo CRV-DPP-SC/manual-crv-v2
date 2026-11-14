@@ -32,8 +32,12 @@ function _atualizarBarraAcoes(s) {
 
   /* Visibilidade dos novos botões */
   var temMod = !!(s.mod);
-  if (btnResumo)  btnResumo.style.display  = temMod ? '' : 'none';
-  if (btnAssinar) btnAssinar.style.display = (temMod && s.mod !== 'resumo_ipen' && s.mod !== 'comunicacao') ? '' : 'none';
+  var ehMesmoComplexo = s.mod === 'mesmo_complexo';
+  if (btnResumo)  btnResumo.style.display  = (temMod && !ehMesmoComplexo) ? '' : 'none';
+  if (btnAssinar) btnAssinar.style.display = (temMod && s.mod !== 'resumo_ipen' && s.mod !== 'comunicacao' && !ehMesmoComplexo) ? '' : 'none';
+  /* Mesmo Complexo: sem ofício formal — só Editar e Copiar fazem sentido */
+  if (btnDoc) btnDoc.style.display = ehMesmoComplexo ? 'none' : '';
+  if (btnPdf) btnPdf.style.display = ehMesmoComplexo ? 'none' : '';
 
   if (!s.mod) {
     aviso.textContent = '';
@@ -73,6 +77,7 @@ function _contarPendencias(s) {
   if (s.mod === 'emergencial' && !s.sit)         n++;
   if (s.mod === 'emergencial' && (s.sub === 'disc_instaurado' || s.sub === 'disc_instaurar') && (!s.faltas || !s.faltas.length)) n++;
   if (s.mod === 'pernoite'   && !s.razPernoite)  n++;
+  if (s.mod === 'mesmo_complexo' && !s.regime)   n++;
   if (s.mod === 'comunicacao' && !s.dataTrans)   n++;
   if (s.mod === 'comunicacao' && !s.motComun)    n++;
   if (s.mod === 'comunicacao' && !s.nomejuiz)    n++;

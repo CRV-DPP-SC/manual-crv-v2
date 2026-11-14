@@ -138,6 +138,17 @@ function rod(s) {
 function montarOficio(s) {
   if (!s || !s.mod) return '';
 
+  /* mesmo_complexo não gera ofício nem assinaturas — é apenas um despacho/resumo para registro no i-PEN */
+  if (s.mod === 'mesmo_complexo') {
+    return '<div style="padding:2rem;">'
+      + '<div style="background:#fff;border:1px solid var(--borda);border-radius:8px;padding:1.5rem;max-width:700px;margin:0 auto;">'
+        + '<div style="font-size:.75rem;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:.03em;margin-bottom:10px;">🏢 Despacho — Resumo para registro no i-PEN</div>'
+        + '<p id="textoMesmoComplexo" class="ofc-p" style="font-size:.95rem;line-height:1.7;text-align:justify;color:var(--texto);">' + gerarTextoMesmoComplexo(s) + '</p>'
+      + '</div>'
+      + '<p style="text-align:center;font-size:.8rem;color:#888;margin-top:14px;">Clique em <strong>📋 Copiar</strong> para copiar o texto.</p>'
+      + '</div>';
+  }
+
   /* resumo_ipen não gera ofício — mostra a pré-visualização do texto do resumo */
   if (s.mod === 'resumo_ipen') {
     return '<div style="padding:2rem;">'

@@ -264,6 +264,8 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
   transition: all .15s;
 }
 .un-selecionada:hover { border-color: var(--azul); background: #dbeafe; }
+.un-selecionada-auto { cursor: default; border-style: dashed; }
+.un-selecionada-auto:hover { border-color: var(--azul3); background: #edf3ff; }
 .un-sel-nome { font-size: .84rem; font-weight: 700; color: var(--azul); }
 .un-sel-sub  { font-size: .72rem; color: #666; margin-top: 2px; }
 
