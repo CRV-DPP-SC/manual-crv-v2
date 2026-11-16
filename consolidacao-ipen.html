@@ -202,7 +202,7 @@ function ler213(tr) {
     if (h.mae == null && u.startsWith('NOME DA M')) h.mae = c.x;
     else if (h.nasc == null && u === 'NASCIMENTO') h.nasc = c.x;
     else if (h.comp == null && u === 'COMPORTAMENTO') h.comp = c.x;
-    else if (h.sit == null && /^SITUA..O( PENAL)?$/.test(u)) h.sit = c.x;
+    else if (h.sit == null && /^SITUA..O( PENAL)?( ?\|)?$/.test(u)) h.sit = c.x;
     else if (h.dias == null && u === 'DIAS') h.dias = c.x;
     else if (h.unidade == null) { const m = c.t.match(/^Unidade:\s*(\d+)\s+(.+?)\s*$/); if (m) h.unidade = `${m[1]} - ${titulo(m[2])}`; }
   }
