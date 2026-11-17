@@ -210,7 +210,19 @@ service cloud.firestore {
       allow update: if membro()
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['assinantes','statusGeral','cancelamento','atualizadoEm','comunicacoes','pendentesDe','unidades','srs']);
+      // Retificação pela CRV (erro material, nome x IPEN, fundamentação): texto,
+      // presos e resumo, sem refazer as assinaturas. O motivo e o texto anterior
+      // ficam em /retificacoes, que só a CRV lê.
+      allow update: if isCRV()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['conteudo','presos','resumo','retificado']);
       allow delete: if isCRV();
+    }
+
+    // Histórico das retificações — visível só para a CRV; não se edita nem apaga
+    match /retificacoes/{id} {
+      allow read: if isCRV();
+      allow create: if isCRV() && request.resource.data.porEmail == meuEmail();
     }
 
     // ── Presença (usuários online) ──────────────────────────────────
