@@ -229,7 +229,12 @@ async function processarSolicitacoes(desde) {
   for (const doc of snap.docs) {
     try { await corrigirIndice(doc); } catch (e) { console.warn('[índices]', doc.id, e.message); }
     const data = doc.data();
-    if (!(data.criadoEm && data.criadoEm.toMillis() > desde.toMillis())) continue;   // só as novas geram push
+    // só as novas (ou corrigidas e reenviadas para assinatura) geram push
+    const nova      = data.criadoEm && data.criadoEm.toMillis() > desde.toMillis();
+    const reenviada = data.reenviadoEm && data.reenviadoEm.toMillis() > desde.toMillis();
+    if (!nova && !reenviada) continue;
+    const sufixo = reenviada && !nova ? ' (documento corrigido)' : '';
+    const tagV   = reenviada && !nova ? '-v' + (data.versao || 2) : '';
     const pendentes = (data.assinantes || []).filter(a => a.status === 'pendente' && a.emailUnidade);
     // Em exercício: o push vai para a pessoa (substituto/a), não para a unidade do lugar
     const unidadesUnicas = [...new Set(pendentes.filter(a => !a.emExercicio).map(a => a.emailUnidade))];
@@ -240,17 +245,17 @@ async function processarSolicitacoes(desde) {
     for (const emailUnidade of unidadesUnicas) {
       await enviarPushUnidade({
         emailUnidade,
-        titulo: '✍️ Assinatura Pendente',
+        titulo: '✍️ Assinatura Pendente' + sufixo,
         corpo:  criador + ' solicitou sua anuência em: ' + titulo,
-        tag:    'assinatura-' + doc.id,
+        tag:    'assinatura-' + doc.id + tagV,
       });
     }
     for (const a of substitutos) {
       await enviarPushPessoas({
         emails: [a.email],
-        titulo: '✍️ Assinatura Pendente (em exercício)',
+        titulo: '✍️ Assinatura Pendente (em exercício)' + sufixo,
         corpo:  criador + ' solicitou sua anuência, como ' + (a.cargo || 'substituto(a)') + ' — ' + (a.unidade || '') + ', em: ' + titulo,
-        tag:    'assinatura-' + doc.id,
+        tag:    'assinatura-' + doc.id + tagV,
       });
     }
   }

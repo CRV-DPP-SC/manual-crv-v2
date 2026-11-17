@@ -109,6 +109,13 @@ service cloud.firestore {
       return servidorAprovado() ? get(meuCadastro()).data.emailUnidade : '';
     }
 
+    // Gestor(a)/servidor(a) da unidade de origem do pedido, ou quem o criou
+    function daOrigem(d) {
+      return (isGestor() && unidadeDoGestor() == d.emailUnidadeOrigem)
+          || (servidorAprovado() && unidadeDoServidor() == d.emailUnidadeOrigem)
+          || meuEmail() == d.emailCriador.lower();
+    }
+
     // Qualquer pessoa com acesso liberado ao sistema
     function membro() {
       return isInstitucional() || servidorAprovado();
@@ -216,6 +223,12 @@ service cloud.firestore {
       allow update: if isCRV()
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['conteudo','presos','resumo','retificado']);
+      // Corrigir e reenviar para assinatura (unidade de origem, quem criou ou CRV):
+      // muda o texto, guarda a versão anterior e todas as assinaturas voltam a pendente.
+      allow update: if (isCRV() || daOrigem(resource.data))
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['assinantes','statusGeral','atualizadoEm','pendentesDe','unidades','srs',
+                       'conteudo','presos','resumo','versao','versoesAnteriores','reenviadoEm']);
       allow delete: if isCRV();
     }
 

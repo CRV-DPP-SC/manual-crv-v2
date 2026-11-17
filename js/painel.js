@@ -1547,6 +1547,7 @@ function renderizarLista(el, lista, tipo) {
         <span class="p-card-titulo-row">${escHtml(s.titulo || 'Ofício s/ título')}</span>
         ${_etiquetaExercicio(s)}
         ${_etiquetaRetificado(s)}
+        ${(s.versao || 1) > 1 ? `<span title="Documento corrigido e reenviado para assinatura" style="flex-shrink:0;font-size:.62rem;font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #93c5fd;border-radius:5px;padding:1px 6px;">📄 v${s.versao}</span>` : ''}
         <span class="p-card-meta-row">${escHtml(s.nomeUnidadeOrigem || s.emailUnidadeOrigem || '—')} · ${data}</span>
         <span class="p-card-arrow" id="parrow-${s.id}">▶</span>
       </div>
@@ -1590,6 +1591,7 @@ function renderizarLista(el, lista, tipo) {
           </button>
           <button class="p-btn p-btn-outline" onclick="verResumoOficio('${s.id}')">📄 Resumo IPEN</button>
           ${_botoesComunicacao(s, statusGeral)}
+          ${podeReenviar(s) ? `<button class="p-btn p-btn-outline" onclick="abrirReenvio('${s.id}')">📨 Corrigir e reenviar</button>` : ''}
           ${podeFirmar ? `
             <button class="p-btn p-btn-assinar" onclick="assinarOficio('${s.id}')">Assinar</button>
             <button class="p-btn p-btn-negar"   onclick="abrirModalNegar('${s.id}')">Negar</button>
@@ -2133,12 +2135,16 @@ window.verDetalheOficio = async function (id) {
   })() : '';
 
   _retDoc = { id, s };
-  const barraCRV = perfilAtual === 'crv' ? `
+  const ehCRVRet = perfilAtual === 'crv';
+  const podeReenv = podeReenviar(s);
+  const barraCRV = (ehCRVRet || podeReenv || (s.versao || 1) > 1) ? `
     <div id="p-ret-barra" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;">
-      ${s.retificado ? `<span style="font-size:.75rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;">📝 Texto retificado pela CRV</span>
+      ${(s.versao || 1) > 1 ? `<span style="font-size:.75rem;font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:4px 8px;">📄 Versão ${s.versao} — corrigida e reenviada para assinatura</span>
+        <button class="p-btn p-btn-outline" onclick="verVersoesAnteriores()">Versões anteriores</button>` : ''}
+      ${ehCRVRet && s.retificado ? `<span style="font-size:.75rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;">📝 Texto retificado pela CRV</span>
         <button class="p-btn p-btn-outline" onclick="verHistoricoRetificacao('${id}')">Ver histórico</button>` : ''}
-      <button class="p-btn p-btn-outline" onclick="iniciarRetificacao()">✏️ Retificar texto</button>
-      <span style="font-size:.7rem;color:var(--txt-4);">visível somente para a CRV</span>
+      ${podeReenv ? `<button class="p-btn p-btn-outline" onclick="iniciarRetificacao('reenvio')">📨 Corrigir e reenviar para assinatura</button>` : ''}
+      ${ehCRVRet ? `<button class="p-btn p-btn-outline" onclick="iniciarRetificacao('crv')" title="Mantém as assinaturas; visível somente para a CRV">✏️ Retificar texto (CRV)</button>` : ''}
     </div>
     <div id="p-ret-form"></div>
     <div id="p-ret-hist"></div>` : '';
@@ -2193,6 +2199,19 @@ window.verDetalheOficio = async function (id) {
 // sem refazer as assinaturas. O texto anterior, quem retificou e a justificativa
 // ficam em /retificacoes (só a CRV lê); a solicitação recebe só retificado:true.
 let _retDoc = null;               // { id, s } do documento aberto no detalhe
+let _retModo = 'crv';             // 'crv' = retificação (mantém assinaturas) | 'reenvio' = corrigir e reenviar
+
+// Corrigir e reenviar: unidade de origem (Diretor/CPEN) ou quem criou, com pedido concluído ou com negativa
+function podeReenviar(s) {
+  if (!s || s.statusGeral === 'cancelado') return false;
+  const cl = calcularStatusGeral(s.assinantes || [], s.statusGeral).classe;
+  if (!['concluido', 'negado'].includes(cl)) return false;
+  if (perfilAtual === 'crv') return true;
+  if (modoLeitura()) return false;
+  if (mesmoUsuario(s.emailCriador, usuarioAtual?.email)) return true;
+  if (['dir', 'cpen'].includes(perfilAtual)) return s.emailUnidadeOrigem === escopoAtual?.email;
+  return false;
+}
 const _retLocal = {};             // id → campos retificados nesta sessão (atualiza os cards)
 
 function _retIframeDoc() {
@@ -2200,8 +2219,10 @@ function _retIframeDoc() {
   return f ? (f.contentDocument || f.contentWindow.document) : null;
 }
 
-window.iniciarRetificacao = function () {
-  if (perfilAtual !== 'crv' || !_retDoc) return;
+window.iniciarRetificacao = function (modo) {
+  _retModo = modo === 'reenvio' ? 'reenvio' : 'crv';
+  if (!_retDoc) return;
+  if (_retModo === 'crv' ? perfilAtual !== 'crv' : !podeReenviar(_retDoc.s)) return;
   const iDoc = _retIframeDoc();
   if (!iDoc) return;
   if (!iDoc.getElementById('ret-style')) {
@@ -2219,7 +2240,11 @@ window.iniciarRetificacao = function () {
   const campo = 'width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:.82rem;box-sizing:border-box;';
   document.getElementById('p-ret-form').innerHTML = `
     <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
-      <div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">✏️ Retificação do texto — as assinaturas são mantidas</div>
+      ${_retModo === 'reenvio'
+        ? `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">📨 Corrigir e reenviar para assinatura</div>
+           <div style="font-size:.75rem;color:#92400e;margin-bottom:6px;">Ao reenviar, <strong>todas as assinaturas voltam a pendente</strong> e os signatários são avisados novamente. A versão atual fica guardada no histórico.</div>
+           ${calcularStatusGeral(s.assinantes || [], s.statusGeral).classe === 'concluido' ? `<div style="font-size:.75rem;color:#b91c1c;font-weight:600;margin-bottom:6px;">⚠️ Este pedido já está concluído. Se já foi cadastrado no i-PEN ou deliberado pela CRV, não o altere — o documento deixaria de corresponder ao que foi analisado.</div>` : ''}`
+        : `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">✏️ Retificação do texto — as assinaturas são mantidas</div>`}
       <div style="font-size:.75rem;color:#92400e;margin-bottom:10px;">Clique no texto do ofício abaixo (área tracejada) e corrija diretamente. Ajuste também os dados dos presos e o resumo, se for o caso.</div>
       ${presos.length ? `<div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin-bottom:4px;">Presos (cards e Resumo IPEN)</div>
         ${presos.map((p, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;">
@@ -2228,20 +2253,21 @@ window.iniciarRetificacao = function () {
         </div>`).join('')}` : ''}
       <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin:8px 0 4px;">Resumo sintético (i-PEN)</div>
       <textarea id="ret-resumo" rows="4" style="${campo}">${escHtml(s.resumo || '')}</textarea>
-      <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin:8px 0 4px;">Justificativa (obrigatória)</div>
-      <textarea id="ret-just" rows="3" style="${campo}" placeholder="Ex.: A pedido de FULANO DE TAL, sob a justificativa de que o IPEN informado estava incorreto."></textarea>
+      <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin:8px 0 4px;">${_retModo === 'reenvio' ? 'Motivo da correção (obrigatório)' : 'Justificativa (obrigatória)'}</div>
+      <textarea id="ret-just" rows="3" style="${campo}" placeholder="${_retModo === 'reenvio' ? 'Ex.: Correção do IPEN do reeducando, apontada na negativa do Diretor de destino.' : 'Ex.: A pedido de FULANO DE TAL, sob a justificativa de que o IPEN informado estava incorreto.'}"></textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
         <button class="p-btn p-btn-outline" onclick="verDetalheOficio('${_retDoc.id}')">Cancelar</button>
-        <button class="p-btn" id="ret-salvar" style="background:#b45309;color:#fff;" onclick="salvarRetificacao()">Salvar retificação</button>
+        <button class="p-btn" id="ret-salvar" style="background:#b45309;color:#fff;" onclick="salvarRetificacao()">${_retModo === 'reenvio' ? 'Reenviar para assinatura' : 'Salvar retificação'}</button>
       </div>
     </div>`;
 };
 
 window.salvarRetificacao = async function () {
-  if (perfilAtual !== 'crv' || !_retDoc) return;
+  if (!_retDoc) return;
+  if (_retModo === 'crv' ? perfilAtual !== 'crv' : !podeReenviar(_retDoc.s)) return;
   const { id, s } = _retDoc;
   const just = (document.getElementById('ret-just').value || '').trim();
-  if (just.length < 10) { showToastPainel('Informe a justificativa da retificação.'); return; }
+  if (just.length < 10) { showToastPainel(_retModo === 'reenvio' ? 'Informe o motivo da correção.' : 'Informe a justificativa da retificação.'); return; }
 
   const iDoc = _retIframeDoc();
   const corpo = iDoc.body.cloneNode(true);
@@ -2260,6 +2286,46 @@ window.salvarRetificacao = async function () {
 
   const btn = document.getElementById('ret-salvar');
   btn.disabled = true; btn.textContent = 'Salvando…';
+
+  if (_retModo === 'reenvio') {
+    if (!confirm('Todas as assinaturas voltarão a pendente e os signatários serão avisados novamente. Confirmar o reenvio?')) {
+      btn.disabled = false; btn.textContent = 'Reenviar para assinatura'; return;
+    }
+    try {
+      const email = usuarioAtual.email.toLowerCase();
+      const versao = s.versao || 1;
+      const anteriores = [...(s.versoesAnteriores || []), {
+        versao, conteudo: s.conteudo || '', presos: s.presos || [], resumo: s.resumo || '',
+        assinantes: s.assinantes || [],
+        substituidaEm: Date.now(), motivo: just,
+        porEmail: email, porNome: usuarioAtual.displayName || email,
+      }];
+      const assinantes = (s.assinantes || []).map(a => {
+        const { motivo, motivoNegacao, ...resto } = a;
+        return { ...resto, status: 'pendente', dataAcao: null, motivo: null };
+      });
+      const novo = { ...s, conteudo, presos, resumo, assinantes, statusGeral: 'em_andamento' };
+      await updateDoc(doc(db, 'solicitacoes', id), {
+        conteudo, presos, resumo, assinantes,
+        statusGeral: 'em_andamento',
+        versao: versao + 1,
+        versoesAnteriores: anteriores,
+        reenviadoEm: serverTimestamp(),
+        atualizadoEm: serverTimestamp(),
+        ...indiceSolicitacao(novo, UNIDADES),
+      });
+      _retLocal[id] = { conteudo, presos, resumo, assinantes, statusGeral: 'em_andamento', versao: versao + 1, versoesAnteriores: anteriores };
+      _retAtualizarCard(id);
+      showToastPainel('Documento corrigido e reenviado para assinatura.');
+      verDetalheOficio(id);
+    } catch (e) {
+      console.error('[reenvio]', e);
+      showToastPainel('Erro ao reenviar: ' + (e.code || e.message));
+      btn.disabled = false; btn.textContent = 'Reenviar para assinatura';
+    }
+    return;
+  }
+
   try {
     const email = usuarioAtual.email.toLowerCase();
     await addDoc(collection(db, 'retificacoes'), {
@@ -2293,7 +2359,11 @@ function _retAtualizarCard(id) {
   const rs = body.querySelector('.p-card-resumo-txt');
   if (rs) rs.textContent = r.resumo;
   const row = document.querySelector('#pcard-' + id + ' .p-card-titulo-row');
-  if (row && !row.parentElement.querySelector('.p-ret-tag')) row.insertAdjacentHTML('afterend', _etiquetaRetificado({ retificado: true }));
+  if (r.retificado && row && !row.parentElement.querySelector('.p-ret-tag')) row.insertAdjacentHTML('afterend', _etiquetaRetificado({ retificado: true }));
+  if (r.versao > 1) {
+    const st = document.querySelector('#pcard-' + id + ' .p-status');
+    if (st) { st.className = 'p-status p-status-andamento'; st.textContent = 'Em andamento'; }
+  }
 }
 
 function _etiquetaRetificado(s) {
@@ -2326,6 +2396,52 @@ window.verHistoricoRetificacao = async function (id) {
     el.innerHTML = '<p style="font-size:.8rem;color:var(--vermelho);">Erro ao carregar o histórico: ' + escHtml(e.code || e.message) + '</p>';
   }
 };
+
+window.abrirReenvio = async function (id) {
+  await verDetalheOficio(id);
+  iniciarRetificacao('reenvio');
+  document.getElementById('p-ret-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.verVersoesAnteriores = function () {
+  const el = document.getElementById('p-ret-hist');
+  if (!el || !_retDoc) return;
+  const lista = [...(_retDoc.s.versoesAnteriores || [])].reverse();
+  window._versoesAnt = lista;
+  el.innerHTML = `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+    <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin-bottom:6px;">Versões anteriores</div>
+    ${lista.map((v, i) => {
+      const dt = v.substituidaEm ? new Date(v.substituidaEm).toLocaleDateString('pt-BR') + ' às ' + new Date(v.substituidaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+      const ass = (v.assinantes || []).map(a => (a.status === 'assinado' ? '✅ ' : a.status === 'negado' ? '❌ ' : '⏳ ') + escHtml(a.nome || a.email)
+        + (_motivoNeg(a) ? ' — ' + escHtml(_motivoNeg(a)) : '')).join('<br>');
+      return `<div style="padding:6px 0;border-top:${i ? '1px solid var(--border)' : 'none'};font-size:.8rem;line-height:1.5;">
+        <strong>Versão ${v.versao}</strong> — substituída em ${dt} por ${escHtml(v.porNome || v.porEmail || '—')}<br>
+        <span style="color:var(--txt-2);">Motivo da correção: ${escHtml(v.motivo || '')}</span><br>
+        <span style="font-size:.74rem;color:var(--txt-3);">${ass}</span><br>
+        <button class="p-btn p-btn-outline" style="margin-top:4px;font-size:.72rem;padding:3px 10px;" onclick="verVersaoAnterior(${i})">Ver texto desta versão</button>
+      </div>`;
+    }).join('') || '<p style="font-size:.8rem;color:var(--txt-4);margin:0;">Nenhuma versão anterior.</p>'}
+  </div>`;
+};
+
+window.verVersaoAnterior = function (i) {
+  const v = (window._versoesAnt || [])[i];
+  if (!v) return;
+  _abrirTextoAntigo('Versão ' + v.versao + ' (substituída)', 'Motivo da correção: ' + (v.motivo || ''), v);
+};
+
+function _abrirTextoAntigo(titulo, aviso, antes) {
+  const base = window.location.href.replace(/\/[^/]*(\?.*)?$/, '/') + 'gerador-oficios-v2/';
+  const presos = (antes.presos || []).map(p => escHtml((p.nome || '—') + ' · IPEN ' + (p.ipen || '—'))).join('<br>');
+  const w = window.open('', '_blank');
+  if (!w) { showToastPainel('Permita pop-ups para ver o texto anterior.'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(titulo)}</title>
+    <base href="${base}"><link rel="stylesheet" href="css/oficio.css">
+    <style>body{margin:0;background:#fff}.ret-aviso{font-family:Arial,sans-serif;font-size:12px;background:#fef3c7;border-bottom:1px solid #f59e0b;padding:10px 16px;color:#92400e}</style>
+    </head><body><div class="ret-aviso"><strong>${escHtml(titulo)}</strong> — ${escHtml(aviso)}${presos ? '<br>Presos: ' + presos : ''}${antes.resumo ? '<br>Resumo: ' + escHtml(antes.resumo) : ''}</div>
+    ${antes.conteudo || ''}</body></html>`);
+  w.document.close();
+}
 
 window.verTextoAnteriorRet = function (i) {
   const r = (window._retHist || [])[i];
@@ -2576,6 +2692,7 @@ ${s.conteudo || ''}
       <div class="stamp-box">
         <div class="stamp-title">CENTRAL DE REGULAÇÃO DE VAGAS / DPP-SC — ${statusTxt}</div>
         <div class="stamp-meta">
+          ${(s.versao || 1) > 1 ? `<strong>Versão ${s.versao}</strong> — documento corrigido e reenviado para assinatura${s.reenviadoEm?.toDate ? ' em ' + s.reenviadoEm.toDate().toLocaleDateString('pt-BR') : ''}<br>` : ''}
           Criado por: ${escHtml((s.nomeCriador || s.emailCriador || '—').toUpperCase())}${s.nomeUnidadeOrigem ? ' — ' + escHtml(s.nomeUnidadeOrigem.toUpperCase()) : ''} — ${escHtml(dataCriacao)}
           ${datas.length ? `<br>${todosSig ? 'Concluído em' : 'Última ação em'}: ${datas[0].toLocaleDateString('pt-BR')} às ${datas[0].toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
         </div>
