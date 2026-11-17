@@ -2140,7 +2140,7 @@ window.verDetalheOficio = async function (id) {
   const barraCRV = (ehCRVRet || podeReenv || (s.versao || 1) > 1) ? `
     <div id="p-ret-barra" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;">
       ${(s.versao || 1) > 1 ? `<span style="font-size:.75rem;font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:4px 8px;">📄 Versão ${s.versao} — corrigida e reenviada para assinatura</span>
-        <button class="p-btn p-btn-outline" onclick="verVersoesAnteriores()">Versões anteriores</button>` : ''}
+` : ''}
       ${ehCRVRet && s.retificado ? `<span style="font-size:.75rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;">📝 Texto retificado pela CRV</span>
         <button class="p-btn p-btn-outline" onclick="verHistoricoRetificacao('${id}')">Ver histórico</button>` : ''}
       ${podeReenv ? `<button class="p-btn p-btn-outline" onclick="iniciarRetificacao('reenvio')">📨 Corrigir e reenviar para assinatura</button>` : ''}
@@ -2153,6 +2153,7 @@ window.verDetalheOficio = async function (id) {
     <div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:16px;">
       <iframe id="p-oficio-iframe" style="width:100%;border:none;min-height:500px;display:block;"></iframe>
     </div>
+    <div id="p-ret-campos"></div>
     ${cancelHtml}
     <div style="border-top:1px solid var(--border);padding-top:14px;">
       <p style="font-size:.68rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px 0;">Registro de Assinaturas</p>
@@ -2242,10 +2243,13 @@ window.iniciarRetificacao = function (modo) {
     <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
       ${_retModo === 'reenvio'
         ? `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">📨 Corrigir e reenviar para assinatura</div>
-           <div style="font-size:.75rem;color:#92400e;margin-bottom:6px;">Ao reenviar, <strong>todas as assinaturas voltam a pendente</strong> e os signatários são avisados novamente. A versão atual fica guardada no histórico.</div>
+           <div style="font-size:.75rem;color:#92400e;margin-bottom:6px;">Ao reenviar, <strong>todas as assinaturas voltam a pendente</strong> e os signatários são avisados novamente. </div>
            ${calcularStatusGeral(s.assinantes || [], s.statusGeral).classe === 'concluido' ? `<div style="font-size:.75rem;color:#b91c1c;font-weight:600;margin-bottom:6px;">⚠️ Este pedido já está concluído. Se já foi cadastrado no i-PEN ou deliberado pela CRV, não o altere — o documento deixaria de corresponder ao que foi analisado.</div>` : ''}`
         : `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">✏️ Retificação do texto — as assinaturas são mantidas</div>`}
-      <div style="font-size:.75rem;color:#92400e;margin-bottom:10px;">Clique no texto do ofício abaixo (área tracejada) e corrija diretamente. Ajuste também os dados dos presos e o resumo, se for o caso.</div>
+      <div style="font-size:.8rem;color:#92400e;font-weight:600;">👇 Clique no <u>texto do ofício</u> logo abaixo (área tracejada em amarelo) e corrija diretamente. Depois, ao final do documento, ajuste presos/resumo, informe o motivo e conclua.</div>
+    </div>`;
+  document.getElementById('p-ret-campos').innerHTML = `
+    <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
       ${presos.length ? `<div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin-bottom:4px;">Presos (cards e Resumo IPEN)</div>
         ${presos.map((p, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;">
           <input id="ret-pn-${i}" value="${escHtml(p.nome || '')}" placeholder="Nome" style="${campo}flex:3;">
@@ -2260,7 +2264,13 @@ window.iniciarRetificacao = function (modo) {
         <button class="p-btn" id="ret-salvar" style="background:#b45309;color:#fff;" onclick="salvarRetificacao()">${_retModo === 'reenvio' ? 'Reenviar para assinatura' : 'Salvar retificação'}</button>
       </div>
     </div>`;
+  _retFocarOficio();
 };
+
+function _retFocarOficio() {
+  const f = document.getElementById('p-ret-form');
+  if (f) f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 window.salvarRetificacao = async function () {
   if (!_retDoc) return;
@@ -2294,12 +2304,6 @@ window.salvarRetificacao = async function () {
     try {
       const email = usuarioAtual.email.toLowerCase();
       const versao = s.versao || 1;
-      const anteriores = [...(s.versoesAnteriores || []), {
-        versao, conteudo: s.conteudo || '', presos: s.presos || [], resumo: s.resumo || '',
-        assinantes: s.assinantes || [],
-        substituidaEm: Date.now(), motivo: just,
-        porEmail: email, porNome: usuarioAtual.displayName || email,
-      }];
       const assinantes = (s.assinantes || []).map(a => {
         const { motivo, motivoNegacao, ...resto } = a;
         return { ...resto, status: 'pendente', dataAcao: null, motivo: null };
@@ -2309,12 +2313,11 @@ window.salvarRetificacao = async function () {
         conteudo, presos, resumo, assinantes,
         statusGeral: 'em_andamento',
         versao: versao + 1,
-        versoesAnteriores: anteriores,
         reenviadoEm: serverTimestamp(),
         atualizadoEm: serverTimestamp(),
         ...indiceSolicitacao(novo, UNIDADES),
       });
-      _retLocal[id] = { conteudo, presos, resumo, assinantes, statusGeral: 'em_andamento', versao: versao + 1, versoesAnteriores: anteriores };
+      _retLocal[id] = { conteudo, presos, resumo, assinantes, statusGeral: 'em_andamento', versao: versao + 1 };
       _retAtualizarCard(id);
       showToastPainel('Documento corrigido e reenviado para assinatura.');
       verDetalheOficio(id);
@@ -2400,48 +2403,7 @@ window.verHistoricoRetificacao = async function (id) {
 window.abrirReenvio = async function (id) {
   await verDetalheOficio(id);
   iniciarRetificacao('reenvio');
-  document.getElementById('p-ret-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
-
-window.verVersoesAnteriores = function () {
-  const el = document.getElementById('p-ret-hist');
-  if (!el || !_retDoc) return;
-  const lista = [...(_retDoc.s.versoesAnteriores || [])].reverse();
-  window._versoesAnt = lista;
-  el.innerHTML = `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
-    <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin-bottom:6px;">Versões anteriores</div>
-    ${lista.map((v, i) => {
-      const dt = v.substituidaEm ? new Date(v.substituidaEm).toLocaleDateString('pt-BR') + ' às ' + new Date(v.substituidaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
-      const ass = (v.assinantes || []).map(a => (a.status === 'assinado' ? '✅ ' : a.status === 'negado' ? '❌ ' : '⏳ ') + escHtml(a.nome || a.email)
-        + (_motivoNeg(a) ? ' — ' + escHtml(_motivoNeg(a)) : '')).join('<br>');
-      return `<div style="padding:6px 0;border-top:${i ? '1px solid var(--border)' : 'none'};font-size:.8rem;line-height:1.5;">
-        <strong>Versão ${v.versao}</strong> — substituída em ${dt} por ${escHtml(v.porNome || v.porEmail || '—')}<br>
-        <span style="color:var(--txt-2);">Motivo da correção: ${escHtml(v.motivo || '')}</span><br>
-        <span style="font-size:.74rem;color:var(--txt-3);">${ass}</span><br>
-        <button class="p-btn p-btn-outline" style="margin-top:4px;font-size:.72rem;padding:3px 10px;" onclick="verVersaoAnterior(${i})">Ver texto desta versão</button>
-      </div>`;
-    }).join('') || '<p style="font-size:.8rem;color:var(--txt-4);margin:0;">Nenhuma versão anterior.</p>'}
-  </div>`;
-};
-
-window.verVersaoAnterior = function (i) {
-  const v = (window._versoesAnt || [])[i];
-  if (!v) return;
-  _abrirTextoAntigo('Versão ' + v.versao + ' (substituída)', 'Motivo da correção: ' + (v.motivo || ''), v);
-};
-
-function _abrirTextoAntigo(titulo, aviso, antes) {
-  const base = window.location.href.replace(/\/[^/]*(\?.*)?$/, '/') + 'gerador-oficios-v2/';
-  const presos = (antes.presos || []).map(p => escHtml((p.nome || '—') + ' · IPEN ' + (p.ipen || '—'))).join('<br>');
-  const w = window.open('', '_blank');
-  if (!w) { showToastPainel('Permita pop-ups para ver o texto anterior.'); return; }
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escHtml(titulo)}</title>
-    <base href="${base}"><link rel="stylesheet" href="css/oficio.css">
-    <style>body{margin:0;background:#fff}.ret-aviso{font-family:Arial,sans-serif;font-size:12px;background:#fef3c7;border-bottom:1px solid #f59e0b;padding:10px 16px;color:#92400e}</style>
-    </head><body><div class="ret-aviso"><strong>${escHtml(titulo)}</strong> — ${escHtml(aviso)}${presos ? '<br>Presos: ' + presos : ''}${antes.resumo ? '<br>Resumo: ' + escHtml(antes.resumo) : ''}</div>
-    ${antes.conteudo || ''}</body></html>`);
-  w.document.close();
-}
 
 window.verTextoAnteriorRet = function (i) {
   const r = (window._retHist || [])[i];
