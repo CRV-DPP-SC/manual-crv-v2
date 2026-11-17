@@ -2246,17 +2246,19 @@ window.iniciarRetificacao = function (modo) {
            <div style="font-size:.75rem;color:#92400e;margin-bottom:6px;">Ao reenviar, <strong>todas as assinaturas voltam a pendente</strong> e os signatários são avisados novamente. </div>
            ${calcularStatusGeral(s.assinantes || [], s.statusGeral).classe === 'concluido' ? `<div style="font-size:.75rem;color:#b91c1c;font-weight:600;margin-bottom:6px;">⚠️ Este pedido já está concluído. Se já foi cadastrado no i-PEN ou deliberado pela CRV, não o altere — o documento deixaria de corresponder ao que foi analisado.</div>` : ''}`
         : `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">✏️ Retificação do texto — as assinaturas são mantidas</div>`}
-      <div style="font-size:.8rem;color:#92400e;font-weight:600;">👇 Clique no <u>texto do ofício</u> logo abaixo (área tracejada em amarelo) e corrija diretamente. Depois, ao final do documento, ajuste presos/resumo, informe o motivo e conclua.</div>
+      ${presos.length ? `
+      <div style="font-size:.8rem;color:#92400e;font-weight:600;margin:4px 0 6px;">1️⃣ Nome ou IPEN errado? Corrija aqui — o ofício e o Resumo IPEN são atualizados automaticamente.</div>
+        ${presos.map((p, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;">
+          <input id="ret-pn-${i}" value="${escHtml(p.nome || '')}" placeholder="Nome" onchange="_retSincronizarPreso(${i})" style="${campo}flex:3;background:#fff;">
+          <input id="ret-pi-${i}" value="${escHtml(p.ipen || '')}" placeholder="IPEN" onchange="_retSincronizarPreso(${i})" style="${campo}flex:1;background:#fff;">
+        </div>`).join('')}` : ''}
+      <div style="font-size:.8rem;color:#92400e;font-weight:600;margin-top:6px;">${presos.length ? '2️⃣ ' : ''}Demais alterações: 👇 clique no <u>texto do ofício</u> logo abaixo (área tracejada em amarelo) e corrija diretamente. Ao final do documento, informe o motivo e conclua.</div>
     </div>`;
+  _retAplicado = presos.map(p => ({ nome: p.nome || '', ipen: p.ipen || '' }));
   document.getElementById('p-ret-campos').innerHTML = `
     <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
-      ${presos.length ? `<div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin-bottom:4px;">Presos (cards e Resumo IPEN)</div>
-        ${presos.map((p, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;">
-          <input id="ret-pn-${i}" value="${escHtml(p.nome || '')}" placeholder="Nome" style="${campo}flex:3;">
-          <input id="ret-pi-${i}" value="${escHtml(p.ipen || '')}" placeholder="IPEN" style="${campo}flex:1;">
-        </div>`).join('')}` : ''}
-      <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin:8px 0 4px;">Resumo sintético (i-PEN)</div>
-      <textarea id="ret-resumo" rows="4" style="${campo}">${escHtml(s.resumo || '')}</textarea>
+      <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin:0 0 4px;">Resumo sintético (i-PEN) — atualizado automaticamente</div>
+      <textarea id="ret-resumo" rows="4" readonly style="${campo}background:#f8fafc;color:var(--txt-2);">${escHtml(s.resumo || '')}</textarea>
       <div style="font-size:.7rem;font-weight:700;color:var(--txt-2);text-transform:uppercase;margin:8px 0 4px;">${_retModo === 'reenvio' ? 'Motivo da correção (obrigatório)' : 'Justificativa (obrigatória)'}</div>
       <textarea id="ret-just" rows="3" style="${campo}" placeholder="${_retModo === 'reenvio' ? 'Ex.: Correção do IPEN do reeducando, apontada na negativa do Diretor de destino.' : 'Ex.: A pedido de FULANO DE TAL, sob a justificativa de que o IPEN informado estava incorreto.'}"></textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
@@ -2265,6 +2267,50 @@ window.iniciarRetificacao = function (modo) {
       </div>
     </div>`;
   _retFocarOficio();
+};
+
+/* Nome/IPEN corrigido no campo → troca no texto do ofício e refaz o Resumo IPEN */
+let _retAplicado = [];
+
+function _retEscRe(x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function _retTrocar(texto, antigo, novo, ehIpen) {
+  if (!antigo || !novo || antigo === novo) return texto;
+  const re = ehIpen ? new RegExp('(?<!\\d)' + _retEscRe(antigo) + '(?!\\d)', 'g')
+                    : new RegExp(_retEscRe(antigo), 'gi');
+  return texto.replace(re, m => (!ehIpen && m === m.toUpperCase() && m !== m.toLowerCase()) ? novo.toUpperCase() : novo);
+}
+
+window._retSincronizarPreso = function (i) {
+  if (!_retDoc) return;
+  const novo = {
+    nome: (document.getElementById('ret-pn-' + i)?.value || '').trim(),
+    ipen: (document.getElementById('ret-pi-' + i)?.value || '').trim(),
+  };
+  const ant = _retAplicado[i] || { nome: '', ipen: '' };
+  // texto do ofício (inclui o anexo): troca só nos nós de texto, sem mexer na formatação
+  const iDoc = _retIframeDoc();
+  if (iDoc) {
+    const w = iDoc.createTreeWalker(iDoc.body, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = w.nextNode())) {
+      let v = _retTrocar(n.nodeValue, ant.nome, novo.nome, false);
+      v = _retTrocar(v, ant.ipen, novo.ipen, true);
+      if (v !== n.nodeValue) n.nodeValue = v;
+    }
+  }
+  if (novo.nome) ant.nome = novo.nome;
+  if (novo.ipen) ant.ipen = novo.ipen;
+  _retAplicado[i] = ant;
+  // Resumo IPEN: refeito a partir do original com todas as correções
+  let r = _retDoc.s.resumo || '';
+  (_retDoc.s.presos || []).forEach((p, k) => {
+    const c = _retAplicado[k] || {};
+    r = _retTrocar(r, p.nome || '', c.nome, false);
+    r = _retTrocar(r, p.ipen || '', c.ipen, true);
+  });
+  const ta = document.getElementById('ret-resumo');
+  if (ta) ta.value = r;
 };
 
 function _retFocarOficio() {
