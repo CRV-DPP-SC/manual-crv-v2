@@ -169,9 +169,15 @@ async function abrirModalAssinaturas() {
 
   _assModalData = { titulo: titulo, assinantes: assinantes };
 
+  var ed = window._edicaoPedido;
+  if (ed) body.innerHTML = _htmlModalEdicao(ed) + body.innerHTML;
+  var h3 = document.querySelector('#assBg .modal-head h3');
+  if (h3) h3.textContent = ed ? (ed.modo === 'crv' ? '✏️ Retificar pedido (CRV)' : '🔄 Atualizar pedido') : '✍ Solicitar Assinaturas';
+
   foot.innerHTML = '<button class="btn-acao btn-sec" onclick="fecharModalAssinaturas()">Fechar</button>'
     + (podeEnviar && assinantes.length > 0
-        ? '<button class="btn-acao btn-pri" id="btnEnviarAss" onclick="enviarSolicitacaoAssinatura()">✉ Enviar Solicitação</button>'
+        ? '<button class="btn-acao btn-pri" id="btnEnviarAss" onclick="enviarSolicitacaoAssinatura()">'
+          + (ed ? (ed.modo === 'crv' ? '💾 Salvar retificação' : '💾 Salvar e solicitar assinaturas') : '✉ Enviar Solicitação') + '</button>'
         : '');
 
   document.getElementById('assBg').classList.add('open');
@@ -181,11 +187,9 @@ function fecharModalAssinaturas() {
   document.getElementById('assBg').classList.remove('open');
 }
 
-async function enviarSolicitacaoAssinatura() {
-  if (!_assModalData) return;
-  var s = Estado.get();
+/* Dados do pedido a partir do formulário e do preview (criação e edição) */
+function _dadosDoPedido(s) {
   var conteudo = (document.getElementById('oficio-preview') || {}).innerHTML || '';
-  var unidadeOrigem = s.ori ? s.ori.em : '';
 
   /* Extrai lista de presos do estado */
   var presos = [];
@@ -194,15 +198,6 @@ async function enviarSolicitacaoAssinatura() {
   } else if (s.nome) {
     presos = [{ nome: s.nome || '', ipen: s.ipen || '' }];
   }
-
-  var fnCriar = window._v2CriarSolicitacaoAssinatura || window.criarSolicitacaoAssinatura || null;
-  if (!fnCriar) { _toast('Não foi possível enviar. Tente pelo Painel da Unidade.'); return; }
-
-  var btnEnv = document.getElementById('btnEnviarAss');
-  if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
-
-  /* Gera o resumo sintético para salvar junto à solicitação */
-  var resumoTexto = gerarTextoResumo(s);
 
   /* Transferências: guarda os dados organizados para as comunicações de entrada/saída */
   var transf = null;
@@ -217,8 +212,32 @@ async function enviarSolicitacaoAssinatura() {
     };
   }
 
+  return {
+    conteudo: conteudo, presos: presos, transf: transf,
+    resumo: gerarTextoResumo(s),
+    /* respostas do formulário: permitem reabrir o pedido no Gerador para editar (edicao-pedido.js) */
+    estadoGerador: JSON.stringify(s),
+  };
+}
+
+async function enviarSolicitacaoAssinatura() {
+  if (!_assModalData) return;
+  if (window._edicaoPedido) return salvarEdicaoPedido();
+  var s = Estado.get();
+  var unidadeOrigem = s.ori ? s.ori.em : '';
+  var dp = _dadosDoPedido(s);
+  var conteudo = dp.conteudo, presos = dp.presos, transf = dp.transf;
+
+  var fnCriar = window._v2CriarSolicitacaoAssinatura || window.criarSolicitacaoAssinatura || null;
+  if (!fnCriar) { _toast('Não foi possível enviar. Tente pelo Painel da Unidade.'); return; }
+
+  var btnEnv = document.getElementById('btnEnviarAss');
+  if (btnEnv) { btnEnv.disabled = true; btnEnv.textContent = 'Enviando…'; }
+
+  var resumoTexto = dp.resumo;
+
   try {
-    await fnCriar({ titulo: _assModalData.titulo, conteudo: conteudo, unidadeOrigem: unidadeOrigem, assinantes: _assModalData.assinantes, presos: presos, resumo: resumoTexto, transf: transf });
+    await fnCriar({ titulo: _assModalData.titulo, conteudo: conteudo, unidadeOrigem: unidadeOrigem, assinantes: _assModalData.assinantes, presos: presos, resumo: resumoTexto, transf: transf, estadoGerador: dp.estadoGerador });
     fecharModalAssinaturas();
     _toast('Solicitação de assinaturas enviada com sucesso!');
   } catch (e) {

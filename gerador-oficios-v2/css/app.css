@@ -770,3 +770,20 @@ html, body { height: 100%; font-family: 'Segoe UI', Calibri, sans-serif; backgro
 }
 .btn-wpp:hover { transform: scale(1.1); box-shadow: 0 6px 22px rgba(0,0,0,.35); }
 .btn-wpp svg  { width: 26px; height: 26px; fill: #fff; }
+
+/* ── Edição de pedido reaberto no Gerador (edicao-pedido.js) ── */
+.edicao-banner {
+  margin: 8px 12px 0; padding: 10px 14px; border-radius: 8px;
+  border: 1px solid #f59e0b; background: #fef3c7; color: #92400e;
+  font-size: .85rem; line-height: 1.5;
+}
+.ass-modal-edicao {
+  margin-bottom: 14px; padding: 10px 12px; border-radius: 8px;
+  background: #fef3c7; border: 1px solid #f59e0b; color: #92400e;
+  font-size: .82rem; line-height: 1.5;
+}
+.ass-modal-edicao label { display: block; margin: 8px 0 4px; font-weight: 700; font-size: .75rem; text-transform: uppercase; }
+.ass-modal-edicao textarea {
+  width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #e2e8f0;
+  border-radius: 6px; font-family: inherit; font-size: .82rem; color: #1e293b;
+}

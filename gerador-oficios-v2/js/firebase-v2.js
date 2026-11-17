@@ -105,7 +105,7 @@ onAuthStateChanged(auth, async (user) => {
   window._v2Usuario = user || null;
 
   if (user) {
-    window._v2CriarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo, transf }) {
+    window._v2CriarSolicitacaoAssinatura = async function ({ titulo, conteudo, unidadeOrigem, assinantes, presos, resumo, transf, estadoGerador }) {
       const uns  = typeof getUns === 'function' ? getUns()
                  : (typeof UNS !== 'undefined'  ? UNS : []);
       const uObj = uns.find(u => u.em === unidadeOrigem) || {};
@@ -131,6 +131,8 @@ onAuthStateChanged(auth, async (user) => {
         statusGeral:  'em_andamento',
         // dados organizados da transferência (para gerar as comunicações no Painel)
         ...(transf ? { transf } : {}),
+        // respostas do formulário (JSON): reabrir o pedido no Gerador para editar
+        ...(estadoGerador ? { estadoGerador } : {}),
         criadoEm:     serverTimestamp(),
         atualizadoEm: serverTimestamp(),
       };
@@ -138,6 +140,44 @@ onAuthStateChanged(auth, async (user) => {
       const ref  = await addDoc(collection(db, 'solicitacoes'), { ...dados, ...indiceSolicitacao(dados, uns) });
       return ref.id;
     };
+    /* Edição de pedido reaberto no Gerador (edicao-pedido.js)
+       modo 'reenvio' → unidade de origem/quem criou: todas as assinaturas voltam a pendente
+       modo 'crv'     → retificação da CRV: mantém as assinaturas; registro em /retificacoes */
+    window._v2AtualizarSolicitacao = async function (id, { modo, titulo, conteudo, presos, resumo, transf, estadoGerador, assinantes, motivo }) {
+      const ref   = doc(db, 'solicitacoes', id);
+      const snap  = await getDoc(ref);
+      if (!snap.exists()) throw new Error('Pedido não encontrado.');
+      const atual = snap.data();
+      const uns   = typeof getUns === 'function' ? getUns() : (typeof UNS !== 'undefined' ? UNS : []);
+      const comuns = { titulo, conteudo, resumo, estadoGerador,
+                       presos: (presos || []).map(p => ({ nome: p.nome || '', ipen: p.ipen || '' })),
+                       ...(transf ? { transf } : {}) };
+      if (modo === 'crv') {
+        const email = user.email.toLowerCase();
+        await addDoc(collection(db, 'retificacoes'), {
+          solicitacaoId: id, titulo: atual.titulo || '', porEmail: email,
+          porNome: user.displayName || email, em: serverTimestamp(), justificativa: motivo,
+          antes: { conteudo: atual.conteudo || '', presos: atual.presos || [], resumo: atual.resumo || '' },
+        });
+        await updateDoc(ref, { ...comuns, retificado: true });
+        return;
+      }
+      const novos = assinantes.map(a => ({
+        email: a.email, nome: a.nome, emailUnidade: a.emailUnidade || '',
+        status: 'pendente', dataAcao: null, motivo: null,
+        ...(a.emExercicio ? { emExercicio: true, cargo: a.cargo || '', unidade: a.unidade || '' } : {}),
+      }));
+      const novo = { ...atual, assinantes: novos, statusGeral: 'em_andamento' };
+      await updateDoc(ref, {
+        ...comuns,
+        assinantes: novos, statusGeral: 'em_andamento',
+        versao: (atual.versao || 1) + 1,
+        correcao: { motivo, porEmail: user.email, porNome: user.displayName || user.email, em: Date.now() },
+        reenviadoEm: serverTimestamp(), atualizadoEm: serverTimestamp(),
+        ...indiceSolicitacao(novo, uns),
+      });
+    };
+
     /* Comunicações de entrada/saída geradas a partir do Painel */
     window._v2LerSolicitacao = async function (id) {
       const snap = await getDoc(doc(db, 'solicitacoes', id));

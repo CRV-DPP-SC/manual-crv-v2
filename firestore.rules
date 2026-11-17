@@ -222,13 +222,14 @@ service cloud.firestore {
       // ficam em /retificacoes, que só a CRV lê.
       allow update: if isCRV()
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['conteudo','presos','resumo','retificado']);
-      // Corrigir e reenviar para assinatura (unidade de origem, quem criou ou CRV):
+             .hasOnly(['conteudo','presos','resumo','retificado','titulo','transf','estadoGerador']);
+      // Editar pelo Gerador e reenviar para assinatura (unidade de origem, quem criou ou CRV):
       // muda o texto e todas as assinaturas voltam a pendente (a versão anterior não é guardada).
       allow update: if (isCRV() || daOrigem(resource.data))
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['assinantes','statusGeral','atualizadoEm','pendentesDe','unidades','srs',
-                       'conteudo','presos','resumo','versao','reenviadoEm']);
+                       'conteudo','presos','resumo','versao','reenviadoEm',
+                       'titulo','transf','estadoGerador','correcao']);
       allow delete: if isCRV();
     }
 

@@ -955,8 +955,14 @@ var FormularioCtrl = (function() {
     _renderizarCards();
   }
 
+  /* Reabre o formulário com um estado já carregado (edição de pedido) */
+  function abrirComEstado() {
+    if (Estado.get('mod')) _renderizarFormulario(); else _renderizarCards();
+  }
+
   return {
     inicializar: inicializar,
+    abrirComEstado: abrirComEstado,
     selecionarMod: selecionarMod,
     trocarMod: trocarMod,
     abrirModalEmergencial: abrirModalEmergencial,

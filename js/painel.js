@@ -2139,12 +2139,11 @@ window.verDetalheOficio = async function (id) {
   const podeReenv = podeReenviar(s);
   const barraCRV = (ehCRVRet || podeReenv || (s.versao || 1) > 1) ? `
     <div id="p-ret-barra" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px;">
-      ${(s.versao || 1) > 1 ? `<span style="font-size:.75rem;font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:4px 8px;">📄 Versão ${s.versao} — corrigida e reenviada para assinatura</span>
-` : ''}
+      ${(s.versao || 1) > 1 ? `<span style="font-size:.75rem;font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:4px 8px;">📄 Versão ${s.versao} — corrigida e reenviada para assinatura${s.correcao?.motivo ? ': ' + escHtml(s.correcao.motivo) : ''}</span>` : ''}
       ${ehCRVRet && s.retificado ? `<span style="font-size:.75rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;">📝 Texto retificado pela CRV</span>
         <button class="p-btn p-btn-outline" onclick="verHistoricoRetificacao('${id}')">Ver histórico</button>` : ''}
       ${podeReenv ? `<button class="p-btn p-btn-outline" onclick="avisoEditarOficio('${id}')">✏️ Editar texto do ofício</button>` : ''}
-      ${ehCRVRet ? `<button class="p-btn p-btn-outline" onclick="iniciarRetificacao('crv')" title="Mantém as assinaturas; visível somente para a CRV">✏️ Retificar texto (CRV)</button>` : ''}
+      ${ehCRVRet ? `<button class="p-btn p-btn-outline" onclick="retificarCRV('${id}')" title="Mantém as assinaturas; visível somente para a CRV">✏️ Retificar texto (CRV)</button>` : ''}
     </div>
     <div id="p-ret-form"></div>
     <div id="p-ret-hist"></div>` : '';
@@ -2205,6 +2204,7 @@ let _retModo = 'crv';             // 'crv' = retificação (mantém assinaturas)
 // Corrigir e reenviar: unidade de origem (Diretor/CPEN) ou quem criou, com pedido concluído ou com negativa
 function podeReenviar(s) {
   if (!s || s.statusGeral === 'cancelado') return false;
+  if (!s.estadoGerador) return false;   // só pedidos criados com as respostas do formulário salvas
   const cl = calcularStatusGeral(s.assinantes || [], s.statusGeral).classe;
   if (!['concluido', 'negado'].includes(cl)) return false;
   if (perfilAtual === 'crv') return true;
@@ -2220,10 +2220,9 @@ function _retIframeDoc() {
   return f ? (f.contentDocument || f.contentWindow.document) : null;
 }
 
-window.iniciarRetificacao = function (modo) {
-  _retModo = modo === 'reenvio' ? 'reenvio' : 'crv';
-  if (!_retDoc) return;
-  if (_retModo === 'crv' ? perfilAtual !== 'crv' : !podeReenviar(_retDoc.s)) return;
+window.iniciarRetificacao = function () {
+  _retModo = 'crv';   // retificação no próprio Painel: só CRV, pedidos antigos (sem as respostas do formulário)
+  if (!_retDoc || perfilAtual !== 'crv') return;
   const iDoc = _retIframeDoc();
   if (!iDoc) return;
   if (!iDoc.getElementById('ret-style')) {
@@ -2319,8 +2318,7 @@ function _retFocarOficio() {
 }
 
 window.salvarRetificacao = async function () {
-  if (!_retDoc) return;
-  if (_retModo === 'crv' ? perfilAtual !== 'crv' : !podeReenviar(_retDoc.s)) return;
+  if (!_retDoc || perfilAtual !== 'crv') return;
   const { id, s } = _retDoc;
   const just = (document.getElementById('ret-just').value || '').trim();
   if (just.length < 10) { showToastPainel(_retModo === 'reenvio' ? 'Informe o motivo da correção.' : 'Informe a justificativa da retificação.'); return; }
@@ -2342,35 +2340,6 @@ window.salvarRetificacao = async function () {
 
   const btn = document.getElementById('ret-salvar');
   btn.disabled = true; btn.textContent = 'Salvando…';
-
-  if (_retModo === 'reenvio') {
-    try {
-      const email = usuarioAtual.email.toLowerCase();
-      const versao = s.versao || 1;
-      const assinantes = (s.assinantes || []).map(a => {
-        const { motivo, motivoNegacao, ...resto } = a;
-        return { ...resto, status: 'pendente', dataAcao: null, motivo: null };
-      });
-      const novo = { ...s, conteudo, presos, resumo, assinantes, statusGeral: 'em_andamento' };
-      await updateDoc(doc(db, 'solicitacoes', id), {
-        conteudo, presos, resumo, assinantes,
-        statusGeral: 'em_andamento',
-        versao: versao + 1,
-        reenviadoEm: serverTimestamp(),
-        atualizadoEm: serverTimestamp(),
-        ...indiceSolicitacao(novo, UNIDADES),
-      });
-      _retLocal[id] = { conteudo, presos, resumo, assinantes, statusGeral: 'em_andamento', versao: versao + 1 };
-      _retAtualizarCard(id);
-      showToastPainel('Documento corrigido e reenviado para assinatura.');
-      verDetalheOficio(id);
-    } catch (e) {
-      console.error('[reenvio]', e);
-      showToastPainel('Erro ao reenviar: ' + (e.code || e.message));
-      btn.disabled = false; btn.textContent = 'Salvar e solicitar assinaturas';
-    }
-    return;
-  }
 
   try {
     const email = usuarioAtual.email.toLowerCase();
@@ -2443,11 +2412,6 @@ window.verHistoricoRetificacao = async function (id) {
   }
 };
 
-window.abrirReenvio = async function (id) {
-  await verDetalheOficio(id);
-  iniciarRetificacao('reenvio');
-};
-
 /* Aviso antes de editar: depois de alterado, todos assinam de novo */
 window.avisoEditarOficio = function (id) {
   document.getElementById('p-editar-id').value = id;
@@ -2459,7 +2423,17 @@ window.fecharAvisoEditarOficio = function () {
 window.confirmarEditarOficio = function () {
   const id = document.getElementById('p-editar-id').value;
   fecharAvisoEditarOficio();
-  abrirReenvio(id);
+  _abrirNoGerador(id, false);
+};
+
+/* Reabre o pedido no Gerador de Ofícios (edicao-pedido.js) */
+function _abrirNoGerador(id, crv) {
+  const base = window.location.href.replace(/\/[^/]*(\?.*)?(#.*)?$/, '/');
+  window.open(base + 'gerador-oficios-v2/index.html?editar=' + encodeURIComponent(id) + (crv ? '&modo=crv' : ''), '_blank');
+}
+window.retificarCRV = function (id) {
+  if (_retDoc && _retDoc.id === id && _retDoc.s.estadoGerador) _abrirNoGerador(id, true);
+  else iniciarRetificacao('crv');
 };
 
 window.verTextoAnteriorRet = function (i) {
