@@ -1591,7 +1591,7 @@ function renderizarLista(el, lista, tipo) {
           </button>
           <button class="p-btn p-btn-outline" onclick="verResumoOficio('${s.id}')">📄 Resumo IPEN</button>
           ${_botoesComunicacao(s, statusGeral)}
-          ${podeReenviar(s) ? `<button class="p-btn p-btn-outline" onclick="abrirReenvio('${s.id}')">📨 Corrigir e reenviar</button>` : ''}
+          ${podeReenviar(s) ? `<button class="p-btn p-btn-outline" onclick="avisoEditarOficio('${s.id}')">✏️ Editar texto do ofício</button>` : ''}
           ${podeFirmar ? `
             <button class="p-btn p-btn-assinar" onclick="assinarOficio('${s.id}')">Assinar</button>
             <button class="p-btn p-btn-negar"   onclick="abrirModalNegar('${s.id}')">Negar</button>
@@ -2143,7 +2143,7 @@ window.verDetalheOficio = async function (id) {
 ` : ''}
       ${ehCRVRet && s.retificado ? `<span style="font-size:.75rem;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;">📝 Texto retificado pela CRV</span>
         <button class="p-btn p-btn-outline" onclick="verHistoricoRetificacao('${id}')">Ver histórico</button>` : ''}
-      ${podeReenv ? `<button class="p-btn p-btn-outline" onclick="iniciarRetificacao('reenvio')">📨 Corrigir e reenviar para assinatura</button>` : ''}
+      ${podeReenv ? `<button class="p-btn p-btn-outline" onclick="avisoEditarOficio('${id}')">✏️ Editar texto do ofício</button>` : ''}
       ${ehCRVRet ? `<button class="p-btn p-btn-outline" onclick="iniciarRetificacao('crv')" title="Mantém as assinaturas; visível somente para a CRV">✏️ Retificar texto (CRV)</button>` : ''}
     </div>
     <div id="p-ret-form"></div>
@@ -2242,7 +2242,7 @@ window.iniciarRetificacao = function (modo) {
   document.getElementById('p-ret-form').innerHTML = `
     <div style="border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
       ${_retModo === 'reenvio'
-        ? `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">📨 Corrigir e reenviar para assinatura</div>
+        ? `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">✏️ Editar texto do ofício — as assinaturas serão solicitadas novamente</div>
            <div style="font-size:.75rem;color:#92400e;margin-bottom:6px;">Ao reenviar, <strong>todas as assinaturas voltam a pendente</strong> e os signatários são avisados novamente. </div>
            ${calcularStatusGeral(s.assinantes || [], s.statusGeral).classe === 'concluido' ? `<div style="font-size:.75rem;color:#b91c1c;font-weight:600;margin-bottom:6px;">⚠️ Este pedido já está concluído. Se já foi cadastrado no i-PEN ou deliberado pela CRV, não o altere — o documento deixaria de corresponder ao que foi analisado.</div>` : ''}`
         : `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px;">✏️ Retificação do texto — as assinaturas são mantidas</div>`}
@@ -2261,7 +2261,7 @@ window.iniciarRetificacao = function (modo) {
       <textarea id="ret-just" rows="3" style="${campo}" placeholder="${_retModo === 'reenvio' ? 'Ex.: Correção do IPEN do reeducando, apontada na negativa do Diretor de destino.' : 'Ex.: A pedido de FULANO DE TAL, sob a justificativa de que o IPEN informado estava incorreto.'}"></textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
         <button class="p-btn p-btn-outline" onclick="verDetalheOficio('${_retDoc.id}')">Cancelar</button>
-        <button class="p-btn" id="ret-salvar" style="background:#b45309;color:#fff;" onclick="salvarRetificacao()">${_retModo === 'reenvio' ? 'Reenviar para assinatura' : 'Salvar retificação'}</button>
+        <button class="p-btn" id="ret-salvar" style="background:#b45309;color:#fff;" onclick="salvarRetificacao()">${_retModo === 'reenvio' ? 'Salvar e solicitar assinaturas' : 'Salvar retificação'}</button>
       </div>
     </div>`;
   _retFocarOficio();
@@ -2298,9 +2298,6 @@ window.salvarRetificacao = async function () {
   btn.disabled = true; btn.textContent = 'Salvando…';
 
   if (_retModo === 'reenvio') {
-    if (!confirm('Todas as assinaturas voltarão a pendente e os signatários serão avisados novamente. Confirmar o reenvio?')) {
-      btn.disabled = false; btn.textContent = 'Reenviar para assinatura'; return;
-    }
     try {
       const email = usuarioAtual.email.toLowerCase();
       const versao = s.versao || 1;
@@ -2324,7 +2321,7 @@ window.salvarRetificacao = async function () {
     } catch (e) {
       console.error('[reenvio]', e);
       showToastPainel('Erro ao reenviar: ' + (e.code || e.message));
-      btn.disabled = false; btn.textContent = 'Reenviar para assinatura';
+      btn.disabled = false; btn.textContent = 'Salvar e solicitar assinaturas';
     }
     return;
   }
@@ -2403,6 +2400,20 @@ window.verHistoricoRetificacao = async function (id) {
 window.abrirReenvio = async function (id) {
   await verDetalheOficio(id);
   iniciarRetificacao('reenvio');
+};
+
+/* Aviso antes de editar: depois de alterado, todos assinam de novo */
+window.avisoEditarOficio = function (id) {
+  document.getElementById('p-editar-id').value = id;
+  document.getElementById('p-modal-editar-aviso').style.display = 'flex';
+};
+window.fecharAvisoEditarOficio = function () {
+  document.getElementById('p-modal-editar-aviso').style.display = 'none';
+};
+window.confirmarEditarOficio = function () {
+  const id = document.getElementById('p-editar-id').value;
+  fecharAvisoEditarOficio();
+  abrirReenvio(id);
 };
 
 window.verTextoAnteriorRet = function (i) {

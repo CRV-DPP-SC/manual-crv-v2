@@ -640,6 +640,27 @@
   </div>
 </div>
 
+<!-- ══ MODAL AVISO — EDITAR TEXTO DO OFÍCIO ══ -->
+<div id="p-modal-editar-aviso" class="p-modal" onclick="if(event.target===this)fecharAvisoEditarOficio()">
+  <div class="p-modal-box">
+    <div class="p-modal-header">
+      <h3>✏️ Editar texto do ofício</h3>
+      <button class="p-modal-fechar" onclick="fecharAvisoEditarOficio()">✕</button>
+    </div>
+    <div class="p-modal-body">
+      <input type="hidden" id="p-editar-id" />
+      <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;font-size:.84rem;color:#92400e;line-height:1.55;margin-bottom:12px;">
+        ⚠️ Ao alterar o texto, <strong>será necessário solicitar as assinaturas novamente</strong>: todas as assinaturas já colhidas (e eventuais negativas) voltam a <strong>pendente</strong>, e os signatários serão avisados para assinar o documento corrigido.
+      </div>
+      <p style="font-size:.82rem;color:var(--txt-2);margin:0 0 12px;">Se o pedido já foi cadastrado no i-PEN ou deliberado pela CRV, não altere o documento.</p>
+      <div class="p-modal-acoes">
+        <button class="p-btn p-btn-outline" onclick="fecharAvisoEditarOficio()">Cancelar</button>
+        <button class="p-btn" style="background:#b45309;color:#fff;" onclick="confirmarEditarOficio()">Entendi, editar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL RECUSAR ACESSO ══ -->
 <div id="p-modal-negar-acesso" class="p-modal" onclick="if(event.target===this)fecharModalNegarAcesso()">
   <div class="p-modal-box">
@@ -746,6 +767,6 @@
   <button class="p-barra-btn-limpar" onclick="selLimpar()">✕ Desmarcar todos</button>
 </div>
 
-<script type="module" src="js/painel.js?v=29"></script>
+<script type="module" src="js/painel.js?v=30"></script>
 </body>
 </html>
